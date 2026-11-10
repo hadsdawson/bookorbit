@@ -29,6 +29,7 @@ const TONES: Record<BookRequestTrackingStatus, string> = {
 const tone = computed(() => (props.request.trackingStatus ? TONES[props.request.trackingStatus] : 'text-muted-foreground'))
 
 const label = computed(() => t(`bookRequests.trackingStatus.${props.request.trackingStatus ?? 'none'}`))
+const mediaLabel = computed(() => t(`bookRequests.mediaKind.${props.request.mediaKind}`))
 
 function handleChange(event: Event) {
   const value = (event.target as HTMLSelectElement).value
@@ -41,8 +42,8 @@ function handleChange(event: Event) {
     v-if="editable"
     :value="request.trackingStatus ?? ''"
     :disabled="busy"
-    :aria-label="t('bookRequests.table.trackingLabel', { title: request.title })"
-    class="h-7 max-w-full rounded-md border border-input bg-background px-1.5 text-xs focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-60"
+    :aria-label="t('bookRequests.table.trackingLabel', { title: `${request.title} (${mediaLabel})` })"
+    class="h-7 w-full max-w-52 min-w-0 rounded-md border border-input bg-background px-1.5 text-xs focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-60"
     :class="tone"
     @change="handleChange"
   >
@@ -51,5 +52,5 @@ function handleChange(event: Event) {
       {{ t(`bookRequests.trackingStatus.${status}`) }}
     </option>
   </select>
-  <span v-else class="text-xs" :class="tone">{{ request.trackingStatus ? label : '—' }}</span>
+  <span v-else class="text-xs" :class="tone">{{ request.trackingStatus ? label : '-' }}</span>
 </template>
