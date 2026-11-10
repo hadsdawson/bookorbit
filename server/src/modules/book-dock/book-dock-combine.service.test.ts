@@ -4,11 +4,13 @@ import { BookDockCombineService } from './book-dock-combine.service';
 
 const user = { id: 1, isSuperuser: false } as never;
 
-function makeService(options: { canJoinBook?: boolean; previewStatus?: string; primaryFiled?: boolean } = {}) {
+function makeService(
+  options: { canJoinBook?: boolean; previewStatus?: string; primaryFiled?: boolean; targetLibraryId?: number; formatPriority?: string[] } = {},
+) {
   const repo = {
     findByIds: vi.fn().mockResolvedValue([
-      { id: 11, fileName: 'Book A.m4b' },
-      { id: 12, fileName: 'Book A.epub' },
+      { id: 11, fileName: 'Book A.m4b', targetLibraryId: options.targetLibraryId ?? null },
+      { id: 12, fileName: 'Book A.epub', targetLibraryId: null },
     ]),
   };
   const finalizeService = {
@@ -26,7 +28,8 @@ function makeService(options: { canJoinBook?: boolean; previewStatus?: string; p
       ),
     })),
   };
-  return { service: new BookDockCombineService(finalizeService as never, repo as never), finalizeService, repo };
+  const libraries = { findOne: vi.fn().mockResolvedValue({ formatPriority: options.formatPriority ?? ['epub', 'm4b'] }) };
+  return { service: new BookDockCombineService(finalizeService as never, repo as never, libraries as never), finalizeService, repo, libraries };
 }
 
 describe('BookDockCombineService', () => {
@@ -54,6 +57,21 @@ describe('BookDockCombineService', () => {
     expect(finalizeService.finalize.mock.calls[1]![3]).toEqual([11]);
     expect(finalizeService.finalize.mock.calls[1]![8]).toEqual([{ fileId: 11, joinBook: { bookId: 500 } }]);
     expect(result).toMatchObject({ bookId: 500, primaryFileId: 12, succeeded: 2, failed: 0 });
+  });
+
+  it('follows the destination library format priority when nobody picked', async () => {
+    const { service, finalizeService, libraries } = makeService({ targetLibraryId: 3, formatPriority: ['m4b', 'epub'] });
+    const result = await service.combine({ fileIds: [11, 12] }, user, false);
+    expect(libraries.findOne).toHaveBeenCalledWith(3);
+    expect(finalizeService.finalize.mock.calls[0]![3]).toEqual([11]);
+    expect(result.primaryFileId).toBe(11);
+  });
+
+  it('uses the default destination library when no file has its own', async () => {
+    const { service, libraries } = makeService({ formatPriority: ['m4b', 'epub'] });
+    const result = await service.combine({ fileIds: [11, 12], defaultLibraryId: 4, defaultFolderId: 5 }, user, false);
+    expect(libraries.findOne).toHaveBeenCalledWith(4);
+    expect(result.primaryFileId).toBe(11);
   });
 
   it('uses the file the person picked as the primary one', async () => {

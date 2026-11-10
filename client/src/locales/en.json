@@ -9517,7 +9517,7 @@
       "action": "Combine",
       "actionHint": "File the selected files as one book, such as an ebook and its audiobook",
       "title": "Combine {count} files into one book",
-      "instructions": "The primary file is filed as the book. The other files are added to it as more formats, for example the audiobook of the same book.",
+      "instructions": "The primary file is filed as the book. The other files are added to the same book folder as more formats, for example the audiobook of the same book.",
       "primaryLabel": "Primary file",
       "primaryHint": "The book takes its title, authors and other details from the primary file: {title}",
       "folder": "Folder",
@@ -9526,7 +9526,8 @@
       "resultTitle": "Files combined",
       "done": "{count, plural, one {# file filed} other {All # files filed as one book}}",
       "partial": "{done} of {total} files filed",
-      "failed": "Could not combine those files"
+      "failed": "Could not combine those files",
+      "primaryByPriority": "Picked by the library's format priority."
     }
   },
   "bookRequests": {

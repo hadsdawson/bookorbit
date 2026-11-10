@@ -1,10 +1,11 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { extname } from 'path';
-import { isAudioFormat } from '@bookorbit/types';
+import { DEFAULT_FORMAT_PRIORITY, pickByFormatPriority } from '@bookorbit/types';
 import type { BookDockCombineResult, BookDockFinalizeFileResult } from '@bookorbit/types';
 
 import type { RequestUser } from '../../common/types/request-user';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
+import { LibraryService } from '../library/library.service';
 import { BookDockFinalizeService } from './book-dock-finalize.service';
 import { BookDockRepository } from './book-dock.repository';
 import type { CombineBookDockDto } from './dto';
@@ -21,6 +22,7 @@ export class BookDockCombineService {
   constructor(
     private readonly finalizeService: BookDockFinalizeService,
     private readonly repo: BookDockRepository,
+    private readonly libraries: LibraryService,
   ) {}
 
   async combine(dto: CombineBookDockDto, user: RequestUser, canManageAll: boolean): Promise<BookDockCombineResult> {
@@ -31,7 +33,7 @@ export class BookDockCombineService {
     const rows = await this.repo.findByIds(fileIds, user.id, canManageAll);
     if (rows.length !== fileIds.length) throw new BadRequestException('Some of those files are no longer in Book Dock');
 
-    const primaryFileId = this.pickPrimary(dto.primaryFileId, rows);
+    const primaryFileId = await this.pickPrimary(dto.primaryFileId, rows, dto.defaultLibraryId);
     const others = fileIds.filter((id) => id !== primaryFileId);
     this.logger.log(
       `[book_dock.combine] [start] userId=${user.id} primaryFileId=${primaryFileId} files=${fileIds.length} - combining docked files into one book`,
@@ -113,16 +115,30 @@ export class BookDockCombineService {
     return { total: results.length, succeeded, failed: results.length - succeeded, results, bookId, primaryFileId };
   }
 
-  /** The book's details come from the primary file, so an ebook is preferred: it usually carries the fuller metadata. */
-  private pickPrimary(requested: number | undefined, rows: Array<{ id: number; fileName: string }>): number {
+  /**
+   * The file the book is filed from: the one picked, else the one whose format ranks highest in
+   * the destination library's format priority, which is the same order the library uses to choose
+   * a book's main file.
+   */
+  private async pickPrimary(
+    requested: number | undefined,
+    rows: Array<{ id: number; fileName: string; targetLibraryId: number | null }>,
+    defaultLibraryId: number | undefined,
+  ): Promise<number> {
     if (requested !== undefined) {
       if (!rows.some((row) => row.id === requested)) throw new BadRequestException('The primary file must be one of the files being combined');
       return requested;
     }
-    const ebook = rows.find((row) => {
-      const extension = extname(row.fileName).slice(1);
-      return extension !== '' && !isAudioFormat(extension);
-    });
-    return (ebook ?? rows[0]!).id;
+    const libraryId = rows.find((row) => row.targetLibraryId !== null)?.targetLibraryId ?? defaultLibraryId;
+    const priority = libraryId !== undefined ? await this.formatPriorityOf(libraryId) : DEFAULT_FORMAT_PRIORITY;
+    return (pickByFormatPriority(rows, (row) => extname(row.fileName).slice(1), priority) ?? rows[0]!).id;
+  }
+
+  private async formatPriorityOf(libraryId: number): Promise<readonly string[]> {
+    try {
+      return (await this.libraries.findOne(libraryId)).formatPriority;
+    } catch {
+      return DEFAULT_FORMAT_PRIORITY;
+    }
   }
 }

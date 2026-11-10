@@ -4,16 +4,26 @@ import { ref } from 'vue'
 import type { BookDockFile } from '@bookorbit/types'
 
 const apiMock = vi.fn<(...args: unknown[]) => Promise<Response>>()
+const libraryList = ref([
+  { id: 1, formatPriority: ['epub', 'm4b'] },
+  { id: 3, formatPriority: ['m4b', 'epub'] },
+])
 
 vi.mock('@/lib/api', () => ({ api: (...args: unknown[]) => apiMock(...args) }))
 vi.mock('@/features/library/composables/useBookDestination', () => ({
-  useBookDestination: () => ({ libraryId: ref(1), folderId: ref(2), hasDestination: ref(true), fetchLibraries: vi.fn() }),
+  useBookDestination: () => ({
+    libraries: libraryList,
+    libraryId: ref(1),
+    folderId: ref(2),
+    hasDestination: ref(true),
+    fetchLibraries: vi.fn(),
+  }),
 }))
 
 import BookDockCombineDialog from '../BookDockCombineDialog.vue'
 
-function file(id: number, fileName: string, targetFolderId: number | null = null): BookDockFile {
-  return { id, fileName, targetFolderId, selectedMetadata: { title: 'Book A' } } as unknown as BookDockFile
+function file(id: number, fileName: string, targetFolderId: number | null = null, targetLibraryId: number | null = null): BookDockFile {
+  return { id, fileName, targetFolderId, targetLibraryId, selectedMetadata: { title: 'Book A' } } as unknown as BookDockFile
 }
 
 function mountDialog(files: BookDockFile[]) {
@@ -40,7 +50,14 @@ describe('BookDockCombineDialog', () => {
     } as Response)
   })
 
-  it('makes the ebook the primary file by default and sends the default destination', async () => {
+  it('follows the format priority of the library the book is headed to', async () => {
+    const wrapper = mountDialog([file(1, 'Book A.epub', 7, 3), file(2, 'Book A.m4b', 7, 3)])
+    await combineButton(wrapper).trigger('click')
+    await flushPromises()
+    expect(sentBody().primaryFileId).toBe(2)
+  })
+
+  it('makes the ebook the primary file when the library ranks it first, and sends the default destination', async () => {
     const wrapper = mountDialog([file(1, 'Book A.m4b'), file(2, 'Book A.epub')])
     await combineButton(wrapper).trigger('click')
     await flushPromises()

@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Combine, Loader2, X } from '@lucide/vue'
-import { isAudioFormat, type BookDockCombineResult, type BookDockFile } from '@bookorbit/types'
+import { DEFAULT_FORMAT_PRIORITY, pickByFormatPriority, type BookDockCombineResult, type BookDockFile } from '@bookorbit/types'
 import { api } from '@/lib/api'
 import { useBookDestination } from '@/features/library/composables/useBookDestination'
 import BookDestinationFields from '@/features/library/components/BookDestinationFields.vue'
@@ -19,20 +19,28 @@ const emit = defineEmits<{
 }>()
 
 const destination = useBookDestination({ defaultToFirstLibrary: true })
-const { libraryId, folderId, hasDestination, fetchLibraries } = destination
+const { libraries, libraryId, folderId, hasDestination, fetchLibraries } = destination
 
 function extensionOf(file: BookDockFile): string {
   const dot = file.fileName.lastIndexOf('.')
   return dot > 0 ? file.fileName.slice(dot + 1).toLowerCase() : ''
 }
 
-function isAudio(file: BookDockFile): boolean {
-  const extension = extensionOf(file)
-  return extension !== '' && isAudioFormat(extension)
-}
+/** Where the book is headed: a file's own target library, else the default picked here. */
+const destinationLibraryId = computed(() => props.files.find((file) => file.targetLibraryId != null)?.targetLibraryId ?? libraryId.value)
 
-/** Matches the server's own default, so the choice shown is the one that happens if left alone. */
-const primaryFileId = ref<number>(props.files.find((file) => extensionOf(file) !== '' && !isAudio(file))?.id ?? props.files[0]?.id ?? 0)
+/**
+ * The file whose format ranks highest in that library's format priority, the same rule the server
+ * applies, so the default shown is the one that happens if left alone.
+ */
+const defaultPrimaryId = computed(() => {
+  const priority = libraries.value.find((library) => library.id === destinationLibraryId.value)?.formatPriority ?? DEFAULT_FORMAT_PRIORITY
+  return pickByFormatPriority(props.files, extensionOf, priority)?.id ?? 0
+})
+
+/** Null until the person picks one, so a change of library can still move the default. */
+const pickedPrimaryId = ref<number | null>(null)
+const primaryFileId = computed(() => pickedPrimaryId.value ?? defaultPrimaryId.value)
 const loading = ref(false)
 const error = ref<string | null>(null)
 const result = ref<BookDockCombineResult | null>(null)
@@ -46,6 +54,7 @@ const primaryTitle = computed(() => {
 
 /** A file headed somewhere of its own needs no default, so the picker shows only when one is missing. */
 const needsDestination = computed(() => props.files.some((file) => file.id === primaryFileId.value && file.targetFolderId == null))
+const primaryReason = computed(() => (pickedPrimaryId.value === null ? t('bookDock.combine.primaryByPriority') : ''))
 const canSubmit = computed(() => props.files.length >= 2 && !loading.value && (!needsDestination.value || hasDestination.value))
 
 onMounted(() => {
@@ -53,7 +62,7 @@ onMounted(() => {
 })
 
 function choosePrimary(fileId: number) {
-  primaryFileId.value = fileId
+  pickedPrimaryId.value = fileId
 }
 
 async function submit() {
@@ -136,7 +145,10 @@ function handleClose() {
               <span class="min-w-0 flex-1 truncate">{{ file.fileName }}</span>
               <span class="shrink-0 text-xs uppercase text-muted-foreground">{{ extensionOf(file) || t('bookDock.combine.folder') }}</span>
             </label>
-            <p class="text-xs text-muted-foreground">{{ t('bookDock.combine.primaryHint', { title: primaryTitle }) }}</p>
+            <p class="text-xs text-muted-foreground">
+              {{ t('bookDock.combine.primaryHint', { title: primaryTitle }) }}
+              <span v-if="primaryReason"> {{ primaryReason }}</span>
+            </p>
           </fieldset>
 
           <BookDestinationFields
