@@ -129,11 +129,19 @@ describe('RequestListTable released and tracking cells', () => {
   })
 
   it('shows the full date when there is one', () => {
-    expect(render([request({ publishedDate: '2026-12-08' })]).find('table').text()).toContain('2026')
+    expect(
+      render([request({ publishedDate: '2026-12-08' })])
+        .find('table')
+        .text(),
+    ).toContain('2026')
   })
 
   it('hides tracking on an available request', () => {
-    expect(render([request({ status: 'available' })]).find('table').findAll('select')).toHaveLength(0)
+    expect(
+      render([request({ status: 'available' })])
+        .find('table')
+        .findAll('select'),
+    ).toHaveLength(0)
   })
 
   it('hides tracking only on the half of a pair that is available', () => {

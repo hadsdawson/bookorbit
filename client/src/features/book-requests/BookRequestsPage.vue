@@ -12,7 +12,15 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import { usePermissions } from '@/features/auth/composables/usePermissions'
 import { useAuth } from '@/features/auth/composables/useAuth'
 import { formatCompactNumber, formatNumber } from '@/i18n/formatters'
-import { canBulkActRequest, canDismissRequest, cancelStopsATransfer } from './requestActions'
+import {
+  canBulkActRequest,
+  canCancelRequest,
+  canDeleteRequest,
+  canDismissRequest,
+  canTrackRequest,
+  cancelStopsATransfer,
+  type BulkActor,
+} from './requestActions'
 import { flattenRequestRows, rowRequests } from './requestPair'
 import RequestDrawer from './components/RequestDrawer.vue'
 import NoRequestSourcesNotice from './components/NoRequestSourcesNotice.vue'
@@ -98,7 +106,8 @@ const selectedIds = ref<number[]>([])
 /** Every request on the page with pairs unfolded, since a selection and a batch act on requests, not rows. */
 const activeRequests = computed(() => flattenRequestRows(activeList.value.items.value))
 const selectedRows = computed(() => activeRequests.value.filter((request) => selectedIds.value.includes(request.id)))
-const selectableRows = computed(() => activeRequests.value.filter((request) => canBulkActRequest(request, canManage.value)))
+const bulkActor = computed<BulkActor>(() => ({ userId: user.value?.id ?? null, canManage: canManage.value, canSelfFulfil: canSelfFulfil.value }))
+const selectableRows = computed(() => activeRequests.value.filter((request) => canBulkActRequest(request, bulkActor.value)))
 
 /**
  * A selection can mix states, so each bulk button owns its own subset and says how big it is.
@@ -108,6 +117,13 @@ const selectableRows = computed(() => activeRequests.value.filter((request) => c
 const approvableSelection = computed(() => selectedRows.value.filter((request) => canManage.value && request.status === 'pending'))
 const rejectableSelection = computed(() => selectedRows.value.filter((request) => canManage.value && request.status === 'pending'))
 const dismissableSelection = computed(() => selectedRows.value.filter((request) => canDismissRequest(request) && !request.dismissed))
+const trackableSelection = computed(() =>
+  selectedRows.value.filter((request) => canTrackRequest(request, user.value?.id ?? null, canManage.value, canSelfFulfil.value)),
+)
+const cancellableSelection = computed(() =>
+  selectedRows.value.filter((request) => canCancelRequest(request, user.value?.id ?? null, canManage.value, canSelfFulfil.value)),
+)
+const deletableSelection = computed(() => selectedRows.value.filter((request) => canDeleteRequest(request, canManage.value)))
 
 provide(REQUEST_DRAWER, {
   position: queue.position,
@@ -122,17 +138,23 @@ provide(REQUEST_DRAWER, {
 const STATUS_FILTERS: Array<BookRequestStatus | ''> = ['', ...BOOK_REQUEST_STATUSES]
 
 /** One request, or both halves of a pair cancelled from their row in one press. */
-const confirming = ref<{ requests: BookRequestItem[]; action: 'cancel' | 'delete' } | null>(null)
+/** `bulk` sends the whole selection through the batch endpoint instead of one row at a time. */
+const confirming = ref<{ requests: BookRequestItem[]; action: 'cancel' | 'delete'; bulk?: boolean } | null>(null)
 /** Open while the approver is writing the one reason the whole selection is being turned down for. */
 const rejectingSelection = ref(false)
 const rejectNote = ref('')
 
-const confirmTitle = computed(() =>
-  confirming.value?.action === 'delete' ? t('bookRequests.confirm.deleteTitle') : t('bookRequests.confirm.cancelTitle'),
-)
+const confirmTitle = computed(() => {
+  if (confirming.value?.bulk) {
+    const count = confirming.value.requests.length
+    return confirming.value.action === 'delete' ? t('bookRequests.bulk.deleteTitle', { count }) : t('bookRequests.bulk.cancelTitle', { count })
+  }
+  return confirming.value?.action === 'delete' ? t('bookRequests.confirm.deleteTitle') : t('bookRequests.confirm.cancelTitle')
+})
 
 const confirmDescription = computed(() => {
   if (!confirming.value) return ''
+  if (confirming.value.bulk && confirming.value.action === 'delete') return t('bookRequests.bulk.deleteDescription')
   if (confirming.value.action === 'delete') {
     return t(
       confirming.value.requests.some((request) => request.download?.alwaysDeletesRemote)
@@ -150,7 +172,10 @@ const confirmDescription = computed(() => {
 
 const confirmLabel = computed(() => (confirming.value?.action === 'delete' ? t('bookRequests.actions.delete') : t('bookRequests.actions.cancel')))
 /** The dialog acts on one row, so it is busy only while that row's own actions are running. */
-const confirmBusy = computed(() => confirming.value?.requests.some((request) => actions.isPending(request.id)) ?? false)
+const confirmBusy = computed(
+  () =>
+    (confirming.value?.bulk && actions.bulkPending.value) || (confirming.value?.requests.some((request) => actions.isPending(request.id)) ?? false),
+)
 
 async function loadActive() {
   if (activeTab.value === 'mine') await mine.fetchRequests()
@@ -214,7 +239,7 @@ function clearSelection() {
 /** A pair row's checkbox stands for every half of it a bulk action can reach. */
 function toggleSelect(row: BookRequestItem) {
   const ids = rowRequests(row)
-    .filter((request) => canBulkActRequest(request, canManage.value))
+    .filter((request) => canBulkActRequest(request, bulkActor.value))
     .map((request) => request.id)
   const allSelected = ids.every((id) => selectedIds.value.includes(id))
   selectedIds.value = allSelected ? selectedIds.value.filter((id) => !ids.includes(id)) : [...new Set([...selectedIds.value, ...ids])]
@@ -442,6 +467,33 @@ function handleRemove(request: BookRequestItem) {
 async function handleConfirm() {
   const pending = confirming.value
   if (!pending) return
+  if (pending.bulk) {
+    confirming.value = null
+    if (pending.action === 'delete') {
+      await runBulk(
+        pending.requests,
+        actions.deleteMany,
+        {
+          failed: 'bookRequests.errors.bulkDeleteFailed',
+          done: 'bookRequests.toasts.bulkDeleted',
+          partial: 'bookRequests.toasts.bulkDeletedPartial',
+        },
+        true,
+      )
+    } else {
+      await runBulk(
+        pending.requests,
+        actions.cancelMany,
+        {
+          failed: 'bookRequests.errors.bulkCancelFailed',
+          done: 'bookRequests.toasts.bulkCancelled',
+          partial: 'bookRequests.toasts.bulkCancelledPartial',
+        },
+        false,
+      )
+    }
+    return
+  }
   if (pending.action === 'delete') {
     for (const request of pending.requests) await deleteRequest(request)
   } else await cancelRequests(pending.requests)
@@ -548,6 +600,33 @@ function handleDismissSelected() {
       partial: 'bookRequests.toasts.bulkDismissedPartial',
     },
     !activeList.value.includeDismissed.value,
+  )
+}
+
+function handleCancelSelected() {
+  confirming.value = { requests: cancellableSelection.value, action: 'cancel', bulk: true }
+}
+
+function handleDeleteSelected() {
+  confirming.value = { requests: deletableSelection.value, action: 'delete', bulk: true }
+}
+
+/** The select resets to its prompt after each use, so it reads as an action rather than a filter. */
+function handleTrackSelected(event: Event) {
+  const select = event.target as HTMLSelectElement
+  const value = select.value
+  select.value = ''
+  if (value === '') return
+  const trackingStatus = value === 'none' ? null : (value as BookRequestTrackingStatus)
+  void runBulk(
+    trackableSelection.value,
+    (ids) => actions.setTrackingStatusMany(ids, trackingStatus),
+    {
+      failed: 'bookRequests.errors.bulkTrackingFailed',
+      done: 'bookRequests.toasts.bulkTracking',
+      partial: 'bookRequests.toasts.bulkTrackingPartial',
+    },
+    false,
   )
 }
 
@@ -811,6 +890,37 @@ function goToNextPage() {
             @click="handleDismissSelected"
           >
             {{ t('bookRequests.bulk.dismissSelected', { count: dismissableSelection.length }) }}
+          </Button>
+          <select
+            v-if="trackableSelection.length > 0"
+            :aria-label="t('bookRequests.bulk.trackingLabel', { count: trackableSelection.length })"
+            :disabled="actions.bulkPending.value"
+            class="h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+            @change="handleTrackSelected"
+          >
+            <option value="">{{ t('bookRequests.bulk.trackingPrompt', { count: trackableSelection.length }) }}</option>
+            <option v-for="trackingStatus in BOOK_REQUEST_TRACKING_STATUSES" :key="trackingStatus" :value="trackingStatus">
+              {{ t(`bookRequests.trackingStatus.${trackingStatus}`) }}
+            </option>
+            <option value="none">{{ t('bookRequests.trackingStatus.none') }}</option>
+          </select>
+          <Button
+            v-if="cancellableSelection.length > 0"
+            variant="outline"
+            size="sm"
+            :disabled="actions.bulkPending.value"
+            @click="handleCancelSelected"
+          >
+            {{ t('bookRequests.bulk.cancelSelected', { count: cancellableSelection.length }) }}
+          </Button>
+          <Button
+            v-if="deletableSelection.length > 0"
+            variant="destructive-outline"
+            size="sm"
+            :disabled="actions.bulkPending.value"
+            @click="handleDeleteSelected"
+          >
+            {{ t('bookRequests.bulk.deleteSelected', { count: deletableSelection.length }) }}
           </Button>
           <Button variant="ghost" size="sm" class="ms-auto" @click="clearSelection">
             <X :size="14" aria-hidden="true" />

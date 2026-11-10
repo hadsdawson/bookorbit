@@ -166,6 +166,22 @@ export class BookRequestAdminController {
    * dismissal, which hides a request without taking the record of it away from the other people
    * who asked for the same book.
    */
+  /** Deleting a selection of settled requests. Files on disk are always kept. */
+  @Post('delete')
+  @HttpCode(HttpStatus.OK)
+  @Auditable({
+    action: AuditAction.BookRequestDelete,
+    resource: AuditResource.BookRequest,
+    getMeta: (_req, body) => {
+      const result = body as { updated?: unknown[]; failed?: unknown[] } | null;
+      return { deleted: result?.updated?.length ?? 0, failed: result?.failed?.length ?? 0 };
+    },
+    description: 'Deleted a selection of book requests',
+  })
+  removeMany(@Body() dto: BulkBookRequestsDto, @CurrentUser() user: RequestUser) {
+    return this.service.removeMany(dto, user);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @Auditable({

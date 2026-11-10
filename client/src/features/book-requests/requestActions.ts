@@ -25,15 +25,32 @@ export function canDismissRequest(request: BookRequestItem): boolean {
 }
 
 /**
- * Whether ticking this row would let the bulk bar offer anything.
- *
- * Selection used to mean "pending", which on a list of twenty-two settled rows rendered a column
- * of blanks under a dead select-all box and read as a broken control. A row earns a checkbox when
- * at least one bulk action can reach it.
+ * Whether the tracking note can be set on this request: by whoever may drive it, and only while it
+ * still has something to wait for. Mirrors the server, which refuses anyone else.
  */
-export function canBulkActRequest(request: BookRequestItem, canManage: boolean): boolean {
-  if (canManage && request.status === 'pending') return true
-  return canDismissRequest(request) && !request.dismissed
+export function canTrackRequest(request: BookRequestItem, userId: number | null, canManage: boolean, canSelfFulfil = false): boolean {
+  if (request.status === 'available') return false
+  if (canManage) return true
+  if (userId === null) return false
+  return request.userId === userId || (canSelfFulfil && request.fulfillerUserId === userId)
+}
+
+export interface BulkActor {
+  userId: number | null
+  canManage: boolean
+  canSelfFulfil: boolean
+}
+
+/**
+ * Whether ticking this row would let the bulk bar offer anything. A row earns a checkbox when at
+ * least one bulk action can reach it: approve or reject, dismiss, set tracking, cancel, or delete.
+ */
+export function canBulkActRequest(request: BookRequestItem, actor: BulkActor): boolean {
+  if (actor.canManage && request.status === 'pending') return true
+  if (canDismissRequest(request) && !request.dismissed) return true
+  if (canTrackRequest(request, actor.userId, actor.canManage, actor.canSelfFulfil)) return true
+  if (canCancelRequest(request, actor.userId, actor.canManage, actor.canSelfFulfil)) return true
+  return canDeleteRequest(request, actor.canManage)
 }
 
 /**

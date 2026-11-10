@@ -237,7 +237,9 @@ function canGrab(request: BookRequestItem): boolean {
  * whichever of its halves a bulk action can reach.
  */
 function selectableHalves(row: BookRequestItem): BookRequestItem[] {
-  return rowRequests(row).filter((request) => canBulkActRequest(request, props.canManage))
+  return rowRequests(row).filter((request) =>
+    canBulkActRequest(request, { userId: props.currentUserId, canManage: props.canManage, canSelfFulfil: props.canSelfFulfil }),
+  )
 }
 
 function isSelectable(row: BookRequestItem): boolean {

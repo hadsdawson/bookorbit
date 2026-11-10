@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import { BOOK_REQUEST_STATUSES } from '@bookorbit/types'
 import type { BookRequestDownloadItem, BookRequestItem, BookRequestStatus } from '@bookorbit/types'
-import { canBulkActRequest, canCancelRequest, canDeleteRequest, canDismissRequest, cancelStopsATransfer } from '../requestActions'
+import { canBulkActRequest, canTrackRequest, canCancelRequest, canDeleteRequest, canDismissRequest, cancelStopsATransfer } from '../requestActions'
 
 const OWNER = 4
 const STRANGER = 9
@@ -110,23 +110,44 @@ describe('cancelStopsATransfer', () => {
 })
 
 describe('canBulkActRequest', () => {
-  it('offers a checkbox on a pending row only to someone who could approve it', () => {
-    expect(canBulkActRequest(request({ status: 'pending' }), true)).toBe(true)
-    expect(canBulkActRequest(request({ status: 'pending' }), false)).toBe(false)
+  const manager = { userId: 1, canManage: true, canSelfFulfil: false }
+  const stranger = { userId: 99, canManage: false, canSelfFulfil: false }
+
+  it('offers a checkbox on a pending row to someone who could approve it', () => {
+    expect(canBulkActRequest(request({ status: 'pending' }), manager)).toBe(true)
   })
 
   it.each(['rejected', 'cancelled', 'available', 'failed'] as const)('offers a checkbox on a settled %s row to anyone', (status) => {
-    expect(canBulkActRequest(request({ status }), false)).toBe(true)
+    expect(canBulkActRequest(request({ status }), stranger)).toBe(true)
   })
 
-  it('offers nothing on a row that is already hidden, since hiding is the action', () => {
-    expect(canBulkActRequest(request({ status: 'available', dismissed: true }), true)).toBe(false)
+  it('still offers a hidden settled row to a manager, who can delete it', () => {
+    expect(canBulkActRequest(request({ status: 'rejected', dismissed: true }), manager)).toBe(true)
+  })
+
+  it('offers nothing on a hidden row to someone who can only hide it', () => {
+    expect(canBulkActRequest(request({ status: 'available', dismissed: true }), stranger)).toBe(false)
   })
 
   it.each(['approved', 'searching', 'grabbed', 'downloading', 'importing', 'needs_review'] as const)(
-    'offers nothing mid-flight at %s, where neither bulk action applies',
+    'offers a checkbox mid-flight at %s, where tracking and cancelling apply',
     (status) => {
-      expect(canBulkActRequest(request({ status }), true)).toBe(false)
+      expect(canBulkActRequest(request({ status }), manager)).toBe(true)
     },
   )
+
+  it('offers nothing mid-flight on somebody else request to a plain user', () => {
+    expect(canBulkActRequest(request({ status: 'approved', userId: 5 }), stranger)).toBe(false)
+  })
+})
+
+describe('canTrackRequest', () => {
+  it('lets the requester track until the request is available', () => {
+    expect(canTrackRequest(request({ status: 'approved', userId: 5 }), 5, false)).toBe(true)
+    expect(canTrackRequest(request({ status: 'available', userId: 5 }), 5, false)).toBe(false)
+  })
+
+  it('refuses a stranger', () => {
+    expect(canTrackRequest(request({ status: 'approved', userId: 5 }), 6, false)).toBe(false)
+  })
 })
