@@ -10185,7 +10185,8 @@
       "pairMedia": "E-book and audiobook",
       "released": "Released",
       "tracking": "Tracking",
-      "trackingLabel": "Tracking status for {title}"
+      "trackingLabel": "Tracking status for {title}",
+      "releasedUnknown": "N/A"
     },
     "confirm": {
       "cancelDownloadTitle": "Cancel this download?",

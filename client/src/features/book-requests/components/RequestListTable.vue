@@ -297,13 +297,16 @@ function sortByTracking() {
   emit('sort', 'trackingStatus')
 }
 
-/** The full date where the provider gave one, else the year, which is all older requests carry. */
+/** The full release date for this format, or N/A: a year alone says nothing about whether this format is out. */
 function releasedLabel(request: BookRequestItem): string {
-  if (request.publishedDate) {
-    const [year, month, day] = request.publishedDate.split('-').map(Number)
-    return formatDate(new Date(year!, month! - 1, day!), { dateStyle: 'medium' })
-  }
-  return request.publishedYear ? String(request.publishedYear) : '-'
+  if (!request.publishedDate) return t('bookRequests.table.releasedUnknown')
+  const [year, month, day] = request.publishedDate.split('-').map(Number)
+  return formatDate(new Date(year!, month! - 1, day!), { dateStyle: 'medium' })
+}
+
+/** An available request is finished, so there is nothing left to track on it. */
+function showsTracking(request: BookRequestItem): boolean {
+  return request.status !== 'available'
 }
 
 /** Mirrors the server's rule: the requester, a manager, or whoever is fulfilling it. */
@@ -760,17 +763,19 @@ function rowDismissed(row: BookRequestItem): boolean {
             <td v-if="show('tracking')" class="px-3" :class="isCompact ? 'py-1.5' : 'py-2.5'">
               <div v-if="isPair(request)" class="flex flex-col gap-1">
                 <div v-for="half in orderedHalves(request)" :key="half.id" class="flex h-6 min-w-0 items-center gap-1.5">
-                  <component :is="mediaIcon(half)" :size="13" :class="mediaColor(half)" class="shrink-0" aria-hidden="true" />
-                  <RequestTrackingStatusSelect
-                    :request="half"
-                    :editable="canEditTracking(half)"
-                    :busy="busyIds.has(half.id)"
-                    @change="handleSetTrackingStatus"
-                  />
+                  <template v-if="showsTracking(half)">
+                    <component :is="mediaIcon(half)" :size="13" :class="mediaColor(half)" class="shrink-0" aria-hidden="true" />
+                    <RequestTrackingStatusSelect
+                      :request="half"
+                      :editable="canEditTracking(half)"
+                      :busy="busyIds.has(half.id)"
+                      @change="handleSetTrackingStatus"
+                    />
+                  </template>
                 </div>
               </div>
               <RequestTrackingStatusSelect
-                v-else
+                v-else-if="showsTracking(request)"
                 :request="request"
                 :editable="canEditTracking(request)"
                 :busy="busyIds.has(request.id)"
@@ -941,7 +946,7 @@ function rowDismissed(row: BookRequestItem): boolean {
               </RouterLink>
             </div>
             <p v-if="authorLine(request)" class="truncate text-xs text-muted-foreground">{{ authorLine(request) }}</p>
-            <p v-if="releasedLabel(request) !== '-'" class="text-xs text-muted-foreground tabular-nums">
+            <p class="text-xs text-muted-foreground tabular-nums">
               {{ t('bookRequests.card.releasedOn', { date: releasedLabel(request) }) }}
             </p>
 
@@ -952,6 +957,7 @@ function rowDismissed(row: BookRequestItem): boolean {
                 <span class="sr-only">{{ mediaLabel(half) }}</span>
                 <RequestStatusBadge :status="statusFor(half)" />
                 <RequestTrackingStatusSelect
+                  v-if="showsTracking(half)"
                   :request="half"
                   :editable="canEditTracking(half)"
                   :busy="busyIds.has(half.id)"
@@ -989,6 +995,7 @@ function rowDismissed(row: BookRequestItem): boolean {
                 {{ t('bookRequests.card.requestedByAt', { name: request.requesterName, time: formatRelativeFromNow(new Date(request.createdAt)) }) }}
               </span>
               <RequestTrackingStatusSelect
+                v-if="showsTracking(request)"
                 :request="request"
                 :editable="canEditTracking(request)"
                 :busy="busyIds.has(request.id)"
