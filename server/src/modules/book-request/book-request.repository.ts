@@ -228,9 +228,8 @@ export class BookRequestRepository {
     const dir = opts.sortDir === 'asc' ? sql.raw('asc') : sql.raw('desc');
     const NULLS_LAST_SORTS = {
       trackingStatus: sql`${bookRequests.trackingStatus} ${dir} nulls last`,
-      // The year stands in for the date on requests that only have one. Guarded, because a year of 0
-      // is a valid stored value and make_date() refuses it.
-      publishedDate: sql`coalesce(${bookRequests.publishedDate}, case when ${bookRequests.publishedYear} between 1 and 9999 then make_date(${bookRequests.publishedYear}, 1, 1) end) ${dir} nulls last`,
+      // Only a full date counts: the list shows N/A for a year alone, so those rows sort with the empty ones.
+      publishedDate: sql`${bookRequests.publishedDate} ${dir} nulls last`,
     } as const;
     const sortBy = opts.sortBy ?? 'createdAt';
     const primarySort = sortBy === 'trackingStatus' || sortBy === 'publishedDate' ? NULLS_LAST_SORTS[sortBy] : direction(SORT_COLUMNS[sortBy]);

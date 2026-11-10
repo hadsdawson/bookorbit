@@ -120,3 +120,25 @@ describe('RequestListTable columns', () => {
     ).toBe(true)
   })
 })
+
+describe('RequestListTable released and tracking cells', () => {
+  it('shows N/A when only a year is known', () => {
+    const wrapper = render([request({ publishedDate: null, publishedYear: 2024 })])
+    expect(wrapper.find('table').text()).toContain('N/A')
+    expect(wrapper.find('table').text()).not.toContain('2024')
+  })
+
+  it('shows the full date when there is one', () => {
+    expect(render([request({ publishedDate: '2026-12-08' })]).find('table').text()).toContain('2026')
+  })
+
+  it('hides tracking on an available request', () => {
+    expect(render([request({ status: 'available' })]).find('table').findAll('select')).toHaveLength(0)
+  })
+
+  it('hides tracking only on the half of a pair that is available', () => {
+    const audiobook = request({ id: 2, mediaKind: 'audiobook', companionRequestId: 1, status: 'approved' })
+    const wrapper = render([{ ...request({ companionRequestId: 2, status: 'available' }), companion: audiobook } as BookRequestItem])
+    expect(wrapper.find('table').findAll('select')).toHaveLength(1)
+  })
+})
