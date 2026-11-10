@@ -15372,7 +15372,8 @@
       "books": "Books",
       "authors": "Authors",
       "series": "Series",
-      "settings": "Settings"
+      "settings": "Settings",
+      "dock": "Book Dock"
     },
     "sections": {
       "continueReading": "Continue Reading",
@@ -15381,7 +15382,8 @@
       "books": "Books",
       "authors": "Authors",
       "series": "Series",
-      "settings": "Settings"
+      "settings": "Settings",
+      "dock": "Book Dock"
     },
     "kinds": {
       "author": "Author",
@@ -15390,7 +15392,8 @@
       "smartScope": "Smart scope",
       "collection": "Collection",
       "page": "Page",
-      "setting": "Setting"
+      "setting": "Setting",
+      "dockFile": "Book Dock"
     },
     "showAllBooks": "{count, plural, one {Show # book} other {Show all # books}}",
     "showAllAuthors": "{count, plural, one {Show # author} other {Show all # authors}}",

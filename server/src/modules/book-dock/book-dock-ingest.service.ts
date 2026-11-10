@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, OnApplicationBootstrap, OnModuleDestroy, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { basename, dirname, extname, join, relative, sep } from 'path';
 import { mkdir, realpath, stat } from 'fs/promises';
@@ -19,6 +19,7 @@ import { isExternalProviderIdKey } from '../metadata-fetch/provider-ids/provider
 import { inspectEpubMediaOverlayFields } from '../reader/epub/epub-media-overlay-capability';
 import { interpretRelease } from '../scanner/lib/release-plan';
 import { buildSingleBookCandidate } from '../scanner/lib/walk';
+import { BookDockDefaultTargetService } from './book-dock-default-target.service';
 import { BookDockRepository } from './book-dock.repository';
 import { BookDockMetadataService } from './book-dock-metadata.service';
 import { BookDockEventsService, BOOK_DOCK_FILE_INGESTED } from './book-dock-events.service';
@@ -52,6 +53,7 @@ export class BookDockIngestService implements OnApplicationBootstrap, OnModuleDe
     private readonly metadataFetchPipeline: MetadataFetchPipeline,
     private readonly processingState: BookDockProcessingStateService,
     private readonly gateway: BookDockGateway,
+    @Optional() private readonly defaultTarget?: BookDockDefaultTargetService,
   ) {
     const appDataPath = this.config.get<string>('storage.appDataPath') ?? '/data';
     this.bookDockPath = this.config.get<string>('storage.bookDockPath') ?? join(appDataPath, 'book-dock');
@@ -104,6 +106,7 @@ export class BookDockIngestService implements OnApplicationBootstrap, OnModuleDe
         uploadedBy: uploadedBy ?? null,
       });
 
+      await this.defaultTarget?.apply();
       this.extractMetadataAsync(row.id, ext, metadataQueuePriority(row));
 
       return row.id;
@@ -168,6 +171,7 @@ export class BookDockIngestService implements OnApplicationBootstrap, OnModuleDe
       status: 'pending',
     });
 
+    await this.defaultTarget?.apply();
     this.extractMetadataAsync(row.id, ext, metadataQueuePriority(row));
 
     return row.id;
@@ -246,6 +250,7 @@ export class BookDockIngestService implements OnApplicationBootstrap, OnModuleDe
           }),
       );
 
+      await this.defaultTarget?.apply();
       this.extractMetadataAsync(row.id, primary.format, metadataQueuePriority(row));
       for (const file of unit.files) claimedPaths.add(join(unitDirectory, file.path));
       result.created++;

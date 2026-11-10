@@ -14,6 +14,8 @@ import { formatNumber, formatPercent } from '@/i18n/formatters'
 import { useCommandPalette } from '../composables/useCommandPalette'
 import { useCommandPaletteResults, type PaletteItem, type PaletteTab } from '../composables/useCommandPaletteResults'
 import { highlightSegments } from '../lib/highlight'
+import { currentCoverUrl } from '@/features/book-dock/lib/file-display'
+import type { BookDockFile } from '@bookorbit/types'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -103,6 +105,9 @@ function select(item: PaletteItem) {
     case 'setting':
       navigate(item.to)
       return
+    case 'dockFile':
+      navigate({ name: 'book-dock', query: { search: query.value.trim(), file: String(item.file.id) } })
+      return
     case 'action':
       closePalette()
       item.run()
@@ -112,6 +117,15 @@ function select(item: PaletteItem) {
       listRef.value?.scrollTo({ top: 0 })
       inputRef.value?.focus()
   }
+}
+
+function dockTitle(file: BookDockFile): string {
+  return file.selectedMetadata?.title || file.fetchedMetadata?.title || file.embeddedMetadata?.title || file.fileName
+}
+
+function dockMeta(file: BookDockFile): string {
+  const authors = file.selectedMetadata?.authors ?? file.fetchedMetadata?.authors ?? file.embeddedMetadata?.authors ?? []
+  return [authors.join(', '), file.format?.toUpperCase()].filter(Boolean).join(' · ')
 }
 
 function selectTab(next: PaletteTab) {
@@ -416,6 +430,20 @@ const highlightClass = 'rounded-[2px] bg-(--shell-accent-tint) font-semibold tex
                   </span>
                 </span>
                 <span class="shrink-0 text-xs text-muted-foreground">{{ t('commandPalette.kinds.setting') }}</span>
+              </template>
+
+              <template v-else-if="item.kind === 'dockFile'">
+                <img :src="currentCoverUrl(item.file)" alt="" loading="lazy" class="h-12 w-8 shrink-0 rounded-[2px] bg-muted object-cover" />
+                <span class="min-w-0 flex-1">
+                  <span class="block truncate text-[14px] font-medium text-foreground">
+                    <template v-for="(seg, i) in segments(dockTitle(item.file))" :key="i">
+                      <span v-if="seg.match" :class="highlightClass">{{ seg.text }}</span>
+                      <template v-else>{{ seg.text }}</template>
+                    </template>
+                  </span>
+                  <span class="mt-0.5 block truncate text-[13px] text-muted-foreground">{{ dockMeta(item.file) }}</span>
+                </span>
+                <span class="shrink-0 text-xs text-muted-foreground">{{ t('commandPalette.kinds.dockFile') }}</span>
               </template>
 
               <template v-else-if="item.kind === 'action'">

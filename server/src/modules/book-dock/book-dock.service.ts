@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Inject, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { rmdir, unlink } from 'fs/promises';
 import { eq, inArray } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
@@ -9,6 +9,7 @@ import * as schema from '../../db/schema';
 import { libraries, libraryFolders } from '../../db/schema';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
 import { BookDockRepository, type ListOptions } from './book-dock.repository';
+import { BookDockDefaultTargetService } from './book-dock-default-target.service';
 import { BookDockIngestService } from './book-dock-ingest.service';
 import { BookDockFinalizeService } from './book-dock-finalize.service';
 import { BookDockGateway } from './book-dock.gateway';
@@ -34,9 +35,11 @@ export class BookDockService {
     private readonly watcherService: BookDockWatcherService,
     private readonly processingState: BookDockProcessingStateService,
     private readonly gateway: BookDockGateway,
+    @Optional() private readonly defaultTarget?: BookDockDefaultTargetService,
   ) {}
 
   async listFiles(query: ListOptions): Promise<BookDockFilesPage> {
+    await this.defaultTarget?.applyThrottled();
     const { items, total } = await this.repo.findAll(query);
     // One query for the whole page rather than one per unit row, which at a page of 100 units
     // would be 100 round trips for a list nobody has even expanded yet.
@@ -373,6 +376,7 @@ export class BookDockService {
   }
 
   async getSummary(userId?: number, canManageAll?: boolean): Promise<BookDockSummary> {
+    await this.defaultTarget?.applyThrottled();
     const [summary, paused] = await Promise.all([this.repo.countsByStatus(userId, canManageAll), this.processingState.isPaused()]);
     return { ...summary, paused };
   }
