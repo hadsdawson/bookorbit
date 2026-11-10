@@ -14,6 +14,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import {
+  BOOK_REQUEST_FORMAT_CHOICES,
   BOOK_REQUEST_IMPORT_FORMATS,
   MAX_AUTO_GRAB_ATTEMPTS_LIMIT,
   MAX_AUTO_SEARCH_INTERVAL_HOURS,
@@ -24,7 +25,7 @@ import {
   MIN_AUTO_SEARCH_INTERVAL_HOURS,
   MIN_AUTO_SEARCH_MAX_AGE_DAYS,
 } from '@bookorbit/types';
-import type { BookRequestImportFormats, ReleaseFileLayout } from '@bookorbit/types';
+import type { BookRequestFormatChoice, BookRequestImportFormats, ReleaseFileLayout } from '@bookorbit/types';
 
 /**
  * Null clears the default for that medium, which is not the same as omitting it: an omitted
@@ -165,6 +166,15 @@ class ReleaseProfilesDto {
  * row that never passed through this pipe.
  */
 export class UpdateAutomationSettingsDto {
+  /** Null lets requesters start from the form's own default. */
+  @IsOptional()
+  @IsIn(BOOK_REQUEST_FORMAT_CHOICES)
+  defaultFormat?: BookRequestFormatChoice | null;
+
+  @IsOptional()
+  @IsBoolean()
+  formatLocked?: boolean;
+
   @IsOptional()
   @IsBoolean()
   autoGrabEnabled?: boolean;

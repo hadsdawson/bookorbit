@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { ChevronRight, Loader2 } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 import {
+  BOOK_REQUEST_FORMAT_CHOICES,
   BOOK_REQUEST_IMPORT_FORMATS,
   BOOK_REQUEST_MEDIA_KINDS,
   MAX_AUTO_GRAB_ATTEMPTS_LIMIT,
@@ -14,6 +15,7 @@ import {
   MIN_AUTO_SEARCH_MAX_AGE_DAYS,
 } from '@bookorbit/types'
 import type {
+  BookRequestFormatChoice,
   BookRequestImportFormats,
   BookRequestMediaKind,
   IndexerItem,
@@ -182,6 +184,20 @@ function handleAutoGrabChange(enabled: boolean) {
  * side to be off. Both are ordinary choices about what a library should hold.
  */
 const IMPORT_FORMAT_OPTIONS = BOOK_REQUEST_IMPORT_FORMATS
+
+function formatChoiceLabel(choice: BookRequestFormatChoice): string {
+  return choice === 'pair' ? t('bookRequests.search.pair.choice') : t(`bookRequests.mediaKind.${choice}`)
+}
+
+function handleDefaultFormatChange(event: Event) {
+  const value = (event.target as HTMLSelectElement).value
+  const defaultFormat = value === '' ? null : (value as BookRequestFormatChoice)
+  void persist(defaultFormat === null ? { defaultFormat, formatLocked: false } : { defaultFormat }, 'settings.system.requests.automation.saved')
+}
+
+function handleFormatLockedChange(locked: boolean) {
+  void persist({ formatLocked: locked }, 'settings.system.requests.automation.saved')
+}
 
 function handleImportFormatsChange(importFormats: BookRequestImportFormats) {
   void persist({ importFormats }, 'settings.system.requests.automation.saved')
@@ -491,6 +507,42 @@ function handleVerificationChange(enabled: boolean) {
           </div>
         </div>
       </fieldset>
+    </div>
+
+    <div class="settings-card">
+      <div class="settings-card-header">
+        <span class="settings-card-title">{{ t('settings.system.requests.automation.requestFormat') }}</span>
+      </div>
+
+      <p class="settings-hint settings-prose bg-card px-4 py-3 md:px-5">{{ t('settings.system.requests.automation.requestFormatHint') }}</p>
+
+      <SettingsRow :label="t('settings.system.requests.automation.requestFormatDefault')" control-id="request-default-format">
+        <select
+          id="request-default-format"
+          :value="settings.defaultFormat ?? ''"
+          class="h-8 w-full rounded-md border border-input bg-background px-2 text-sm text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+          @change="handleDefaultFormatChange"
+        >
+          <option value="">{{ t('settings.system.requests.automation.requestFormatNone') }}</option>
+          <option v-for="choice in BOOK_REQUEST_FORMAT_CHOICES" :key="choice" :value="choice">{{ formatChoiceLabel(choice) }}</option>
+        </select>
+      </SettingsRow>
+
+      <SettingsRow
+        :label="t('settings.system.requests.automation.requestFormatLocked')"
+        :hint="
+          settings.defaultFormat === null
+            ? t('settings.system.requests.automation.requestFormatLockNeedsFormat')
+            : t('settings.system.requests.automation.requestFormatLockedHint')
+        "
+      >
+        <ToggleSwitch
+          :model-value="settings.formatLocked && settings.defaultFormat !== null"
+          :disabled="settings.defaultFormat === null"
+          :aria-label="t('settings.system.requests.automation.requestFormatLocked')"
+          @update:model-value="handleFormatLockedChange"
+        />
+      </SettingsRow>
     </div>
 
     <div class="settings-card">

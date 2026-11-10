@@ -9,9 +9,16 @@ const state = vi.hoisted(() => ({
   showBookRequests: true,
   toastSuccess: vi.fn<(message: string) => void>(),
   toastError: vi.fn<(message: string) => void>(),
+  formatPolicy: null as null | { value: { defaultFormat: string | null; locked: boolean } },
 }))
 
 vi.mock('@/lib/api', () => ({ api: state.api }))
+vi.mock('../composables/useRequestFormatPolicy', async () => {
+  const { ref } = await import('vue')
+  const policy = ref({ defaultFormat: null as string | null, locked: false })
+  state.formatPolicy = policy
+  return { useRequestFormatPolicy: () => ({ policy, load: vi.fn().mockResolvedValue(undefined) }) }
+})
 vi.mock('vue-sonner', () => ({ toast: { success: state.toastSuccess, error: state.toastError } }))
 vi.mock('@/features/auth/composables/usePermissions', () => ({ usePermissions: () => ({ hasPermission: state.hasPermission }) }))
 vi.mock('../composables/useBookRequestVisibility', () => ({
@@ -62,6 +69,19 @@ describe('BookMissingFormatRequest', () => {
     state.showBookRequests = true
     state.hasPermission.mockReturnValue(true)
     state.api.mockResolvedValue(json([NOTHING]))
+    state.formatPolicy!.value = { defaultFormat: null, locked: false }
+  })
+
+  it('stays out of the way when the server is locked to the format this book already has', async () => {
+    state.formatPolicy!.value = { defaultFormat: 'ebook', locked: true }
+    const wrapper = await render(['epub'])
+    expect(wrapper.text()).not.toContain('No audiobook yet')
+  })
+
+  it('still offers the missing format when the server is locked to pairs', async () => {
+    state.formatPolicy!.value = { defaultFormat: 'pair', locked: true }
+    const wrapper = await render(['epub'])
+    expect(wrapper.text()).toContain('No audiobook yet')
   })
 
   it('offers the audiobook an ebook is missing, and asks whether anybody has it already', async () => {

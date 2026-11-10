@@ -21,7 +21,22 @@ export const BOOK_REQUEST_AUTOMATION_SETTING_KEYS = {
   AUTO_SEARCH_ENABLED: "book_request_auto_search_enabled",
   AUTO_SEARCH_INTERVAL_HOURS: "book_request_auto_search_interval_hours",
   AUTO_SEARCH_MAX_AGE_DAYS: "book_request_auto_search_max_age_days",
+  DEFAULT_FORMAT: "book_request_default_format",
+  FORMAT_LOCKED: "book_request_format_locked",
 } as const;
+
+/** What the request form can ask for: one medium, or both together as a pair. */
+export const BOOK_REQUEST_FORMAT_CHOICES = ["ebook", "audiobook", "pair"] as const;
+export type BookRequestFormatChoice = (typeof BOOK_REQUEST_FORMAT_CHOICES)[number];
+
+/**
+ * What requesters are told about format. `locked` only takes effect with a `defaultFormat` set,
+ * so the effective policy is never "locked to nothing".
+ */
+export interface BookRequestFormatPolicy {
+  defaultFormat: BookRequestFormatChoice | null;
+  locked: boolean;
+}
 
 /**
  * The instance default destination for one medium, as two flat rows rather than a JSON blob, so
@@ -116,6 +131,10 @@ export interface BookRequestAutomationSettings {
    * Never applies to a multipart audiobook: its parts are one book, not competing editions.
    */
   importFormats: BookRequestImportFormats;
+  /** The format the request form starts on. Null leaves the form on its own default. */
+  defaultFormat: BookRequestFormatChoice | null;
+  /** Whether requesters may pick another format than `defaultFormat`. */
+  formatLocked: boolean;
   /**
    * Where a request goes when nobody picked anywhere: per medium, so audiobooks need not land in
    * the library the ebooks do.
@@ -149,6 +168,8 @@ export const DEFAULT_BOOK_REQUEST_AUTOMATION_SETTINGS: BookRequestAutomationSett
   // Keeping what the release carried is the less surprising default: dropping formats silently is
   // the change an operator would have to notice to undo.
   importFormats: "all",
+  defaultFormat: null,
+  formatLocked: false,
   // Unset, because guessing which of an operator's libraries holds audiobooks is how a book ends
   // up somewhere nobody looks. Until one is set the destination stays a decision a human makes.
   destinations: emptyRequestDestinationDefaults(),

@@ -159,6 +159,7 @@ function makeService(
   // Nothing pinned for the instance, so the destination stays whatever the request itself names.
   const automationSettings = {
     resolveDestinationFor: vi.fn().mockResolvedValue({ libraryId: null, folderId: null }),
+    getFormatPolicy: vi.fn().mockResolvedValue({ defaultFormat: null, locked: false }),
     ...overrides.automationSettings,
   };
   const removal = {
@@ -1043,6 +1044,48 @@ describe('BookRequestService.cancelDownload', () => {
 
     await expect(service.cancelDownload(10, 11, user())).rejects.toThrow('The download finished before it could be cancelled');
     expect(repo.updateIf).not.toHaveBeenCalled();
+  });
+});
+
+describe('BookRequestService format lock', () => {
+  function locked(defaultFormat: 'ebook' | 'audiobook' | 'pair') {
+    return { automationSettings: { getFormatPolicy: vi.fn().mockResolvedValue({ defaultFormat, locked: true }) } };
+  }
+
+  it('refuses the other medium when locked to one', async () => {
+    const { service, repo } = makeService(locked('ebook'));
+    await expect(service.submit({ ...dto, mediaKind: 'audiobook' }, user())).rejects.toMatchObject({
+      response: { errorCode: 'SUBMIT_FORMAT_LOCKED', errorMeta: { format: 'ebook' } },
+    });
+    expect(repo.create).not.toHaveBeenCalled();
+  });
+
+  it('accepts the locked medium', async () => {
+    const { service, repo } = makeService(locked('ebook'));
+    await service.submit({ ...dto, mediaKind: 'ebook' }, user());
+    expect(repo.create).toHaveBeenCalled();
+  });
+
+  it('refuses a pair when locked to one medium', async () => {
+    const { service } = makeService(locked('audiobook'));
+    await expect(service.submitPair({ title: 'Dune', authors: ['Frank Herbert'] }, user())).rejects.toMatchObject({
+      response: { errorCode: 'SUBMIT_FORMAT_LOCKED' },
+    });
+  });
+
+  /** Finishing a pair whose other half is already owned is a single-medium request. */
+  it('still accepts a single medium when locked to pairs', async () => {
+    const { service, repo } = makeService(locked('pair'));
+    await service.submit({ ...dto, mediaKind: 'audiobook' }, user());
+    expect(repo.create).toHaveBeenCalled();
+  });
+
+  it('enforces nothing when not locked', async () => {
+    const { service, repo } = makeService({
+      automationSettings: { getFormatPolicy: vi.fn().mockResolvedValue({ defaultFormat: 'ebook', locked: false }) },
+    });
+    await service.submit({ ...dto, mediaKind: 'audiobook' }, user());
+    expect(repo.create).toHaveBeenCalled();
   });
 });
 

@@ -4269,7 +4269,14 @@
             "allHint": "Keep every format that came with the release.",
             "preferred": "Preferred only",
             "preferredHint": "Keep only the format that sits highest in the destination library's format priority."
-          }
+          },
+          "requestFormat": "Request format",
+          "requestFormatHint": "The format the Request a Book page starts on. Lock it to stop requesters picking a different one.",
+          "requestFormatDefault": "Default format",
+          "requestFormatNone": "Let requesters choose",
+          "requestFormatLocked": "Lock this format",
+          "requestFormatLockedHint": "Hides the format choice on the Request a Book page. Locking to Both still lets a book you own in one format be completed with the other.",
+          "requestFormatLockNeedsFormat": "Pick a default format to lock it."
         },
         "profiles": {
           "title": "Release profiles",
@@ -9638,7 +9645,8 @@
         "submitted": "Requested the e-book and the audiobook",
         "submittedPartlyJoined": "Requested both. One was already on its way, so you were added to that request",
         "submittedJoinsBook": "Requested. It will join the copy already in your library"
-      }
+      },
+      "formatLocked": "Set by your server owner"
     },
     "card": {
       "details": "Details",
@@ -10234,7 +10242,8 @@
       "SUBMIT_ON_BEHALF_FORBIDDEN": "You are not allowed to request books for other people",
       "SUBMIT_ON_BEHALF_UNKNOWN_USER": "That user cannot have a book request made for them",
       "SUBMIT_TARGET_BOOK_NOT_FOUND": "That book is not in a library you can reach",
-      "SUBMIT_TARGET_BOOK_HAS_MEDIUM": "That book already has this format"
+      "SUBMIT_TARGET_BOOK_HAS_MEDIUM": "That book already has this format",
+      "SUBMIT_FORMAT_LOCKED": "Requests on this server are limited to {format}"
     },
     "actionError": {
       "BOOK_REQUEST_NOT_PENDING": "Only a pending request supports this action; this request is currently {status}",

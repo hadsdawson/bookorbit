@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, toRef } from 'vue'
+import { computed, onMounted, toRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { BookOpen, Check, Headphones, Library, Loader2, Users, WandSparkles } from '@lucide/vue'
@@ -8,6 +8,7 @@ import { usePermissions } from '@/features/auth/composables/usePermissions'
 import { useBookRequestVisibility } from '../composables/useBookRequestVisibility'
 import { useMissingFormatRequest } from '../composables/useMissingFormatRequest'
 import { submitFailureText } from '../composables/useRequestSubmission'
+import { useRequestFormatPolicy } from '../composables/useRequestFormatPolicy'
 
 /**
  * The format a book does not have yet, offered where the book's formats are listed: an ebook's
@@ -23,7 +24,16 @@ const { showBookRequests } = useBookRequestVisibility()
 const enabled = computed(() => hasPermission(Permission.BookRequestAccess) && showBookRequests.value)
 const { missing, state, requestId, ownedBookId, submitting, request } = useMissingFormatRequest(toRef(props, 'book'), enabled)
 
-const visible = computed(() => enabled.value && missing.value !== null)
+const { policy: formatPolicy, load: loadFormatPolicy } = useRequestFormatPolicy()
+onMounted(loadFormatPolicy)
+
+/** A server locked to the other medium would refuse this request, so it is not offered. */
+const allowedByPolicy = computed(() => {
+  const { locked, defaultFormat } = formatPolicy.value
+  return !locked || defaultFormat === null || defaultFormat === 'pair' || defaultFormat === missing.value
+})
+
+const visible = computed(() => enabled.value && missing.value !== null && allowedByPolicy.value)
 const icon = computed(() => (missing.value === 'audiobook' ? Headphones : BookOpen))
 const groupLabel = computed(() =>
   missing.value === 'audiobook' ? t('bookRequests.missingFormat.labelAudiobook') : t('bookRequests.missingFormat.labelEbook'),

@@ -48,6 +48,8 @@ describe('RequestAutomationSettingsService.get', () => {
       [KEYS.AUTO_SEARCH_ENABLED]: 'true',
       [KEYS.AUTO_SEARCH_INTERVAL_HOURS]: '12',
       [KEYS.AUTO_SEARCH_MAX_AGE_DAYS]: '90',
+      [KEYS.DEFAULT_FORMAT]: 'pair',
+      [KEYS.FORMAT_LOCKED]: 'true',
     });
 
     await expect(service.get()).resolves.toEqual({
@@ -61,6 +63,8 @@ describe('RequestAutomationSettingsService.get', () => {
       verificationEnabled: false,
       verificationThreshold: 85,
       importFormats: 'preferred',
+      defaultFormat: 'pair',
+      formatLocked: true,
       destinations: NO_DESTINATIONS,
       profiles: emptyReleaseProfiles(),
     });
@@ -291,5 +295,40 @@ describe('RequestAutomationSettingsService.resolveDestinationFor', () => {
 
       await expect(service.get()).resolves.toMatchObject({ profiles: emptyReleaseProfiles() });
     });
+  });
+});
+
+describe('RequestAutomationSettingsService format policy', () => {
+  it('reads a locked default format', async () => {
+    const { service } = makeService({ [KEYS.DEFAULT_FORMAT]: 'pair', [KEYS.FORMAT_LOCKED]: 'true' });
+    await expect(service.getFormatPolicy()).resolves.toEqual({ defaultFormat: 'pair', locked: true });
+  });
+
+  it('treats a lock with no format as unlocked', async () => {
+    const { service } = makeService({ [KEYS.FORMAT_LOCKED]: 'true' });
+    await expect(service.getFormatPolicy()).resolves.toEqual({ defaultFormat: null, locked: false });
+  });
+
+  it('ignores an unknown stored format', async () => {
+    const { service } = makeService({ [KEYS.DEFAULT_FORMAT]: 'comic', [KEYS.FORMAT_LOCKED]: 'true' });
+    await expect(service.getFormatPolicy()).resolves.toEqual({ defaultFormat: null, locked: false });
+  });
+
+  it('stores a default format and clears it with null', async () => {
+    const { service, appSettings } = makeService();
+    await service.update({ defaultFormat: 'audiobook' });
+    expect(appSettings.setValue).toHaveBeenCalledWith(KEYS.DEFAULT_FORMAT, 'audiobook');
+    await service.update({ defaultFormat: null });
+    expect(appSettings.setValue).toHaveBeenCalledWith(KEYS.DEFAULT_FORMAT, '');
+  });
+
+  it('refuses a format that is not a choice', async () => {
+    const { service } = makeService();
+    await expect(service.update({ defaultFormat: 'comic' as never })).rejects.toThrow(BadRequestException);
+  });
+
+  it('includes the format settings in the full settings', async () => {
+    const { service } = makeService({ [KEYS.DEFAULT_FORMAT]: 'ebook', [KEYS.FORMAT_LOCKED]: 'true' });
+    await expect(service.get()).resolves.toMatchObject({ defaultFormat: 'ebook', formatLocked: true });
   });
 });
