@@ -36,6 +36,7 @@ const STATUS_LABEL_KEYS: Record<ReadStatus, string> = {
   read: 'book.readStatus.read',
   skimmed: 'book.readStatus.skimmed',
   abandoned: 'book.readStatus.abandoned',
+  not_interested: 'book.readStatus.notInterested',
 }
 
 const localizedStatusOptions = computed(() => STATUS_OPTIONS.map((option) => ({ ...option, label: t(STATUS_LABEL_KEYS[option.value]) })))
@@ -56,10 +57,10 @@ const validationError = computed(() => {
   if (start && start > today.value) return t('book.bulkReadingState.errors.startFuture')
   if (finish && finish > today.value) return t('book.bulkReadingState.errors.finishFuture')
   if (start && finish && finish < start) return t('book.bulkReadingState.errors.finishBeforeStart')
-  if ((start || finish) && ['unread', 'want_to_read'].includes(status.value)) {
+  if ((start || finish) && ['unread', 'want_to_read', 'not_interested'].includes(status.value)) {
     return t('book.bulkReadingState.errors.statusConflict')
   }
-  if (finish && ['unread', 'want_to_read', 'reading', 'rereading', 'on_hold'].includes(status.value)) {
+  if (finish && ['unread', 'want_to_read', 'not_interested', 'reading', 'rereading', 'on_hold'].includes(status.value)) {
     return t('book.bulkReadingState.errors.statusConflict')
   }
   return null

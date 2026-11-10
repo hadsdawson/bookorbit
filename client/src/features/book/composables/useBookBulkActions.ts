@@ -65,7 +65,7 @@ export type QuerySelectionState = BookSelectionQuery & {
 }
 
 function buildLocalReadStatus(patch: BulkReadingStatePatch, existing: UserBookStatus | null, nowIso: string): UserBookStatus {
-  const clearsLifecycle = patch.status === 'unread' || patch.status === 'want_to_read'
+  const clearsLifecycle = patch.status === 'unread' || patch.status === 'want_to_read' || patch.status === 'not_interested'
   const hasStartedAt = Object.prototype.hasOwnProperty.call(patch, 'startedAt')
   const hasFinishedAt = Object.prototype.hasOwnProperty.call(patch, 'finishedAt')
   return {

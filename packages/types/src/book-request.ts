@@ -34,6 +34,22 @@ export const MAX_BOOK_REQUEST_SEARCH_ISBNS = 8;
  */
 export const MAX_TORRENT_FILE_BYTES = 2 * 1024 * 1024;
 
+/**
+ * A note a person sets by hand on a request, separate from the workflow status the server drives.
+ * It records why a request is still waiting from the requester's side: the book is out but not in
+ * this format yet, it is not out at all yet, or it was searched for and could not be found.
+ */
+export const BOOK_REQUEST_TRACKING_STATUSES = ["format_not_available", "not_yet_released", "missing"] as const;
+export type BookRequestTrackingStatus = (typeof BOOK_REQUEST_TRACKING_STATUSES)[number];
+
+/** The list filter's extra value for "no tracking status set". */
+export const BOOK_REQUEST_TRACKING_STATUS_NONE = "none" as const;
+export type BookRequestTrackingStatusFilter = BookRequestTrackingStatus | typeof BOOK_REQUEST_TRACKING_STATUS_NONE;
+
+export interface UpdateBookRequestTrackingStatusPayload {
+  trackingStatus: BookRequestTrackingStatus | null;
+}
+
 export const BOOK_REQUEST_STATUSES = [
   "pending",
   "approved",
@@ -409,6 +425,8 @@ export interface BookRequestWorkSnapshot {
   isbn10: string | null;
   isbn13: string | null;
   publishedYear: number | null;
+  /** The full release date as YYYY-MM-DD, when the provider gave one. Null when only a year is known. */
+  publishedDate: string | null;
   language: string | null;
   coverUrl: string | null;
   providerKey: string | null;
@@ -430,6 +448,8 @@ export interface BookRequestItem extends BookRequestWorkSnapshot {
   /** A retired medium only on a request made before it was retired; see `LegacyBookRequestMediaKind`. */
   mediaKind: StoredBookRequestMediaKind;
   status: BookRequestStatus;
+  /** Set by hand; see `BOOK_REQUEST_TRACKING_STATUSES`. Null when nobody has set one. */
+  trackingStatus: BookRequestTrackingStatus | null;
   preferredFormats: string[];
   note: string | null;
   targetLibraryId: number | null;
@@ -611,7 +631,7 @@ export interface BookRequestSummary {
  * Columns the request list can be ordered by. Shared so the table cannot offer a sort the query
  * does not know how to build, and so a rename breaks the client at compile time.
  */
-export const BOOK_REQUEST_SORT_FIELDS = ["createdAt", "title", "mediaKind", "requester", "status"] as const;
+export const BOOK_REQUEST_SORT_FIELDS = ["createdAt", "title", "mediaKind", "requester", "status", "trackingStatus", "publishedDate"] as const;
 export type BookRequestSortField = (typeof BOOK_REQUEST_SORT_FIELDS)[number];
 
 export const BOOK_REQUEST_SORT_DIRECTIONS = ["asc", "desc"] as const;

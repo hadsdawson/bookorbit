@@ -14,6 +14,7 @@ import { BulkBookRequestsDto } from './dto/bulk-book-requests.dto';
 import { ListBookRequestsDto } from './dto/list-book-requests.dto';
 import { UpdateBookRequestLanguageDto } from './dto/update-book-request-language.dto';
 import { RemoveDownloadDto } from './dto/remove-download.dto';
+import { UpdateBookRequestTrackingStatusDto } from './dto/update-book-request-tracking-status.dto';
 
 @Controller('book-requests')
 @RequirePermission(Permission.BookRequestAccess)
@@ -107,6 +108,13 @@ export class BookRequestController {
   @HttpCode(HttpStatus.OK)
   setLanguage(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateBookRequestLanguageDto, @CurrentUser() user: RequestUser) {
     return this.service.setLanguage(id, dto.language, user);
+  }
+
+  /** A note set by hand, apart from the workflow status. Logged by the service rather than audited. */
+  @Post(':id/tracking-status')
+  @HttpCode(HttpStatus.OK)
+  setTrackingStatus(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateBookRequestTrackingStatusDto, @CurrentUser() user: RequestUser) {
+    return this.service.setTrackingStatus(id, dto.trackingStatus, user);
   }
 
   @Post(':id/cancel')

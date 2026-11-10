@@ -39,6 +39,7 @@ function row(overrides: Record<string, unknown> = {}) {
     userId: 1,
     mediaKind: 'ebook',
     status: 'pending',
+    trackingStatus: null,
     title: 'Dune',
     subtitle: null,
     authors: ['Frank Herbert'],
@@ -47,6 +48,7 @@ function row(overrides: Record<string, unknown> = {}) {
     isbn10: null,
     isbn13: null,
     publishedYear: null,
+    publishedDate: null,
     language: null,
     coverUrl: null,
     providerKey: null,
@@ -216,6 +218,18 @@ describe('BookRequestService.submit', () => {
         scope: { kind: 'permission', permission: Permission.ManageBookRequests },
       }),
     );
+  });
+
+  it('stores the full release date, normalised, and takes the year from it when none was given', async () => {
+    const { service, repo } = makeService();
+    await service.submit({ ...dto, publishedYear: undefined, publishedDate: '2026-3-14' }, user());
+    expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ publishedDate: '2026-03-14', publishedYear: 2026 }), expect.anything());
+  });
+
+  it('drops a release date that is only a year', async () => {
+    const { service, repo } = makeService();
+    await service.submit({ ...dto, publishedYear: 2026, publishedDate: '2026' }, user());
+    expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ publishedDate: null, publishedYear: 2026 }), expect.anything());
   });
 
   it('rejects a blank title rather than storing one', async () => {
@@ -1029,6 +1043,49 @@ describe('BookRequestService.cancelDownload', () => {
 
     await expect(service.cancelDownload(10, 11, user())).rejects.toThrow('The download finished before it could be cancelled');
     expect(repo.updateIf).not.toHaveBeenCalled();
+  });
+});
+
+describe('BookRequestService.setTrackingStatus', () => {
+  it('lets the owner set a tracking status', async () => {
+    const { service, repo } = makeService();
+    await service.setTrackingStatus(10, 'not_yet_released', user());
+    expect(repo.update).toHaveBeenCalledWith(10, { trackingStatus: 'not_yet_released' });
+  });
+
+  it('clears the tracking status', async () => {
+    const { service, repo } = makeService({ repo: { findById: vi.fn().mockResolvedValue(joined({ trackingStatus: 'missing' })) } });
+    await service.setTrackingStatus(10, null, user());
+    expect(repo.update).toHaveBeenCalledWith(10, { trackingStatus: null });
+  });
+
+  it('writes nothing when the value is unchanged', async () => {
+    const { service, repo } = makeService({ repo: { findById: vi.fn().mockResolvedValue(joined({ trackingStatus: 'missing' })) } });
+    await service.setTrackingStatus(10, 'missing', user());
+    expect(repo.update).not.toHaveBeenCalled();
+  });
+
+  /** It is a note, not part of the workflow, so a filed request can still carry one. */
+  it.each(['pending', 'available', 'failed', 'rejected'])('can be set while %s', async (status) => {
+    const { service, repo } = makeService({ repo: { findById: vi.fn().mockResolvedValue(joined({ status })) } });
+    await service.setTrackingStatus(10, 'format_not_available', user());
+    expect(repo.update).toHaveBeenCalledWith(10, { trackingStatus: 'format_not_available' });
+  });
+
+  it('refuses a stranger', async () => {
+    const { service } = makeService({ repo: { findById: vi.fn().mockResolvedValue(joined({ userId: 2 })) } });
+    await expect(service.setTrackingStatus(10, 'missing', user())).rejects.toThrow(ForbiddenException);
+  });
+
+  it('lets an approver set it on someone else request', async () => {
+    const { service, repo } = makeService({ repo: { findById: vi.fn().mockResolvedValue(joined({ userId: 2 })) } });
+    await service.setTrackingStatus(10, 'missing', moderator());
+    expect(repo.update).toHaveBeenCalledWith(10, { trackingStatus: 'missing' });
+  });
+
+  it('reports a missing request as not found', async () => {
+    const { service } = makeService({ repo: { findById: vi.fn().mockResolvedValue(undefined) } });
+    await expect(service.setTrackingStatus(10, 'missing', user())).rejects.toThrow(NotFoundException);
   });
 });
 

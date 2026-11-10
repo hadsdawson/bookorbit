@@ -18,8 +18,22 @@ export interface ScrollerSelectionOptions {
 }
 type RandomCandidateRow = { sampleIndex: number; id: number };
 const AUDIO_FORMATS = BOOK_FORMATS.filter(isAudioFormat);
-const CONTINUE_SCROLLER_EXCLUDED_READ_STATUSES = ['unread', 'read', 'skimmed', 'abandoned'] as const satisfies readonly ReadStatus[];
-const DISCOVERY_EXCLUDED_READ_STATUSES = ['reading', 'rereading', 'on_hold', 'read', 'skimmed', 'abandoned'] as const satisfies readonly ReadStatus[];
+const CONTINUE_SCROLLER_EXCLUDED_READ_STATUSES = [
+  'unread',
+  'read',
+  'skimmed',
+  'abandoned',
+  'not_interested',
+] as const satisfies readonly ReadStatus[];
+const DISCOVERY_EXCLUDED_READ_STATUSES = [
+  'reading',
+  'rereading',
+  'on_hold',
+  'read',
+  'skimmed',
+  'abandoned',
+  'not_interested',
+] as const satisfies readonly ReadStatus[];
 // Three independent pivots per requested row tolerate moderate collisions from
 // sparse eligibility. The ceiling prevents large requests from multiplying probes.
 const RANDOM_PIVOT_MULTIPLIER = 3;

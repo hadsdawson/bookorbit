@@ -28,6 +28,7 @@ import type {
   BookRequestFailureMeta,
   BookRequestSubmitErrorCode,
   BookRequestItem,
+  BookRequestTrackingStatus,
   BookRequestMediaKind,
   BookRequestMetadataSource,
   BookRequestPage,
@@ -47,6 +48,7 @@ import type {
 import { StatsCache } from '../../common/cache/stats-cache';
 import { isUniqueViolation } from '../../common/utils/db-error.utils';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
+import { normalizePublishedDate, publishedYearFromDateKey } from '../../common/utils/published-date.utils';
 import type { RequestUser } from '../../common/types/request-user';
 import type { BookRequestRow, NewBookRequestRow } from '../../db/schema';
 import { LibraryService } from '../library/library.service';
@@ -551,6 +553,7 @@ export class BookRequestService {
       throw submitRefusal('SUBMIT_DESTINATION_REQUIRED', 'Pick a destination library: your own requests are approved without a second pair of eyes');
     }
 
+    const publishedDate = normalizePublishedDate(dto.publishedDate) ?? null;
     const insert: NewBookRequestRow = {
       userId: subject.id,
       createdByUserId: this.attribution.createdByUserIdFor(actor, subject),
@@ -564,7 +567,8 @@ export class BookRequestService {
       seriesIndex: dto.seriesIndex ?? null,
       isbn10: dto.isbn10 ?? null,
       isbn13: dto.isbn13 ?? null,
-      publishedYear: dto.publishedYear ?? null,
+      publishedYear: dto.publishedYear ?? (publishedDate ? publishedYearFromDateKey(publishedDate) : null),
+      publishedDate,
       // Normalised on the way in, because providers state it every which way: "spa", "English",
       // or nothing at all. The matcher compares codes, so anything else is a filter that either
       // rejects everything or agrees by accident.
@@ -842,6 +846,7 @@ export class BookRequestService {
       userId: user.id,
       selfServe: dto.selfServe,
       excludeDismissedFor: dto.includeDismissed ? undefined : user.id,
+      trackingStatus: dto.trackingStatus,
       sortBy: dto.sortBy,
       sortDir: dto.sortDir,
       groupPairs: dto.groupPairs,
@@ -859,6 +864,7 @@ export class BookRequestService {
       requesterUserId: dto.requesterUserId,
       selfServe: dto.selfServe,
       excludeDismissedFor: dto.includeDismissed ? undefined : user.id,
+      trackingStatus: dto.trackingStatus,
       sortBy: dto.sortBy,
       sortDir: dto.sortDir,
       groupPairs: dto.groupPairs,
@@ -1039,6 +1045,27 @@ export class BookRequestService {
     );
 
     this.gateway.emitChanged();
+    return this.getOne(id, user);
+  }
+
+  /**
+   * A note set by hand, apart from the workflow status, so it may change at any point in the
+   * request's life. Only whoever may drive the request can set it, the same as its language.
+   */
+  async setTrackingStatus(id: number, trackingStatus: BookRequestTrackingStatus | null, user: RequestUser): Promise<BookRequestItem> {
+    const joined = await this.repo.findById(id);
+    if (!joined) throw new NotFoundException('Book request not found');
+    if (!this.canDrive(joined.request, user)) throw new ForbiddenException('You cannot change this book request');
+
+    const previous = joined.request.trackingStatus ?? null;
+    if (previous !== trackingStatus) {
+      const updated = await this.repo.update(id, { trackingStatus });
+      if (!updated) throw new NotFoundException('Book request not found');
+      this.logger.log(
+        `[book_request.set_tracking_status] [end] requestId=${id} userId=${user.id} from=${previous ?? 'none'} to=${trackingStatus ?? 'none'} - request tracking status changed`,
+      );
+      this.gateway.emitChanged();
+    }
     return this.getOne(id, user);
   }
 

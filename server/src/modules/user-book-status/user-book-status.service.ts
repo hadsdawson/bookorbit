@@ -103,7 +103,7 @@ export class UserBookStatusService {
     let nextStartedAt = hasStartedAt ? (patch.startedAt ?? null) : (existing?.startedAt ?? null);
     let nextFinishedAt = hasFinishedAt ? (patch.finishedAt ?? null) : (existing?.finishedAt ?? null);
 
-    if (nextStatus === 'unread' || nextStatus === 'want_to_read') {
+    if (nextStatus === 'unread' || nextStatus === 'want_to_read' || nextStatus === 'not_interested') {
       nextStartedAt = null;
       nextFinishedAt = null;
     }
@@ -111,7 +111,8 @@ export class UserBookStatusService {
     // When dates were not explicitly provided and would be null, seed from session history.
     // Explicit null patches (user clearing a date) are preserved as-is.
     // Mirror the same status guard used in repo.upsert(): unread/want_to_read always have null dates.
-    const needsStartedAt = !hasStartedAt && nextStartedAt === null && nextStatus !== 'unread' && nextStatus !== 'want_to_read';
+    const needsStartedAt =
+      !hasStartedAt && nextStartedAt === null && nextStatus !== 'unread' && nextStatus !== 'want_to_read' && nextStatus !== 'not_interested';
     const needsFinishedAt = !hasFinishedAt && nextFinishedAt === null && nextStatus === 'read';
     if (needsStartedAt || needsFinishedAt) {
       const boundaries = await this.repo.findSessionBoundariesForBook(userId, bookId);
@@ -206,7 +207,7 @@ export class UserBookStatusService {
     await Promise.all(
       bookIds.map((bookId) => {
         const current = existingMap.get(bookId) ?? null;
-        const clearsLifecycle = status === 'unread' || status === 'want_to_read';
+        const clearsLifecycle = status === 'unread' || status === 'want_to_read' || status === 'not_interested';
         return this.repo.upsertState(userId, bookId, {
           status,
           source: 'manual',

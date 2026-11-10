@@ -42,7 +42,7 @@ function projectionDatesFor(
   status: ReadStatus,
   attempt: { startedOn: string | null; endedOn: string | null; outcome: ReadingAttemptOutcome | null } | null | undefined,
 ): { startedOn: string | null; endedOn: string | null } {
-  if (!attempt || status === 'unread' || status === 'want_to_read') return { startedOn: null, endedOn: null };
+  if (!attempt || status === 'unread' || status === 'want_to_read' || status === 'not_interested') return { startedOn: null, endedOn: null };
   return { startedOn: attempt.startedOn, endedOn: attempt.outcome === 'completed' ? attempt.endedOn : null };
 }
 
@@ -148,7 +148,7 @@ export class ReadingAttemptService {
         }
       } else {
         const isActiveStatus = status === 'reading' || status === 'rereading' || status === 'on_hold';
-        const clearsLifecycle = status === 'unread' || status === 'want_to_read';
+        const clearsLifecycle = status === 'unread' || status === 'want_to_read' || status === 'not_interested';
         if ((isActiveStatus && endedOn !== undefined && endedOn !== null) || (clearsLifecycle && (startedOn != null || endedOn != null))) {
           throw new BadRequestException({
             message: 'Reading dates conflict with the requested status',
@@ -487,7 +487,7 @@ export class ReadingAttemptService {
         const target = active ?? latest;
         let status: ReadStatus = 'unread';
         if (active) status = current?.status === 'on_hold' ? 'on_hold' : hasCompleted ? 'rereading' : 'reading';
-        else if (current?.status === 'want_to_read' || current?.status === 'unread') status = current.status;
+        else if (current?.status === 'want_to_read' || current?.status === 'unread' || current?.status === 'not_interested') status = current.status;
         else if (latest?.outcome === 'completed') status = 'read';
         else if (latest?.outcome === 'skimmed') status = 'skimmed';
         else if (latest?.outcome === 'abandoned') status = 'abandoned';

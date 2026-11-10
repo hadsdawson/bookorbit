@@ -1,7 +1,20 @@
 import { Transform } from 'class-transformer';
 import { IsBoolean, IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
-import { BOOK_REQUEST_MEDIA_KINDS, BOOK_REQUEST_SORT_DIRECTIONS, BOOK_REQUEST_SORT_FIELDS, BOOK_REQUEST_STATUSES } from '@bookorbit/types';
-import type { BookRequestMediaKind, BookRequestSortDirection, BookRequestSortField, BookRequestStatus } from '@bookorbit/types';
+import {
+  BOOK_REQUEST_MEDIA_KINDS,
+  BOOK_REQUEST_SORT_DIRECTIONS,
+  BOOK_REQUEST_SORT_FIELDS,
+  BOOK_REQUEST_STATUSES,
+  BOOK_REQUEST_TRACKING_STATUS_NONE,
+  BOOK_REQUEST_TRACKING_STATUSES,
+} from '@bookorbit/types';
+import type {
+  BookRequestMediaKind,
+  BookRequestSortDirection,
+  BookRequestSortField,
+  BookRequestStatus,
+  BookRequestTrackingStatusFilter,
+} from '@bookorbit/types';
 
 export class ListBookRequestsDto {
   @IsOptional()
@@ -24,6 +37,11 @@ export class ListBookRequestsDto {
   @IsOptional()
   @IsIn(BOOK_REQUEST_MEDIA_KINDS)
   mediaKind?: BookRequestMediaKind;
+
+  /** One tracking status, or `none` for requests nobody has set one on. */
+  @IsOptional()
+  @IsIn([...BOOK_REQUEST_TRACKING_STATUSES, BOOK_REQUEST_TRACKING_STATUS_NONE])
+  trackingStatus?: BookRequestTrackingStatusFilter;
 
   /** Rows the caller has hidden are left out unless they ask for them back. */
   @IsOptional()

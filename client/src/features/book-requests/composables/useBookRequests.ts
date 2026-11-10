@@ -13,6 +13,8 @@ import type {
   BookRequestSortField,
   BookRequestStatus,
   BookRequestSubmitErrorCode,
+  BookRequestTrackingStatus,
+  BookRequestTrackingStatusFilter,
   BookRequestBulkResult,
   BulkBookRequestsPayload,
   BulkRejectBookRequestsPayload,
@@ -40,6 +42,8 @@ export function useBookRequests(scope: RequestScope) {
   const includeDismissed = ref(false)
   /** '' is "either", so the control has a third state rather than a checkbox that means two. */
   const selfServe = ref<'' | 'true' | 'false'>('')
+  /** '' is any; 'none' is rows with no tracking status set. */
+  const trackingStatus = ref<BookRequestTrackingStatusFilter | ''>('')
   const sortBy = ref<BookRequestSortField>('createdAt')
   const sortDir = ref<BookRequestSortDirection>('desc')
   const loading = ref(false)
@@ -75,6 +79,7 @@ export function useBookRequests(scope: RequestScope) {
     if (scope === 'all' && requesterUserId.value !== '') query.set('requesterUserId', String(requesterUserId.value))
     if (includeDismissed.value) query.set('includeDismissed', 'true')
     if (selfServe.value !== '') query.set('selfServe', selfServe.value)
+    if (trackingStatus.value !== '') query.set('trackingStatus', trackingStatus.value)
     query.set('sortBy', sortBy.value)
     query.set('sortDir', sortDir.value)
     // A pair is one row here, led by its ebook, with the audiobook riding along as its companion.
@@ -133,7 +138,7 @@ export function useBookRequests(scope: RequestScope) {
     if (sortBy.value === field) sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
     else {
       sortBy.value = field
-      sortDir.value = field === 'createdAt' ? 'desc' : 'asc'
+      sortDir.value = field === 'createdAt' || field === 'publishedDate' ? 'desc' : 'asc'
     }
     page.value = 1
     await fetchRequests()
@@ -205,6 +210,7 @@ export function useBookRequests(scope: RequestScope) {
     requesterOptions,
     includeDismissed,
     selfServe,
+    trackingStatus,
     sortBy,
     sortDir,
     loading,
@@ -380,6 +386,8 @@ export function useBookRequestActions(canManage: () => boolean) {
     dismissMany,
     /** The language the request asks for, which decides which releases can match it at all. */
     setLanguage: (id: number, language: string | null) => run(id, `/api/v1/book-requests/${id}/language`, { language }),
+    setTrackingStatus: (id: number, trackingStatus: BookRequestTrackingStatus | null) =>
+      run(id, `/api/v1/book-requests/${id}/tracking-status`, { trackingStatus }),
     cancelDownload: (id: number, downloadId: number, body?: RemoveBookRequestDownloadPayload) =>
       run(id, `/api/v1/book-requests/${id}/downloads/${downloadId}/cancel`, body),
     cancel: (id: number, body?: RemoveBookRequestDownloadPayload) => run(id, `/api/v1/book-requests/${id}/cancel`, body),

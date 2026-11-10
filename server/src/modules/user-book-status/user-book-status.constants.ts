@@ -1,6 +1,16 @@
 import type { ReadStatus, ReadStatusSource } from '@bookorbit/types';
 
-export const READ_STATUSES: readonly ReadStatus[] = ['unread', 'want_to_read', 'reading', 'on_hold', 'rereading', 'read', 'skimmed', 'abandoned'];
+export const READ_STATUSES: readonly ReadStatus[] = [
+  'unread',
+  'want_to_read',
+  'reading',
+  'on_hold',
+  'rereading',
+  'read',
+  'skimmed',
+  'abandoned',
+  'not_interested',
+];
 
 export const READ_STATUS_SOURCES: readonly ReadStatusSource[] = ['auto', 'manual'];
 
