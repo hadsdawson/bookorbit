@@ -70,7 +70,7 @@ import type { BookRequestWorkDto, CreateBookRequestDto } from './dto/create-book
 import type { CreateBookRequestPairDto } from './dto/create-book-request-pair.dto';
 import type { DecideBookRequestDto } from './dto/decide-book-request.dto';
 import type { FulfillBookRequestDto } from './dto/fulfill-book-request.dto';
-import type { BulkBookRequestsDto, BulkRejectBookRequestsDto } from './dto/bulk-book-requests.dto';
+import type { BulkBookRequestsDto, BulkRejectBookRequestsDto, BulkTrackingStatusDto } from './dto/bulk-book-requests.dto';
 import type { ListAllBookRequestsDto, ListBookRequestsDto } from './dto/list-book-requests.dto';
 import type { ListRequesterOptionsDto } from './dto/list-requester-options.dto';
 
@@ -1298,6 +1298,30 @@ export class BookRequestService {
     return this.runBulk('book_request.reject_many', [...new Set(dto.ids)], user, 'Could not reject that request', (id) =>
       this.reject(id, { decisionNote: dto.decisionNote }, user),
     );
+  }
+
+  /** Each row goes through the single setter, so every row keeps its own permission check. */
+  async setTrackingStatusMany(dto: BulkTrackingStatusDto, user: RequestUser): Promise<BookRequestBulkResult> {
+    return this.runBulk('book_request.set_tracking_status_many', [...new Set(dto.ids)], user, 'Could not change that tracking status', (id) =>
+      this.setTrackingStatus(id, dto.trackingStatus, user),
+    );
+  }
+
+  /** Files from a cancelled transfer are kept, as a single cancel does unless asked otherwise. */
+  async cancelMany(dto: BulkBookRequestsDto, user: RequestUser): Promise<BookRequestBulkResult> {
+    return this.runBulk('book_request.cancel_many', [...new Set(dto.ids)], user, 'Could not cancel that request', (id) => this.cancel(id, user));
+  }
+
+  /**
+   * Deletes a selection and reports each row as it was just before. Files on disk are kept: a
+   * batch is no place to decide, row by row, which downloads are safe to throw away.
+   */
+  async removeMany(dto: BulkBookRequestsDto, user: RequestUser): Promise<BookRequestBulkResult> {
+    return this.runBulk('book_request.remove_many', [...new Set(dto.ids)], user, 'Could not delete that request', async (id) => {
+      const before = await this.getOne(id, user);
+      await this.remove(id, user);
+      return before;
+    });
   }
 
   /** Hiding is personal, so this needs no moderator permission and touches nobody else's list. */

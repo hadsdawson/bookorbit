@@ -177,8 +177,9 @@ describe('RequestListTable pairs', () => {
   })
 
   it('ticks the row only when every half a bulk action can reach is selected', () => {
-    // Only the pending ebook can be acted on in bulk; the downloading audiobook cannot.
-    expect((renderPair([10]).get('table tbody input[type="checkbox"]').element as HTMLInputElement).checked).toBe(true)
+    // A manager can act on both halves: approve the pending ebook, track or cancel the downloading audiobook.
+    expect((renderPair([10, 11]).get('table tbody input[type="checkbox"]').element as HTMLInputElement).checked).toBe(true)
+    expect((renderPair([10]).get('table tbody input[type="checkbox"]').element as HTMLInputElement).checked).toBe(false)
     expect((renderPair([]).get('table tbody input[type="checkbox"]').element as HTMLInputElement).checked).toBe(false)
   })
 })

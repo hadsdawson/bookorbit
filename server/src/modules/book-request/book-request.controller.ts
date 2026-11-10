@@ -10,7 +10,7 @@ import { BookRequestService } from './book-request.service';
 import { CheckAvailabilityDto } from './dto/check-availability.dto';
 import { CreateBookRequestDto } from './dto/create-book-request.dto';
 import { CreateBookRequestPairDto } from './dto/create-book-request-pair.dto';
-import { BulkBookRequestsDto } from './dto/bulk-book-requests.dto';
+import { BulkBookRequestsDto, BulkTrackingStatusDto } from './dto/bulk-book-requests.dto';
 import { ListBookRequestsDto } from './dto/list-book-requests.dto';
 import { UpdateBookRequestLanguageDto } from './dto/update-book-request-language.dto';
 import { RemoveDownloadDto } from './dto/remove-download.dto';
@@ -160,6 +160,29 @@ export class BookRequestController {
   @HttpCode(HttpStatus.NO_CONTENT)
   unsubscribe(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: RequestUser) {
     return this.service.unsubscribe(id, user);
+  }
+
+  /** A note set on a selection at once. Each row is checked as if it were set on its own. */
+  @Post('tracking-status')
+  @HttpCode(HttpStatus.OK)
+  setTrackingStatusMany(@Body() dto: BulkTrackingStatusDto, @CurrentUser() user: RequestUser) {
+    return this.service.setTrackingStatusMany(dto, user);
+  }
+
+  /** Each row is refused or cancelled under the same rules as cancelling it alone. */
+  @Post('cancel')
+  @HttpCode(HttpStatus.OK)
+  @Auditable({
+    action: AuditAction.BookRequestCancel,
+    resource: AuditResource.BookRequest,
+    getMeta: (_req, body) => {
+      const result = body as { updated?: unknown[]; failed?: unknown[] } | null;
+      return { cancelled: result?.updated?.length ?? 0, failed: result?.failed?.length ?? 0 };
+    },
+    description: 'Cancelled a selection of book requests',
+  })
+  cancelMany(@Body() dto: BulkBookRequestsDto, @CurrentUser() user: RequestUser) {
+    return this.service.cancelMany(dto, user);
   }
 
   /**

@@ -9812,7 +9812,13 @@
       "importDiscarded": "The imported file was discarded",
       "pairApproved": "Approved both",
       "pairRejected": "Rejected both",
-      "trackingStatusChanged": "Tracking status updated"
+      "trackingStatusChanged": "Tracking status updated",
+      "bulkCancelled": "{count, plural, one {# request cancelled} other {# requests cancelled}}",
+      "bulkCancelledPartial": "{done} cancelled, {failed} could not be",
+      "bulkDeleted": "{count, plural, one {# request deleted} other {# requests deleted}}",
+      "bulkDeletedPartial": "{done} deleted, {failed} could not be",
+      "bulkTracking": "{count, plural, one {Tracking updated on # request} other {Tracking updated on # requests}}",
+      "bulkTrackingPartial": "{done} updated, {failed} could not be"
     },
     "errors": {
       "loadFailed": "Could not load requests",
@@ -9835,7 +9841,10 @@
       "discardImportFailed": "That import could not be discarded",
       "approveCompanionFailedEbook": "Approved this one, but the e-book could not be approved",
       "approveCompanionFailedAudiobook": "Approved this one, but the audiobook could not be approved",
-      "trackingStatusChangeFailed": "Couldn't update the tracking status"
+      "trackingStatusChangeFailed": "Couldn't update the tracking status",
+      "bulkCancelFailed": "Could not cancel the selected requests",
+      "bulkDeleteFailed": "Could not delete the selected requests",
+      "bulkTrackingFailed": "Could not update tracking on the selected requests"
     },
     "grab": {
       "title": "Send to a download client",
@@ -10279,7 +10288,14 @@
       "rejectNoteLabel": "Reason (optional)",
       "rejectNotePlaceholder": "Why these are being turned down",
       "rejectTitle": "Reject {count, plural, one {# request} other {# requests}}?",
-      "rejectConfirm": "Reject"
+      "rejectConfirm": "Reject",
+      "cancelSelected": "{count, plural, one {Cancel # request} other {Cancel all #}}",
+      "deleteSelected": "{count, plural, one {Delete # request} other {Delete all #}}",
+      "cancelTitle": "Cancel {count, plural, one {# request} other {# requests}}?",
+      "deleteTitle": "Delete {count, plural, one {# request} other {# requests}}?",
+      "deleteDescription": "They are removed for everyone. Files already downloaded are kept.",
+      "trackingPrompt": "{count, plural, one {Set tracking for # request} other {Set tracking for all #}}",
+      "trackingLabel": "Set the tracking status of {count, plural, one {# selected request} other {# selected requests}}"
     },
     "chooser": {
       "title": "Choose which book to import",

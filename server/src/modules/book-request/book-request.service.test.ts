@@ -1047,6 +1047,40 @@ describe('BookRequestService.cancelDownload', () => {
   });
 });
 
+describe('BookRequestService bulk tracking, cancel and delete', () => {
+  it('sets one tracking status on every row and reports each', async () => {
+    const { service } = makeService();
+    const set = vi.spyOn(service, 'setTrackingStatus').mockImplementation(async (id) => ({ id }) as never);
+    const result = await service.setTrackingStatusMany({ ids: [3, 4, 3], trackingStatus: 'missing' }, user());
+    expect(set.mock.calls.map(([id, status]) => [id, status])).toEqual([
+      [3, 'missing'],
+      [4, 'missing'],
+    ]);
+    expect(result.updated.map((item) => item.id)).toEqual([3, 4]);
+  });
+
+  it('cancels what it may and names what it may not', async () => {
+    const { service } = makeService();
+    vi.spyOn(service, 'cancel').mockImplementation(async (id) => {
+      if (id === 6) throw new ForbiddenException('You cannot cancel this book request');
+      return { id } as never;
+    });
+    const result = await service.cancelMany({ ids: [5, 6] }, user());
+    expect(result.updated.map((item) => item.id)).toEqual([5]);
+    expect(result.failed).toEqual([expect.objectContaining({ id: 6, reason: 'You cannot cancel this book request' })]);
+  });
+
+  it('deletes each row, keeps files, and reports the row as it was', async () => {
+    const { service } = makeService();
+    vi.spyOn(service, 'getOne').mockImplementation(async (id) => ({ id, title: 'Dune' }) as never);
+    const remove = vi.spyOn(service, 'remove').mockResolvedValue(undefined);
+    const result = await service.removeMany({ ids: [9] }, moderator());
+    expect(remove).toHaveBeenCalledWith(9, expect.anything());
+    expect(remove.mock.calls[0]).toHaveLength(2);
+    expect(result.updated).toEqual([expect.objectContaining({ id: 9, title: 'Dune' })]);
+  });
+});
+
 describe('BookRequestService format lock', () => {
   function locked(defaultFormat: 'ebook' | 'audiobook' | 'pair') {
     return { automationSettings: { getFormatPolicy: vi.fn().mockResolvedValue({ defaultFormat, locked: true }) } };

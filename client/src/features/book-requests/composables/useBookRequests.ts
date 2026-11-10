@@ -333,7 +333,7 @@ export function useBookRequestActions(canManage: () => boolean) {
    * The batch reports per-row outcomes, so `null` here means the call itself failed rather than
    * that nothing was applied. The two need different messages.
    */
-  async function runBulk(path: string, payload: BulkBookRequestsPayload): Promise<BookRequestBulkResult | null> {
+  async function runBulk(path: string, payload: BulkBookRequestsPayload & Record<string, unknown>): Promise<BookRequestBulkResult | null> {
     bulkPending.value = true
     lastReason.value = null
     try {
@@ -356,6 +356,10 @@ export function useBookRequestActions(canManage: () => boolean) {
 
   const approveMany = (ids: number[]) => runBulk('/api/v1/admin/book-requests/approve', { ids })
   const dismissMany = (ids: number[]) => runBulk('/api/v1/book-requests/dismiss', { ids })
+  const setTrackingStatusMany = (ids: number[], trackingStatus: BookRequestTrackingStatus | null) =>
+    runBulk('/api/v1/book-requests/tracking-status', { ids, trackingStatus })
+  const cancelMany = (ids: number[]) => runBulk('/api/v1/book-requests/cancel', { ids })
+  const deleteMany = (ids: number[]) => runBulk('/api/v1/admin/book-requests/delete', { ids })
   /** One sentence for the whole selection, since a batch is refused for one reason or none. */
   const rejectMany = (ids: number[], decisionNote?: string) =>
     runBulk('/api/v1/admin/book-requests/reject', { ids, ...(decisionNote ? { decisionNote } : {}) } satisfies BulkRejectBookRequestsPayload)
@@ -384,6 +388,9 @@ export function useBookRequestActions(canManage: () => boolean) {
     approveMany,
     rejectMany,
     dismissMany,
+    setTrackingStatusMany,
+    cancelMany,
+    deleteMany,
     /** The language the request asks for, which decides which releases can match it at all. */
     setLanguage: (id: number, language: string | null) => run(id, `/api/v1/book-requests/${id}/language`, { language }),
     setTrackingStatus: (id: number, trackingStatus: BookRequestTrackingStatus | null) =>
