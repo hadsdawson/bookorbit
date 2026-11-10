@@ -6,6 +6,7 @@ import { and, eq, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import sharp from 'sharp';
 
+import { GenrePolicyService } from '../genre-policy/genre-policy.service';
 import { DB } from '../../db';
 import * as schema from '../../db/schema';
 import { mapWithConcurrency } from '../../common/utils/batch.utils';
@@ -109,6 +110,7 @@ export class MetadataService {
     @Optional() private readonly seriesIdentity?: SeriesIdentityService,
     @Optional() private readonly seriesMemberships?: SeriesMembershipService,
     @Optional() private readonly seriesExpectedCount?: SeriesExpectedCountService,
+    @Optional() private readonly genrePolicy?: GenrePolicyService,
   ) {}
 
   // ── Public API ───────────────────────────────────────────────────────────────
@@ -769,7 +771,11 @@ export class MetadataService {
   }
 
   async replaceGenres(bookId: number, parsedGenres: string[], options: RelationMutationOptions = {}) {
-    const uniqueGenres = this.normalizeUniqueRelationNames(parsedGenres);
+    const requested = this.normalizeUniqueRelationNames(parsedGenres);
+    const uniqueGenres = this.genrePolicy ? await this.genrePolicy.filter(requested) : requested;
+    // A source offering only genres outside the allowed list says nothing about which allowed ones
+    // apply, so the book keeps what it has rather than losing every genre.
+    if (requested.length > 0 && uniqueGenres.length === 0) return;
 
     if (options.executor) {
       await this.replaceGenresInExecutor(options.executor, bookId, uniqueGenres);

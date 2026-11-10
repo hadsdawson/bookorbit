@@ -6,6 +6,7 @@ import { AudiobookChaptersModule } from '../audiobook-chapters/audiobook-chapter
 import { BookMetadataLockModule } from '../book-metadata-lock/book-metadata-lock.module';
 import { BookCoverStoreModule } from '../book-cover-store/book-cover-store.module';
 import { EmbeddingModule } from '../embedding/embedding.module';
+import { GenrePolicyModule } from '../genre-policy/genre-policy.module';
 import { MetadataScoreModule } from '../metadata-score/metadata-score.module';
 import { NarratorModule } from '../narrator/narrator.module';
 import { ComicMetadataRepository } from './comic-metadata.repository';
@@ -20,6 +21,7 @@ import { MetadataService } from './metadata.service';
     BookMetadataLockModule,
     BookCoverStoreModule,
     EmbeddingModule,
+    GenrePolicyModule,
     MetadataScoreModule,
     NarratorModule,
     DjvuDocumentModule,

@@ -34,7 +34,7 @@ function applyButton() {
 }
 
 function sentBody() {
-  const [, init] = api.mock.calls[0] as [string, RequestInit]
+  const [, init] = api.mock.calls.find(([path]) => path === '/api/v1/book-dock/files/bulk-edit') as [string, RequestInit]
   return JSON.parse(init.body as string)
 }
 

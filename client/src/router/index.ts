@@ -353,7 +353,7 @@ export const routes: RouteRecordRaw[] = [
           {
             path: 'metadata/genre-blocklist',
             name: 'settings-metadata-genre-blocklist',
-            component: () => import('@/features/settings/metadata-preferences/MetadataGenreBlocklistSettings.vue'),
+            component: () => import('@/features/settings/metadata-preferences/MetadataGenreSettings.vue'),
             meta: { maxWidth: 'max-w-3xl', title: () => t('titles.metadata.genre-blocklist') },
           },
           {
