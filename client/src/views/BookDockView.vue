@@ -6,7 +6,7 @@ import type { BookDockFile } from '@bookorbit/types'
 import { api } from '@/lib/api'
 import { formatBytes } from '@/lib/formatting'
 import { usePermissions } from '@/features/auth/composables/usePermissions'
-import { Permission } from '@bookorbit/types'
+import { BOOK_DOCK_COMBINE_MAX_FILES, Permission } from '@bookorbit/types'
 import { useBookDockFiles, type SortField } from '@/features/book-dock/composables/useBookDockFiles'
 import { useBookDockSummary } from '@/features/book-dock/composables/useBookDockSummary'
 import { useBookDockStatistics } from '@/features/book-dock/composables/useBookDockStatistics'
@@ -21,6 +21,7 @@ import BookDockListBar from '@/features/book-dock/components/BookDockListBar.vue
 import BookDockFileSheet from '@/features/book-dock/components/BookDockFileSheet.vue'
 import BookDockFinalizeDialog from '@/features/book-dock/components/BookDockFinalizeDialog.vue'
 import BookDockBulkEditDialog from '@/features/book-dock/components/BookDockBulkEditDialog.vue'
+import BookDockCombineDialog from '@/features/book-dock/components/BookDockCombineDialog.vue'
 import BookDockSetDestinationDialog from '@/features/book-dock/components/BookDockSetDestinationDialog.vue'
 import BookDockDiscardDialog from '@/features/book-dock/components/BookDockDiscardDialog.vue'
 import PaginationNav from '@/components/PaginationNav.vue'
@@ -85,6 +86,17 @@ const { conflicts, scheduleConflicts, cancelConflicts } = useBookDockConflicts()
 const selectedFile = ref<BookDockFile | null>(null)
 const showFinalizeDialog = ref(false)
 const showBulkEditDialog = ref(false)
+const showCombineDialog = ref(false)
+
+/** Combining names its files one by one, so it only works on a selection that is all on this page. */
+const combineFiles = computed(() => (selectAll.value ? [] : items.value.filter((file) => isSelected(file.id))))
+const canCombine = computed(
+  () =>
+    !selectAll.value &&
+    combineFiles.value.length === selectionCount.value &&
+    combineFiles.value.length >= 2 &&
+    combineFiles.value.length <= BOOK_DOCK_COMBINE_MAX_FILES,
+)
 const showSetDestinationDialog = ref(false)
 const pendingDiscard = ref<PendingDiscard | null>(null)
 const dragOver = ref(false)
@@ -358,6 +370,19 @@ function openFinalize() {
   showFinalizeDialog.value = true
 }
 
+function openCombine() {
+  if (canCombine.value) showCombineDialog.value = true
+}
+
+function closeCombine() {
+  showCombineDialog.value = false
+}
+
+function onCombined() {
+  showCombineDialog.value = false
+  onFinalized()
+}
+
 function openBulkEdit() {
   if (isDemoRestrictedAccount.value) return
   showBulkEditDialog.value = true
@@ -603,6 +628,7 @@ onUnmounted(() => {
             :all-on-page-selected="allOnPageSelected"
             :select-all-matching="selectAll"
             :selection-count="selectionCount"
+            :can-combine="canCombine"
             :fetched-count="fetchedCount"
             :error-count="errorCount"
             :summary="summary"
@@ -614,6 +640,7 @@ onUnmounted(() => {
             @finalize="openFinalize"
             @set-destination="openSetDestination"
             @bulk-edit="openBulkEdit"
+            @combine="openCombine"
             @deselect="clearSelection"
             @bulk-discard="openBulkDiscardDialog"
             @apply-fetched="handleApplyFetched"
@@ -654,6 +681,8 @@ onUnmounted(() => {
       @close="showFinalizeDialog = false"
       @finalized="onFinalized"
     />
+
+    <BookDockCombineDialog v-if="showCombineDialog" :files="combineFiles" @close="closeCombine" @combined="onCombined" />
 
     <BookDockBulkEditDialog
       v-if="showBulkEditDialog"

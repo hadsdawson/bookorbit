@@ -59,3 +59,21 @@ export function formatKeyRank(key: string, normalizedPriority: readonly string[]
   const index = normalizedPriority.indexOf(key);
   return index === -1 ? Number.MAX_SAFE_INTEGER : index;
 }
+
+/**
+ * The item whose format ranks highest in a library's format priority, or undefined for an empty
+ * list. Formats the list does not name rank after every one it does; ties go to the earlier item.
+ */
+export function pickByFormatPriority<T>(items: readonly T[], formatOf: (item: T) => string, priority: readonly string[]): T | undefined {
+  let best: T | undefined;
+  let bestRank = Number.POSITIVE_INFINITY;
+  for (const item of items) {
+    const index = priority.indexOf(formatOf(item).toLowerCase());
+    const rank = index === -1 ? priority.length : index;
+    if (best === undefined || rank < bestRank) {
+      best = item;
+      bestRank = rank;
+    }
+  }
+  return best;
+}

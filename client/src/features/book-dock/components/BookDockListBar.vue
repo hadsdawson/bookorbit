@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ArrowUpDown, Check, FolderPlus, Keyboard, Loader2, PenLine, RefreshCw, Trash2, Wand2, X } from '@lucide/vue'
+import { ArrowUpDown, Check, Combine, FolderPlus, Keyboard, Loader2, PenLine, RefreshCw, Trash2, Wand2, X } from '@lucide/vue'
 import { Permission, type BookDockSummary } from '@bookorbit/types'
 import { formatBytes } from '@/lib/formatting'
 import { formatNumber } from '@/i18n/formatters'
@@ -15,6 +15,8 @@ const props = defineProps<{
   allOnPageSelected: boolean
   selectAllMatching: boolean
   selectionCount: number
+  /** True when the selection is two or more files on this page, which is what combining needs. */
+  canCombine?: boolean
   fetchedCount: number
   errorCount: number
   sort: SortField
@@ -27,6 +29,7 @@ const emit = defineEmits<{
   selectAllMatching: []
   sort: [SortField]
   finalize: []
+  combine: []
   setDestination: []
   bulkEdit: []
   deselect: []
@@ -72,6 +75,9 @@ function emitSetDestination() {
 }
 function emitBulkEdit() {
   emit('bulkEdit')
+}
+function emitCombine() {
+  emit('combine')
 }
 function emitDeselect() {
   emit('deselect')
@@ -167,6 +173,17 @@ function emitRetryFetch() {
           >
             <FolderPlus class="size-3" aria-hidden="true" />
             {{ t('bookDock.setDestinationAction') }}
+          </button>
+          <button
+            v-if="canFinalize && canCombine"
+            type="button"
+            data-testid="book-dock-combine"
+            :title="t('bookDock.combine.actionHint')"
+            class="inline-flex h-7 items-center gap-1.5 rounded-lg bg-sky-500/12 px-2.5 text-[11.5px] font-medium text-sky-700 transition-colors hover:bg-sky-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:text-sky-300"
+            @click="emitCombine"
+          >
+            <Combine class="size-3" aria-hidden="true" />
+            {{ t('bookDock.combine.action') }}
           </button>
           <button
             v-if="canBulkEdit"
