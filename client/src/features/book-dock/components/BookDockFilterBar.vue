@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Search, X } from '@lucide/vue'
 import type { BookDockSummary } from '@bookorbit/types'
@@ -9,6 +9,8 @@ import type { BookDockView } from '../composables/useBookDockFiles'
 const props = defineProps<{
   activeView: BookDockView
   summary: BookDockSummary
+  /** The search the list is filtered by, so a search set from elsewhere shows in the box. */
+  searchValue?: string
 }>()
 
 const emit = defineEmits<{
@@ -18,7 +20,14 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-const searchQuery = ref('')
+const searchQuery = ref(props.searchValue ?? '')
+
+watch(
+  () => props.searchValue,
+  (value) => {
+    if (value !== undefined && value !== searchQuery.value) searchQuery.value = value
+  },
+)
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 
 /** Every chip maps to something the files endpoint can answer, so counts cover the whole dock. */

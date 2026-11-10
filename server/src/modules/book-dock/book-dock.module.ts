@@ -17,6 +17,7 @@ import { BookDockController } from './book-dock.controller';
 import { BookDockEventsService } from './book-dock-events.service';
 import { BookDockFinalizeService } from './book-dock-finalize.service';
 import { BookDockCombineService } from './book-dock-combine.service';
+import { BookDockDefaultTargetService } from './book-dock-default-target.service';
 import { BookDockGateway } from './book-dock.gateway';
 import { BookDockIngestService } from './book-dock-ingest.service';
 import { BookDockJoinService } from './book-dock-join.service';
@@ -56,6 +57,7 @@ import { BookDockRepository } from './book-dock.repository';
     BookDockProcessingStateService,
     BookDockFinalizeService,
     BookDockCombineService,
+    BookDockDefaultTargetService,
     BookDockJoinService,
     BookDockWatcherService,
     BookDockGateway,

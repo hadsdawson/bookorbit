@@ -12,6 +12,12 @@ const apiMock = vi.fn<(url: string) => Promise<Response>>(
 )
 
 vi.mock('@/lib/api', () => ({ api: (url: string) => apiMock(url) }))
+const routeQuery: Record<string, string> = {}
+const replaceMock = vi.fn()
+vi.mock('vue-router', () => ({
+  useRoute: () => ({ query: routeQuery }),
+  useRouter: () => ({ replace: replaceMock }),
+}))
 vi.mock('@/features/auth/composables/usePermissions', () => ({
   usePermissions: () => ({ isDemoRestrictedAccount: ref(false), hasPermission: () => false }),
 }))
@@ -87,5 +93,26 @@ describe('BookDockView uploads', () => {
 
     expect(addFilesMock).not.toHaveBeenCalled()
     wrapper.unmount()
+  })
+})
+
+describe('BookDockView links from the command palette', () => {
+  it('filters by the search and opens the file the palette picked, then clears the link', async () => {
+    routeQuery.search = 'dune'
+    routeQuery.file = '5'
+    apiMock.mockImplementation(async (url: string) =>
+      url.includes('/files/5')
+        ? ({ ok: true, json: async () => ({ id: 5, fileName: 'Dune.epub' }) } as Response)
+        : ({ ok: true, json: async () => ({ items: [], total: 0, page: 1, size: 20 }) } as Response),
+    )
+    const wrapper = shallowMount(BookDockView, { global: { stubs: { Teleport: true } } })
+
+    await vi.waitFor(() => expect(apiMock.mock.calls.some(([url]) => url.includes('/files/5'))).toBe(true))
+    expect(apiMock.mock.calls.some(([url]) => url.includes('search=dune'))).toBe(true)
+    expect(replaceMock).toHaveBeenCalledWith({ name: 'book-dock' })
+    await vi.waitFor(() => expect(wrapper.findComponent({ name: 'BookDockFileSheet' }).exists()).toBe(true))
+    wrapper.unmount()
+    delete routeQuery.search
+    delete routeQuery.file
   })
 })

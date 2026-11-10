@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter } from 'vue-router'
 import { PackageOpen, CheckCircle2, AlertCircle } from '@lucide/vue'
 import type { BookDockFile } from '@bookorbit/types'
 import { api } from '@/lib/api'
@@ -481,8 +482,40 @@ watch(
   },
 )
 
-onMounted(() => {
-  fetchFiles()
+const route = useRoute()
+const router = useRouter()
+
+/**
+ * The command palette links here with `search` and `file`. Both are read once and then dropped
+ * from the URL, so closing the panel or clearing the search does not bring them back on refresh.
+ */
+async function applyRouteQuery(): Promise<boolean> {
+  const search = typeof route.query.search === 'string' ? route.query.search : null
+  const fileId = typeof route.query.file === 'string' ? Number(route.query.file) : NaN
+  if (search === null && Number.isNaN(fileId)) return false
+
+  if (search !== null) setSearch(search)
+  void router.replace({ name: 'book-dock' })
+  if (Number.isInteger(fileId) && fileId > 0) {
+    try {
+      const res = await api(`/api/v1/book-dock/files/${fileId}`)
+      if (res.ok) openSheet((await res.json()) as BookDockFile)
+    } catch {
+      // The file may have been filed or discarded since the search; the filtered list still shows.
+    }
+  }
+  return search !== null
+}
+
+watch(
+  () => [route.query.search, route.query.file],
+  () => {
+    void applyRouteQuery()
+  },
+)
+
+onMounted(async () => {
+  if (!(await applyRouteQuery())) fetchFiles()
   fetchSummary(true)
   fetchStatistics()
   subscribe()
@@ -507,7 +540,14 @@ onUnmounted(() => {
       <div class="flex w-full max-w-420 flex-col gap-4 pt-2 pb-4">
         <PageTitleRow :title="t('views.bookDock.title')" :icon="PackageOpen" inline-grow>
           <template #inline>
-            <BookDockFilterBar class="w-full" :active-view="activeView" :summary="summary" @view="setView" @search="setSearch" />
+            <BookDockFilterBar
+              class="w-full"
+              :active-view="activeView"
+              :summary="summary"
+              :search-value="filters.search"
+              @view="setView"
+              @search="setSearch"
+            />
           </template>
           <template #facts>
             <span

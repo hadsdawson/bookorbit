@@ -2,7 +2,8 @@ import { computed, ref, watch, type Component, type Ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { RouteLocationRaw } from 'vue-router'
 import { Moon, Settings, SlidersHorizontal, Sparkles, Sun, Upload } from '@lucide/vue'
-import type { AuthorSummary, BookCard, DashboardScrollerBatchResponse, SeriesSummary } from '@bookorbit/types'
+import { Permission } from '@bookorbit/types'
+import type { AuthorSummary, BookCard, BookDockFile, BookDockFilesPage, DashboardScrollerBatchResponse, SeriesSummary } from '@bookorbit/types'
 import { api } from '@/lib/api'
 import { formatNumber } from '@/i18n/formatters'
 import { useSidebarCustomizeMode } from '@/composables/useSidebarCustomizeMode'
@@ -22,13 +23,14 @@ import { rankBooks } from '../lib/rank'
 
 export const PALETTE_MIN_QUERY = 2
 
-export type PaletteTab = 'all' | 'books' | 'authors' | 'series' | 'settings'
+export type PaletteTab = 'all' | 'books' | 'authors' | 'series' | 'settings' | 'dock'
 
 export type PaletteItem =
   | { kind: 'book'; key: string; book: BookCard }
   | { kind: 'reading'; key: string; book: BookCard }
   | { kind: 'author'; key: string; author: AuthorSummary }
   | { kind: 'series'; key: string; series: SeriesSummary }
+  | { kind: 'dockFile'; key: string; file: BookDockFile }
   | { kind: 'place'; key: string; label: string; icon: Component | string; fallbackIcon?: Component; meta: string; to: RouteLocationRaw }
   | { kind: 'setting'; key: string; label: string; groupLabel: string; description: string; icon: Component; to: RouteLocationRaw }
   | { kind: 'action'; key: string; label: string; icon: Component; meta?: string; run: () => void }
@@ -95,6 +97,52 @@ export function useCommandPaletteResults(query: Ref<string>, tab: Ref<PaletteTab
   const authorTotal = ref(0)
   const series = ref<SeriesSummary[]>([])
   const seriesTotal = ref(0)
+  /** Book Dock is searched only when its tab is open, so the library stays the default search. */
+  const canSearchDock = computed(() => hasPermission(Permission.BookDockAccess))
+  const dockFiles = ref<BookDockFile[]>([])
+  const dockTotal = ref(0)
+  const dockLoading = ref(false)
+  let dockTimer: ReturnType<typeof setTimeout> | null = null
+  let dockGeneration = 0
+
+  async function loadDock(q: string, generation: number) {
+    try {
+      const params = new URLSearchParams({ search: q, limit: String(TAB_PAGE_SIZE), page: '1' })
+      const res = await api(`/api/v1/book-dock/files?${params}`)
+      if (generation !== dockGeneration) return
+      if (res.ok) {
+        const page: BookDockFilesPage = await res.json()
+        dockFiles.value = page.items
+        dockTotal.value = page.total
+      } else {
+        dockFiles.value = []
+        dockTotal.value = 0
+      }
+    } catch {
+      if (generation !== dockGeneration) return
+      dockFiles.value = []
+      dockTotal.value = 0
+    } finally {
+      if (generation === dockGeneration) dockLoading.value = false
+    }
+  }
+
+  watch([trimmed, tab], ([q, currentTab]) => {
+    if (dockTimer) clearTimeout(dockTimer)
+    dockGeneration += 1
+    if (currentTab !== 'dock' || !canSearchDock.value || q.length < PALETTE_MIN_QUERY) {
+      dockLoading.value = false
+      if (q.length < PALETTE_MIN_QUERY) {
+        dockFiles.value = []
+        dockTotal.value = 0
+      }
+      return
+    }
+    dockLoading.value = true
+    const generation = dockGeneration
+    dockTimer = setTimeout(() => void loadDock(q, generation), ENTITY_DEBOUNCE_MS)
+  })
+
   const entitiesLoading = ref(false)
   let entityTimer: ReturnType<typeof setTimeout> | null = null
   let entityGeneration = 0
@@ -254,7 +302,13 @@ export function useCommandPaletteResults(query: Ref<string>, tab: Ref<PaletteTab
       { id: 'settings', label: t('commandPalette.tabs.settings'), count: settingsHits.value.length },
     ]
     const all = options.reduce((sum, option) => sum + option.count, 0) + placeHits.value.length
-    return [{ id: 'all', label: t('commandPalette.tabs.all'), count: all }, ...options.filter((option) => option.count > 0)]
+    const result: PaletteTabOption[] = [
+      { id: 'all', label: t('commandPalette.tabs.all'), count: all },
+      ...options.filter((option) => option.count > 0),
+    ]
+    // Always offered, since its count is only known once it has been searched.
+    if (canSearchDock.value) result.push({ id: 'dock', label: t('commandPalette.tabs.dock'), count: dockTotal.value })
+    return result
   })
 
   function moreRow(label: string, target: PaletteTab): PaletteItem {
@@ -286,6 +340,10 @@ export function useCommandPaletteResults(query: Ref<string>, tab: Ref<PaletteTab
     if (tab.value === 'series') return [{ id: 'series', label: t('commandPalette.sections.series'), count: seriesTotal.value, items: seriesItems }]
     if (tab.value === 'settings')
       return [{ id: 'settings', label: t('commandPalette.sections.settings'), count: settingsHits.value.length, items: settingsHits.value }]
+    if (tab.value === 'dock') {
+      const items: PaletteItem[] = dockFiles.value.map((file) => ({ kind: 'dockFile', key: `dock:${file.id}`, file }))
+      return [{ id: 'dock', label: t('commandPalette.sections.dock'), count: dockTotal.value, items }]
+    }
 
     const result: PaletteSection[] = []
     if (bookItems.length) {
@@ -319,8 +377,8 @@ export function useCommandPaletteResults(query: Ref<string>, tab: Ref<PaletteTab
     return result
   })
 
-  const loading = computed(() => isSearching.value && (books.loading.value || entitiesLoading.value))
-  const settled = computed(() => isSearching.value && books.settled.value && !entitiesLoading.value)
+  const loading = computed(() => isSearching.value && (books.loading.value || entitiesLoading.value || dockLoading.value))
+  const settled = computed(() => isSearching.value && books.settled.value && !entitiesLoading.value && !dockLoading.value)
 
   function clear() {
     books.clear()

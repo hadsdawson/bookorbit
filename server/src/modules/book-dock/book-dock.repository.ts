@@ -139,6 +139,25 @@ export class BookDockRepository {
     return row !== undefined;
   }
 
+  /** The only library and its only folder, or null when there is any choice to make. */
+  async findSoleLibraryTarget(): Promise<{ libraryId: number; folderId: number } | null> {
+    const found = await this.db.select({ id: libraries.id }).from(libraries).limit(2);
+    if (found.length !== 1) return null;
+    const libraryId = found[0]!.id;
+    const folders = await this.db.select({ id: libraryFolders.id }).from(libraryFolders).where(eq(libraryFolders.libraryId, libraryId)).limit(2);
+    return folders.length === 1 ? { libraryId, folderId: folders[0]!.id } : null;
+  }
+
+  /** Gives every docked file with no destination at all the one given. Returns how many changed. */
+  async assignTargetToUnassigned(libraryId: number, folderId: number): Promise<number> {
+    const updated = await this.db
+      .update(bookDockFiles)
+      .set({ targetLibraryId: libraryId, targetFolderId: folderId })
+      .where(and(isNull(bookDockFiles.targetLibraryId), isNull(bookDockFiles.targetFolderId)))
+      .returning({ id: bookDockFiles.id });
+    return updated.length;
+  }
+
   async findAll(opts: ListOptions): Promise<{ items: BookDockFileRow[]; total: number }> {
     const conditions = this.buildSelectionConditions(opts.status, opts.search, opts.userId, opts.canManageAll, opts.needsReview, opts.readyToFile);
 
