@@ -45,7 +45,7 @@ export class ReadingAttemptRepository {
       .innerJoin(users, eq(users.id, userBookStatus.userId))
       .where(
         and(
-          notInArray(userBookStatus.status, ['unread', 'want_to_read']),
+          notInArray(userBookStatus.status, ['unread', 'want_to_read', 'not_interested']),
           notExists(
             this.db
               .select({ id: readingAttempts.id })

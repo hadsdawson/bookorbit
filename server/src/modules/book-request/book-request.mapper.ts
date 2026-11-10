@@ -7,6 +7,7 @@ import type {
   BookRequestMediaKind,
   BookRequestStatus,
   BookRequestSubscriber,
+  BookRequestTrackingStatus,
 } from '@bookorbit/types';
 import { DOWNLOAD_CLIENT_ALWAYS_DELETES_REMOTE } from '@bookorbit/types';
 
@@ -32,6 +33,7 @@ export function mapBookRequestRow(
     requesterName: row.requesterName,
     mediaKind: r.mediaKind as BookRequestMediaKind,
     status: r.status as BookRequestStatus,
+    trackingStatus: (r.trackingStatus as BookRequestTrackingStatus | null) ?? null,
     title: r.title,
     subtitle: r.subtitle,
     authors: r.authors ?? [],
@@ -40,6 +42,7 @@ export function mapBookRequestRow(
     isbn10: r.isbn10,
     isbn13: r.isbn13,
     publishedYear: r.publishedYear,
+    publishedDate: r.publishedDate ?? null,
     language: r.language,
     coverUrl: r.coverUrl,
     providerKey: r.providerKey,

@@ -32,6 +32,7 @@ import type {
   BookRequestRequesterOption,
   BookRequestSortDirection,
   BookRequestSortField,
+  BookRequestTrackingStatusFilter,
   BookRequestStatus,
 } from '@bookorbit/types';
 
@@ -124,6 +125,8 @@ export interface ListRequestsOptions {
   excludeDismissedFor?: number;
   /** Narrows to self-served rows, or to the ones that went through approval. */
   selfServe?: boolean;
+  /** A tracking status, or `none` for rows with none set. */
+  trackingStatus?: BookRequestTrackingStatusFilter;
   sortBy?: BookRequestSortField;
   sortDir?: BookRequestSortDirection;
   /**
@@ -206,6 +209,8 @@ export class BookRequestRepository {
     if (opts.mediaKind) conditions.push(eq(table.mediaKind, opts.mediaKind));
     if (opts.requesterUserId !== undefined) conditions.push(eq(table.userId, opts.requesterUserId));
     if (opts.selfServe !== undefined) conditions.push(eq(table.selfServe, opts.selfServe));
+    if (opts.trackingStatus === 'none') conditions.push(isNull(table.trackingStatus));
+    else if (opts.trackingStatus) conditions.push(eq(table.trackingStatus, opts.trackingStatus));
     return conditions;
   }
 
@@ -218,9 +223,20 @@ export class BookRequestRepository {
       requester: users.name,
       status: bookRequests.status,
     } as const;
+    // Rows with nothing to sort on go last whichever way the list runs, so sorting by release date
+    // or tracking status shows the rows that have one first.
+    const dir = opts.sortDir === 'asc' ? sql.raw('asc') : sql.raw('desc');
+    const NULLS_LAST_SORTS = {
+      trackingStatus: sql`${bookRequests.trackingStatus} ${dir} nulls last`,
+      // The year stands in for the date on requests that only have one. Guarded, because a year of 0
+      // is a valid stored value and make_date() refuses it.
+      publishedDate: sql`coalesce(${bookRequests.publishedDate}, case when ${bookRequests.publishedYear} between 1 and 9999 then make_date(${bookRequests.publishedYear}, 1, 1) end) ${dir} nulls last`,
+    } as const;
+    const sortBy = opts.sortBy ?? 'createdAt';
+    const primarySort = sortBy === 'trackingStatus' || sortBy === 'publishedDate' ? NULLS_LAST_SORTS[sortBy] : direction(SORT_COLUMNS[sortBy]);
     // The id tie-break runs the same way as the sort, so a row cannot sit on both sides of a page
     // boundary when two requests share a title or a timestamp.
-    const orderBy = [direction(SORT_COLUMNS[opts.sortBy ?? 'createdAt']), direction(bookRequests.id)];
+    const orderBy = [primarySort, direction(bookRequests.id)];
 
     const visible = this.visibilityConditions(bookRequests, opts);
     const filters = this.filterConditions(bookRequests, opts);

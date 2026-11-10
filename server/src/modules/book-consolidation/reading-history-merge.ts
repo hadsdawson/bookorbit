@@ -43,7 +43,17 @@ export interface ReadingHistoryMergePlan {
 }
 
 /** Highest first. "Most advanced wins" picks the lower index. */
-export const READ_STATUS_RANK: readonly ReadStatus[] = ['rereading', 'read', 'skimmed', 'reading', 'on_hold', 'abandoned', 'want_to_read', 'unread'];
+export const READ_STATUS_RANK: readonly ReadStatus[] = [
+  'rereading',
+  'read',
+  'skimmed',
+  'reading',
+  'on_hold',
+  'abandoned',
+  'want_to_read',
+  'not_interested',
+  'unread',
+];
 
 function rankOf(status: ReadStatus): number {
   const index = READ_STATUS_RANK.indexOf(status);
@@ -261,7 +271,8 @@ function projectMergedStatus(attempts: MergeAttempt[], target: MergeStatusRow | 
     ...(source ? [{ status: source.status, row: source }] : []),
   ];
   const status = mostAdvanced(candidates.map((candidate) => candidate.status));
-  if (status === 'unread' || status === 'want_to_read') return { status, source: sourceOf, startedAt: null, finishedAt: null };
+  if (status === 'unread' || status === 'want_to_read' || status === 'not_interested')
+    return { status, source: sourceOf, startedAt: null, finishedAt: null };
   if (status === derived && latest) {
     return {
       status,

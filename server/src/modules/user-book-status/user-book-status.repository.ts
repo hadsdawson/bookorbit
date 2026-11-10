@@ -28,6 +28,7 @@ export function deriveLifecycle(
   switch (status) {
     case 'unread':
     case 'want_to_read':
+    case 'not_interested':
       return { startedAt: null, finishedAt: null };
     case 'reading':
     case 'on_hold':
@@ -96,7 +97,7 @@ export class UserBookStatusRepository {
   ): Promise<void> {
     const row = existing !== undefined ? existing : await this.findOne(userId, bookId);
 
-    const needsSessionBoundaries = status !== 'unread' && status !== 'want_to_read' && row?.startedAt == null;
+    const needsSessionBoundaries = status !== 'unread' && status !== 'want_to_read' && status !== 'not_interested' && row?.startedAt == null;
     const sessionBoundaries = needsSessionBoundaries ? await this.findSessionBoundariesForBook(userId, bookId) : undefined;
 
     const { startedAt, finishedAt } = deriveLifecycle(status, now, row, sessionBoundaries);

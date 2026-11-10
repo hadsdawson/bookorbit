@@ -97,6 +97,7 @@ const READ_STATUS_LABELS = computed<Record<string, string>>(() => ({
   read: t('book.readStatus.read'),
   skimmed: t('book.readStatus.skimmed'),
   abandoned: t('book.readStatus.abandoned'),
+  not_interested: t('book.readStatus.notInterested'),
 }))
 
 const { labels: providerLabels } = useMetadataProviderLabels()

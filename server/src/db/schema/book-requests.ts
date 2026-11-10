@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  date,
   index,
   integer,
   jsonb,
@@ -50,6 +51,8 @@ export const bookRequests = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     mediaKind: bookRequestMediaKindEnum('media_kind').notNull(),
     status: varchar('status', { length: 20 }).notNull().default('pending'),
+    /** A note set by hand, apart from the workflow status; see `BOOK_REQUEST_TRACKING_STATUSES`. */
+    trackingStatus: varchar('tracking_status', { length: 30 }),
 
     title: varchar('title', { length: 500 }).notNull(),
     subtitle: varchar('subtitle', { length: 500 }),
@@ -59,6 +62,8 @@ export const bookRequests = pgTable(
     isbn10: varchar('isbn10', { length: 20 }),
     isbn13: varchar('isbn13', { length: 20 }),
     publishedYear: integer('published_year'),
+    /** The full release date when the provider gave one; requests made before this existed only have the year. */
+    publishedDate: date('published_date', { mode: 'string' }),
     language: varchar('language', { length: 20 }),
     coverUrl: text('cover_url'),
     providerKey: varchar('provider_key', { length: 50 }),
@@ -154,6 +159,7 @@ export const bookRequests = pgTable(
     // status, because the default list has no status filter on it.
     index('book_requests_created_at_idx').on(t.createdAt),
     index('book_requests_title_idx').on(t.title),
+    index('book_requests_tracking_status_idx').on(t.trackingStatus),
     // Drives the content-filter exemption, which asks "did this user request this book" once per
     // candidate row while a restricted reader browses. Partial because only fulfilled requests
     // carry a matched book, so at library scale the index stays a fraction of the table.
@@ -181,6 +187,10 @@ export const bookRequests = pgTable(
     check(
       'book_requests_status_chk',
       sql`${t.status} in ('pending', 'approved', 'rejected', 'cancelled', 'searching', 'grabbed', 'downloading', 'importing', 'needs_review', 'available', 'failed')`,
+    ),
+    check(
+      'book_requests_tracking_status_chk',
+      sql`${t.trackingStatus} is null or ${t.trackingStatus} in ('format_not_available', 'not_yet_released', 'missing')`,
     ),
     check('book_requests_series_index_nonnegative_chk', sql`${t.seriesIndex} is null or ${t.seriesIndex} >= 0`),
   ],

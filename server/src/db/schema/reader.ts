@@ -32,7 +32,7 @@ export const userBookStatus = pgTable(
     bookId: integer('book_id')
       .notNull()
       .references(() => books.id, { onDelete: 'cascade' }),
-    // 'unread' | 'want_to_read' | 'reading' | 'on_hold' | 'rereading' | 'read' | 'skimmed' | 'abandoned'
+    // 'unread' | 'want_to_read' | 'reading' | 'on_hold' | 'rereading' | 'read' | 'skimmed' | 'abandoned' | 'not_interested'
     status: varchar('status', { length: 20 }).$type<ReadStatus>().notNull().default('unread'),
     // 'auto' (derived from progress) | 'manual' (user-set/imported; protected from progress updates except want_to_read)
     source: varchar('source', { length: 10 }).$type<ReadStatusSource>().notNull().default('auto'),
@@ -50,7 +50,7 @@ export const userBookStatus = pgTable(
     index('ubs_book_user_idx').on(t.bookId, t.userId),
     check(
       'user_book_status_status_chk',
-      sql`${t.status} in ('unread', 'want_to_read', 'reading', 'on_hold', 'rereading', 'read', 'skimmed', 'abandoned')`,
+      sql`${t.status} in ('unread', 'want_to_read', 'reading', 'on_hold', 'rereading', 'read', 'skimmed', 'abandoned', 'not_interested')`,
     ),
     check('user_book_status_source_chk', sql`${t.source} in ('auto', 'manual')`),
     check('user_book_status_finished_after_started_chk', sql`${t.finishedAt} is null or ${t.startedAt} is null or ${t.finishedAt} >= ${t.startedAt}`),

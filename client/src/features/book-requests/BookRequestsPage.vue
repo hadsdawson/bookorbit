@@ -4,8 +4,8 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { BookPlus, Rows3, Rows4, X } from '@lucide/vue'
-import { BOOK_REQUEST_MEDIA_KINDS, BOOK_REQUEST_STATUSES, Permission } from '@bookorbit/types'
-import type { BookRequestBulkResult, BookRequestItem, BookRequestSortField, BookRequestStatus } from '@bookorbit/types'
+import { BOOK_REQUEST_MEDIA_KINDS, BOOK_REQUEST_STATUSES, BOOK_REQUEST_TRACKING_STATUSES, Permission } from '@bookorbit/types'
+import type { BookRequestBulkResult, BookRequestItem, BookRequestSortField, BookRequestStatus, BookRequestTrackingStatus } from '@bookorbit/types'
 import PageTitleRow from '@/components/page-header/PageTitleRow.vue'
 import { Button } from '@/components/ui/button'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
@@ -332,6 +332,16 @@ async function restoreRequest(request: BookRequestItem) {
   if (!applyUpdate(outcome, 'bookRequests.errors.restoreFailed')) return
   void refreshSummary()
   toast.success(t('bookRequests.toasts.restored'))
+}
+
+/** Quiet on success beyond a toast: the select already shows the new value. */
+async function setTrackingStatus(request: BookRequestItem, trackingStatus: BookRequestTrackingStatus | null) {
+  const outcome = await actions.setTrackingStatus(request.id, trackingStatus)
+  if (applyUpdate(outcome, 'bookRequests.errors.trackingStatusChangeFailed')) toast.success(t('bookRequests.toasts.trackingStatusChanged'))
+}
+
+function handleSetTrackingStatus(request: BookRequestItem, trackingStatus: BookRequestTrackingStatus | null) {
+  void setTrackingStatus(request, trackingStatus)
 }
 
 async function deleteRequest(request: BookRequestItem) {
@@ -688,6 +698,24 @@ function goToNextPage() {
             </select>
           </div>
 
+          <div class="flex items-center gap-2">
+            <label :for="`requests-tracking-${activeTab}`" class="text-sm text-muted-foreground">
+              {{ t('bookRequests.filters.trackingStatus') }}
+            </label>
+            <select
+              :id="`requests-tracking-${activeTab}`"
+              v-model="activeList.trackingStatus.value"
+              class="h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+              @change="handleFilterChange"
+            >
+              <option value="">{{ t('bookRequests.filters.anyTrackingStatus') }}</option>
+              <option v-for="trackingStatus in BOOK_REQUEST_TRACKING_STATUSES" :key="trackingStatus" :value="trackingStatus">
+                {{ t(`bookRequests.trackingStatus.${trackingStatus}`) }}
+              </option>
+              <option value="none">{{ t('bookRequests.filters.noTrackingStatus') }}</option>
+            </select>
+          </div>
+
           <label class="flex items-center gap-2 text-sm text-muted-foreground">
             <input
               v-model="activeList.includeDismissed.value"
@@ -813,6 +841,7 @@ function goToNextPage() {
           @pair-dismiss="handlePairDismiss"
           @pair-restore="handlePairRestore"
           @sort="handleSort"
+          @set-tracking-status="handleSetTrackingStatus"
           @toggle-select="toggleSelect"
           @toggle-select-all="toggleSelectAll"
         />

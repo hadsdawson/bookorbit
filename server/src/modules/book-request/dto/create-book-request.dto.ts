@@ -98,6 +98,12 @@ export class BookRequestWorkDto {
   @Max(9999)
   publishedYear?: number;
 
+  /** As the provider stated it; normalised to YYYY-MM-DD on the way in, and dropped if it is only a year. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  publishedDate?: string;
+
   @IsOptional()
   @IsString()
   @MaxLength(20)

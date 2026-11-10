@@ -3,8 +3,14 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ArrowDown, ArrowUp, ChevronsUpDown, ExternalLink, EyeOff, TriangleAlert, Zap } from '@lucide/vue'
 import { isGrabbableBookRequestStatus } from '@bookorbit/types'
-import type { BookRequestItem, BookRequestProgressEvent, BookRequestSortDirection, BookRequestSortField } from '@bookorbit/types'
-import { formatPercent, formatRelativeFromNow } from '@/i18n/formatters'
+import type {
+  BookRequestItem,
+  BookRequestProgressEvent,
+  BookRequestSortDirection,
+  BookRequestSortField,
+  BookRequestTrackingStatus,
+} from '@bookorbit/types'
+import { formatDate, formatPercent, formatRelativeFromNow } from '@/i18n/formatters'
 import { formatBytes } from '@/lib/formatting'
 import type { RequestListDensity } from '../composables/useRequestListDensity'
 import { canBulkActRequest } from '../requestActions'
@@ -19,6 +25,7 @@ import RequestPairRowActions from './RequestPairRowActions.vue'
 import RequestPipeline from './RequestPipeline.vue'
 import RequestRowActions from './RequestRowActions.vue'
 import RequestStatusBadge from './RequestStatusBadge.vue'
+import RequestTrackingStatusSelect from './RequestTrackingStatusSelect.vue'
 
 const props = defineProps<{
   requests: BookRequestItem[]
@@ -51,6 +58,7 @@ const emit = defineEmits<{
   'pair-dismiss': [requests: BookRequestItem[]]
   'pair-restore': [requests: BookRequestItem[]]
   sort: [field: BookRequestSortField]
+  'set-tracking-status': [request: BookRequestItem, trackingStatus: BookRequestTrackingStatus | null]
   'toggle-select': [request: BookRequestItem]
   'toggle-select-all': []
 }>()
@@ -187,6 +195,34 @@ function sortByAge() {
 
 function sortByState() {
   emit('sort', 'status')
+}
+
+function sortByReleased() {
+  emit('sort', 'publishedDate')
+}
+
+function sortByTracking() {
+  emit('sort', 'trackingStatus')
+}
+
+/** The full date where the provider gave one, else the year, which is all older requests carry. */
+function releasedLabel(request: BookRequestItem): string {
+  if (request.publishedDate) {
+    const [year, month, day] = request.publishedDate.split('-').map(Number)
+    return formatDate(new Date(year!, month! - 1, day!), { dateStyle: 'medium' })
+  }
+  return request.publishedYear ? String(request.publishedYear) : '—'
+}
+
+/** Mirrors the server's rule: the requester, a manager, or whoever is fulfilling it. */
+function canEditTracking(request: BookRequestItem): boolean {
+  if (props.canManage) return true
+  if (props.currentUserId === null) return false
+  return request.userId === props.currentUserId || (props.canSelfFulfil && request.fulfillerUserId === props.currentUserId)
+}
+
+function handleSetTrackingStatus(request: BookRequestItem, trackingStatus: BookRequestTrackingStatus | null) {
+  emit('set-tracking-status', request, trackingStatus)
 }
 
 function toggleSelectAll() {
@@ -327,6 +363,17 @@ function rowDismissed(row: BookRequestItem): boolean {
             </button>
           </th>
 
+          <th scope="col" class="w-28 px-3 py-2.5 text-start" :aria-sort="ariaSort('publishedDate')">
+            <button
+              type="button"
+              class="inline-flex items-center gap-1 rounded-xs text-xs font-semibold tracking-wide text-muted-foreground uppercase transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+              @click="sortByReleased"
+            >
+              {{ t('bookRequests.table.released') }}
+              <component :is="sortIcon('publishedDate')" :size="12" aria-hidden="true" />
+            </button>
+          </th>
+
           <th scope="col" class="hidden w-36 px-3 py-2.5 text-start xl:table-cell" :aria-sort="ariaSort('requester')">
             <button
               type="button"
@@ -357,6 +404,17 @@ function rowDismissed(row: BookRequestItem): boolean {
             >
               {{ t('bookRequests.table.state') }}
               <component :is="sortIcon('status')" :size="12" aria-hidden="true" />
+            </button>
+          </th>
+
+          <th scope="col" class="w-44 px-3 py-2.5 text-start" :aria-sort="ariaSort('trackingStatus')">
+            <button
+              type="button"
+              class="inline-flex items-center gap-1 rounded-xs text-xs font-semibold tracking-wide text-muted-foreground uppercase transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+              @click="sortByTracking"
+            >
+              {{ t('bookRequests.table.tracking') }}
+              <component :is="sortIcon('trackingStatus')" :size="12" aria-hidden="true" />
             </button>
           </th>
 
@@ -450,6 +508,13 @@ function rowDismissed(row: BookRequestItem): boolean {
             </span>
           </td>
 
+          <td class="px-3 text-xs text-muted-foreground whitespace-nowrap tabular-nums" :class="isCompact ? 'py-1.5' : 'py-2.5'">
+            <div v-if="isPair(request)" class="flex flex-col gap-1">
+              <div v-for="half in orderedHalves(request)" :key="half.id" class="flex h-6 items-center">{{ releasedLabel(half) }}</div>
+            </div>
+            <template v-else>{{ releasedLabel(request) }}</template>
+          </td>
+
           <!--
             `max-w-0` with the header's `w-36`: an auto-layout table sizes a column to its widest
             content, so `truncate` alone never fires here and one long display name takes its width
@@ -501,6 +566,26 @@ function rowDismissed(row: BookRequestItem): boolean {
                 {{ t('bookRequests.card.dismissedBadge') }}
               </span>
             </div>
+          </td>
+
+          <td class="px-3" :class="isCompact ? 'py-1.5' : 'py-2.5'">
+            <div v-if="isPair(request)" class="flex flex-col gap-1">
+              <div v-for="half in orderedHalves(request)" :key="half.id" class="flex h-6 items-center">
+                <RequestTrackingStatusSelect
+                  :request="half"
+                  :editable="canEditTracking(half)"
+                  :busy="busyIds.has(half.id)"
+                  @change="handleSetTrackingStatus"
+                />
+              </div>
+            </div>
+            <RequestTrackingStatusSelect
+              v-else
+              :request="request"
+              :editable="canEditTracking(request)"
+              :busy="busyIds.has(request.id)"
+              @change="handleSetTrackingStatus"
+            />
           </td>
 
           <td class="px-3 text-xs" :class="isCompact ? 'py-1.5' : 'py-2.5'">
@@ -665,6 +750,9 @@ function rowDismissed(row: BookRequestItem): boolean {
               </RouterLink>
             </div>
             <p v-if="authorLine(request)" class="truncate text-xs text-muted-foreground">{{ authorLine(request) }}</p>
+            <p v-if="releasedLabel(request) !== '—'" class="text-xs text-muted-foreground tabular-nums">
+              {{ t('bookRequests.card.releasedOn', { date: releasedLabel(request) }) }}
+            </p>
 
             <!-- A pair stacks one line per half: the medium, its stage, and what is happening to it. -->
             <template v-if="isPair(request)">
@@ -672,6 +760,12 @@ function rowDismissed(row: BookRequestItem): boolean {
                 <component :is="mediaIcon(half)" :size="14" :class="mediaColor(half)" aria-hidden="true" />
                 <span class="sr-only">{{ mediaLabel(half) }}</span>
                 <RequestStatusBadge :status="statusFor(half)" />
+                <RequestTrackingStatusSelect
+                  :request="half"
+                  :editable="canEditTracking(half)"
+                  :busy="busyIds.has(half.id)"
+                  @change="handleSetTrackingStatus"
+                />
                 <span v-if="outcomeFor(half).kind === 'progress'" class="text-xs text-muted-foreground tabular-nums">{{ percentLabel(half) }}</span>
                 <span
                   v-else-if="failureFor(half)"
@@ -703,6 +797,12 @@ function rowDismissed(row: BookRequestItem): boolean {
               <span class="text-xs text-muted-foreground">
                 {{ t('bookRequests.card.requestedByAt', { name: request.requesterName, time: formatRelativeFromNow(new Date(request.createdAt)) }) }}
               </span>
+              <RequestTrackingStatusSelect
+                :request="request"
+                :editable="canEditTracking(request)"
+                :busy="busyIds.has(request.id)"
+                @change="handleSetTrackingStatus"
+              />
             </div>
 
             <!--

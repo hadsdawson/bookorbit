@@ -40,6 +40,7 @@ const READ_STATUS_TO_DEVICE_STATUS: Record<ReadStatus, string> = {
   skimmed: 'complete',
   on_hold: 'abandoned',
   abandoned: 'abandoned',
+  not_interested: 'abandoned',
 };
 
 export interface MatchCheckResult {

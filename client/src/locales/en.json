@@ -6238,7 +6238,8 @@
       "rereading": "Rereading",
       "read": "Read",
       "skimmed": "Skimmed",
-      "abandoned": "Abandoned"
+      "abandoned": "Abandoned",
+      "notInterested": "Not Interested"
     },
     "download": {
       "action": "Download",
@@ -9650,7 +9651,8 @@
       "moreActions": "More actions for {title}",
       "settledIn": "Filed in {library}, {time}",
       "settledAt": "Closed {time}",
-      "dismissedBadge": "Dismissed"
+      "dismissedBadge": "Dismissed",
+      "releasedOn": "Released {date}"
     },
     "detail": {
       "unknownAuthor": "Author unknown",
@@ -9749,7 +9751,10 @@
       "fulfilment": "Fulfilment",
       "anyFulfilment": "Any fulfilment",
       "selfServeOnly": "Self-served",
-      "approvedOnly": "Went through approval"
+      "approvedOnly": "Went through approval",
+      "trackingStatus": "Tracking",
+      "anyTrackingStatus": "Any tracking",
+      "noTrackingStatus": "None set"
     },
     "list": {
       "loading": "Loading requests...",
@@ -9781,7 +9786,8 @@
       "bulkRejectedPartial": "{done} rejected, {failed} could not be",
       "importDiscarded": "The imported file was discarded",
       "pairApproved": "Approved both",
-      "pairRejected": "Rejected both"
+      "pairRejected": "Rejected both",
+      "trackingStatusChanged": "Tracking status updated"
     },
     "errors": {
       "loadFailed": "Could not load requests",
@@ -9803,7 +9809,8 @@
       "bulkRejectFailed": "That selection could not be rejected",
       "discardImportFailed": "That import could not be discarded",
       "approveCompanionFailedEbook": "Approved this one, but the e-book could not be approved",
-      "approveCompanionFailedAudiobook": "Approved this one, but the audiobook could not be approved"
+      "approveCompanionFailedAudiobook": "Approved this one, but the audiobook could not be approved",
+      "trackingStatusChangeFailed": "Couldn't update the tracking status"
     },
     "grab": {
       "title": "Send to a download client",
@@ -10163,7 +10170,10 @@
       "decisionNote": "Decision note",
       "requestNote": "Request note",
       "openDetail": "Open full detail",
-      "pairMedia": "E-book and audiobook"
+      "pairMedia": "E-book and audiobook",
+      "released": "Released",
+      "tracking": "Tracking",
+      "trackingLabel": "Tracking status for {title}"
     },
     "confirm": {
       "cancelDownloadTitle": "Cancel this download?",
@@ -10344,6 +10354,12 @@
       "viewRequest": "View request",
       "submittedAudiobook": "Requested. The audiobook will join this book when it arrives",
       "submittedEbook": "Requested. The e-book will join this book when it arrives"
+    },
+    "trackingStatus": {
+      "none": "None",
+      "format_not_available": "Format Not Available",
+      "not_yet_released": "Not Yet Released",
+      "missing": "Missing"
     }
   },
   "collection": {

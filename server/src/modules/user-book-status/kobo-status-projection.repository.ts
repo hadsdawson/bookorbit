@@ -26,6 +26,7 @@ const KOBO_STATUS_BY_READ_STATUS: Record<ReadStatus, KoboReadingStatus> = {
   read: 'Finished',
   skimmed: 'Finished',
   abandoned: 'Reading',
+  not_interested: 'ReadyToRead',
 };
 
 export function toKoboReadingStatus(status: ReadStatus): KoboReadingStatus {

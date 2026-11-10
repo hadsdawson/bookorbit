@@ -31,6 +31,7 @@ const READ_STATUS_MESSAGE_KEYS: Record<string, string> = {
   read: 'book.readStatus.read',
   skimmed: 'book.readStatus.skimmed',
   abandoned: 'book.readStatus.abandoned',
+  not_interested: 'book.readStatus.notInterested',
 }
 
 function mergeLetterTemplate(template: string[], buckets: JumpBucket[]): string[] {

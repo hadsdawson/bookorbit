@@ -1,5 +1,5 @@
 import { api } from '@/lib/api'
-import { Book, BookCheck, BookMarked, BookOpen, BookX, Pause, RotateCcw, ScanLine } from '@lucide/vue'
+import { Ban, Book, BookCheck, BookMarked, BookOpen, BookX, Pause, RotateCcw, ScanLine } from '@lucide/vue'
 import type { ReadStatus, UserBookStatus } from '@bookorbit/types'
 
 export type StatusOption = {
@@ -16,6 +16,7 @@ export const STATUS_OPTIONS: StatusOption[] = [
   { value: 'read', label: 'Read' },
   { value: 'skimmed', label: 'Skimmed' },
   { value: 'abandoned', label: 'Abandoned' },
+  { value: 'not_interested', label: 'Not interested' },
 ]
 
 export const STATUS_ICONS: Record<ReadStatus, unknown> = {
@@ -27,6 +28,7 @@ export const STATUS_ICONS: Record<ReadStatus, unknown> = {
   read: BookCheck,
   skimmed: ScanLine,
   abandoned: BookX,
+  not_interested: Ban,
 }
 
 export const STATUS_COLORS: Record<ReadStatus, string> = {
@@ -38,6 +40,7 @@ export const STATUS_COLORS: Record<ReadStatus, string> = {
   read: 'text-emerald-500',
   skimmed: 'text-cyan-500',
   abandoned: 'text-rose-400',
+  not_interested: 'text-zinc-500',
 }
 
 export type ReadStatusPatch = {

@@ -244,6 +244,7 @@ export function useRequestSubmission() {
       isbn10: extra.isbn10 !== undefined ? extra.isbn10 : (candidate.isbn10 ?? null),
       isbn13: extra.isbn13 !== undefined ? extra.isbn13 : (candidate.isbn13 ?? null),
       publishedYear: candidate.publishedYear ?? null,
+      publishedDate: candidate.publishedDate ?? null,
       // What the requester chose, not what the edition happened to be. Inheriting the edition's
       // language silently is how a request for a book became a request for a translation.
       language: extra.language ?? null,
