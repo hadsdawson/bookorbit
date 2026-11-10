@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ArrowDown, ArrowUp, ChevronsUpDown, ExternalLink, EyeOff, TriangleAlert, Zap } from '@lucide/vue'
 import { isGrabbableBookRequestStatus } from '@bookorbit/types'
@@ -26,6 +26,14 @@ import RequestPipeline from './RequestPipeline.vue'
 import RequestRowActions from './RequestRowActions.vue'
 import RequestStatusBadge from './RequestStatusBadge.vue'
 import RequestTrackingStatusSelect from './RequestTrackingStatusSelect.vue'
+import {
+  ACTIONS_COLUMN_WIDTH,
+  REQUEST_TABLE_COLUMNS,
+  SELECT_COLUMN_WIDTH,
+  TITLE_MIN_WIDTH,
+  useRequestTableColumns,
+  type RequestTableColumn,
+} from '../composables/useRequestTableColumns'
 
 const props = defineProps<{
   requests: BookRequestItem[]
@@ -66,6 +74,90 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const isCompact = computed(() => props.density === 'compact')
+
+const columns = useRequestTableColumns()
+
+/** The narrowest the table may get before it scrolls sideways rather than squeezing a column. */
+const tableMinWidth = computed(
+  () =>
+    (hasSelectableRows.value ? SELECT_COLUMN_WIDTH : 0) +
+    ACTIONS_COLUMN_WIDTH +
+    columns.visibleColumns.value.reduce(
+      (sum, column) => sum + (column === 'title' ? (columns.storedWidthOf('title') ?? TITLE_MIN_WIDTH) : columns.widthOf(column)),
+      0,
+    ),
+)
+
+function show(column: RequestTableColumn): boolean {
+  return columns.isVisible(column)
+}
+
+function columnStyle(column: RequestTableColumn) {
+  if (column === 'title') {
+    const stored = columns.storedWidthOf('title')
+    return stored === null ? {} : { width: `${stored}px` }
+  }
+  return { width: `${columns.widthOf(column)}px` }
+}
+
+/** What the header is drawn at now, which for a flexible title is not its stored width. */
+function renderedWidth(event: Event, column: RequestTableColumn): number {
+  const header = (event.currentTarget as HTMLElement | null)?.closest('th')
+  return header ? header.getBoundingClientRect().width : columns.widthOf(column)
+}
+
+function columnFromEvent(event: Event): RequestTableColumn | null {
+  const value = (event.currentTarget as HTMLElement | null)?.dataset.column
+  return value && (REQUEST_TABLE_COLUMNS as readonly string[]).includes(value) ? (value as RequestTableColumn) : null
+}
+
+let resizing: { column: RequestTableColumn; startX: number; startWidth: number } | null = null
+
+function onResizeMove(event: PointerEvent) {
+  if (!resizing) return
+  columns.setWidth(resizing.column, resizing.startWidth + (event.clientX - resizing.startX))
+}
+
+function onResizeEnd() {
+  resizing = null
+  window.removeEventListener('pointermove', onResizeMove)
+  window.removeEventListener('pointerup', onResizeEnd)
+  document.body.style.removeProperty('cursor')
+  document.body.style.removeProperty('user-select')
+  columns.commitWidths()
+}
+
+function startResize(event: PointerEvent) {
+  const column = columnFromEvent(event)
+  if (!column) return
+  event.preventDefault()
+  event.stopPropagation()
+  resizing = { column, startX: event.clientX, startWidth: renderedWidth(event, column) }
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+  window.addEventListener('pointermove', onResizeMove)
+  window.addEventListener('pointerup', onResizeEnd)
+}
+
+function resizeWithKeys(event: KeyboardEvent) {
+  const column = columnFromEvent(event)
+  if (!column) return
+  const step = event.shiftKey ? 48 : 16
+  const current = renderedWidth(event, column)
+  if (event.key === 'ArrowRight') columns.setWidth(column, current + step)
+  else if (event.key === 'ArrowLeft') columns.setWidth(column, current - step)
+  else return
+  event.preventDefault()
+  columns.commitWidths()
+}
+
+function resetWidth(event: MouseEvent) {
+  const column = columnFromEvent(event)
+  if (!column) return
+  columns.resetWidth(column)
+}
+
+onBeforeUnmount(onResizeEnd)
 
 function mediaIcon(request: BookRequestItem) {
   return requestMediaIcon(request.mediaKind)
@@ -211,7 +303,7 @@ function releasedLabel(request: BookRequestItem): string {
     const [year, month, day] = request.publishedDate.split('-').map(Number)
     return formatDate(new Date(year!, month! - 1, day!), { dateStyle: 'medium' })
   }
-  return request.publishedYear ? String(request.publishedYear) : '—'
+  return request.publishedYear ? String(request.publishedYear) : '-'
 }
 
 /** Mirrors the server's rule: the requester, a manager, or whoever is fulfilling it. */
@@ -322,383 +414,482 @@ function rowDismissed(row: BookRequestItem): boolean {
       table in an overflow container on purpose: `overflow-x` would trap the sticky header inside a
       box that never scrolls vertically, and the header would stop sticking.
     -->
-    <table class="hidden w-full border-collapse text-sm lg:table">
-      <caption class="sr-only">
-        {{
-          t('bookRequests.table.caption')
-        }}
-      </caption>
-      <thead class="sticky top-0 z-10 bg-card">
-        <tr class="border-b border-border">
-          <th v-if="hasSelectableRows" scope="col" class="w-10 px-3 py-2.5">
-            <input
-              type="checkbox"
-              class="h-3.5 w-3.5 rounded-xs border-border accent-primary"
-              :checked="allSelected"
-              :indeterminate.prop="someSelected && !allSelected"
-              :aria-label="t('bookRequests.table.selectAll')"
-              @change="toggleSelectAll"
-            />
-          </th>
-
-          <th scope="col" class="px-3 py-2.5 text-start" :aria-sort="ariaSort('title')">
-            <button
-              type="button"
-              class="inline-flex items-center gap-1 rounded-xs text-xs font-semibold tracking-wide text-muted-foreground uppercase transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
-              @click="sortByTitle"
-            >
-              {{ t('bookRequests.table.title') }}
-              <component :is="sortIcon('title')" :size="12" aria-hidden="true" />
-            </button>
-          </th>
-
-          <th scope="col" class="w-24 px-3 py-2.5 text-start" :aria-sort="ariaSort('mediaKind')">
-            <button
-              type="button"
-              class="inline-flex items-center gap-1 rounded-xs text-xs font-semibold tracking-wide text-muted-foreground uppercase transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
-              @click="sortByMediaKind"
-            >
-              {{ t('bookRequests.table.mediaKind') }}
-              <component :is="sortIcon('mediaKind')" :size="12" aria-hidden="true" />
-            </button>
-          </th>
-
-          <th scope="col" class="w-28 px-3 py-2.5 text-start" :aria-sort="ariaSort('publishedDate')">
-            <button
-              type="button"
-              class="inline-flex items-center gap-1 rounded-xs text-xs font-semibold tracking-wide text-muted-foreground uppercase transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
-              @click="sortByReleased"
-            >
-              {{ t('bookRequests.table.released') }}
-              <component :is="sortIcon('publishedDate')" :size="12" aria-hidden="true" />
-            </button>
-          </th>
-
-          <th scope="col" class="hidden w-36 px-3 py-2.5 text-start xl:table-cell" :aria-sort="ariaSort('requester')">
-            <button
-              type="button"
-              class="inline-flex items-center gap-1 rounded-xs text-xs font-semibold tracking-wide text-muted-foreground uppercase transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
-              @click="sortByRequester"
-            >
-              {{ t('bookRequests.table.requestedBy') }}
-              <component :is="sortIcon('requester')" :size="12" aria-hidden="true" />
-            </button>
-          </th>
-
-          <th scope="col" class="w-32 px-3 py-2.5 text-start" :aria-sort="ariaSort('createdAt')">
-            <button
-              type="button"
-              class="inline-flex items-center gap-1 rounded-xs text-xs font-semibold tracking-wide text-muted-foreground uppercase transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
-              @click="sortByAge"
-            >
-              {{ t('bookRequests.table.age') }}
-              <component :is="sortIcon('createdAt')" :size="12" aria-hidden="true" />
-            </button>
-          </th>
-
-          <th scope="col" class="w-40 px-3 py-2.5 text-start" :aria-sort="ariaSort('status')">
-            <button
-              type="button"
-              class="inline-flex items-center gap-1 rounded-xs text-xs font-semibold tracking-wide text-muted-foreground uppercase transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
-              @click="sortByState"
-            >
-              {{ t('bookRequests.table.state') }}
-              <component :is="sortIcon('status')" :size="12" aria-hidden="true" />
-            </button>
-          </th>
-
-          <th scope="col" class="w-44 px-3 py-2.5 text-start" :aria-sort="ariaSort('trackingStatus')">
-            <button
-              type="button"
-              class="inline-flex items-center gap-1 rounded-xs text-xs font-semibold tracking-wide text-muted-foreground uppercase transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
-              @click="sortByTracking"
-            >
-              {{ t('bookRequests.table.tracking') }}
-              <component :is="sortIcon('trackingStatus')" :size="12" aria-hidden="true" />
-            </button>
-          </th>
-
-          <th scope="col" class="w-72 px-3 py-2.5 text-start text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-            {{ t('bookRequests.table.outcome') }}
-          </th>
-
-          <th scope="col" class="w-44 px-3 py-2.5">
-            <span class="sr-only">{{ t('bookRequests.table.actions') }}</span>
-          </th>
-        </tr>
-      </thead>
-
-      <tbody>
-        <tr
-          v-for="request in requests"
-          :key="request.id"
-          class="border-b border-border/60 hover:bg-muted/40"
-          :class="[isSelected(request) && 'bg-primary/8', rowDismissed(request) && 'opacity-60']"
-        >
-          <td v-if="hasSelectableRows" class="px-3" :class="isCompact ? 'py-1.5' : 'py-2.5'">
-            <input
-              v-if="isSelectable(request)"
-              type="checkbox"
-              class="h-3.5 w-3.5 rounded-xs border-border accent-primary"
-              :checked="isSelected(request)"
-              :aria-label="t('bookRequests.table.selectRow', { title: request.title })"
-              @change="handleToggleSelect(request)"
-            />
-          </td>
-
-          <!-- Auto table layout uses the nowrap title's intrinsic width unless the cell itself is bounded. -->
-          <td class="max-w-0 px-3" :class="isCompact ? 'py-1.5' : 'py-2.5'">
-            <div class="flex min-w-0 items-center gap-2.5">
-              <RequestPairCover
-                v-if="isPair(request)"
-                :ebook-src="halfCover(request, 'ebook')"
-                :audio-src="halfCover(request, 'audiobook')"
-                :ebook-fallbacks="halfBookCovers(request, 'ebook')"
-                :audio-fallbacks="halfBookCovers(request, 'audiobook')"
-                :class="isCompact ? 'me-1 h-8 w-[22px]' : 'me-1.5 h-[46px] w-8'"
-                :icon-size="isCompact ? 11 : 14"
+    <div class="hidden max-h-[calc(100svh-14rem)] overflow-auto rounded-lg lg:block">
+      <table class="table-fixed border-collapse text-sm" :style="{ width: '100%', minWidth: `${tableMinWidth}px` }">
+        <caption class="sr-only">
+          {{
+            t('bookRequests.table.caption')
+          }}
+        </caption>
+        <colgroup>
+          <col v-if="hasSelectableRows" :style="{ width: `${SELECT_COLUMN_WIDTH}px` }" />
+          <col v-for="column in columns.visibleColumns.value" :key="column" :style="columnStyle(column)" />
+          <col :style="{ width: `${ACTIONS_COLUMN_WIDTH}px` }" />
+        </colgroup>
+        <thead class="sticky top-0 z-10 bg-card">
+          <tr class="border-b border-border">
+            <th v-if="hasSelectableRows" scope="col" class="w-10 px-3 py-2.5">
+              <input
+                type="checkbox"
+                class="h-3.5 w-3.5 rounded-xs border-border accent-primary"
+                :checked="allSelected"
+                :indeterminate.prop="someSelected && !allSelected"
+                :aria-label="t('bookRequests.table.selectAll')"
+                @change="toggleSelectAll"
               />
-              <RequestCover
-                v-else
-                :src="request.coverUrl"
-                :fallback-sources="requestBookCoverSources(request)"
-                :media-kind="request.mediaKind"
-                :class="isCompact ? 'h-8 w-[22px]' : 'h-[46px] w-8'"
-                :icon-size="isCompact ? 11 : 14"
+            </th>
+
+            <th scope="col" class="relative px-3 py-2.5 text-start" :aria-sort="ariaSort('title')">
+              <button
+                type="button"
+                class="inline-flex max-w-full items-center gap-1 rounded-xs text-xs font-semibold tracking-wide whitespace-nowrap text-muted-foreground uppercase transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+                @click="sortByTitle"
+              >
+                {{ t('bookRequests.table.title') }}
+                <component :is="sortIcon('title')" :size="12" aria-hidden="true" />
+              </button>
+              <span
+                role="separator"
+                aria-orientation="vertical"
+                tabindex="0"
+                data-column="title"
+                :aria-label="t('bookRequests.columns.resize', { column: t('bookRequests.columns.title') })"
+                class="absolute inset-y-0 end-0 w-2 cursor-col-resize touch-none border-e border-transparent hover:border-primary focus-visible:border-primary focus-visible:outline-none"
+                @pointerdown="startResize"
+                @keydown="resizeWithKeys"
+                @dblclick="resetWidth"
               />
-              <div class="min-w-0">
-                <div class="flex min-w-0 items-center gap-2">
-                  <button
-                    type="button"
-                    class="min-w-0 truncate text-start font-medium text-foreground hover:underline focus-visible:underline focus-visible:outline-none"
-                    @click="handleOpen(request)"
-                  >
-                    {{ request.title }}
-                  </button>
-                  <RouterLink
-                    v-if="landedBookId(request) !== null"
-                    :to="{ name: 'book-detail', params: { bookId: landedBookId(request) } }"
-                    class="inline-flex shrink-0 rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
-                    :title="t('book.actions.bookDetails')"
-                  >
-                    <ExternalLink :size="14" aria-hidden="true" />
-                    <span class="sr-only">{{ t('book.actions.bookDetails') }}</span>
-                  </RouterLink>
+            </th>
+
+            <th v-if="show('mediaKind')" scope="col" class="relative px-3 py-2.5 text-start" :aria-sort="ariaSort('mediaKind')">
+              <button
+                type="button"
+                class="inline-flex max-w-full items-center gap-1 rounded-xs text-xs font-semibold tracking-wide whitespace-nowrap text-muted-foreground uppercase transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+                @click="sortByMediaKind"
+              >
+                {{ t('bookRequests.table.mediaKind') }}
+                <component :is="sortIcon('mediaKind')" :size="12" aria-hidden="true" />
+              </button>
+              <span
+                role="separator"
+                aria-orientation="vertical"
+                tabindex="0"
+                data-column="mediaKind"
+                :aria-label="t('bookRequests.columns.resize', { column: t('bookRequests.columns.mediaKind') })"
+                class="absolute inset-y-0 end-0 w-2 cursor-col-resize touch-none border-e border-transparent hover:border-primary focus-visible:border-primary focus-visible:outline-none"
+                @pointerdown="startResize"
+                @keydown="resizeWithKeys"
+                @dblclick="resetWidth"
+              />
+            </th>
+
+            <th v-if="show('released')" scope="col" class="relative px-3 py-2.5 text-start" :aria-sort="ariaSort('publishedDate')">
+              <button
+                type="button"
+                class="inline-flex max-w-full items-center gap-1 rounded-xs text-xs font-semibold tracking-wide whitespace-nowrap text-muted-foreground uppercase transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+                @click="sortByReleased"
+              >
+                {{ t('bookRequests.table.released') }}
+                <component :is="sortIcon('publishedDate')" :size="12" aria-hidden="true" />
+              </button>
+              <span
+                role="separator"
+                aria-orientation="vertical"
+                tabindex="0"
+                data-column="released"
+                :aria-label="t('bookRequests.columns.resize', { column: t('bookRequests.columns.released') })"
+                class="absolute inset-y-0 end-0 w-2 cursor-col-resize touch-none border-e border-transparent hover:border-primary focus-visible:border-primary focus-visible:outline-none"
+                @pointerdown="startResize"
+                @keydown="resizeWithKeys"
+                @dblclick="resetWidth"
+              />
+            </th>
+
+            <th v-if="show('requester')" scope="col" class="relative px-3 py-2.5 text-start" :aria-sort="ariaSort('requester')">
+              <button
+                type="button"
+                class="inline-flex max-w-full items-center gap-1 rounded-xs text-xs font-semibold tracking-wide whitespace-nowrap text-muted-foreground uppercase transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+                @click="sortByRequester"
+              >
+                {{ t('bookRequests.table.requestedBy') }}
+                <component :is="sortIcon('requester')" :size="12" aria-hidden="true" />
+              </button>
+              <span
+                role="separator"
+                aria-orientation="vertical"
+                tabindex="0"
+                data-column="requester"
+                :aria-label="t('bookRequests.columns.resize', { column: t('bookRequests.columns.requester') })"
+                class="absolute inset-y-0 end-0 w-2 cursor-col-resize touch-none border-e border-transparent hover:border-primary focus-visible:border-primary focus-visible:outline-none"
+                @pointerdown="startResize"
+                @keydown="resizeWithKeys"
+                @dblclick="resetWidth"
+              />
+            </th>
+
+            <th v-if="show('age')" scope="col" class="relative px-3 py-2.5 text-start" :aria-sort="ariaSort('createdAt')">
+              <button
+                type="button"
+                class="inline-flex max-w-full items-center gap-1 rounded-xs text-xs font-semibold tracking-wide whitespace-nowrap text-muted-foreground uppercase transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+                @click="sortByAge"
+              >
+                {{ t('bookRequests.table.age') }}
+                <component :is="sortIcon('createdAt')" :size="12" aria-hidden="true" />
+              </button>
+              <span
+                role="separator"
+                aria-orientation="vertical"
+                tabindex="0"
+                data-column="age"
+                :aria-label="t('bookRequests.columns.resize', { column: t('bookRequests.columns.age') })"
+                class="absolute inset-y-0 end-0 w-2 cursor-col-resize touch-none border-e border-transparent hover:border-primary focus-visible:border-primary focus-visible:outline-none"
+                @pointerdown="startResize"
+                @keydown="resizeWithKeys"
+                @dblclick="resetWidth"
+              />
+            </th>
+
+            <th v-if="show('state')" scope="col" class="relative px-3 py-2.5 text-start" :aria-sort="ariaSort('status')">
+              <button
+                type="button"
+                class="inline-flex max-w-full items-center gap-1 rounded-xs text-xs font-semibold tracking-wide whitespace-nowrap text-muted-foreground uppercase transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+                @click="sortByState"
+              >
+                {{ t('bookRequests.table.state') }}
+                <component :is="sortIcon('status')" :size="12" aria-hidden="true" />
+              </button>
+              <span
+                role="separator"
+                aria-orientation="vertical"
+                tabindex="0"
+                data-column="state"
+                :aria-label="t('bookRequests.columns.resize', { column: t('bookRequests.columns.state') })"
+                class="absolute inset-y-0 end-0 w-2 cursor-col-resize touch-none border-e border-transparent hover:border-primary focus-visible:border-primary focus-visible:outline-none"
+                @pointerdown="startResize"
+                @keydown="resizeWithKeys"
+                @dblclick="resetWidth"
+              />
+            </th>
+
+            <th v-if="show('tracking')" scope="col" class="relative px-3 py-2.5 text-start" :aria-sort="ariaSort('trackingStatus')">
+              <button
+                type="button"
+                class="inline-flex max-w-full items-center gap-1 rounded-xs text-xs font-semibold tracking-wide whitespace-nowrap text-muted-foreground uppercase transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+                @click="sortByTracking"
+              >
+                {{ t('bookRequests.table.tracking') }}
+                <component :is="sortIcon('trackingStatus')" :size="12" aria-hidden="true" />
+              </button>
+              <span
+                role="separator"
+                aria-orientation="vertical"
+                tabindex="0"
+                data-column="tracking"
+                :aria-label="t('bookRequests.columns.resize', { column: t('bookRequests.columns.tracking') })"
+                class="absolute inset-y-0 end-0 w-2 cursor-col-resize touch-none border-e border-transparent hover:border-primary focus-visible:border-primary focus-visible:outline-none"
+                @pointerdown="startResize"
+                @keydown="resizeWithKeys"
+                @dblclick="resetWidth"
+              />
+            </th>
+
+            <th
+              v-if="show('outcome')"
+              scope="col"
+              class="relative px-3 py-2.5 text-start text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+            >
+              {{ t('bookRequests.table.outcome') }}
+              <span
+                role="separator"
+                aria-orientation="vertical"
+                tabindex="0"
+                data-column="outcome"
+                :aria-label="t('bookRequests.columns.resize', { column: t('bookRequests.columns.outcome') })"
+                class="absolute inset-y-0 end-0 w-2 cursor-col-resize touch-none border-e border-transparent hover:border-primary focus-visible:border-primary focus-visible:outline-none"
+                @pointerdown="startResize"
+                @keydown="resizeWithKeys"
+                @dblclick="resetWidth"
+              />
+            </th>
+
+            <th scope="col" class="px-3 py-2.5">
+              <span class="sr-only">{{ t('bookRequests.table.actions') }}</span>
+            </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr
+            v-for="request in requests"
+            :key="request.id"
+            class="border-b border-border/60 hover:bg-muted/40"
+            :class="[isSelected(request) && 'bg-primary/8', rowDismissed(request) && 'opacity-60']"
+          >
+            <td v-if="hasSelectableRows" class="px-3" :class="isCompact ? 'py-1.5' : 'py-2.5'">
+              <input
+                v-if="isSelectable(request)"
+                type="checkbox"
+                class="h-3.5 w-3.5 rounded-xs border-border accent-primary"
+                :checked="isSelected(request)"
+                :aria-label="t('bookRequests.table.selectRow', { title: request.title })"
+                @change="handleToggleSelect(request)"
+              />
+            </td>
+
+            <!-- Auto table layout uses the nowrap title's intrinsic width unless the cell itself is bounded. -->
+            <td class="max-w-0 px-3" :class="isCompact ? 'py-1.5' : 'py-2.5'">
+              <div class="flex min-w-0 items-center gap-2.5">
+                <RequestPairCover
+                  v-if="isPair(request)"
+                  :ebook-src="halfCover(request, 'ebook')"
+                  :audio-src="halfCover(request, 'audiobook')"
+                  :ebook-fallbacks="halfBookCovers(request, 'ebook')"
+                  :audio-fallbacks="halfBookCovers(request, 'audiobook')"
+                  :class="isCompact ? 'me-1 h-8 w-[22px]' : 'me-1.5 h-[46px] w-8'"
+                  :icon-size="isCompact ? 11 : 14"
+                />
+                <RequestCover
+                  v-else
+                  :src="request.coverUrl"
+                  :fallback-sources="requestBookCoverSources(request)"
+                  :media-kind="request.mediaKind"
+                  :class="isCompact ? 'h-8 w-[22px]' : 'h-[46px] w-8'"
+                  :icon-size="isCompact ? 11 : 14"
+                />
+                <div class="min-w-0">
+                  <div class="flex min-w-0 items-center gap-2">
+                    <button
+                      type="button"
+                      class="min-w-0 truncate text-start font-medium text-foreground hover:underline focus-visible:underline focus-visible:outline-none"
+                      @click="handleOpen(request)"
+                    >
+                      {{ request.title }}
+                    </button>
+                    <RouterLink
+                      v-if="landedBookId(request) !== null"
+                      :to="{ name: 'book-detail', params: { bookId: landedBookId(request) } }"
+                      class="inline-flex shrink-0 rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+                      :title="t('book.actions.bookDetails')"
+                    >
+                      <ExternalLink :size="14" aria-hidden="true" />
+                      <span class="sr-only">{{ t('book.actions.bookDetails') }}</span>
+                    </RouterLink>
+                  </div>
+                  <span v-if="authorLine(request)" class="block truncate text-xs text-muted-foreground">{{ authorLine(request) }}</span>
                 </div>
-                <span v-if="authorLine(request)" class="block truncate text-xs text-muted-foreground">{{ authorLine(request) }}</span>
               </div>
-            </div>
-          </td>
+            </td>
 
-          <td class="px-3" :class="isCompact ? 'py-1.5' : 'py-2.5'">
-            <span v-if="isPair(request)" class="inline-flex items-center gap-1" :title="t('bookRequests.table.pairMedia')">
-              <component
-                :is="mediaIcon(half)"
-                v-for="half in orderedHalves(request)"
-                :key="half.id"
-                :size="16"
-                :class="mediaColor(half)"
-                aria-hidden="true"
-              />
-              <span class="sr-only">{{ t('bookRequests.table.pairMedia') }}</span>
-            </span>
-            <span v-else class="inline-flex" :title="mediaLabel(request)">
-              <component :is="mediaIcon(request)" :size="16" :class="mediaColor(request)" aria-hidden="true" />
-              <span class="sr-only">{{ mediaLabel(request) }}</span>
-            </span>
-          </td>
+            <td v-if="show('mediaKind')" class="px-3" :class="isCompact ? 'py-1.5' : 'py-2.5'">
+              <span v-if="isPair(request)" class="inline-flex items-center gap-1" :title="t('bookRequests.table.pairMedia')">
+                <component
+                  :is="mediaIcon(half)"
+                  v-for="half in orderedHalves(request)"
+                  :key="half.id"
+                  :size="16"
+                  :class="mediaColor(half)"
+                  aria-hidden="true"
+                />
+                <span class="sr-only">{{ t('bookRequests.table.pairMedia') }}</span>
+              </span>
+              <span v-else class="inline-flex" :title="mediaLabel(request)">
+                <component :is="mediaIcon(request)" :size="16" :class="mediaColor(request)" aria-hidden="true" />
+                <span class="sr-only">{{ mediaLabel(request) }}</span>
+              </span>
+            </td>
 
-          <td class="px-3 text-xs text-muted-foreground whitespace-nowrap tabular-nums" :class="isCompact ? 'py-1.5' : 'py-2.5'">
-            <div v-if="isPair(request)" class="flex flex-col gap-1">
-              <div v-for="half in orderedHalves(request)" :key="half.id" class="flex h-6 items-center">{{ releasedLabel(half) }}</div>
-            </div>
-            <template v-else>{{ releasedLabel(request) }}</template>
-          </td>
+            <td v-if="show('released')" class="truncate px-3 text-xs text-muted-foreground tabular-nums" :class="isCompact ? 'py-1.5' : 'py-2.5'">
+              <div v-if="isPair(request)" class="flex flex-col gap-1">
+                <div v-for="half in orderedHalves(request)" :key="half.id" class="flex h-6 min-w-0 items-center gap-1.5">
+                  <component :is="mediaIcon(half)" :size="13" :class="mediaColor(half)" class="shrink-0" aria-hidden="true" />
+                  <span class="sr-only">{{ mediaLabel(half) }}</span>
+                  <span class="truncate">{{ releasedLabel(half) }}</span>
+                </div>
+              </div>
+              <template v-else>{{ releasedLabel(request) }}</template>
+            </td>
 
-          <!--
-            `max-w-0` with the header's `w-36`: an auto-layout table sizes a column to its widest
-            content, so `truncate` alone never fires here and one long display name takes its width
-            out of Title instead. Zero maximum plus a stated width is what holds the column still.
-          -->
-          <td class="hidden max-w-0 truncate px-3 text-muted-foreground xl:table-cell" :class="isCompact ? 'py-1.5' : 'py-2.5'">
-            <span :title="request.requesterName">{{ request.requesterName }}</span>
-          </td>
+            <td v-if="show('requester')" class="truncate px-3 text-muted-foreground" :class="isCompact ? 'py-1.5' : 'py-2.5'">
+              <span :title="request.requesterName">{{ request.requesterName }}</span>
+            </td>
 
-          <td class="px-3 text-xs text-muted-foreground whitespace-nowrap tabular-nums" :class="isCompact ? 'py-1.5' : 'py-2.5'">
-            {{ formatRelativeFromNow(new Date(request.createdAt)) }}
-          </td>
+            <td v-if="show('age')" class="truncate px-3 text-xs text-muted-foreground tabular-nums" :class="isCompact ? 'py-1.5' : 'py-2.5'">
+              {{ formatRelativeFromNow(new Date(request.createdAt)) }}
+            </td>
 
-          <!-- Pipeline and State were two columns saying one thing; the stage bar rides the chip. -->
-          <td class="px-3" :class="isCompact ? 'py-1.5' : 'py-2.5'">
-            <!--
+            <!-- Pipeline and State were two columns saying one thing; the stage bar rides the chip. -->
+            <td v-if="show('state')" class="overflow-hidden px-3" :class="isCompact ? 'py-1.5' : 'py-2.5'">
+              <!--
               A pair is two lanes, one per half, each on a fixed-height line so the Outcome column's
               lanes line up beside them. The stage bar is left to the drawer: two of them made every
               pair row three times the height of the rows around it.
             -->
-            <div v-if="isPair(request)" class="flex flex-col gap-1">
-              <div v-for="half in orderedHalves(request)" :key="half.id" class="flex h-6 items-center gap-1.5">
-                <component :is="mediaIcon(half)" :size="13" :class="mediaColor(half)" aria-hidden="true" />
-                <span class="sr-only">{{ mediaLabel(half) }}</span>
-                <RequestStatusBadge :status="statusFor(half)" />
-                <span v-if="half.selfServe" class="inline-flex text-muted-foreground" :title="t('bookRequests.selfServeBadgeHint')">
-                  <Zap :size="12" aria-hidden="true" />
-                  <span class="sr-only">{{ t('bookRequests.selfServeBadge') }}</span>
-                </span>
+              <div v-if="isPair(request)" class="flex flex-col gap-1">
+                <div v-for="half in orderedHalves(request)" :key="half.id" class="flex h-6 items-center gap-1.5">
+                  <component :is="mediaIcon(half)" :size="13" :class="mediaColor(half)" aria-hidden="true" />
+                  <span class="sr-only">{{ mediaLabel(half) }}</span>
+                  <RequestStatusBadge :status="statusFor(half)" />
+                  <span v-if="half.selfServe" class="inline-flex text-muted-foreground" :title="t('bookRequests.selfServeBadgeHint')">
+                    <Zap :size="12" aria-hidden="true" />
+                    <span class="sr-only">{{ t('bookRequests.selfServeBadge') }}</span>
+                  </span>
+                </div>
               </div>
-            </div>
-            <div v-else class="inline-flex flex-col items-start gap-2">
-              <!--
+              <div v-else class="inline-flex flex-col items-start gap-2">
+                <!--
                 The self-serve marker rides beside the chip rather than under it. Stacked, it added a
                 line to this cell and left the table ragged: rows carrying it stood 19px taller than
                 rows that did not. The column has room for a chip plus an icon and not for a chip
                 plus a second pill, so the label moves into the tooltip and the screen-reader text.
               -->
-              <div class="inline-flex items-center gap-1.5">
-                <RequestStatusBadge :status="statusFor(request)" />
-                <span v-if="request.selfServe" class="inline-flex text-muted-foreground" :title="t('bookRequests.selfServeBadgeHint')">
-                  <Zap :size="12" aria-hidden="true" />
-                  <span class="sr-only">{{ t('bookRequests.selfServeBadge') }}</span>
+                <div class="inline-flex items-center gap-1.5">
+                  <RequestStatusBadge :status="statusFor(request)" />
+                  <span v-if="request.selfServe" class="inline-flex text-muted-foreground" :title="t('bookRequests.selfServeBadgeHint')">
+                    <Zap :size="12" aria-hidden="true" />
+                    <span class="sr-only">{{ t('bookRequests.selfServeBadge') }}</span>
+                  </span>
+                </div>
+                <RequestPipeline v-if="!isCompact" :request="request" :live="liveFor(request)" compact />
+                <span v-if="request.dismissed" class="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                  <EyeOff :size="11" aria-hidden="true" />
+                  {{ t('bookRequests.card.dismissedBadge') }}
                 </span>
               </div>
-              <RequestPipeline v-if="!isCompact" :request="request" :live="liveFor(request)" compact />
-              <span v-if="request.dismissed" class="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <EyeOff :size="11" aria-hidden="true" />
-                {{ t('bookRequests.card.dismissedBadge') }}
-              </span>
-            </div>
-          </td>
+            </td>
 
-          <td class="px-3" :class="isCompact ? 'py-1.5' : 'py-2.5'">
-            <div v-if="isPair(request)" class="flex flex-col gap-1">
-              <div v-for="half in orderedHalves(request)" :key="half.id" class="flex h-6 items-center">
-                <RequestTrackingStatusSelect
-                  :request="half"
-                  :editable="canEditTracking(half)"
-                  :busy="busyIds.has(half.id)"
-                  @change="handleSetTrackingStatus"
-                />
+            <td v-if="show('tracking')" class="px-3" :class="isCompact ? 'py-1.5' : 'py-2.5'">
+              <div v-if="isPair(request)" class="flex flex-col gap-1">
+                <div v-for="half in orderedHalves(request)" :key="half.id" class="flex h-6 min-w-0 items-center gap-1.5">
+                  <component :is="mediaIcon(half)" :size="13" :class="mediaColor(half)" class="shrink-0" aria-hidden="true" />
+                  <RequestTrackingStatusSelect
+                    :request="half"
+                    :editable="canEditTracking(half)"
+                    :busy="busyIds.has(half.id)"
+                    @change="handleSetTrackingStatus"
+                  />
+                </div>
               </div>
-            </div>
-            <RequestTrackingStatusSelect
-              v-else
-              :request="request"
-              :editable="canEditTracking(request)"
-              :busy="busyIds.has(request.id)"
-              @change="handleSetTrackingStatus"
-            />
-          </td>
+              <RequestTrackingStatusSelect
+                v-else
+                :request="request"
+                :editable="canEditTracking(request)"
+                :busy="busyIds.has(request.id)"
+                @change="handleSetTrackingStatus"
+              />
+            </td>
 
-          <td class="px-3 text-xs" :class="isCompact ? 'py-1.5' : 'py-2.5'">
-            <div v-if="isPair(request)" class="flex flex-col gap-1">
-              <div v-for="half in orderedHalves(request)" :key="half.id" class="flex h-6 min-w-0 items-center gap-2">
-                <template v-if="outcomeFor(half).kind === 'progress'">
-                  <div
-                    class="h-1.5 w-full max-w-20 shrink-0 overflow-hidden rounded-full bg-muted"
-                    role="progressbar"
-                    :aria-valuenow="progressFor(half)?.percent ?? 0"
-                    aria-valuemin="0"
-                    aria-valuemax="100"
-                    :aria-label="t('bookRequests.download.progressLabel', { title: `${half.title} (${mediaLabel(half)})` })"
-                  >
+            <td v-if="show('outcome')" class="overflow-hidden px-3 text-xs" :class="isCompact ? 'py-1.5' : 'py-2.5'">
+              <div v-if="isPair(request)" class="flex flex-col gap-1">
+                <div v-for="half in orderedHalves(request)" :key="half.id" class="flex h-6 min-w-0 items-center gap-2">
+                  <template v-if="outcomeFor(half).kind === 'progress'">
                     <div
-                      class="h-full rounded-full bg-primary transition-[width] duration-500 motion-reduce:transition-none"
-                      :style="{ width: `${progressFor(half)?.percent ?? 0}%` }"
-                    />
-                  </div>
-                  <span class="text-muted-foreground tabular-nums">{{ percentLabel(half) }}</span>
-                </template>
-                <span v-else-if="isFailure(half)" class="truncate text-destructive" :title="failureFor(half) ?? undefined">
-                  {{ failureFor(half) ?? t('bookRequests.outcome.failedUnknown') }}
-                </span>
-                <span v-else-if="failureFor(half)" class="truncate text-muted-foreground" :title="failureFor(half) ?? undefined">
-                  {{ failureFor(half) }}
-                </span>
-                <span v-else class="truncate text-muted-foreground">
-                  {{ t(`bookRequests.outcome.${outcomeFor(half).key}`, outcomeFor(half).params ?? {}) }}
-                </span>
+                      class="h-1.5 w-full max-w-20 shrink-0 overflow-hidden rounded-full bg-muted"
+                      role="progressbar"
+                      :aria-valuenow="progressFor(half)?.percent ?? 0"
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                      :aria-label="t('bookRequests.download.progressLabel', { title: `${half.title} (${mediaLabel(half)})` })"
+                    >
+                      <div
+                        class="h-full rounded-full bg-primary transition-[width] duration-500 motion-reduce:transition-none"
+                        :style="{ width: `${progressFor(half)?.percent ?? 0}%` }"
+                      />
+                    </div>
+                    <span class="text-muted-foreground tabular-nums">{{ percentLabel(half) }}</span>
+                  </template>
+                  <span v-else-if="isFailure(half)" class="truncate text-destructive" :title="failureFor(half) ?? undefined">
+                    {{ failureFor(half) ?? t('bookRequests.outcome.failedUnknown') }}
+                  </span>
+                  <span v-else-if="failureFor(half)" class="truncate text-muted-foreground" :title="failureFor(half) ?? undefined">
+                    {{ failureFor(half) }}
+                  </span>
+                  <span v-else class="truncate text-muted-foreground">
+                    {{ t(`bookRequests.outcome.${outcomeFor(half).key}`, outcomeFor(half).params ?? {}) }}
+                  </span>
+                </div>
               </div>
-            </div>
-            <template v-else-if="outcomeFor(request).kind === 'progress'">
-              <div
-                class="h-1.5 w-full max-w-24 overflow-hidden rounded-full bg-muted"
-                role="progressbar"
-                :aria-valuenow="progressFor(request)?.percent ?? 0"
-                aria-valuemin="0"
-                aria-valuemax="100"
-                :aria-label="t('bookRequests.download.progressLabel', { title: request.title })"
-              >
+              <template v-else-if="outcomeFor(request).kind === 'progress'">
                 <div
-                  class="h-full rounded-full bg-primary transition-[width] duration-500 motion-reduce:transition-none"
-                  :style="{ width: `${progressFor(request)?.percent ?? 0}%` }"
-                />
-              </div>
-              <p class="mt-1 text-muted-foreground tabular-nums">
-                {{ percentLabel(request) }}
-                <template v-if="transferLine(request)">&middot; {{ transferLine(request) }}</template>
+                  class="h-1.5 w-full max-w-24 overflow-hidden rounded-full bg-muted"
+                  role="progressbar"
+                  :aria-valuenow="progressFor(request)?.percent ?? 0"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  :aria-label="t('bookRequests.download.progressLabel', { title: request.title })"
+                >
+                  <div
+                    class="h-full rounded-full bg-primary transition-[width] duration-500 motion-reduce:transition-none"
+                    :style="{ width: `${progressFor(request)?.percent ?? 0}%` }"
+                  />
+                </div>
+                <p class="mt-1 text-muted-foreground tabular-nums">
+                  {{ percentLabel(request) }}
+                  <template v-if="transferLine(request)">&middot; {{ transferLine(request) }}</template>
+                </p>
+              </template>
+
+              <p v-else-if="isFailure(request)" class="line-clamp-2 text-destructive">
+                {{ failureFor(request) ?? t('bookRequests.outcome.failedUnknown') }}
               </p>
-            </template>
 
-            <p v-else-if="isFailure(request)" class="line-clamp-2 text-destructive">
-              {{ failureFor(request) ?? t('bookRequests.outcome.failedUnknown') }}
-            </p>
-
-            <!--
+              <!--
               A request automation handed back is still `approved`, and the stage line for that state
               reads "Looking for a release" - which is the one thing nothing is doing for it. When
               there is a reason on the row, the reason is the outcome.
             -->
-            <p v-else-if="failureFor(request)" class="line-clamp-2 text-muted-foreground">
-              {{ failureFor(request) }}
-            </p>
+              <p v-else-if="failureFor(request)" class="line-clamp-2 text-muted-foreground">
+                {{ failureFor(request) }}
+              </p>
 
-            <p v-else class="text-muted-foreground">
-              {{ t(`bookRequests.outcome.${outcomeFor(request).key}`, outcomeFor(request).params ?? {}) }}
-            </p>
-          </td>
+              <p v-else class="text-muted-foreground">
+                {{ t(`bookRequests.outcome.${outcomeFor(request).key}`, outcomeFor(request).params ?? {}) }}
+              </p>
+            </td>
 
-          <td class="px-3" :class="isCompact ? 'py-1.5' : 'py-2.5'">
-            <div
-              class="flex items-center justify-end gap-1"
-              :class="
-                actionsAreQuiet(request) && 'opacity-60 transition-opacity focus-within:opacity-100 hover:opacity-100 motion-reduce:transition-none'
-              "
-            >
-              <RequestPairRowActions
-                v-if="isPair(request)"
-                :row="request"
-                :can-manage="canManage"
-                :can-self-fulfil="canSelfFulfil"
-                :current-user-id="currentUserId"
-                :busy="isRowBusy(request)"
-                @open="handleOpen"
-                @grab="handleGrab"
-                @approve="handlePairApprove"
-                @reject="handlePairReject"
-                @cancel="handlePairCancel"
-                @dismiss="handlePairDismiss"
-                @restore="handlePairRestore"
-              />
-              <RequestRowActions
-                v-else
-                :request="request"
-                :can-manage="canManage"
-                :can-self-fulfil="canSelfFulfil"
-                :current-user-id="currentUserId"
-                :busy="busyIds.has(request.id)"
-                @open="handleOpen"
-                @approve="handleApprove"
-                @reject="handleReject"
-                @grab="handleGrab"
-                @dismiss="handleDismiss"
-                @restore="handleRestore"
-                @cancel="handleCancel"
-                @remove="handleRemove"
-              />
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            <td class="px-3" :class="isCompact ? 'py-1.5' : 'py-2.5'">
+              <div
+                class="flex items-center justify-end gap-1"
+                :class="
+                  actionsAreQuiet(request) && 'opacity-60 transition-opacity focus-within:opacity-100 hover:opacity-100 motion-reduce:transition-none'
+                "
+              >
+                <RequestPairRowActions
+                  v-if="isPair(request)"
+                  :row="request"
+                  :can-manage="canManage"
+                  :can-self-fulfil="canSelfFulfil"
+                  :current-user-id="currentUserId"
+                  :busy="isRowBusy(request)"
+                  @open="handleOpen"
+                  @grab="handleGrab"
+                  @approve="handlePairApprove"
+                  @reject="handlePairReject"
+                  @cancel="handlePairCancel"
+                  @dismiss="handlePairDismiss"
+                  @restore="handlePairRestore"
+                />
+                <RequestRowActions
+                  v-else
+                  :request="request"
+                  :can-manage="canManage"
+                  :can-self-fulfil="canSelfFulfil"
+                  :current-user-id="currentUserId"
+                  :busy="busyIds.has(request.id)"
+                  @open="handleOpen"
+                  @approve="handleApprove"
+                  @reject="handleReject"
+                  @grab="handleGrab"
+                  @dismiss="handleDismiss"
+                  @restore="handleRestore"
+                  @cancel="handleCancel"
+                  @remove="handleRemove"
+                />
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
     <!-- Below `lg` the same rows stack. Same data, same actions, no second component to keep in step. -->
     <ul class="divide-y divide-border/60 lg:hidden">
@@ -750,7 +941,7 @@ function rowDismissed(row: BookRequestItem): boolean {
               </RouterLink>
             </div>
             <p v-if="authorLine(request)" class="truncate text-xs text-muted-foreground">{{ authorLine(request) }}</p>
-            <p v-if="releasedLabel(request) !== '—'" class="text-xs text-muted-foreground tabular-nums">
+            <p v-if="releasedLabel(request) !== '-'" class="text-xs text-muted-foreground tabular-nums">
               {{ t('bookRequests.card.releasedOn', { date: releasedLabel(request) }) }}
             </p>
 

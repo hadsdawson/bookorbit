@@ -10360,6 +10360,19 @@
       "format_not_available": "Format Not Available",
       "not_yet_released": "Not Yet Released",
       "missing": "Missing"
+    },
+    "columns": {
+      "button": "Columns",
+      "reset": "Reset columns",
+      "resize": "Resize the {column} column",
+      "title": "Title",
+      "mediaKind": "Format",
+      "released": "Released",
+      "requester": "Requested by",
+      "age": "Age",
+      "state": "State",
+      "tracking": "Tracking",
+      "outcome": "Outcome"
     }
   },
   "collection": {

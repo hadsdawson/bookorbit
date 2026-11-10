@@ -18,6 +18,7 @@ import RequestDrawer from './components/RequestDrawer.vue'
 import NoRequestSourcesNotice from './components/NoRequestSourcesNotice.vue'
 import RequestEmptyState from './components/RequestEmptyState.vue'
 import RequestListSkeleton from './components/RequestListSkeleton.vue'
+import RequestColumnsMenu from './components/RequestColumnsMenu.vue'
 import RequestListTable from './components/RequestListTable.vue'
 import RequestSearchPanel from './components/RequestSearchPanel.vue'
 import { useBookRequestActions, useBookRequests, type ActionOutcome } from './composables/useBookRequests'
@@ -727,28 +728,31 @@ function goToNextPage() {
           </label>
         </div>
 
-        <!-- One list at two row heights. Cards and the table were the same view twice over. -->
-        <div class="inline-flex gap-0.5 rounded-lg border border-border bg-muted p-0.5" role="group" :aria-label="t('bookRequests.density.label')">
-          <button
-            type="button"
-            class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
-            :class="!isCompact ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'"
-            :aria-pressed="!isCompact"
-            @click="selectComfortableDensity"
-          >
-            <Rows3 :size="14" aria-hidden="true" />
-            {{ t('bookRequests.density.comfortable') }}
-          </button>
-          <button
-            type="button"
-            class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
-            :class="isCompact ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'"
-            :aria-pressed="isCompact"
-            @click="selectCompactDensity"
-          >
-            <Rows4 :size="14" aria-hidden="true" />
-            {{ t('bookRequests.density.compact') }}
-          </button>
+        <div class="flex items-center gap-2">
+          <RequestColumnsMenu class="hidden lg:inline-flex" />
+          <!-- One list at two row heights. Cards and the table were the same view twice over. -->
+          <div class="inline-flex gap-0.5 rounded-lg border border-border bg-muted p-0.5" role="group" :aria-label="t('bookRequests.density.label')">
+            <button
+              type="button"
+              class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+              :class="!isCompact ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'"
+              :aria-pressed="!isCompact"
+              @click="selectComfortableDensity"
+            >
+              <Rows3 :size="14" aria-hidden="true" />
+              {{ t('bookRequests.density.comfortable') }}
+            </button>
+            <button
+              type="button"
+              class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+              :class="isCompact ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'"
+              :aria-pressed="isCompact"
+              @click="selectCompactDensity"
+            >
+              <Rows4 :size="14" aria-hidden="true" />
+              {{ t('bookRequests.density.compact') }}
+            </button>
+          </div>
         </div>
       </div>
 
