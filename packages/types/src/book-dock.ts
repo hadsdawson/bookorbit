@@ -297,3 +297,21 @@ export interface BookDockStatistics {
   totalSizeBytes: number;
   byFormat: { format: string; count: number; sizeBytes: number }[];
 }
+
+/** Most files one book can be combined from in one go: a format or two plus a few extras. */
+export const BOOK_DOCK_COMBINE_MAX_FILES = 10;
+
+export interface BookDockCombinePayload {
+  /** Two or more docked files that are the same book. */
+  fileIds: number[];
+  /** The file whose metadata the book takes. Defaults to the first ebook, else the first file. */
+  primaryFileId?: number;
+  defaultLibraryId?: number;
+  defaultFolderId?: number;
+}
+
+export interface BookDockCombineResult extends BookDockFinalizeResult {
+  /** The book every file ended up in, when the primary file was filed. */
+  bookId?: number;
+  primaryFileId: number;
+}

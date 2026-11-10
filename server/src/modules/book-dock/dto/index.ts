@@ -1,4 +1,6 @@
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsInt,
@@ -19,6 +21,7 @@ import {
   type ValidatorConstraintInterface,
   ValidatorConstraint,
 } from 'class-validator';
+import { BOOK_DOCK_COMBINE_MAX_FILES } from '@bookorbit/types';
 import { Type } from 'class-transformer';
 import { SERIES_INDEX_MAX_LENGTH, SERIES_INDEX_PATTERN, type MetadataProviderKey, type SeriesIndex } from '@bookorbit/types';
 import { IsExternalProviderMap } from '../../../common/decorators/is-external-provider-map.decorator';
@@ -477,4 +480,27 @@ export class BulkEditBookDockDto {
 
   @IsBoolean()
   mergeArrays: boolean;
+}
+
+@HasCompleteDefaultDestination()
+export class CombineBookDockDto {
+  @IsArray()
+  @ArrayMinSize(2)
+  @ArrayMaxSize(BOOK_DOCK_COMBINE_MAX_FILES)
+  @IsInt({ each: true })
+  fileIds!: number[];
+
+  @IsOptional()
+  @IsInt()
+  primaryFileId?: number;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
+  @IsInt()
+  defaultLibraryId?: number;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
+  @IsInt()
+  defaultFolderId?: number;
 }

@@ -34,12 +34,14 @@ import type { RequestUser } from '../../common/types/request-user';
 import { BookDockService } from './book-dock.service';
 import { BookDockIngestService } from './book-dock-ingest.service';
 import { BookDockFinalizeService } from './book-dock-finalize.service';
+import { BookDockCombineService } from './book-dock-combine.service';
 import { BookDockWatcherService } from './book-dock-watcher.service';
 import { ListBookDockFilesDto } from './dto/list-book-dock-files.dto';
 import { UpdateBookDockSettingsDto } from './dto/update-book-dock-settings.dto';
 import {
   UpdateBookDockFileDto,
   FinalizeBookDockDto,
+  CombineBookDockDto,
   BulkDiscardDto,
   BulkEditBookDockDto,
   BulkApplyFetchedDto,
@@ -59,6 +61,7 @@ export class BookDockController {
     private readonly finalizeService: BookDockFinalizeService,
     private readonly watcherService: BookDockWatcherService,
     private readonly appSettings: AppSettingsService,
+    private readonly combineService: BookDockCombineService,
   ) {}
 
   @Get('files')
@@ -355,6 +358,21 @@ export class BookDockController {
       dto.readyToFile,
       user,
     );
+  }
+
+  /** Files several docked files as one book: the first as the book, the rest as its other formats. */
+  @Post('combine')
+  @RequirePermission(Permission.BookDockAccess, Permission.LibraryUpload)
+  @Auditable({
+    action: AuditAction.BookDockFinalize,
+    resource: AuditResource.BookDockFile,
+    description: (req) => {
+      const count = (req.body as { fileIds?: number[] })?.fileIds?.length ?? 0;
+      return `Combined ${count} Book Dock files into one book`;
+    },
+  })
+  combine(@CurrentUser() user: RequestUser, @Body() dto: CombineBookDockDto) {
+    return this.combineService.combine(dto, user, this.canManageAll(user));
   }
 
   @Post('rescan')
