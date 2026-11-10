@@ -85,6 +85,12 @@ export class BookRequestController {
     return this.service.getDefaultDestinations();
   }
 
+  /** Instance configuration the request form has to follow, so gated on requesting like the destinations. */
+  @Get('format-policy')
+  getFormatPolicy() {
+    return this.service.getFormatPolicy();
+  }
+
   /**
    * POST because the payload is a batch of candidates, not an addressable resource. Read-only,
    * so it is not audited.

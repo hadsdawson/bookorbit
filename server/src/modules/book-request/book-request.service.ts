@@ -27,6 +27,7 @@ import type {
   BookRequestActionErrorCode,
   BookRequestFailureMeta,
   BookRequestSubmitErrorCode,
+  BookRequestFormatPolicy,
   BookRequestItem,
   BookRequestTrackingStatus,
   BookRequestMediaKind,
@@ -279,6 +280,7 @@ export class BookRequestService {
     // Who this request is *for*, which is the caller unless an integration named somebody else.
     // Everything below asks about the subject and never about the actor: their permissions, their
     // libraries, their cap, their notifications. The actor stays the actor in the audit log.
+    await this.assertFormatAllowed(dto.mediaKind);
     const subject = await this.attribution.resolveSubject(actor, dto.userId);
     const selfServe = this.resolveSelfServe(dto, subject);
 
@@ -352,6 +354,7 @@ export class BookRequestService {
    * the book the second half should join when the first is already on the shelf.
    */
   async submitPair(dto: CreateBookRequestPairDto, actor: RequestUser): Promise<BookRequestPairSubmitResult> {
+    await this.assertFormatAllowed('pair');
     const subject = await this.attribution.resolveSubject(actor, dto.userId);
     const selfServe = this.resolveSelfServe(dto, subject);
     const halves = BOOK_REQUEST_MEDIA_KINDS.map((mediaKind): SubmitHalf => {
@@ -819,6 +822,23 @@ export class BookRequestService {
    * The retired `comic` is still answered, always with no destination: released iOS builds decode
    * it as a required field, and without it their whole request screen fails to load.
    */
+  getFormatPolicy(): Promise<BookRequestFormatPolicy> {
+    return this.automationSettings.getFormatPolicy();
+  }
+
+  /**
+   * A lock to one medium refuses the other medium and pairs. A lock to pairs refuses nothing:
+   * finishing a pair whose other half is already owned or requested is a single-medium request.
+   */
+  private async assertFormatAllowed(asked: BookRequestMediaKind | 'pair'): Promise<void> {
+    const policy = await this.automationSettings.getFormatPolicy();
+    if (!policy.locked || policy.defaultFormat === null || policy.defaultFormat === 'pair') return;
+    if (asked === policy.defaultFormat) return;
+    throw submitRefusal('SUBMIT_FORMAT_LOCKED', `Requests on this server are limited to ${policy.defaultFormat}`, {
+      format: policy.defaultFormat,
+    });
+  }
+
   async getDefaultDestinations(): Promise<ResolvedRequestDestinations & Record<LegacyBookRequestMediaKind, ResolvedRequestDestination>> {
     const resolved = await Promise.all(
       BOOK_REQUEST_MEDIA_KINDS.map(async (mediaKind) => [mediaKind, await this.automationSettings.resolveDestinationFor(mediaKind)] as const),

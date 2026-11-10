@@ -11,6 +11,7 @@ import {
   Headphones,
   Library,
   Loader2,
+  Lock,
   Pin,
   Search,
   SlidersHorizontal,
@@ -58,6 +59,7 @@ import { useCandidateGroups, type CandidateGroup, type CandidateIsbnChoice } fro
 import { formatLanguageName } from '@/i18n/formatters'
 import { requestLanguageOptions, useRequestDestinationDefault, useRequestLanguageDefault } from '../composables/useRequestDestinationDefault'
 import { submitFailureText, useRequestSubmission } from '../composables/useRequestSubmission'
+import { useRequestFormatPolicy } from '../composables/useRequestFormatPolicy'
 import RequestCover from './RequestCover.vue'
 import RequestPairCover from './RequestPairCover.vue'
 import { requestMediaIcon } from '../requestMedia'
@@ -113,6 +115,17 @@ type SearchChoice = BookRequestMediaKind | 'pair'
 const SEARCH_CHOICES: readonly SearchChoice[] = [...BOOK_REQUEST_MEDIA_KINDS, 'pair']
 const MAX_REQUEST_METADATA_SOURCES = 20
 const searchChoice = computed<SearchChoice>(() => (pairMode.value ? 'pair' : mediaKind.value))
+
+const { policy: formatPolicy, load: loadFormatPolicy } = useRequestFormatPolicy()
+const formatLocked = computed(() => formatPolicy.value.locked && formatPolicy.value.defaultFormat !== null)
+const shownChoices = computed<readonly SearchChoice[]>(() =>
+  formatLocked.value && formatPolicy.value.defaultFormat ? [formatPolicy.value.defaultFormat] : SEARCH_CHOICES,
+)
+
+function applyChoice(choice: SearchChoice) {
+  pairMode.value = choice === 'pair'
+  mediaKind.value = choice === 'pair' ? 'ebook' : choice
+}
 
 /**
  * What each medium may be asked for, taken from the shared lists rather than restated here, so the
@@ -233,7 +246,8 @@ const isLanguagePinned = computed(() => language.value !== null && defaultLangua
 const languageOptions = computed(() => requestLanguageOptions(locale.value))
 
 onMounted(async () => {
-  await Promise.all([loadProviders(), fetchLibraries(), loadDefaultDestination(), loadLanguageDefault()])
+  await Promise.all([loadProviders(), fetchLibraries(), loadDefaultDestination(), loadLanguageDefault(), loadFormatPolicy()])
+  if (formatPolicy.value.defaultFormat) applyChoice(formatPolicy.value.defaultFormat)
   // Your own interface language, until you pin one. Never the edition's: that is the silent
   // inheritance that turned a request for a book into a request for a translation.
   language.value = resolveLanguage(locale.value)
@@ -296,8 +310,8 @@ function handleSearchSubmit(event: Event) {
 }
 
 function selectSearchChoice(choice: SearchChoice) {
-  pairMode.value = choice === 'pair'
-  mediaKind.value = choice === 'pair' ? 'ebook' : choice
+  if (formatLocked.value && choice !== formatPolicy.value.defaultFormat) return
+  applyChoice(choice)
   if (hasSearched.value) void runSearch()
 }
 
@@ -929,7 +943,7 @@ function mediaIconFor(kind: BookRequestMediaKind) {
           <fieldset class="inline-flex h-9 max-w-full items-center gap-0.5 overflow-x-auto rounded-lg border border-border bg-card p-[3px]">
             <legend class="sr-only">{{ t('bookRequests.search.mediaKindLabel') }}</legend>
             <button
-              v-for="choice in SEARCH_CHOICES"
+              v-for="choice in shownChoices"
               :key="choice"
               type="button"
               class="inline-flex h-full shrink-0 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
@@ -941,6 +955,14 @@ function mediaIconFor(kind: BookRequestMediaKind) {
               <component :is="choiceIcon(choice)" :size="13" aria-hidden="true" />
               {{ choiceLabel(choice) }}
             </button>
+            <span
+              v-if="formatLocked"
+              class="inline-flex items-center gap-1 px-1.5 text-xs text-muted-foreground"
+              :title="t('bookRequests.search.formatLocked')"
+            >
+              <Lock :size="12" aria-hidden="true" />
+              <span class="sr-only sm:not-sr-only">{{ t('bookRequests.search.formatLocked') }}</span>
+            </span>
           </fieldset>
 
           <fieldset

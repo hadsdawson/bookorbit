@@ -330,6 +330,8 @@ export const BOOK_REQUEST_SUBMIT_ERROR_CODES = [
   "SUBMIT_TARGET_BOOK_NOT_FOUND",
   /** The book a request was asked to join already has the requested medium. Carries `mediaKind`. */
   "SUBMIT_TARGET_BOOK_HAS_MEDIUM",
+  /** The instance locks requests to one format and this asked for another. Carries `format`. */
+  "SUBMIT_FORMAT_LOCKED",
 ] as const;
 
 export type BookRequestSubmitErrorCode = (typeof BOOK_REQUEST_SUBMIT_ERROR_CODES)[number];

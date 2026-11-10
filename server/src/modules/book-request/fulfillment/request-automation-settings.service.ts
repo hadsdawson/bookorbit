@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import {
   BOOK_REQUEST_AUTOMATION_SETTING_KEYS,
   BOOK_REQUEST_DESTINATION_SETTING_KEYS,
+  BOOK_REQUEST_FORMAT_CHOICES,
   BOOK_REQUEST_IMPORT_FORMATS,
   BOOK_REQUEST_MEDIA_KINDS,
   BOOK_REQUEST_PROFILE_SETTING_KEYS,
@@ -22,6 +23,8 @@ import {
 } from '@bookorbit/types';
 import type {
   BookRequestAutomationSettings,
+  BookRequestFormatChoice,
+  BookRequestFormatPolicy,
   BookRequestImportFormats,
   BookRequestMediaKind,
   ReleaseProfiles,
@@ -79,6 +82,8 @@ export class RequestAutomationSettingsService {
       verificationEnabled: parseBoolean(values.get(KEYS.VERIFICATION_ENABLED), defaults.verificationEnabled),
       verificationThreshold: parseInteger(values.get(KEYS.VERIFICATION_THRESHOLD), defaults.verificationThreshold, 0, 100),
       importFormats: parseImportFormats(values.get(KEYS.IMPORT_FORMATS), defaults.importFormats),
+      defaultFormat: parseFormatChoice(values.get(KEYS.DEFAULT_FORMAT)),
+      formatLocked: parseBoolean(values.get(KEYS.FORMAT_LOCKED), defaults.formatLocked),
       destinations: parseDestinations(values),
       profiles: parseProfiles(values),
     };
@@ -92,6 +97,14 @@ export class RequestAutomationSettingsService {
    * that is gone resolves to nothing and the request falls back to needing a human, which is the
    * same place it would have been without a default at all.
    */
+  /** What the request form and the submit path both enforce. Locked with no format set means unlocked. */
+  async getFormatPolicy(): Promise<BookRequestFormatPolicy> {
+    const values = await this.appSettings.getValues([KEYS.DEFAULT_FORMAT, KEYS.FORMAT_LOCKED]);
+    const defaultFormat = parseFormatChoice(values.get(KEYS.DEFAULT_FORMAT));
+    const locked = defaultFormat !== null && parseBoolean(values.get(KEYS.FORMAT_LOCKED), false);
+    return { defaultFormat, locked };
+  }
+
   async resolveDestinationFor(mediaKind: BookRequestMediaKind): Promise<RequestDestination> {
     const { destinations } = await this.get();
     const stored = destinations[mediaKind];
@@ -146,6 +159,15 @@ export class RequestAutomationSettingsService {
         throw new BadRequestException(`Import formats must be one of: ${BOOK_REQUEST_IMPORT_FORMATS.join(', ')}`);
       }
       writes.push(this.appSettings.setValue(KEYS.IMPORT_FORMATS, payload.importFormats));
+    }
+    if (payload.defaultFormat !== undefined) {
+      if (payload.defaultFormat !== null && !BOOK_REQUEST_FORMAT_CHOICES.includes(payload.defaultFormat)) {
+        throw new BadRequestException(`Default format must be one of: ${BOOK_REQUEST_FORMAT_CHOICES.join(', ')}`);
+      }
+      writes.push(this.appSettings.setValue(KEYS.DEFAULT_FORMAT, payload.defaultFormat ?? ''));
+    }
+    if (payload.formatLocked !== undefined) {
+      writes.push(this.appSettings.setValue(KEYS.FORMAT_LOCKED, String(payload.formatLocked)));
     }
     if (payload.destinations !== undefined) {
       for (const mediaKind of BOOK_REQUEST_MEDIA_KINDS) {
@@ -275,4 +297,8 @@ function parseInteger(raw: string | undefined, fallback: number, min: number, ma
   const parsed = Number.parseInt(raw, 10);
   if (!Number.isFinite(parsed) || parsed < min || parsed > max) return fallback;
   return parsed;
+}
+
+function parseFormatChoice(raw: string | undefined): BookRequestFormatChoice | null {
+  return raw && (BOOK_REQUEST_FORMAT_CHOICES as readonly string[]).includes(raw) ? (raw as BookRequestFormatChoice) : null;
 }
