@@ -46,6 +46,8 @@ export interface BookDockMetadata {
   seriesIndex?: SeriesIndex | null;
   seriesMemberships?: MetadataSeriesMembership[] | null;
   genres?: string[];
+  /** Library tags to give the book when it is filed, often picked from `genres`. */
+  tags?: string[];
   coverUrl?: string | null;
   durationSeconds?: number | null;
   abridged?: boolean | null;

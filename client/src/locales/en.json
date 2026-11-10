@@ -9290,7 +9290,11 @@
       "seriesIndex": "Series #",
       "genres": "Genres",
       "genresCommaSeparated": "Genres (comma-separated)",
-      "description": "Description"
+      "description": "Description",
+      "tagsCommaSeparated": "Tags (comma-separated)",
+      "tagsFromGenres": "Add from genres:",
+      "addTag": "Add {tag} as a tag",
+      "addAllGenres": "Add all"
     },
     "upload": {
       "nDone": "{count} done",
