@@ -2,7 +2,7 @@
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatDateTime } from '@/i18n/formatters'
-import { X, BookOpen, Check, Trash2, Sparkles, ArrowLeft, Wand2, AlertCircle } from '@lucide/vue'
+import { X, BookOpen, Check, Trash2, Sparkles, ArrowLeft, Wand2, AlertCircle, Plus } from '@lucide/vue'
 import {
   getBookMediaKind,
   resolveBookDockSearchTitle,
@@ -68,9 +68,42 @@ const form = reactive({
   seriesName: '',
   seriesIndex: '',
   genres: '',
+  tags: '',
 })
 const selectedCoverUrl = ref('')
 const passthroughMetadata = ref<BookDockMetadata>({})
+function splitList(value: string): string[] {
+  return value
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+}
+
+/** Genres the metadata sources gave that are not tags yet, offered one tap away. */
+const genreSuggestions = computed(() => {
+  const taken = new Set(splitList(form.tags).map((tag) => tag.toLowerCase()))
+  const seen = new Set<string>()
+  return splitList(form.genres).filter((genre) => {
+    const key = genre.toLowerCase()
+    if (taken.has(key) || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+})
+
+function addTags(names: string[]) {
+  form.tags = [...splitList(form.tags), ...names].join(', ')
+  onFieldChange()
+}
+
+function addTagFromGenre(genre: string) {
+  addTags([genre])
+}
+
+function addAllGenresAsTags() {
+  addTags(genreSuggestions.value)
+}
+
 const seriesIndexError = computed(() => form.seriesIndex !== '' && !isValidSeriesIndex(form.seriesIndex.trim()))
 
 function normalizedSeriesIndex(): string | null {
@@ -96,6 +129,7 @@ watch(
     form.seriesName = m.seriesName ?? ''
     form.seriesIndex = m.seriesIndex != null ? String(m.seriesIndex) : ''
     form.genres = m.genres?.join(', ') ?? ''
+    form.tags = m.tags?.join(', ') ?? ''
     selectedCoverUrl.value = m.coverUrl ?? ''
     metaView.value = 'editor'
 
@@ -139,6 +173,7 @@ function buildMetadataPatchFromForm(): Partial<BookDockMetadata> {
           .map((g) => g.trim())
           .filter(Boolean)
       : undefined,
+    tags: form.tags ? splitList(form.tags) : undefined,
     coverUrl: selectedCoverUrl.value || undefined,
   }
 }
@@ -622,6 +657,38 @@ onMounted(() => {
                 @input="onFieldChange"
               />
             </label>
+            <div class="sm:col-span-2">
+              <label>
+                <span class="text-xs font-medium text-muted-foreground">{{ t('bookDock.field.tagsCommaSeparated') }}</span>
+                <input
+                  v-model="form.tags"
+                  class="mt-1 w-full h-8 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-1 focus:ring-ring"
+                  @input="onFieldChange"
+                />
+              </label>
+              <div v-if="genreSuggestions.length" class="mt-1.5 flex flex-wrap items-center gap-1.5">
+                <span class="text-xs text-muted-foreground">{{ t('bookDock.field.tagsFromGenres') }}</span>
+                <button
+                  v-for="genre in genreSuggestions"
+                  :key="genre"
+                  type="button"
+                  class="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs text-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                  :aria-label="t('bookDock.field.addTag', { tag: genre })"
+                  @click="addTagFromGenre(genre)"
+                >
+                  <Plus :size="11" aria-hidden="true" />
+                  {{ genre }}
+                </button>
+                <button
+                  v-if="genreSuggestions.length > 1"
+                  type="button"
+                  class="rounded-full px-2 py-0.5 text-xs text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                  @click="addAllGenresAsTags"
+                >
+                  {{ t('bookDock.field.addAllGenres') }}
+                </button>
+              </div>
+            </div>
             <label class="sm:col-span-2">
               <span class="text-xs font-medium text-muted-foreground">{{ t('bookDock.field.description') }}</span>
               <textarea

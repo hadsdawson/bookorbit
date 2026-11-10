@@ -208,6 +208,33 @@ describe('BookDockFileSheet', () => {
     }
   })
 
+  it('offers genres as tags, adds one or all of them, and autosaves the tags', async () => {
+    vi.useFakeTimers()
+    try {
+      const wrapper = mountSheet(makeFile({ embeddedMetadata: { genres: ['Fantasy', 'Romance', 'Fae'], tags: ['Owned'] } }))
+      const tagsInput = () =>
+        wrapper
+          .findAll('label')
+          .find((item) => item.text().includes('Tags'))!
+          .get<HTMLInputElement>('input')
+      const chip = (name: string) => wrapper.findAll('button').find((button) => button.text().trim() === name)
+
+      expect(tagsInput().element.value).toBe('Owned')
+      await chip('Romance')!.trigger('click')
+      expect(tagsInput().element.value).toBe('Owned, Romance')
+      expect(chip('Romance')).toBeUndefined()
+
+      await chip('Add all')!.trigger('click')
+      expect(tagsInput().element.value).toBe('Owned, Romance, Fantasy, Fae')
+      expect(chip('Add all')).toBeUndefined()
+
+      await vi.advanceTimersByTimeAsync(1000)
+      expect(mocks.saveMetadata).toHaveBeenLastCalledWith(1, expect.objectContaining({ tags: ['Owned', 'Romance', 'Fantasy', 'Fae'] }))
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('autosaves pasted ISBNs cleaned instead of sending values the server would refuse', async () => {
     vi.useFakeTimers()
     try {

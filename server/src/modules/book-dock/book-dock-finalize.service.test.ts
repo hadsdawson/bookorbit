@@ -61,6 +61,7 @@ function makeService() {
     coverSlotIsEmpty: vi.fn().mockResolvedValue(true),
     replaceAuthors: vi.fn().mockResolvedValue(undefined),
     replaceGenres: vi.fn().mockResolvedValue(undefined),
+    replaceTags: vi.fn().mockResolvedValue(undefined),
     replaceNarrators: vi.fn().mockResolvedValue(undefined),
     upsertComicMetadata: vi.fn().mockResolvedValue(undefined),
     measureMissingAudioDurations: vi.fn().mockResolvedValue({ measured: 0, failed: 0 }),
@@ -1565,6 +1566,7 @@ describe('BookDockFinalizeService', () => {
         seriesIndex: '2.5',
         authors: ['Author A'],
         genres: ['Fantasy'],
+        tags: [' Owned ', 'Fantasy', ''],
       } as BookDockMetadata,
       coverPath: null,
     });
@@ -1587,6 +1589,7 @@ describe('BookDockFinalizeService', () => {
     );
     expect(metadataService.replaceAuthors).toHaveBeenCalledWith(15, [{ name: 'Author A', sortName: null }]);
     expect(metadataService.replaceGenres).toHaveBeenCalledWith(15, ['Fantasy']);
+    expect(metadataService.replaceTags).toHaveBeenCalledWith(15, ['Owned', 'Fantasy']);
     expect(metadataScoreService.calculateAndSave).toHaveBeenCalledWith(15);
   });
 
