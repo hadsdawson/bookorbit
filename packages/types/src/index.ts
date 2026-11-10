@@ -44,6 +44,7 @@ export * from "./koreader";
 export * from "./book-dock";
 export * from "./book-request";
 export * from "./book-request-automation";
+export * from "./genre-policy";
 export * from "./book-request-destination";
 export * from "./book-request-preferences";
 export * from "./book-request-profile";

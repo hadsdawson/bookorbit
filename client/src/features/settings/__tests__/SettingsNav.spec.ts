@@ -167,9 +167,9 @@ describe('SettingsNav', () => {
       expect(childLabels(wrapper)).toEqual(['Missing-field reminders'])
     })
 
-    it('places personal reminders last after the genre blocklist', () => {
+    it('places personal reminders last after the genre settings', () => {
       const wrapper = mountNav({ su: true, routeName: 'settings-metadata-reminders' })
-      expect(childLabels(wrapper).slice(-2)).toEqual(['Genre Blocklist', 'Missing-field reminders'])
+      expect(childLabels(wrapper).slice(-2)).toEqual(['Genres', 'Missing-field reminders'])
     })
 
     it('shows file naming and maintenance with manage_app_settings', () => {

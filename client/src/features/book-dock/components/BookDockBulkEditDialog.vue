@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { X, Loader2 } from '@lucide/vue'
 import { isValidSeriesIndex, type BookDockBulkEditResult, type BookDockMetadata, type IdentifierInputKind } from '@bookorbit/types'
 import { api } from '@/lib/api'
 import IdentifierInput from '@/components/ui/IdentifierInput.vue'
+import ChipInput from '@/components/ui/ChipInput.vue'
+import InputWithSuggestions from '@/components/ui/InputWithSuggestions.vue'
+import { useSeriesNameSearch } from '@/features/book/composables/useMetadataFieldSearch'
+import { useGenreSearch } from '@/features/book/composables/useTagSearch'
+import { useGenrePolicy } from '@/features/book/composables/useGenrePolicy'
 
 const { t } = useI18n()
 
@@ -49,6 +54,28 @@ const FIELD_INPUT_CLASS =
 const enabledFields = reactive<Set<string>>(new Set())
 const values = reactive<Record<string, string>>({})
 const mergeArrays = ref(true)
+
+const { search: searchSeriesName } = useSeriesNameSearch()
+const { search: searchAnyGenre } = useGenreSearch()
+const { restricted: genresRestricted, load: loadGenrePolicy, acceptGenre, searchAllowed: searchAllowedGenres } = useGenrePolicy()
+const searchGenres = computed(() => (genresRestricted.value ? searchAllowedGenres : searchAnyGenre))
+onMounted(loadGenrePolicy)
+
+/** Genres as chips over the comma-separated text the submit step already reads. */
+const genreList = computed({
+  get: () =>
+    (values.genres ?? '')
+      .split(',')
+      .map((genre) => genre.trim())
+      .filter(Boolean),
+  set: (genres: string[]) => {
+    values.genres = genres.join(', ')
+  },
+})
+
+function setSeriesName(value: string | null) {
+  values.seriesName = value ?? ''
+}
 
 function toggleField(key: string) {
   if (enabledFields.has(key)) enabledFields.delete(key)
@@ -151,6 +178,21 @@ function handleClose() {
                   :kind="f.identifier"
                   :disabled="!enabledFields.has(f.key)"
                   :class="FIELD_INPUT_CLASS"
+                />
+                <InputWithSuggestions
+                  v-else-if="f.key === 'seriesName'"
+                  :model-value="values.seriesName ?? ''"
+                  :search-fn="searchSeriesName"
+                  :disabled="!enabledFields.has(f.key)"
+                  :class="FIELD_INPUT_CLASS"
+                  @update:model-value="setSeriesName"
+                />
+                <ChipInput
+                  v-else-if="f.key === 'genres'"
+                  v-model="genreList"
+                  :search-fn="searchGenres"
+                  :normalize="acceptGenre"
+                  :disabled="!enabledFields.has(f.key)"
                 />
                 <input
                   v-else

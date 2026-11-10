@@ -18,6 +18,11 @@ import {
 } from '@bookorbit/types'
 import BookDockStatusBadge from './BookDockStatusBadge.vue'
 import IdentifierInput from '@/components/ui/IdentifierInput.vue'
+import ChipInput from '@/components/ui/ChipInput.vue'
+import InputWithSuggestions from '@/components/ui/InputWithSuggestions.vue'
+import { useSeriesNameSearch } from '@/features/book/composables/useMetadataFieldSearch'
+import { useGenreSearch } from '@/features/book/composables/useTagSearch'
+import { useGenrePolicy } from '@/features/book/composables/useGenrePolicy'
 import MetadataMatchWorkspace from '@/features/book/components/metadata-match/MetadataMatchWorkspace.vue'
 import type { MetadataQuery } from '@/features/book/components/metadata-match/MetadataMatchQuery.vue'
 import { useBookDockDetail } from '../composables/useBookDockDetail'
@@ -72,6 +77,26 @@ const form = reactive({
 })
 const selectedCoverUrl = ref('')
 const passthroughMetadata = ref<BookDockMetadata>({})
+const { search: searchSeriesName } = useSeriesNameSearch()
+const { search: searchAnyGenre } = useGenreSearch()
+const { restricted: genresRestricted, load: loadGenrePolicy, acceptGenre, searchAllowed: searchAllowedGenres } = useGenrePolicy()
+const searchGenres = computed(() => (genresRestricted.value ? searchAllowedGenres : searchAnyGenre))
+onMounted(loadGenrePolicy)
+
+/** The genres field is a chip list over the same comma-separated text the rest of the form reads. */
+const genreList = computed({
+  get: () => splitList(form.genres),
+  set: (genres: string[]) => {
+    form.genres = genres.join(', ')
+    onFieldChange()
+  },
+})
+
+function handleSeriesNameChange(value: string | null) {
+  form.seriesName = value ?? ''
+  onFieldChange()
+}
+
 function splitList(value: string): string[] {
   return value
     .split(',')
@@ -628,10 +653,11 @@ onMounted(() => {
             </label>
             <label>
               <span class="text-xs font-medium text-muted-foreground">{{ t('bookDock.field.series') }}</span>
-              <input
-                v-model="form.seriesName"
+              <InputWithSuggestions
+                :model-value="form.seriesName"
+                :search-fn="searchSeriesName"
                 class="mt-1 w-full h-8 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-1 focus:ring-ring"
-                @input="onFieldChange"
+                @update:model-value="handleSeriesNameChange"
               />
             </label>
             <label>
@@ -649,14 +675,11 @@ onMounted(() => {
                 {{ t('bookDock.invalidSeriesIndex') }}
               </span>
             </label>
-            <label class="sm:col-span-2">
-              <span class="text-xs font-medium text-muted-foreground">{{ t('bookDock.field.genresCommaSeparated') }}</span>
-              <input
-                v-model="form.genres"
-                class="mt-1 w-full h-8 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-1 focus:ring-ring"
-                @input="onFieldChange"
-              />
-            </label>
+            <div class="sm:col-span-2">
+              <label for="book-dock-genres" class="text-xs font-medium text-muted-foreground">{{ t('bookDock.field.genres') }}</label>
+              <ChipInput v-model="genreList" input-id="book-dock-genres" :search-fn="searchGenres" :normalize="acceptGenre" class="mt-1" />
+              <p v-if="genresRestricted" class="mt-1 text-xs text-muted-foreground">{{ t('bookDock.field.genresRestricted') }}</p>
+            </div>
             <div class="sm:col-span-2">
               <label>
                 <span class="text-xs font-medium text-muted-foreground">{{ t('bookDock.field.tagsCommaSeparated') }}</span>

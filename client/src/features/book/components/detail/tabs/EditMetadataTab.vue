@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   Check,
@@ -48,6 +48,7 @@ import { useMetadataLocks } from '../../../composables/useMetadataLocks'
 import { useAuthorSearch } from '../../../composables/useAuthorSearch'
 import { useNarratorSearch } from '../../../composables/useNarratorSearch'
 import { useGenreSearch, useTagSearch } from '../../../composables/useTagSearch'
+import { useGenrePolicy } from '../../../composables/useGenrePolicy'
 import { usePublisherSearch, useSeriesNameSearch, useLanguageSearch } from '../../../composables/useMetadataFieldSearch'
 import InputWithSuggestions from '@/components/ui/InputWithSuggestions.vue'
 import { RATING_STARS, getRatingStarClass } from '@/features/book/lib/rating-stars'
@@ -183,7 +184,10 @@ const {
 } = useMetadataLocks({ deferred: true })
 const { search: searchAuthors } = useAuthorSearch()
 const { search: searchNarrators } = useNarratorSearch()
-const { search: searchGenres } = useGenreSearch()
+const { search: searchAnyGenre } = useGenreSearch()
+const { restricted: genresRestricted, load: loadGenrePolicy, acceptGenre, searchAllowed: searchAllowedGenres } = useGenrePolicy()
+const searchGenres = computed(() => (genresRestricted.value ? searchAllowedGenres : searchAnyGenre))
+onMounted(loadGenrePolicy)
 const { search: searchTags } = useTagSearch()
 const { search: searchPublisher } = usePublisherSearch()
 const { search: searchSeriesName } = useSeriesNameSearch()
@@ -1216,7 +1220,14 @@ function handleCoverChanged(medium: CoverMedium | null) {
                 multiline
                 @toggle="handleLockToggle"
               >
-                <ChipInput v-model="form.genres" :search-fn="searchGenres" :disabled="isLocked('genres')" control-class="pr-11" />
+                <ChipInput
+                  v-model="form.genres"
+                  :search-fn="searchGenres"
+                  :normalize="acceptGenre"
+                  :disabled="isLocked('genres')"
+                  control-class="pr-11"
+                />
+                <p v-if="genresRestricted" class="mt-1 text-xs text-muted-foreground">{{ t('book.detail.editMetadata.genresRestricted') }}</p>
               </MetadataFieldLabel>
 
               <MetadataFieldLabel

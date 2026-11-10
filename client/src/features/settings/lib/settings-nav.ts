@@ -341,7 +341,7 @@ export const SETTINGS_NAV: readonly SettingsNavGroup[] = [
             labelKey: 'settings.metadata.tabs.genre-blocklist',
             descriptionKey: 'settings.metadata.tabSubtitles.genre-blocklist',
             icon: Filter,
-            keywords: 'genre tag blocklist exclude ignore',
+            keywords: 'genre tag blocklist exclude ignore allowed allow list restrict',
             isVisible: anyPermission('manage_metadata_config'),
           },
           {

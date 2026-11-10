@@ -213,6 +213,7 @@ describe('MetadataService', () => {
       };
       embedder?: { embedBook: ReturnType<typeof vi.fn> } | null;
       seriesExpectedCount?: { record: ReturnType<typeof vi.fn> };
+      genrePolicy?: { filter: ReturnType<typeof vi.fn> };
       coverStore?: {
         mediaFor?: ReturnType<typeof vi.fn>;
         chooseWriteMedium?: ReturnType<typeof vi.fn>;
@@ -239,6 +240,7 @@ describe('MetadataService', () => {
       undefined,
       undefined,
       overrides?.seriesExpectedCount as never,
+      overrides?.genrePolicy as never,
     );
   }
 
@@ -1550,6 +1552,48 @@ describe('MetadataService', () => {
       { bookId: 12, genreId: 78 },
       { bookId: 12, genreId: 79 },
     ]);
+  });
+
+  it('replaceGenres writes only the genres the allowed list keeps', async () => {
+    const { db } = makeDb();
+    const filter = vi.fn().mockResolvedValue(['Fantasy']);
+    const service = makeService(db, undefined, { genrePolicy: { filter } });
+    const inserted: string[] = [];
+    db.insert.mockImplementation((table: unknown) => ({
+      values: (rows: Array<{ name?: string }>) => {
+        if (table === genres) inserted.push(...rows.map((row) => row.name!));
+        return {
+          onConflictDoNothing: () =>
+            table === genres
+              ? { returning: () => Promise.resolve(rows.map((row, index) => ({ id: 1 + index, name: row.name }))) }
+              : Promise.resolve(undefined),
+        };
+      },
+    }));
+
+    await service.replaceGenres(12, ['fantasy', 'Horror']);
+
+    expect(filter).toHaveBeenCalledWith(['fantasy', 'Horror']);
+    expect(inserted).toEqual(['Fantasy']);
+  });
+
+  it('replaceGenres leaves the book alone when the allowed list keeps none of the offered genres', async () => {
+    const { db, transaction } = makeDb();
+    const service = makeService(db, undefined, { genrePolicy: { filter: vi.fn().mockResolvedValue([]) } });
+
+    await service.replaceGenres(12, ['Horror']);
+
+    expect(transaction).not.toHaveBeenCalled();
+    expect(db.delete).not.toHaveBeenCalled();
+  });
+
+  it('replaceGenres still clears every genre when asked for none', async () => {
+    const { db } = makeDb();
+    const service = makeService(db, undefined, { genrePolicy: { filter: vi.fn().mockResolvedValue([]) } });
+
+    await service.replaceGenres(12, []);
+
+    expect(db.delete).toHaveBeenCalledWith(bookGenres);
   });
 
   it('replaceTags runs in transaction and normalizes unique names', async () => {

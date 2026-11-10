@@ -2690,7 +2690,7 @@
         "providers": "Providers",
         "field-rules": "Field Rules",
         "custom-fields": "Custom Fields",
-        "genre-blocklist": "Genre Blocklist",
+        "genre-blocklist": "Genres",
         "score": "Confidence Score",
         "auto-fetch": "Books",
         "authors": "Authors",
@@ -2710,7 +2710,7 @@
         "providers": "Enable external metadata sources and configure their credentials.",
         "field-rules": "Control which provider supplies each metadata field and how values are merged across your libraries.",
         "custom-fields": "Define custom metadata fields and choose which libraries use them.",
-        "genre-blocklist": "Prevent unwanted provider genre values from being written to books.",
+        "genre-blocklist": "Limit books to an allowed set of genres, and keep unwanted provider genres out.",
         "score": "How each metadata field counts towards the completeness score shown on every book.",
         "auto-fetch": "Automatically fetch covers, descriptions, and other details when new books are added to your library.",
         "authors": "Automatically fetch biographies and profile photos when new authors appear in your library.",
@@ -2724,6 +2724,17 @@
           "libraryReset": "Library reset to the global rules",
           "resetFailed": "Could not reset metadata preferences. Check your connection and try again."
         }
+      },
+      "allowedGenres": {
+        "heading": "Allowed genres",
+        "hint": "When on, books can only have genres from this list.",
+        "toggle": "Only allow genres from this list",
+        "listLabel": "Allowed genres",
+        "placeholder": "Type a genre and press Enter",
+        "emptyWhileOn": "The list is empty, so no new genres can be added to any book until you add some.",
+        "behaviour": "The metadata editor and Book Dock only offer genres from this list. Genres from metadata sources that are not on it are dropped, matched ignoring capitalization. Genres books already have are kept until they are next edited.",
+        "saved": "Allowed genres saved",
+        "saveFailed": "Could not save allowed genres"
       }
     },
     "reader": {
@@ -7297,7 +7308,8 @@
         "lastWrittenRow": "Last written",
         "neverWritten": "Never",
         "fileCount": "{count, plural, =0 {no files} one {one file} other {# files}}",
-        "unknownFormat": "Unknown"
+        "unknownFormat": "Unknown",
+        "genresRestricted": "Only genres from the allowed list in settings can be added."
       },
       "files": {
         "title": "Book files",
@@ -9294,7 +9306,8 @@
       "tagsCommaSeparated": "Tags (comma-separated)",
       "tagsFromGenres": "Add from genres:",
       "addTag": "Add {tag} as a tag",
-      "addAllGenres": "Add all"
+      "addAllGenres": "Add all",
+      "genresRestricted": "Only genres from the allowed list in settings can be added."
     },
     "upload": {
       "nDone": "{count} done",
@@ -15162,7 +15175,7 @@
       "providers": "Providers",
       "field-rules": "Field-Level Rules",
       "custom-fields": "Custom Metadata",
-      "genre-blocklist": "Genre Blocklist",
+      "genre-blocklist": "Genres",
       "score": "Confidence Score",
       "auto-fetch": "Book Auto-Fetch",
       "authors": "Author Auto-Fetch",
