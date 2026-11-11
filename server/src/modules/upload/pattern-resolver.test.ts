@@ -240,6 +240,19 @@ describe('replacePlaceholders', () => {
       expect(replacePlaceholders('<{series}/>', FULL)).toBe('Sprawl/');
     });
 
+    it('does not leave a run of spaces where dropped blocks were', () => {
+      const pattern = '<{authors:first}> <- {series}> <{seriesIndex}> <- {title}>';
+      const standalone = { authors: 'Neil Gaiman', title: 'The Ocean at the End of the Lane', series: '', seriesIndex: '' };
+      expect(replacePlaceholders(pattern, standalone)).toBe('Neil Gaiman - The Ocean at the End of the Lane');
+      expect(replacePlaceholders(pattern, { ...standalone, series: 'Discworld', seriesIndex: '1' })).toBe(
+        'Neil Gaiman - Discworld 1 - The Ocean at the End of the Lane',
+      );
+    });
+
+    it('keeps the spacing of a pattern whose blocks all fill', () => {
+      expect(replacePlaceholders('{title}  <{series}>', FULL)).toBe('Neuromancer  Sprawl');
+    });
+
     it('omits the block when a token is missing', () => {
       expect(replacePlaceholders('<{series}/>', PARTIAL)).toBe('');
     });
