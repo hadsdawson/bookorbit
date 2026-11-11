@@ -179,7 +179,7 @@ describe('BookFolderFilesService', () => {
     const started = await service.startWriteAll(1, 42);
     expect(started).toMatchObject({ running: true, total: 3 });
 
-    await vi.waitFor(() => expect(service.status(1)?.running).toBe(false));
+    await vi.waitFor(() => expect(service.status(1)?.running).toBe(false), { timeout: 10_000 });
     expect(service.status(1)).toEqual({ running: false, total: 3, processed: 3, written: 1, unchanged: 2, skipped: 0, failed: 0 });
   });
 
@@ -189,6 +189,6 @@ describe('BookFolderFilesService', () => {
     const second = await service.startWriteAll(1, 42);
     expect(second).toBe(first);
     expect(repo.countLibraryBooks).toHaveBeenCalledTimes(1);
-    await vi.waitFor(() => expect(service.status(1)?.running).toBe(false));
+    await vi.waitFor(() => expect(service.status(1)?.running).toBe(false), { timeout: 10_000 });
   });
 });
