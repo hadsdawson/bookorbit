@@ -163,11 +163,20 @@ export class BookFolderFilesService implements OnModuleDestroy {
       }
     }
 
+    // Belt and braces: the names above can never be a book format, but nothing is written over a
+    // path BookOrbit knows as a book's own file, whatever changes later.
+    const protectedPaths = await this.repo.findContentFilesAt(files.map((file) => file.path));
+    for (const path of protectedPaths) {
+      this.logger.warn(`[${EVENT}] [fail] bookId=${bookId} path="${sanitizeLogValue(path)}" - refused to overwrite a book file`);
+    }
+    const safeFiles = files.filter((file) => !protectedPaths.has(file.path));
+    if (files.length > 0 && safeFiles.length === 0) return { status: 'skipped', reason: 'book file at target' };
+
     const written: string[] = [];
     await this.selfWrites.track(
-      files.map((file) => file.path),
+      safeFiles.map((file) => file.path),
       async () => {
-        for (const file of files) {
+        for (const file of safeFiles) {
           if (await sameContent(file.path, file.bytes)) continue;
           await writeFile(file.path, file.bytes);
           written.push(file.path);
@@ -175,7 +184,7 @@ export class BookFolderFilesService implements OnModuleDestroy {
       },
     );
 
-    if (written.length === 0) return { status: 'unchanged', files: files.map((file) => file.path) };
+    if (written.length === 0) return { status: 'unchanged', files: safeFiles.map((file) => file.path) };
     this.logger.debug(`[${EVENT}] [end] bookId=${bookId} durationMs=${Date.now() - startedAt} written=${written.length} - folder files written`);
     return { status: 'written', files: written };
   }

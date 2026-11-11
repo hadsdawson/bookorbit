@@ -50,6 +50,7 @@ function makeService(
     }),
     findChapterSource: vi.fn().mockResolvedValue({ chapters: [{ title: 'One', startMs: 0 }], durationSeconds: 90, abridged: false }),
     countLibraryBooks: vi.fn().mockResolvedValue({ total: 5, ownFolder: 3 }),
+    findContentFilesAt: vi.fn().mockResolvedValue(new Set<string>()),
     listOwnFolderBookIds: vi.fn().mockImplementation((_libraryId: number, afterId: number) => Promise.resolve(afterId === 0 ? [7, 8, 9] : [])),
   };
   const fileWriteRepo = {
@@ -127,6 +128,27 @@ describe('BookFolderFilesService', () => {
     expect(await readFile(join(folder, 'cover.jpg'))).toEqual(ebookCover);
     await expect(stat(join(folder, 'metadata.json'))).rejects.toThrow();
     expect(fileWriteRepo.loadPayload).not.toHaveBeenCalled();
+  });
+
+  it('never writes over a path registered as a book file, and writes the rest', async () => {
+    const { service, repo } = makeService();
+    const bookFile = join(folder, 'metadata.json');
+    await writeFile(bookFile, 'the real book');
+    repo.findContentFilesAt.mockResolvedValue(new Set([bookFile]));
+
+    const outcome = await service.writeForBook(7);
+
+    expect(await readFile(bookFile, 'utf8')).toBe('the real book');
+    expect(outcome).toEqual({ status: 'written', files: [join(folder, 'cover.jpg'), join(folder, 'cover-ebook.jpg')] });
+    expect(repo.findContentFilesAt).toHaveBeenCalledWith([join(folder, 'cover.jpg'), join(folder, 'cover-ebook.jpg'), bookFile]);
+  });
+
+  it('skips the book when every target is a book file', async () => {
+    const { service, repo } = makeService({ folderCovers: 'off' });
+    const bookFile = join(folder, 'metadata.json');
+    repo.findContentFilesAt.mockResolvedValue(new Set([bookFile]));
+    await expect(service.writeForBook(7)).resolves.toEqual({ status: 'skipped', reason: 'book file at target' });
+    await expect(stat(bookFile)).rejects.toThrow();
   });
 
   it('skips a book that shares its folder with other books', async () => {

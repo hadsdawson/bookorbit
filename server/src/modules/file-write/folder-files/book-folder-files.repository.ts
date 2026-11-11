@@ -81,6 +81,21 @@ export class BookFolderFilesRepository {
     return { total: row?.total ?? 0, ownFolder: row?.ownFolder ?? 0 };
   }
 
+  /**
+   * Which of these paths are a book's own content file, in any library. Compared without case so a
+   * case-insensitive share cannot slip one past.
+   */
+  async findContentFilesAt(paths: readonly string[]): Promise<Set<string>> {
+    if (paths.length === 0) return new Set();
+    const lowered = paths.map((path) => path.toLowerCase());
+    const rows = await this.db
+      .select({ path: bookFiles.absolutePath })
+      .from(bookFiles)
+      .where(and(eq(bookFiles.role, 'content'), inArray(sql`lower(${bookFiles.absolutePath})`, lowered)));
+    const hits = new Set(rows.map((row) => row.path.toLowerCase()));
+    return new Set(paths.filter((path) => hits.has(path.toLowerCase())));
+  }
+
   /** One page of a library's books that own their folder, in id order, for the write-all run. */
   async listOwnFolderBookIds(libraryId: number, afterId: number, limit: number): Promise<number[]> {
     const rows = await this.db
