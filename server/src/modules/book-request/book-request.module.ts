@@ -69,6 +69,8 @@ import { RequestImportService } from './fulfillment/request-import.service';
 import { RequestSeedService } from './fulfillment/request-seed.service';
 import { RequestUserCleanupService } from './fulfillment/request-user-cleanup.service';
 import { RequestCompanionService } from './fulfillment/request-companion.service';
+import { RequestAudiobookDateService } from './fulfillment/request-audiobook-date.service';
+import { MetadataFetchModule } from '../metadata-fetch/metadata-fetch.module';
 import { RequestVerificationService } from './fulfillment/request-verification.service';
 import { RequestWatchdogService } from './fulfillment/request-watchdog.service';
 
@@ -79,6 +81,7 @@ import { RequestWatchdogService } from './fulfillment/request-watchdog.service';
 @Module({
   imports: [
     LibraryModule,
+    MetadataFetchModule,
     AppSettingsModule,
     AuditModule,
     BookDockModule,
@@ -168,6 +171,7 @@ import { RequestWatchdogService } from './fulfillment/request-watchdog.service';
     RequestFulfillmentService,
     RequestImportService,
     RequestCompanionService,
+    RequestAudiobookDateService,
     RequestVerificationService,
     RequestSeedService,
     RequestUserCleanupService,

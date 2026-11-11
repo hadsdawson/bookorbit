@@ -25,6 +25,7 @@ import {
   ACTIVE_BOOK_REQUEST_STATUSES,
   BOOK_REQUEST_FORMATS_BY_MEDIA_KIND,
   BOOK_REQUEST_MEDIA_KINDS,
+  SETTLED_BOOK_REQUEST_STATUSES,
   WORKER_WRITABLE_BOOK_REQUEST_STATUSES,
 } from '@bookorbit/types';
 import type {
@@ -348,6 +349,23 @@ export class BookRequestRepository {
       .where(pattern === null ? undefined : or(ilike(users.name, pattern), ilike(users.username, pattern)))
       .orderBy(asc(users.name), asc(users.username), asc(users.id))
       .limit(REQUESTER_OPTION_LIMIT);
+  }
+
+  /** Open audiobook requests, oldest first, for the one-time release date catch-up. */
+  async findOpenAudiobookIds(): Promise<number[]> {
+    const rows = await this.db
+      .select({ id: bookRequests.id })
+      .from(bookRequests)
+      .where(and(eq(bookRequests.mediaKind, 'audiobook'), notInArray(bookRequests.status, [...SETTLED_BOOK_REQUEST_STATUSES])))
+      .orderBy(asc(bookRequests.id));
+    return rows.map((row) => row.id);
+  }
+
+  async setPublishedDate(id: number, publishedDate: string, publishedYear: number | null): Promise<void> {
+    await this.db
+      .update(bookRequests)
+      .set({ publishedDate, ...(publishedYear !== null ? { publishedYear } : {}) })
+      .where(eq(bookRequests.id, id));
   }
 
   async findById(id: number): Promise<BookRequestJoinedRow | undefined> {
