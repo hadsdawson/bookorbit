@@ -1050,7 +1050,7 @@ describe('BookRequestService.cancelDownload', () => {
 describe('BookRequestService bulk tracking, cancel and delete', () => {
   it('sets one tracking status on every row and reports each', async () => {
     const { service } = makeService();
-    const set = vi.spyOn(service, 'setTrackingStatus').mockImplementation(async (id) => ({ id }) as never);
+    const set = vi.spyOn(service, 'setTrackingStatus').mockImplementation((id) => Promise.resolve({ id } as never));
     const result = await service.setTrackingStatusMany({ ids: [3, 4, 3], trackingStatus: 'missing' }, user());
     expect(set.mock.calls.map(([id, status]) => [id, status])).toEqual([
       [3, 'missing'],
@@ -1061,10 +1061,9 @@ describe('BookRequestService bulk tracking, cancel and delete', () => {
 
   it('cancels what it may and names what it may not', async () => {
     const { service } = makeService();
-    vi.spyOn(service, 'cancel').mockImplementation(async (id) => {
-      if (id === 6) throw new ForbiddenException('You cannot cancel this book request');
-      return { id } as never;
-    });
+    vi.spyOn(service, 'cancel').mockImplementation((id) =>
+      id === 6 ? Promise.reject(new ForbiddenException('You cannot cancel this book request')) : Promise.resolve({ id } as never),
+    );
     const result = await service.cancelMany({ ids: [5, 6] }, user());
     expect(result.updated.map((item) => item.id)).toEqual([5]);
     expect(result.failed).toEqual([expect.objectContaining({ id: 6, reason: 'You cannot cancel this book request' })]);
@@ -1072,7 +1071,7 @@ describe('BookRequestService bulk tracking, cancel and delete', () => {
 
   it('deletes each row, keeps files, and reports the row as it was', async () => {
     const { service } = makeService();
-    vi.spyOn(service, 'getOne').mockImplementation(async (id) => ({ id, title: 'Dune' }) as never);
+    vi.spyOn(service, 'getOne').mockImplementation((id) => Promise.resolve({ id, title: 'Dune' } as never));
     const remove = vi.spyOn(service, 'remove').mockResolvedValue(undefined);
     const result = await service.removeMany({ ids: [9] }, moderator());
     expect(remove).toHaveBeenCalledWith(9, expect.anything());
