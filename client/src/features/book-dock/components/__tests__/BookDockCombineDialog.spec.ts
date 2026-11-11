@@ -16,7 +16,7 @@ vi.mock('@/features/library/composables/useBookDestination', () => ({
     libraryId: ref(1),
     folderId: ref(2),
     hasDestination: ref(true),
-    fetchLibraries: vi.fn(),
+    fetchLibraries: vi.fn<() => Promise<void>>(),
   }),
 }))
 

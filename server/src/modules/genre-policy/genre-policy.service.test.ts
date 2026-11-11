@@ -7,9 +7,10 @@ const KEYS = GENRE_POLICY_SETTING_KEYS;
 function makeService(stored: Record<string, string> = {}) {
   const values = new Map(Object.entries(stored));
   const appSettings = {
-    getValues: vi.fn(async (keys: string[]) => new Map(keys.filter((key) => values.has(key)).map((key) => [key, values.get(key)!]))),
-    setValue: vi.fn(async (key: string, value: string) => {
+    getValues: vi.fn((keys: string[]) => Promise.resolve(new Map(keys.filter((key) => values.has(key)).map((key) => [key, values.get(key)!])))),
+    setValue: vi.fn((key: string, value: string) => {
       values.set(key, value);
+      return Promise.resolve();
     }),
   };
   return { service: new GenrePolicyService(appSettings as never), appSettings };
