@@ -175,12 +175,28 @@ describe('BookFolderFilesService', () => {
   });
 
   it('writes a whole library in the background and reports progress', async () => {
-    const { service } = makeService();
+    const { service, repo } = makeService();
+    // Each book owns its own folder, as in a real library, so concurrent writes never share a file.
+    repo.findTarget.mockImplementation(async (bookId: number) => {
+      const own = join(root, `book-${bookId}`);
+      await mkdir(own, { recursive: true });
+      return {
+        bookId,
+        libraryId: 1,
+        folderPath: own,
+        primaryPath: join(own, 'book.m4b'),
+        folderCovers: 'both',
+        metadataJson: true,
+        ownsFolder: true,
+      };
+    });
+    await mkdir(join(root, 'book-8'), { recursive: true });
+    await service.writeForBook(8);
     const started = await service.startWriteAll(1, 42);
     expect(started).toMatchObject({ running: true, total: 3 });
 
     await vi.waitFor(() => expect(service.status(1)?.running).toBe(false), { timeout: 10_000 });
-    expect(service.status(1)).toEqual({ running: false, total: 3, processed: 3, written: 1, unchanged: 2, skipped: 0, failed: 0 });
+    expect(service.status(1)).toEqual({ running: false, total: 3, processed: 3, written: 2, unchanged: 1, skipped: 0, failed: 0 });
   });
 
   it('does not start a second run while one is going', async () => {
