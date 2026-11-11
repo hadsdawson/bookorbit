@@ -2204,6 +2204,7 @@ export class BookService {
         write = settingsResult.writeFailure;
         libraryAutoWriteEnabled = settings?.fileWriteEnabled ?? false;
         this.fileWriteService?.cancelPendingWrite(id);
+        this.fileWriteService?.scheduleFolderFiles(id);
         this.fileRenameService?.cancelPendingRename(id);
 
         if (libraryAutoWriteEnabled) {

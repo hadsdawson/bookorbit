@@ -102,6 +102,7 @@ async function createContext(role: AccessLevel | null = 'viewer') {
     scheduleWrite: vi.fn(),
     writeToFile: vi.fn(),
     cancelPendingWrite: vi.fn(),
+    scheduleFolderFiles: vi.fn(),
     findLibraryWriteSettingsForBook: vi.fn().mockResolvedValue({ fileWriteEnabled: false, fileRenameEnabled: false }),
   };
   const fileRename = { scheduleRename: vi.fn(), cancelPendingRename: vi.fn(), performRename: vi.fn() };

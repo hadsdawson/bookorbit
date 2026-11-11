@@ -14,6 +14,8 @@ import { FileRenameService } from './file-rename.service';
 import { FileWriteRepository } from './file-write.repository';
 import { FileWriteService } from './file-write.service';
 import { FormatWriterRegistry } from './format-writer.registry';
+import { BookFolderFilesRepository } from './folder-files/book-folder-files.repository';
+import { BookFolderFilesService } from './folder-files/book-folder-files.service';
 import { FlacAudioFormatWriter, M4aAudioFormatWriter, M4bAudioFormatWriter, Mp3AudioFormatWriter } from './formats/audio/audio-format-writer';
 import { AudioMetadataEmbedder } from './formats/audio/audio-metadata-embedder';
 import { Cb7FormatWriter } from './formats/cbx/cb7-format-writer';
@@ -86,7 +88,17 @@ import { FORMAT_WRITERS } from './interfaces/format-writer.interface';
       ],
     },
     FormatWriterRegistry,
+    BookFolderFilesRepository,
+    BookFolderFilesService,
   ],
-  exports: [FileWriteService, FileWriteRepository, FileRenameService, FileRenameRepository, BulkRenameRepository, CommonModule],
+  exports: [
+    BookFolderFilesService,
+    FileWriteService,
+    FileWriteRepository,
+    FileRenameService,
+    FileRenameRepository,
+    BulkRenameRepository,
+    CommonModule,
+  ],
 })
 export class FileWriteModule {}

@@ -8,6 +8,7 @@ vi.mock('../app-settings/app-settings.module', () => ({ AppSettingsModule: class
 vi.mock('../notification/notification.module', () => ({ NotificationModule: class NotificationModule {} }));
 
 import { LibraryController } from './library.controller';
+import { LibraryFolderFilesController } from './library-folder-files.controller';
 import { LibraryModule } from './library.module';
 import { LibraryRepository } from './library.repository';
 import { LibraryScanSchedulerService } from './library-scan-scheduler.service';
@@ -17,7 +18,7 @@ import { BulkRenameService } from './bulk-rename.service';
 
 describe('LibraryModule', () => {
   it('registers expected controller/providers/exports', () => {
-    expect(Reflect.getMetadata('controllers', LibraryModule)).toEqual([LibraryController]);
+    expect(Reflect.getMetadata('controllers', LibraryModule)).toEqual([LibraryController, LibraryFolderFilesController]);
     expect(Reflect.getMetadata('providers', LibraryModule)).toEqual([
       LibraryService,
       LibraryRepository,

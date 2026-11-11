@@ -7,7 +7,7 @@ import {
   withoutImplicitReadAlongFormatPriority,
   withReadAlongFormatPriority,
 } from '@bookorbit/types'
-import type { AddedAtSource, CoverAspectRatio, Library, LibraryStats, OrganizationMode, PrescanResult } from '@bookorbit/types'
+import type { AddedAtSource, CoverAspectRatio, FolderCoverMedia, Library, LibraryStats, OrganizationMode, PrescanResult } from '@bookorbit/types'
 import { i18n } from '@/i18n'
 import { isAtOrInside } from './folder-picker/folder-picker-rules'
 
@@ -50,6 +50,8 @@ function blankForm() {
     markAsFinishedPercentComplete: 98,
     fileWriteEnabled: false,
     fileWriteWriteCover: true,
+    fileWriteFolderCovers: 'off' as FolderCoverMedia,
+    fileWriteMetadataJson: false,
     fileWriteEpubEnabled: true,
     fileWriteEpubMaxFileSizeMb: 100,
     fileWriteFb2Enabled: false,
@@ -198,6 +200,8 @@ export function useLibraryCreator() {
     form.markAsFinishedPercentComplete = library.markAsFinishedPercentComplete
     form.fileWriteEnabled = library.fileWriteEnabled
     form.fileWriteWriteCover = library.fileWriteWriteCover
+    form.fileWriteFolderCovers = library.fileWriteFolderCovers ?? 'off'
+    form.fileWriteMetadataJson = library.fileWriteMetadataJson ?? false
     form.fileWriteEpubEnabled = library.fileWriteEpubEnabled
     form.fileWriteEpubMaxFileSizeMb = library.fileWriteEpubMaxFileSizeMb
     form.fileWriteFb2Enabled = library.fileWriteFb2Enabled

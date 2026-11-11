@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, OnModuleDestroy, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { readFile, stat } from 'fs/promises';
 
@@ -32,6 +32,7 @@ import { createBookWriteFieldMask } from './file-write.constants';
 import { FileLockService, bookOperationLockKey } from './file-lock.service';
 import { FileWriteRepository } from './file-write.repository';
 import { FormatWriterRegistry } from './format-writer.registry';
+import { BookFolderFilesService } from './folder-files/book-folder-files.service';
 import { inspectCoverImage } from './formats/shared/cover-image';
 import { probeAudioDurationMs } from './formats/audio/audio-metadata-embedder';
 import type { BookWritePayload } from './interfaces/book-write-payload.interface';
@@ -110,12 +111,14 @@ export class FileWriteService implements OnModuleDestroy {
     private readonly selfWriteRegistry: SelfWriteRegistry,
     private readonly coverStore: BookCoverStore,
     private readonly audiobookChapters: AudiobookChaptersService,
+    @Optional() private readonly folderFiles?: BookFolderFilesService,
   ) {
     this.debounceMs = resolvePositiveInteger(this.config.get('fileWrite.debounceMs'), DEFAULT_WRITE_DEBOUNCE_MS);
     this.maxConcurrentWrites = resolvePositiveInteger(this.config.get('fileWrite.maxConcurrentWrites'), DEFAULT_MAX_CONCURRENT_WRITES);
   }
 
   scheduleWrite(bookId: number, triggeredBy: 'auto' | 'sync', userId?: number): void {
+    this.folderFiles?.schedule(bookId);
     const existing = this.debounceMap.get(bookId);
     if (existing) clearTimeout(existing);
 
@@ -178,9 +181,15 @@ export class FileWriteService implements OnModuleDestroy {
     force = false,
     suppressNotification = false,
   ): Promise<WriteResult> {
+    if (!dryRun) this.folderFiles?.schedule(bookId);
     return this.lockService.withLock(bookOperationLockKey(bookId), () =>
       this.writeToFileLocked(bookId, triggeredBy, userId, dryRun, force, suppressNotification),
     );
+  }
+
+  /** For changes that reach no embedded field, such as saved chapters, but still belong in the book's folder files. */
+  scheduleFolderFiles(bookId: number): void {
+    this.folderFiles?.schedule(bookId);
   }
 
   private async writeToFileLocked(

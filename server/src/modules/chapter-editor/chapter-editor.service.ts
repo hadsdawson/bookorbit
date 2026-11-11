@@ -137,6 +137,7 @@ export class ChapterEditorService {
       const chapters = this.validate(dto.chapters, this.timeline(context).totalDurationMs);
 
       await this.audiobookChapters.saveEditedChapters(bookId, chapters, user.id, { expectedRevision: dto.baseRevision, locked: lock });
+      this.fileWriteService.scheduleFolderFiles(bookId);
 
       this.logger.log(`[${event}] [end] bookId=${bookId} durationMs=${Date.now() - startedAt} chapters=${chapters.length} - chapters saved`);
       return this.buildState(bookId, await this.loadContext(bookId));
@@ -162,6 +163,7 @@ export class ChapterEditorService {
       const embedded = await this.readFileChapters(context, onProgress);
 
       await this.audiobookChapters.restoreFileChapters(bookId, embedded, user.id, { expectedRevision: dto.baseRevision, locked: false });
+      this.fileWriteService.scheduleFolderFiles(bookId);
 
       this.logger.log(
         `[${event}] [end] bookId=${bookId} durationMs=${Date.now() - startedAt} chapters=${embedded.length} - chapters reverted to the files`,
@@ -363,6 +365,7 @@ export class ChapterEditorService {
       if (error instanceof ConflictException) return { status: 'review', reason: 'locked', result };
       throw error;
     }
+    this.fileWriteService.scheduleFolderFiles(bookId);
     return { status: 'applied', reason: null, result: { ...result, chapterCount: plan.chapters.length } };
   }
 

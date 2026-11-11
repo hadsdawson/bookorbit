@@ -23,7 +23,7 @@ describe('classifyFile — primary formats', () => {
 // ── COVER FILES ───────────────────────────────────────────────────────────────
 
 describe('classifyFile — cover images', () => {
-  it.each(['cover', 'folder', 'thumbnail', 'artwork', 'front'])('classifies %s.jpg as cover', (stem) => {
+  it.each(['cover', 'cover-ebook', 'folder', 'thumbnail', 'artwork', 'front'])('classifies %s.jpg as cover', (stem) => {
     const result = classifyFile(`/books/Book/${stem}.jpg`);
     expect(result.role).toBe('cover');
   });
@@ -32,6 +32,12 @@ describe('classifyFile — cover images', () => {
     const result = classifyFile(`/books/Book/cover.${ext}`);
     expect(result.role).toBe('cover');
     expect(result.format).toBe(ext);
+  });
+
+  it('classifies an Audiobookshelf metadata.json as metadata, and other JSON as supplementary', () => {
+    expect(classifyFile('/books/Book/metadata.json')).toEqual({ format: 'json', role: 'metadata' });
+    expect(classifyFile('/books/Book/Metadata.JSON').role).toBe('metadata');
+    expect(classifyFile('/books/Book/chapters.json').role).toBe('supplement');
   });
 
   it('classifies image with unrecognised basename as supplementary', () => {

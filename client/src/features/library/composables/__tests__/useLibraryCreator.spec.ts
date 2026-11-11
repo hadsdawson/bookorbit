@@ -202,6 +202,8 @@ describe('useLibraryCreator', () => {
       fileWriteAudioEnabled: false,
       fileWriteAudioMaxFileSizeMb: 750,
       fileWriteAllFiles: true,
+      fileWriteFolderCovers: 'both',
+      fileWriteMetadataJson: true,
       fileWriteReadAlongEnabled: false,
       fileWriteReadAlongMaxFileSizeMb: 1000,
       fileRenameEnabled: true,
@@ -211,6 +213,7 @@ describe('useLibraryCreator', () => {
     })
 
     expect(creator.form.fileRenameEnabled).toBe(true)
+    expect([creator.form.fileWriteFolderCovers, creator.form.fileWriteMetadataJson]).toEqual(['both', true])
     expect(creator.form.fileWriteAudioEnabled).toBe(false)
     expect(creator.form.fileWriteAudioMaxFileSizeMb).toBe(750)
     expect(creator.form.fileWriteAllFiles).toBe(true)
@@ -458,6 +461,8 @@ function makeLibrary(overrides: Partial<Library> = {}): Library {
     fileWriteAudioEnabled: false,
     fileWriteAudioMaxFileSizeMb: 750,
     fileWriteAllFiles: false,
+    fileWriteFolderCovers: 'off',
+    fileWriteMetadataJson: false,
     fileWriteReadAlongEnabled: false,
     fileWriteReadAlongMaxFileSizeMb: 1000,
     fileRenameEnabled: true,
