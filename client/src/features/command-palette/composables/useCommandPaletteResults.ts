@@ -97,7 +97,7 @@ export function useCommandPaletteResults(query: Ref<string>, tab: Ref<PaletteTab
   const authorTotal = ref(0)
   const series = ref<SeriesSummary[]>([])
   const seriesTotal = ref(0)
-  /** Book Dock is searched only when its tab is open, so the library stays the default search. */
+  /** Book Dock is searched with every query so its tab shows a real count, but its results stay out of All. */
   const canSearchDock = computed(() => hasPermission(Permission.BookDockAccess))
   const dockFiles = ref<BookDockFile[]>([])
   const dockTotal = ref(0)
@@ -127,15 +127,13 @@ export function useCommandPaletteResults(query: Ref<string>, tab: Ref<PaletteTab
     }
   }
 
-  watch([trimmed, tab], ([q, currentTab]) => {
+  watch(trimmed, (q) => {
     if (dockTimer) clearTimeout(dockTimer)
     dockGeneration += 1
-    if (currentTab !== 'dock' || !canSearchDock.value || q.length < PALETTE_MIN_QUERY) {
+    if (!canSearchDock.value || q.length < PALETTE_MIN_QUERY) {
       dockLoading.value = false
-      if (q.length < PALETTE_MIN_QUERY) {
-        dockFiles.value = []
-        dockTotal.value = 0
-      }
+      dockFiles.value = []
+      dockTotal.value = 0
       return
     }
     dockLoading.value = true
@@ -377,8 +375,10 @@ export function useCommandPaletteResults(query: Ref<string>, tab: Ref<PaletteTab
     return result
   })
 
-  const loading = computed(() => isSearching.value && (books.loading.value || entitiesLoading.value || dockLoading.value))
-  const settled = computed(() => isSearching.value && books.settled.value && !entitiesLoading.value && !dockLoading.value)
+  /** A slow Book Dock search only holds up its own tab, since nothing else shows its results. */
+  const dockPending = computed(() => tab.value === 'dock' && dockLoading.value)
+  const loading = computed(() => isSearching.value && (books.loading.value || entitiesLoading.value || dockPending.value))
+  const settled = computed(() => isSearching.value && books.settled.value && !entitiesLoading.value && !dockPending.value)
 
   function clear() {
     books.clear()
