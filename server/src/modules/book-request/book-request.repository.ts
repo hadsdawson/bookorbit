@@ -361,6 +361,21 @@ export class BookRequestRepository {
     return rows.map((row) => row.id);
   }
 
+  async findOpenEbookIdsWithoutDate(): Promise<number[]> {
+    const rows = await this.db
+      .select({ id: bookRequests.id })
+      .from(bookRequests)
+      .where(
+        and(
+          eq(bookRequests.mediaKind, 'ebook'),
+          isNull(bookRequests.publishedDate),
+          notInArray(bookRequests.status, [...SETTLED_BOOK_REQUEST_STATUSES]),
+        ),
+      )
+      .orderBy(asc(bookRequests.id));
+    return rows.map((row) => row.id);
+  }
+
   async setPublishedDate(id: number, publishedDate: string, publishedYear: number | null): Promise<void> {
     await this.db
       .update(bookRequests)

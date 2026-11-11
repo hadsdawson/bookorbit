@@ -63,7 +63,7 @@ import { DownloadRemovalService } from './fulfillment/download-removal.service';
 import { BookRequestRepository, type BookPlacement, type BookRequestJoinedRow, type BookRequestListRow } from './book-request.repository';
 import { RequestAutomationService } from './fulfillment/request-automation.service';
 import { RequestCompanionService } from './fulfillment/request-companion.service';
-import { RequestAudiobookDateService } from './fulfillment/request-audiobook-date.service';
+import { RequestReleaseDateService } from './fulfillment/request-release-date.service';
 import { RETIRED_MEDIUM_REFUSAL } from './retired-media';
 import { RequestAutomationSettingsService } from './fulfillment/request-automation-settings.service';
 import { IndexerConfigService } from './indexers/indexer-config.service';
@@ -226,7 +226,7 @@ export class BookRequestService {
     private readonly attribution: BookRequestAttributionService,
     private readonly indexers: IndexerConfigService,
     private readonly companions: RequestCompanionService,
-    @Optional() private readonly audiobookDates?: RequestAudiobookDateService,
+    @Optional() private readonly releaseDates?: RequestReleaseDateService,
   ) {}
 
   canManageAll(user: RequestUser): boolean {
@@ -653,8 +653,7 @@ export class BookRequestService {
     // them onto a release they did not choose, which is the opposite of what they asked for.
     if (!plan.availableOnCreate && plan.autoApproved && !plan.selfServe) this.automation.considerRequest(row.id, 'auto_approval');
 
-    // The date the form sent usually belongs to the ebook; an audiobook has its own.
-    if (row.mediaKind === 'audiobook' && !plan.availableOnCreate) this.audiobookDates?.enrichInBackground(row.id);
+    if (!plan.availableOnCreate) this.releaseDates?.enrichInBackground(row.id);
   }
 
   /**
