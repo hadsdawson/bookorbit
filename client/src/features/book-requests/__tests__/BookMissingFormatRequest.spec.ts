@@ -17,7 +17,7 @@ vi.mock('../composables/useRequestFormatPolicy', async () => {
   const { ref } = await import('vue')
   const policy = ref({ defaultFormat: null as string | null, locked: false })
   state.formatPolicy = policy
-  return { useRequestFormatPolicy: () => ({ policy, load: vi.fn().mockResolvedValue(undefined) }) }
+  return { useRequestFormatPolicy: () => ({ policy, load: vi.fn<() => Promise<void>>().mockResolvedValue(undefined) }) }
 })
 vi.mock('vue-sonner', () => ({ toast: { success: state.toastSuccess, error: state.toastError } }))
 vi.mock('@/features/auth/composables/usePermissions', () => ({ usePermissions: () => ({ hasPermission: state.hasPermission }) }))

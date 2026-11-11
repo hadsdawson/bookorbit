@@ -14,19 +14,23 @@ function makeService(
     ]),
   };
   const finalizeService = {
-    previewFinalize: vi.fn().mockImplementation(async (_u: unknown, _s: unknown, _m: unknown, fileIds: number[]) => ({
-      items: fileIds.map((fileId) => ({ fileId, status: options.previewStatus ?? 'ready', canJoinBook: options.canJoinBook ?? true })),
-    })),
-    finalize: vi.fn().mockImplementation(async (_u, _s, _m, fileIds: number[], _a, _e, _l, _f, overrides?: Array<{ joinBook: unknown }>) => ({
-      total: fileIds.length,
-      succeeded: fileIds.length,
-      failed: 0,
-      results: fileIds.map((fileId) =>
-        overrides || options.primaryFiled !== false
-          ? { fileId, fileName: String(fileId), success: true, bookId: 500 }
-          : { fileId, fileName: String(fileId), success: false, message: 'Destination exists' },
-      ),
-    })),
+    previewFinalize: vi.fn().mockImplementation((_u: unknown, _s: unknown, _m: unknown, fileIds: number[]) =>
+      Promise.resolve({
+        items: fileIds.map((fileId) => ({ fileId, status: options.previewStatus ?? 'ready', canJoinBook: options.canJoinBook ?? true })),
+      }),
+    ),
+    finalize: vi.fn().mockImplementation((_u, _s, _m, fileIds: number[], _a, _e, _l, _f, overrides?: Array<{ joinBook: unknown }>) =>
+      Promise.resolve({
+        total: fileIds.length,
+        succeeded: fileIds.length,
+        failed: 0,
+        results: fileIds.map((fileId) =>
+          overrides || options.primaryFiled !== false
+            ? { fileId, fileName: String(fileId), success: true, bookId: 500 }
+            : { fileId, fileName: String(fileId), success: false, message: 'Destination exists' },
+        ),
+      }),
+    ),
   };
   const libraries = { findOne: vi.fn().mockResolvedValue({ formatPriority: options.formatPriority ?? ['epub', 'm4b'] }) };
   return { service: new BookDockCombineService(finalizeService as never, repo as never, libraries as never), finalizeService, repo, libraries };

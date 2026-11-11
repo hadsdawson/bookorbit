@@ -13,7 +13,7 @@ const apiMock = vi.fn<(url: string) => Promise<Response>>(
 
 vi.mock('@/lib/api', () => ({ api: (url: string) => apiMock(url) }))
 const routeQuery: Record<string, string> = {}
-const replaceMock = vi.fn()
+const replaceMock = vi.fn<(location: unknown) => void>()
 vi.mock('vue-router', () => ({
   useRoute: () => ({ query: routeQuery }),
   useRouter: () => ({ replace: replaceMock }),
