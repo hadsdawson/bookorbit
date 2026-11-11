@@ -9,6 +9,7 @@ import { createPostgresClientConfig } from '../db/postgres-connection-config';
 import { dropUnreleasedMigrationRows, reconcileMigrationLedgerTimestamps } from './migration-ledger-compatibility';
 import { installPostgresExtensions } from './postgres-extensions';
 import { prepareLegacySeriesIndexColumns } from './series-index-migration-compatibility';
+import { applySkippedMigrations } from './skipped-migration-compatibility';
 
 function resolveMigrationsFolder(): string {
   const candidates = [
@@ -45,6 +46,7 @@ async function runMigrations() {
     const migrationFiles = readMigrationFiles({ migrationsFolder });
     await dropUnreleasedMigrationRows(pool, migrationFiles);
     await reconcileMigrationLedgerTimestamps(pool, migrationFiles);
+    await applySkippedMigrations(pool, migrationFiles);
     await prepareLegacySeriesIndexColumns(pool);
 
     await migrate(drizzle(pool), { migrationsFolder });
