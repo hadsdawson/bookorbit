@@ -159,7 +159,12 @@ export function resolvePlaceholders(pattern: string, values: Record<string, stri
     return "";
   });
 
-  return { text: resolveModifierPlaceholders(resolved, values).trim(), usedFallback, droppedOptional };
+  let text = resolveModifierPlaceholders(resolved, values);
+  // A dropped block leaves behind the spaces that sat on either side of it, which is how
+  // "{author} <{series}> - {title}" became "Author  - Title" for a book with no series. Runs of
+  // spaces are folded only when a block was dropped, so a pattern that fills completely is untouched.
+  if (droppedOptional) text = text.replace(/ {2,}/g, " ");
+  return { text: text.trim(), usedFallback, droppedOptional };
 }
 
 export function replacePlaceholders(pattern: string, values: Record<string, string>): string {

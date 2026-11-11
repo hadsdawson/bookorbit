@@ -73,15 +73,15 @@ function handleSelect(id: string) {
               ]"
               aria-hidden="true"
             />
-            <span v-if="change.emptyName" class="min-w-0 break-words text-destructive"
+            <span v-if="change.emptyName" class="min-w-0 whitespace-pre-wrap break-words text-destructive"
               ><s>{{ change.from }}</s>
               <span class="ms-1 text-[10px] font-bold uppercase tracking-wider">{{ t('settings.reader.fileNaming.tagEmptyName') }}</span></span
             >
-            <span v-else-if="change.skipped" class="min-w-0 break-words text-muted-foreground"
+            <span v-else-if="change.skipped" class="min-w-0 whitespace-pre-wrap break-words text-muted-foreground"
               ><s>{{ change.from }}</s>
               <span class="ms-1 text-[10px] font-bold uppercase tracking-wider">{{ t('settings.reader.fileNaming.tagSkipped') }}</span></span
             >
-            <span v-else class="min-w-0 break-words" :class="change.usedFallback ? 'text-pattern-fallback' : 'text-foreground'"
+            <span v-else class="min-w-0 whitespace-pre-wrap break-words" :class="change.usedFallback ? 'text-pattern-fallback' : 'text-foreground'"
               >{{ parts(change)[0] }}<span v-if="parts(change)[1]" class="text-primary">{{ parts(change)[1] }}</span></span
             >
           </span>

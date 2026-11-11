@@ -86,7 +86,7 @@ function iconFor(level: ResolvedLevel) {
           aria-hidden="true"
         />
         <span
-          class="min-w-0 break-words"
+          class="min-w-0 whitespace-pre-wrap break-words"
           :class="[row.level.kind === 'file' ? 'font-semibold' : '', row.level.usedFallback ? 'text-pattern-fallback' : 'text-foreground']"
           >{{ row.stem }}<span v-if="row.suffix" class="font-medium text-primary">{{ row.suffix }}</span>
           <span v-if="row.level.usedFallback" class="tag tag-fallback">{{ t('settings.reader.fileNaming.tagFallback') }}</span>
