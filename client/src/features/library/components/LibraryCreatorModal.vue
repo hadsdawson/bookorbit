@@ -25,7 +25,7 @@ import {
   Users,
   X,
 } from '@lucide/vue'
-import { isReadAlongFormatKey, type CoverAspectRatio, type Library, type OrganizationMode } from '@bookorbit/types'
+import { isReadAlongFormatKey, type CoverAspectRatio, type FolderCoverMedia, type Library, type OrganizationMode } from '@bookorbit/types'
 import AppIcon from '@/components/AppIcon.vue'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useModal } from '@/composables/useModal'
@@ -307,6 +307,8 @@ const sectionProps = computed(() => ({
     fileRenameEnabled: form.fileRenameEnabled,
     fileWriteEnabled: form.fileWriteEnabled,
     fileWriteWriteCover: form.fileWriteWriteCover,
+    fileWriteFolderCovers: form.fileWriteFolderCovers,
+    fileWriteMetadataJson: form.fileWriteMetadataJson,
     fileWriteEpubEnabled: form.fileWriteEpubEnabled,
     fileWriteEpubMaxFileSizeMb: form.fileWriteEpubMaxFileSizeMb,
     fileWriteFb2Enabled: form.fileWriteFb2Enabled,
@@ -504,6 +506,8 @@ const sectionListeners = {
   'update:fileRenameEnabled': (value: boolean) => (form.fileRenameEnabled = value),
   'update:fileWriteEnabled': (value: boolean) => (form.fileWriteEnabled = value),
   'update:fileWriteWriteCover': handleWriteCoverUpdate,
+  'update:fileWriteFolderCovers': (value: FolderCoverMedia) => (form.fileWriteFolderCovers = value),
+  'update:fileWriteMetadataJson': (value: boolean) => (form.fileWriteMetadataJson = value),
   'update:fileWriteEpubEnabled': (value: boolean) => (form.fileWriteEpubEnabled = value),
   'update:fileWriteEpubMaxFileSizeMb': (value: number) => (form.fileWriteEpubMaxFileSizeMb = value),
   'update:fileWriteFb2Enabled': (value: boolean) => (form.fileWriteFb2Enabled = value),

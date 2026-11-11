@@ -15,7 +15,7 @@ import {
   uniqueIndex,
   varchar,
 } from 'drizzle-orm/pg-core';
-import { FieldPreferenceOverrides, BookMetadataFetchConfigOverride, AddedAtSource, RegexMetadataConfig } from '@bookorbit/types';
+import { FieldPreferenceOverrides, BookMetadataFetchConfigOverride, AddedAtSource, FolderCoverMedia, RegexMetadataConfig } from '@bookorbit/types';
 
 export const libraries = pgTable(
   'libraries',
@@ -52,6 +52,8 @@ export const libraries = pgTable(
     // File write-back settings
     fileWriteEnabled: boolean('file_write_enabled').notNull().default(false),
     fileWriteWriteCover: boolean('file_write_write_cover').notNull().default(true),
+    fileWriteFolderCovers: varchar('file_write_folder_covers', { length: 10 }).$type<FolderCoverMedia>().notNull().default('off'),
+    fileWriteMetadataJson: boolean('file_write_metadata_json').notNull().default(false),
     fileWriteEpubEnabled: boolean('file_write_epub_enabled').notNull().default(true),
     fileWriteEpubMaxFileSizeMb: integer('file_write_epub_max_file_size_mb').notNull().default(100),
     fileWriteFb2Enabled: boolean('file_write_fb2_enabled').notNull().default(false),

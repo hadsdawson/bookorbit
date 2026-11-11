@@ -12415,7 +12415,24 @@
         },
         "sizeLimitAria": "{format} size limit in MB",
         "mb": "MB",
-        "summary": "{count, plural, =0 {No file types are written.} one {# kind of file is written. Files over their size limit are skipped.} other {# kinds of file are written. Files over their size limit are skipped.}}"
+        "summary": "{count, plural, =0 {No file types are written.} one {# kind of file is written. Files over their size limit are skipped.} other {# kinds of file are written. Files over their size limit are skipped.}}",
+        "folderFiles": {
+          "title": "Save covers and metadata.json in book folders",
+          "hint": "Keeps cover images and an Audiobookshelf-style metadata.json, chapters included, beside each book's files. They are updated whenever the book's details, cover or chapters change. This works on its own, without writing metadata into the files.",
+          "coversLabel": "Cover images",
+          "covers": {
+            "off": "None",
+            "ebook": "Ebook cover",
+            "audiobook": "Audiobook cover",
+            "both": "Both covers"
+          },
+          "coversHint": "A single cover is saved as cover.jpg. With both, the audiobook cover is cover.jpg and the ebook cover is cover-ebook.jpg.",
+          "json": {
+            "title": "Keep a metadata.json",
+            "hint": "Title, authors, narrators, series, genres, description, chapters and more, in the layout Audiobookshelf reads."
+          },
+          "sharedNote": "Books that share a folder with other books are left alone, since their files could not be told apart."
+        }
       },
       "reading": {
         "readingStart": {
@@ -12820,6 +12837,30 @@
         "title": "Drop files here or click to browse",
         "hint": "{formats} - up to {size} MB each"
       }
+    },
+    "folderFilesBackfill": {
+      "title": "Write folder files for existing books?",
+      "loading": "Checking this library...",
+      "body": "{count, plural, one {{name} has # book in its own folder. BookOrbit can write its cover and metadata.json now, or only when you change it from now on.} other {{name} has # books in their own folders. BookOrbit can write their covers and metadata.json now, or only for books you change from now on.}}",
+      "timeLabel": "How long:",
+      "time": {
+        "underMinute": "under a minute.",
+        "minutes": "roughly {low} to {high} minutes.",
+        "hours": "roughly {low} to {high} hours."
+      },
+      "background": "It runs in the background, so you can close this and keep using BookOrbit. Slower drives or network storage take longer.",
+      "replaces": "Any cover.jpg, cover-ebook.jpg or metadata.json already in those folders is replaced.",
+      "shared": "{count, plural, one {# book shares a folder with other books and is skipped.} other {# books share a folder with other books and are skipped.}}",
+      "otherApps": "Other apps that read these folders, such as Audiobookshelf, will pick up the new files. Audiobookshelf uses metadata.json ahead of its own data by default.",
+      "readOnly": "A book whose folder cannot be written to is skipped and noted in the server log; the rest carry on.",
+      "later": "Choosing \"only from now on\" leaves existing folders untouched until you change a book.",
+      "forwardOnly": "Only from now on",
+      "writeAll": "Write all now",
+      "progress": "Writing folder files: {done} of {total} books",
+      "closeAnytime": "You can close this; writing carries on in the background.",
+      "done": "Done. {written} written, {unchanged} already up to date, {skipped} skipped.",
+      "error": "Something went wrong. Check your connection and try again.",
+      "finishedToast": "{count, plural, one {Folder files written for # book} other {Folder files written for # books}}"
     }
   },
   "metadataReminders": {

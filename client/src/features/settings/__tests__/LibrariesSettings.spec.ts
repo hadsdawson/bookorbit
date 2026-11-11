@@ -105,6 +105,8 @@ function makeLibrary(overrides: Partial<Library> = {}): Library {
     fileWriteAudioEnabled: false,
     fileWriteAudioMaxFileSizeMb: 500,
     fileWriteAllFiles: false,
+    fileWriteFolderCovers: 'off',
+    fileWriteMetadataJson: false,
     fileWriteReadAlongEnabled: false,
     fileWriteReadAlongMaxFileSizeMb: 1000,
     fileRenameEnabled: false,

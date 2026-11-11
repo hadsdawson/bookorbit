@@ -13,7 +13,9 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { api } from '@/lib/api'
 import { apiError, jsonBody } from '@/lib/api-json'
 import { usePermissions } from '@/features/auth/composables/usePermissions'
+import FolderFilesBackfillDialog from '@/features/library/components/FolderFilesBackfillDialog.vue'
 import LibraryCreatorModal from '@/features/library/components/LibraryCreatorModal.vue'
+import { folderFilesTurnedOn } from '@/features/library/utils/folder-files'
 import type { LibraryCreatorSectionId } from '@/features/library/composables/useLibraryCreator'
 import { useLibraries } from '@/features/library/composables/useLibraries'
 import { useLibraryCreationRedirect } from '@/features/library/composables/useLibraryCreationRedirect'
@@ -54,6 +56,8 @@ const sortBy = ref<LibrarySortField>('default')
 const scanningAll = ref(false)
 const creatorOpen = ref(false)
 const editingLibrary = ref<LibraryType | null>(null)
+/** A library whose folder files were just turned on, so its existing books can be written or left for later. */
+const folderFilesLibrary = ref<LibraryType | null>(null)
 const editingSection = ref<LibraryCreatorSectionId | undefined>(undefined)
 const templateLibrary = ref<LibraryType | null>(null)
 const savingAutomation = ref<Set<number>>(new Set())
@@ -375,8 +379,10 @@ function closeCreator() {
 }
 
 async function onSaved(library: LibraryType) {
-  const isNew = !editingLibrary.value
+  const previous = editingLibrary.value
+  const isNew = !previous
   closeCreator()
+  if (previous && folderFilesTurnedOn(previous, library)) folderFilesLibrary.value = library
   subscribeLibrary(library.id)
   if (isNew) {
     toast.success(t('settings.admin.libraries.libraryCreated', { name: library.name }))
@@ -394,6 +400,14 @@ async function onSaved(library: LibraryType) {
 function syncFilesFromEditor(lib: LibraryType) {
   closeCreator()
   promptSyncFiles(lib)
+}
+
+function closeFolderFiles() {
+  folderFilesLibrary.value = null
+}
+
+function handleFolderFilesFinished(written: number) {
+  toast.success(t('library.folderFilesBackfill.finishedToast', { count: written }))
 }
 
 function removeFromEditor(lib: LibraryType) {
@@ -561,6 +575,14 @@ async function confirmDelete() {
       @refresh-covers="refreshCovers"
       @sync-files="syncFilesFromEditor"
       @remove="removeFromEditor"
+    />
+
+    <FolderFilesBackfillDialog
+      v-if="folderFilesLibrary"
+      :library-id="folderFilesLibrary.id"
+      :library-name="folderFilesLibrary.name"
+      @close="closeFolderFiles"
+      @finished="handleFolderFilesFinished"
     />
 
     <ConfirmDialog

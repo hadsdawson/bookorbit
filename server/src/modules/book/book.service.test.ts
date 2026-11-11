@@ -230,6 +230,7 @@ function makeService(
   const fileWriteService = {
     scheduleWrite: vi.fn(),
     cancelPendingWrite: vi.fn(),
+    scheduleFolderFiles: vi.fn(),
     writeToFile: vi.fn(),
     findLibraryWriteSettingsForBook: vi.fn().mockResolvedValue({ fileWriteEnabled: false, fileRenameEnabled: false }),
     resolveBookFileWriteStatus: vi.fn().mockReturnValue({ enabled: false, reason: 'library_disabled', writableFormats: [], writableFields: [] }),

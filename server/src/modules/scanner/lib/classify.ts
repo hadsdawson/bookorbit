@@ -11,8 +11,11 @@ export { DEFAULT_FORMAT_PRIORITY };
 const PRIMARY_FORMATS = new Set<string>(DEFAULT_FORMAT_PRIORITY as readonly string[]);
 
 const COVER_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp']);
-const COVER_BASENAMES = new Set(['cover', 'folder', 'thumbnail', 'artwork', 'front']);
+// cover-ebook is the name a book's folder files give its ebook cover when the audiobook one is cover.jpg.
+const COVER_BASENAMES = new Set(['cover', 'cover-ebook', 'folder', 'thumbnail', 'artwork', 'front']);
 const METADATA_EXTENSIONS = new Set(['opf', 'nfo']);
+/** Audiobookshelf's metadata file, which a book's folder files also keep: book data, not an attachment. */
+const METADATA_FILE_NAMES = new Set(['metadata.json']);
 
 export const FILE_ROLES = ['content', 'cover', 'metadata', 'supplement'] as const;
 export type FileRole = (typeof FILE_ROLES)[number];
@@ -28,6 +31,7 @@ export function classifyFile(absolutePath: string): Classification {
 
   if (PRIMARY_FORMATS.has(ext)) return { format: ext, role: 'content' };
   if (METADATA_EXTENSIONS.has(ext)) return { format: ext, role: 'metadata' };
+  if (METADATA_FILE_NAMES.has(basename(absolutePath).toLowerCase())) return { format: ext, role: 'metadata' };
   if (COVER_EXTENSIONS.has(ext)) return { format: ext, role: COVER_BASENAMES.has(stem) ? 'cover' : 'supplement' };
 
   return { format: ext || null, role: 'supplement' };

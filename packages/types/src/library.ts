@@ -5,6 +5,8 @@ export type OrganizationMode = "book_per_file" | "book_per_folder";
 export const COVER_ASPECT_RATIOS = ["2/3", "1/1"] as const;
 export type CoverAspectRatio = (typeof COVER_ASPECT_RATIOS)[number];
 export type AddedAtSource = "imported" | "file_modified" | "file_created";
+export const FOLDER_COVER_MEDIA = ["off", "ebook", "audiobook", "both"] as const;
+export type FolderCoverMedia = (typeof FOLDER_COVER_MEDIA)[number];
 
 export function normalizeCoverAspectRatio(value: unknown): CoverAspectRatio {
   return value === "1/1" ? "1/1" : "2/3";
@@ -59,6 +61,10 @@ export interface Library {
   fileNamingPattern?: string | null;
   fileWriteEnabled: boolean;
   fileWriteWriteCover: boolean;
+  /** Which cover images are saved into each book's folder, beside its files. */
+  fileWriteFolderCovers: FolderCoverMedia;
+  /** Keeps an Audiobookshelf-style metadata.json, chapters included, in each book's folder. */
+  fileWriteMetadataJson: boolean;
   fileWriteEpubEnabled: boolean;
   fileWriteEpubMaxFileSizeMb: number;
   fileWriteFb2Enabled: boolean;
@@ -141,4 +147,24 @@ export interface UserLibraryGrant {
 
 export interface DefaultLibraryAccessConfig {
   libraryIds: number[];
+}
+
+/** What writing folder files for a whole library would cover, shown before it starts. */
+export interface FolderFilesEstimate {
+  /** Books that own their folder, which are the ones written. */
+  books: number;
+  /** Books sharing a folder with other books, which are left alone. */
+  sharedFolderBooks: number;
+  /** A rough range for the whole run, in seconds. */
+  estimatedSeconds: { low: number; high: number };
+}
+
+export interface FolderFilesStatus {
+  running: boolean;
+  total: number;
+  processed: number;
+  written: number;
+  unchanged: number;
+  skipped: number;
+  failed: number;
 }

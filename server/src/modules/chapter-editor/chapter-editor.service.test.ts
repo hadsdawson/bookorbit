@@ -136,6 +136,7 @@ function makeService(
   const fileWriteService = {
     resolveChapterWriteStatus: vi.fn().mockResolvedValue(WRITE_BACK),
     writeChapters: vi.fn().mockResolvedValue({ status: 'success', filesWritten: 2, filesTotal: 2 }),
+    scheduleFolderFiles: vi.fn(),
   };
   const service = new ChapterEditorService(
     repo as never,

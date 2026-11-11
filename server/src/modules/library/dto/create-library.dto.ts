@@ -19,7 +19,14 @@ import {
 } from 'class-validator';
 import { IsOptionalNotNull } from './optional-not-null.decorator';
 import { Transform } from 'class-transformer';
-import { ICON_VALUE_MAX_LENGTH, type AddedAtSource, type CoverAspectRatio, type OrganizationMode } from '@bookorbit/types';
+import {
+  FOLDER_COVER_MEDIA,
+  ICON_VALUE_MAX_LENGTH,
+  type AddedAtSource,
+  type CoverAspectRatio,
+  type FolderCoverMedia,
+  type OrganizationMode,
+} from '@bookorbit/types';
 
 import {
   LIBRARY_ADDED_AT_SOURCES,
@@ -135,6 +142,14 @@ export class CreateLibraryDto {
   @IsOptionalNotNull()
   @IsBoolean()
   fileWriteWriteCover?: boolean;
+
+  @IsOptionalNotNull()
+  @IsIn(FOLDER_COVER_MEDIA)
+  fileWriteFolderCovers?: FolderCoverMedia;
+
+  @IsOptionalNotNull()
+  @IsBoolean()
+  fileWriteMetadataJson?: boolean;
 
   @IsOptionalNotNull()
   @IsBoolean()

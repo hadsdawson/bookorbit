@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { FileCode, FilePenLine } from '@lucide/vue'
+import { FileCode, FilePenLine, FolderOpen } from '@lucide/vue'
+import { FOLDER_COVER_MEDIA, type FolderCoverMedia } from '@bookorbit/types'
 import ToggleSwitch from '@/components/ui/ToggleSwitch.vue'
 import { formatNumber } from '@/i18n/formatters'
 
@@ -14,6 +15,8 @@ const props = withDefaults(
     fileRenameEnabled: boolean
     fileWriteEnabled: boolean
     fileWriteWriteCover: boolean
+    fileWriteFolderCovers: FolderCoverMedia
+    fileWriteMetadataJson: boolean
     fileWriteEpubEnabled: boolean
     fileWriteEpubMaxFileSizeMb: number
     fileWriteFb2Enabled: boolean
@@ -38,6 +41,8 @@ const emit = defineEmits<{
   'update:fileRenameEnabled': [value: boolean]
   'update:fileWriteEnabled': [value: boolean]
   'update:fileWriteWriteCover': [value: boolean]
+  'update:fileWriteFolderCovers': [value: FolderCoverMedia]
+  'update:fileWriteMetadataJson': [value: boolean]
   'update:fileWriteEpubEnabled': [value: boolean]
   'update:fileWriteEpubMaxFileSizeMb': [value: number]
   'update:fileWriteFb2Enabled': [value: boolean]
@@ -144,6 +149,14 @@ function handleWriteToggle(value: boolean) {
 
 function handleCoverChange(event: Event) {
   emit('update:fileWriteWriteCover', (event.target as HTMLInputElement).checked)
+}
+
+function handleFolderCoversChange(event: Event) {
+  emit('update:fileWriteFolderCovers', (event.target as HTMLSelectElement).value as FolderCoverMedia)
+}
+
+function handleMetadataJsonChange(event: Event) {
+  emit('update:fileWriteMetadataJson', (event.target as HTMLInputElement).checked)
 }
 
 function handleAllFilesChange(event: Event) {
@@ -257,6 +270,39 @@ function updateSize(row: FamilyRow, event: Event) {
         </ul>
       </div>
       <p class="mt-2 text-xs text-muted-foreground">{{ t('library.creator.fileWrite.summary', { count: writtenCount }) }}</p>
+    </div>
+
+    <div class="px-4 py-3.5">
+      <div class="flex items-start gap-3.5">
+        <FolderOpen :size="17" class="mt-0.5 shrink-0 text-foreground" aria-hidden="true" />
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-semibold text-foreground">{{ t('library.creator.fileWrite.folderFiles.title') }}</p>
+          <p class="mt-0.5 text-xs text-muted-foreground">{{ t('library.creator.fileWrite.folderFiles.hint') }}</p>
+        </div>
+      </div>
+      <div class="mt-3 space-y-3 ps-[31px]">
+        <label class="block">
+          <span class="block text-[13px] font-medium text-foreground">{{ t('library.creator.fileWrite.folderFiles.coversLabel') }}</span>
+          <select
+            class="mt-1.5 h-8 w-full max-w-xs rounded-md border border-input bg-background px-2.5 text-[13px] text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            :value="fileWriteFolderCovers"
+            @change="handleFolderCoversChange"
+          >
+            <option v-for="option in FOLDER_COVER_MEDIA" :key="option" :value="option">
+              {{ t(`library.creator.fileWrite.folderFiles.covers.${option}`) }}
+            </option>
+          </select>
+          <span class="mt-1 block text-xs text-muted-foreground">{{ t('library.creator.fileWrite.folderFiles.coversHint') }}</span>
+        </label>
+        <label class="flex cursor-pointer items-start gap-2.5">
+          <input type="checkbox" class="mt-0.5 size-4 shrink-0 accent-primary" :checked="fileWriteMetadataJson" @change="handleMetadataJsonChange" />
+          <span class="min-w-0">
+            <span class="block text-[13px] font-medium text-foreground">{{ t('library.creator.fileWrite.folderFiles.json.title') }}</span>
+            <span class="block text-xs text-muted-foreground">{{ t('library.creator.fileWrite.folderFiles.json.hint') }}</span>
+          </span>
+        </label>
+        <p class="text-xs text-muted-foreground">{{ t('library.creator.fileWrite.folderFiles.sharedNote') }}</p>
+      </div>
     </div>
   </section>
 </template>

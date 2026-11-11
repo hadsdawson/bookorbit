@@ -1009,6 +1009,13 @@
       "when": 1794336093949,
       "tag": "0143_request_tracking_and_not_interested",
       "breakpoints": true
+    },
+    {
+      "idx": 144,
+      "version": "7",
+      "when": 1794410794073,
+      "tag": "0144_folder_covers_and_metadata_json",
+      "breakpoints": true
     }
   ]
 }

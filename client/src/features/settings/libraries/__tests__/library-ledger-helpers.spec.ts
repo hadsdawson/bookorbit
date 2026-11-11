@@ -38,6 +38,8 @@ function library(overrides: Partial<Library> & Pick<Library, 'id' | 'name'>): Li
     fileWriteAudioEnabled: false,
     fileWriteAudioMaxFileSizeMb: 500,
     fileWriteAllFiles: false,
+    fileWriteFolderCovers: 'off',
+    fileWriteMetadataJson: false,
     fileWriteReadAlongEnabled: false,
     fileWriteReadAlongMaxFileSizeMb: 1000,
     fileRenameEnabled: false,

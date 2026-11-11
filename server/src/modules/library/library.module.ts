@@ -6,6 +6,7 @@ import { AchievementModule } from '../achievement/achievement.module';
 import { AppSettingsModule } from '../app-settings/app-settings.module';
 import { BookModule } from '../book/book.module';
 import { FileWriteModule } from '../file-write/file-write.module';
+import { LibraryFolderFilesController } from './library-folder-files.controller';
 import { NotificationModule } from '../notification/notification.module';
 import { PathModule } from '../path/path.module';
 import { ScannerModule } from '../scanner/scanner.module';
@@ -28,7 +29,7 @@ import { LibraryAddedAtService } from './library-added-at.service';
     AppSettingsModule,
     PathModule,
   ],
-  controllers: [LibraryController],
+  controllers: [LibraryController, LibraryFolderFilesController],
   providers: [LibraryService, LibraryRepository, LibraryScanSchedulerService, BulkRenameService, LibraryAddedAtService],
   exports: [LibraryService, LibraryRepository],
 })

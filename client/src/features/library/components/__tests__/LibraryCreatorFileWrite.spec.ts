@@ -10,6 +10,8 @@ describe('LibraryCreatorFileWrite', () => {
         fileRenameEnabled: false,
         fileWriteEnabled: false,
         fileWriteWriteCover: false,
+        fileWriteFolderCovers: 'off',
+        fileWriteMetadataJson: false,
         fileWriteEpubEnabled: false,
         fileWriteEpubMaxFileSizeMb: 100,
         fileWriteFb2Enabled: false,
@@ -176,5 +178,19 @@ describe('LibraryCreatorFileWrite', () => {
 
     const kindle = wrapper.findAll('li').find((row) => row.text().includes('Kindle'))!
     expect(kindle.text()).toContain('59')
+  })
+
+  it('offers folder covers and metadata.json even when writing into files is off', async () => {
+    const wrapper = mountComponent({ fileWriteEnabled: false })
+    const select = wrapper.find('select')
+    expect(select.exists()).toBe(true)
+    expect(select.findAll('option').map((option) => option.attributes('value'))).toEqual(['off', 'ebook', 'audiobook', 'both'])
+
+    await select.setValue('both')
+    expect(wrapper.emitted('update:fileWriteFolderCovers')).toEqual([['both']])
+
+    const json = wrapper.findAll('input[type="checkbox"]').at(-1)!
+    await json.setValue(true)
+    expect(wrapper.emitted('update:fileWriteMetadataJson')).toEqual([[true]])
   })
 })

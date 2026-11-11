@@ -1,0 +1,2 @@
+ALTER TABLE "libraries" ADD COLUMN "file_write_folder_covers" varchar(10) DEFAULT 'off' NOT NULL;--> statement-breakpoint
+ALTER TABLE "libraries" ADD COLUMN "file_write_metadata_json" boolean DEFAULT false NOT NULL;
