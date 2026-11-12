@@ -21,6 +21,7 @@ import { BookDockJoinService } from './book-dock-join.service';
 import { BookDockMetadataService } from './book-dock-metadata.service';
 import { BookDockProcessingStateService } from './book-dock-processing-state.service';
 import { BookDockWatcherService } from './book-dock-watcher.service';
+import { BookDockPathsService } from './book-dock-paths.service';
 import { BookDockService } from './book-dock.service';
 import { BookDockRepository } from './book-dock.repository';
 
@@ -49,6 +50,7 @@ import { BookDockRepository } from './book-dock.repository';
     BookDockCombineService,
     BookDockDefaultTargetService,
     BookDockJoinService,
+    BookDockPathsService,
     BookDockWatcherService,
     BookDockGateway,
   ],

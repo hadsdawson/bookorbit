@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
-import { rmdir, unlink } from 'fs/promises';
+import { unlink } from 'fs/promises';
 import { eq, inArray } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
@@ -9,6 +9,7 @@ import * as schema from '../../db/schema';
 import { libraries, libraryFolders } from '../../db/schema';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
 import { BookDockRepository, type ListOptions } from './book-dock.repository';
+import { BookDockPathsService, removeLeftoverFolders } from './book-dock-paths.service';
 import { BookDockDefaultTargetService } from './book-dock-default-target.service';
 import { BookDockIngestService } from './book-dock-ingest.service';
 import { BookDockFinalizeService } from './book-dock-finalize.service';
@@ -36,6 +37,7 @@ export class BookDockService {
     private readonly processingState: BookDockProcessingStateService,
     private readonly gateway: BookDockGateway,
     @Optional() private readonly defaultTarget?: BookDockDefaultTargetService,
+    @Optional() private readonly paths?: BookDockPathsService,
   ) {}
 
   async listFiles(query: ListOptions): Promise<BookDockFilesPage> {
@@ -420,11 +422,9 @@ export class BookDockService {
   /** A unit is N files plus the directory holding them, and deleting it takes all of them. */
   private async cleanupFiles(row: BookDockFileRow): Promise<void> {
     for (const file of await this.repo.findUnitFiles(row.id)) await safeUnlink(file.absolutePath);
-    if (row.unitDirectory) {
-      // Non-recursive: anything still in there is unaccounted for, and worth leaving for a human.
-      await rmdir(row.unitDirectory).catch(() => {});
-    }
     await safeUnlink(row.absolutePath);
+    // Anything still in the folder besides system leftovers is unaccounted for, and kept for a person.
+    await removeLeftoverFolders(this.paths, row);
     if (row.coverPath) {
       await safeUnlink(row.coverPath);
       const thumbPath = row.coverPath.replace(/\.\w+$/, '_thumb.jpg');

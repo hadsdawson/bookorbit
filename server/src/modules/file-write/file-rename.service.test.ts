@@ -1086,17 +1086,18 @@ describe('FileRenameService', () => {
     renameRepo.findBookRenameData.mockResolvedValue(
       makeRenameData({
         file: {
-          absolutePath: '/library/Old Title.epub',
-          relPath: 'Old Title.epub',
+          absolutePath: '/library/Old Folder/Old Title.epub',
+          relPath: 'Old Folder/Old Title.epub',
         },
-        bookFolderPath: '/library/Old Title.epub',
+        bookFolderPath: '/library/Old Folder/Old Title.epub',
       }),
     );
     mockReaddir.mockResolvedValue([] as never);
 
     await service.performRename(5, 12);
 
-    expect(mockRmdir).toHaveBeenCalledWith('/library');
+    expect(mockRmdir).toHaveBeenCalledWith('/library/Old Folder');
+    expect(mockRmdir).not.toHaveBeenCalledWith('/library');
   });
 
   it('clears all timers on module destroy', () => {

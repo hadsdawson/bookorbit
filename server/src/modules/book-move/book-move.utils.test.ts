@@ -299,6 +299,43 @@ describe('removeEmptyDirs', () => {
     expect(await pathExists(join(root, 'Author'))).toBe(true);
   });
 
+  it('climbs every level the move left empty, not just one parent', async () => {
+    const root = join(workDir, 'library');
+    const bookDir = join(root, 'Author', 'Series', 'Book');
+    await mkdir(bookDir, { recursive: true });
+
+    await removeEmptyDirs(bookDir, root);
+
+    expect(await readdir(root)).toEqual([]);
+  });
+
+  it('treats folders holding only system leftovers as empty', async () => {
+    const root = join(workDir, 'library');
+    const bookDir = join(root, 'Author', 'Book');
+    await mkdir(join(bookDir, '@eaDir', 'cover.jpg'), { recursive: true });
+    await writeFile(join(bookDir, '@eaDir', 'cover.jpg', 'SYNOPHOTO_THUMB_M.jpg'), 'x');
+    await writeFile(join(bookDir, '.DS_Store'), 'x');
+    await writeFile(join(bookDir, '._Book.epub'), 'x');
+    await writeFile(join(root, 'Author', 'Thumbs.db'), 'x');
+
+    await removeEmptyDirs(bookDir, root);
+
+    expect(await pathExists(join(root, 'Author'))).toBe(false);
+    expect(await pathExists(root)).toBe(true);
+  });
+
+  it('keeps a folder with any real file next to the leftovers', async () => {
+    const root = join(workDir, 'library');
+    const bookDir = join(root, 'Author', 'Book');
+    await mkdir(bookDir, { recursive: true });
+    await writeFile(join(bookDir, '.DS_Store'), 'x');
+    await writeFile(join(bookDir, 'notes.txt'), 'x');
+
+    await removeEmptyDirs(bookDir, root);
+
+    expect((await readdir(bookDir)).sort()).toEqual(['.DS_Store', 'notes.txt']);
+  });
+
   it('never removes the library root itself', async () => {
     const root = join(workDir, 'library');
     await mkdir(root, { recursive: true });

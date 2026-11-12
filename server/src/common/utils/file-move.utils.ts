@@ -1,6 +1,6 @@
 import { createHash, type Hash } from 'crypto';
 import { createReadStream, createWriteStream } from 'fs';
-import { mkdir, open, readdir, rename as fsRename, rmdir, stat, unlink } from 'fs/promises';
+import { mkdir, open, readdir, rename as fsRename, rm, rmdir, stat, unlink } from 'fs/promises';
 import { dirname, isAbsolute, join, normalize, relative, sep } from 'path';
 import { Writable } from 'stream';
 import { pipeline } from 'stream/promises';
@@ -155,14 +155,33 @@ export async function moveFileBack(from: string, to: string): Promise<void> {
   await unlink(from);
 }
 
-/** Removes the directory when empty, plus one parent level, matching rename cleanup. */
+/** Files the operating system or NAS leaves in folders on its own. They never make a folder worth keeping. */
+const SYSTEM_JUNK_FILES = new Set(['.ds_store', 'thumbs.db', 'ehthumbs.db', 'desktop.ini', '.directory']);
+/** Synology's and QNAP's thumbnail caches, which they recreate whenever they need them. */
+const SYSTEM_JUNK_DIRECTORIES = new Set(['@eadir', '.@__thumb']);
+
+/** macOS writes `._name` alongside a file on network shares to hold its extra attributes. */
+function isSystemJunk(name: string, isDirectory: boolean): boolean {
+  const lower = name.toLowerCase();
+  if (isDirectory) return SYSTEM_JUNK_DIRECTORIES.has(lower);
+  return SYSTEM_JUNK_FILES.has(lower) || lower.startsWith('._');
+}
+
+/**
+ * Removes a folder a move left empty, then each parent it leaves empty, up to but never including
+ * `stopAtRoot`. A folder holding only system leftovers (.DS_Store, Thumbs.db, Synology's @eaDir and
+ * the like) counts as empty and they are cleared with it. Anything else, even one stray file, keeps
+ * the folder and stops the climb, so nothing a person put there is ever deleted.
+ */
 export async function removeEmptyDirs(directory: string, stopAtRoot: string): Promise<void> {
   let current = normalize(directory);
-  for (let level = 0; level < 2; level++) {
-    if (!isInsideRoot(stopAtRoot, current)) return;
+  while (isInsideRoot(stopAtRoot, current)) {
     try {
-      const entries = await readdir(current);
-      if (entries.length > 0) return;
+      const entries = await readdir(current, { withFileTypes: true });
+      if (!entries.every((entry) => (entry.isFile() || entry.isDirectory()) && isSystemJunk(entry.name, entry.isDirectory()))) return;
+      for (const entry of entries) {
+        await rm(join(current, entry.name), { recursive: entry.isDirectory(), force: true });
+      }
       await rmdir(current);
     } catch {
       return;

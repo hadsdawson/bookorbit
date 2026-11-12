@@ -5,7 +5,7 @@ import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { ContentFilterRules } from '@bookorbit/types';
 
 import { DB } from '../../db';
-import { accentInsensitiveIlike } from '../../common/utils/accent-insensitive-search.utils';
+import { accentInsensitiveIlike, buildSearchPattern } from '../../common/utils/accent-insensitive-search.utils';
 import { buildContentFilterClauses } from '../../common/utils/content-filter-sql.utils';
 import * as schema from '../../db/schema';
 import {
@@ -564,10 +564,29 @@ export class BookDockRepository {
     }
     if (needsReview) conditions.push(needsReviewCondition());
     if (readyToFile) conditions.push(readyToFileCondition());
-    if (search) conditions.push(accentInsensitiveIlike(bookDockFiles.fileName, `%${search}%`));
+    if (search?.trim()) conditions.push(dockSearchCondition(search));
     if (userId !== undefined && !canManageAll) {
       conditions.push(eq(bookDockFiles.uploadedBy, userId));
     }
     return conditions;
   }
+}
+
+/**
+ * A Book Dock search matches the file and folder names as they are, and the title, authors and
+ * series in any of the row's details: the file's own, the chosen ones, or a lookup's.
+ */
+function dockSearchCondition(search: string): SQL {
+  const pattern = buildSearchPattern(search);
+  const fields: SQL[] = [sql`${bookDockFiles.fileName}`, sql`regexp_replace(${bookDockFiles.unitDirectory}, '^.*/', '')`];
+  for (const details of [bookDockFiles.selectedMetadata, bookDockFiles.embeddedMetadata, bookDockFiles.fetchedMetadata]) {
+    fields.push(
+      sql`${details}->>'title'`,
+      sql`jsonb_path_query_array(${details}, '$.authors[*]')::text`,
+      sql`${details}->>'seriesName'`,
+      sql`jsonb_path_query_array(${details}, '$.seriesMemberships[*].seriesName')::text`,
+    );
+  }
+  const unitFileName = sql`exists (select 1 from ${bookDockUnitFiles} where ${bookDockUnitFiles.dockFileId} = ${bookDockFiles.id} and ${accentInsensitiveIlike(bookDockUnitFiles.fileName, pattern)})`;
+  return or(...fields.map((field) => accentInsensitiveIlike(field, pattern)), unitFileName)!;
 }
