@@ -38,9 +38,9 @@ function makeService(settings: Record<string, string> = {}) {
       return Promise.resolve();
     }),
   };
-  const db = { execute: vi.fn().mockResolvedValue({ rows: [{ hash: 'a' }] }) };
+  const repo = { migrationLedgerHashes: vi.fn().mockResolvedValue(['a']) };
   const service = new BackupService(
-    db as never,
+    repo as never,
     appSettings as never,
     { appDataPath: dataDir } as never,
     { url: 'postgres://x' } as never,

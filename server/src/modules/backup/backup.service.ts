@@ -1,8 +1,6 @@
 import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
-import { sql } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { createWriteStream } from 'fs';
 import { mkdir, rename, rm, stat } from 'fs/promises';
 import { join, relative } from 'path';
@@ -11,10 +9,9 @@ import { pipeline } from 'stream/promises';
 import type { BackupInfo, BackupKind, BackupOverview, BackupSettings } from '@bookorbit/types';
 
 import { appConfig, dbConfig, storageConfig } from '../../config/config';
-import { DB } from '../../db';
-import * as schema from '../../db/schema';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
 import { AppSettingsService } from '../app-settings/app-settings.service';
+import { BackupRepository } from './backup.repository';
 import { backupFileName, createBackup, isBackupFileName, listBackups, readManifest, resolveBackupDir } from './lib/backup-archive';
 import { shippedMigrationHashes } from './lib/backup-migrations';
 import { BACKUP_LAST_SLOT_KEY, BACKUP_SETTINGS_KEY, dueScheduleSlot, parseBackupSettings, pruneBackups } from './lib/backup-policy';
@@ -31,7 +28,7 @@ export class BackupService {
   private lastError: string | null = null;
 
   constructor(
-    @Inject(DB) private readonly db: NodePgDatabase<typeof schema>,
+    private readonly repo: BackupRepository,
     private readonly appSettings: AppSettingsService,
     @Inject(storageConfig.KEY) private readonly storage: ConfigType<typeof storageConfig>,
     @Inject(dbConfig.KEY) private readonly database: ConfigType<typeof dbConfig>,
@@ -86,7 +83,7 @@ export class BackupService {
         backupDir: this.backupDir,
         kind,
         appVersion: this.app.version,
-        migrationHashes: await this.ledgerHashes(),
+        migrationHashes: await this.repo.migrationLedgerHashes(),
       });
       const settings = await this.getSettings();
       const removed = await pruneBackups(this.backupDir, await listBackups(this.backupDir), settings.keep);
@@ -164,11 +161,6 @@ export class BackupService {
 
   async cancelRestore(): Promise<void> {
     await cancelPendingRestore(this.backupDir);
-  }
-
-  private async ledgerHashes(): Promise<string[]> {
-    const result = await this.db.execute<{ hash: string }>(sql`SELECT hash FROM drizzle.__drizzle_migrations ORDER BY created_at`);
-    return result.rows.map((row) => row.hash);
   }
 }
 
