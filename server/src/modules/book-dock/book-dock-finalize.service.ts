@@ -11,7 +11,7 @@ import {
   Optional,
 } from '@nestjs/common';
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'path';
-import { access as fsAccess, readFile, rmdir, stat, unlink } from 'fs/promises';
+import { access as fsAccess, readFile, stat, unlink } from 'fs/promises';
 import { eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DatabaseError } from 'pg';
@@ -71,6 +71,7 @@ import { UploadStorageService } from '../upload/upload-storage.service';
 import { UploadValidatorService } from '../upload/upload-validator.service';
 import { inspectEpubMediaOverlayFields } from '../reader/epub/epub-media-overlay-capability';
 import { isAbsMetadataFile } from './abs-metadata-import';
+import { BookDockPathsService, removeLeftoverFolders } from './book-dock-paths.service';
 import { BookDockRepository } from './book-dock.repository';
 import { BookDockEventsService, BOOK_DOCK_FILE_INGESTED } from './book-dock-events.service';
 import { BookDockGateway } from './book-dock.gateway';
@@ -294,6 +295,7 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
     @Optional() private readonly seriesMemberships?: SeriesMembershipService,
     @Optional() private readonly providerIdStore?: ProviderIdStore,
     @Optional() private readonly joinService?: BookDockJoinService,
+    @Optional() private readonly paths?: BookDockPathsService,
   ) {
     this.autoFinalizeQueue = new BookDockWorkQueue(
       AUTO_FINALIZE_QUEUE_CONCURRENCY,
@@ -1579,18 +1581,17 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
       await safeUnlink(thumbPath);
     }
     // The unit's files have all been moved into the library by now, so what is left is the empty
-    // directory they came out of. The child rows go with the anchor via the cascade.
-    if (row.unitDirectory) await removeEmptyDirectory(row.unitDirectory);
+    // directory they came out of, and any parent folders that held only it. The child rows go with
+    // the anchor via the cascade.
+    await removeLeftoverFolders(this.paths, row);
     await this.repo.deleteById(row.id);
   }
 
   /** Discarding a unit throws away every file in it. Discarding track 1 of 31 is not a thing. */
   private async cleanupDiscardedBookDockFile(row: BookDockFileRow): Promise<void> {
     for (const file of await this.repo.findUnitFiles(row.id)) await safeUnlink(file.absolutePath);
-    if (row.unitDirectory) {
-      await removeEmptyDirectory(row.unitDirectory);
-    }
     await safeUnlink(row.absolutePath);
+    await removeLeftoverFolders(this.paths, row);
     if (row.coverPath) {
       await safeUnlink(row.coverPath);
       const thumbPath = row.coverPath.replace(/\.\w+$/, '_thumb.jpg');
@@ -1621,14 +1622,6 @@ async function safeUnlink(path: string): Promise<void> {
   } catch {
     // file may already be deleted
   }
-}
-
-/**
- * Deliberately non-recursive. A directory that still holds files is one the dock did not fully
- * account for, and leaving it for a human to look at is far better than deleting what is in it.
- */
-async function removeEmptyDirectory(path: string): Promise<void> {
-  await rmdir(path).catch(() => {});
 }
 
 function createFinalizePreviewSummary(): BookDockFinalizePreviewResult {

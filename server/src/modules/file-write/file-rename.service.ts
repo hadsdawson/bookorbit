@@ -1,11 +1,12 @@
 import { ConflictException, Injectable, Logger, OnModuleDestroy, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { access, mkdir, readdir, rename as fsRename, rmdir } from 'fs/promises';
+import { access, mkdir, rename as fsRename } from 'fs/promises';
 import { basename, dirname, extname, isAbsolute, join, normalize, relative, sep } from 'path';
 
 import type { FileRenameResult } from '@bookorbit/types';
 import { NotificationType, resolveUploadPath, sanitizePathSegment } from '@bookorbit/types';
 import { SelfWriteRegistry } from '../../common/services/self-write-registry.service';
+import { removeEmptyDirs } from '../../common/utils/file-move.utils';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
 import { pathsReferToSameEntry } from '../../common/utils/path-identity.utils';
 import { resolveSingleFileBookPath } from '../../common/utils/book-path.utils';
@@ -388,7 +389,7 @@ export class FileRenameService implements OnModuleDestroy {
       const oldDir = dirname(file.absolutePath);
       const newDir = dirname(fileTargets.get(file.id)!);
       if (oldDir !== newDir) {
-        await this.tryRemoveEmptyDir(oldDir);
+        await removeEmptyDirs(oldDir, data.libraryFolderPath);
       }
     }
   }
@@ -464,8 +465,7 @@ export class FileRenameService implements OnModuleDestroy {
       }
     }
 
-    await this.tryRemoveEmptyDir(oldFolderPath);
-    await this.tryRemoveEmptyDir(dirname(oldFolderPath));
+    await removeEmptyDirs(oldFolderPath, data.libraryFolderPath);
   }
 
   private async renameBookIntoExistingFolder(
@@ -496,8 +496,7 @@ export class FileRenameService implements OnModuleDestroy {
       sanitizeForCrossPlatform,
     );
 
-    await this.tryRemoveEmptyDir(oldFolderPath);
-    await this.tryRemoveEmptyDir(dirname(oldFolderPath));
+    await removeEmptyDirs(oldFolderPath, data.libraryFolderPath);
   }
 
   private async mergeBookIntoExistingFolder(
@@ -562,8 +561,7 @@ export class FileRenameService implements OnModuleDestroy {
     }
 
     await this.handOverCovers(bookId, sourceSlots, targetBookId);
-    await this.tryRemoveEmptyDir(oldFolderPath);
-    await this.tryRemoveEmptyDir(dirname(oldFolderPath));
+    await removeEmptyDirs(oldFolderPath, data.libraryFolderPath);
   }
 
   /** The target keeps its own art and takes the source's for any medium it had no cover for. */
@@ -718,17 +716,6 @@ export class FileRenameService implements OnModuleDestroy {
 
     const sanitizedSourcePath = join(libraryFolderPath, ...relativeSourcePath.split(sep).map((segment) => sanitizePathSegment(segment)));
     return sanitizedSourcePath === sourcePath ? null : sanitizedSourcePath;
-  }
-
-  private async tryRemoveEmptyDir(dirPath: string): Promise<void> {
-    try {
-      const entries = await readdir(dirPath);
-      if (entries.length === 0) {
-        await rmdir(dirPath);
-      }
-    } catch {
-      // Best effort.
-    }
   }
 
   private logAndReturn(bookId: number, startedAt: number, result: Omit<FileRenameResult, 'durationMs'>): FileRenameResult {
