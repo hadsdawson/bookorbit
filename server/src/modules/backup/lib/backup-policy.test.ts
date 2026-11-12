@@ -1,6 +1,6 @@
 import { DEFAULT_BACKUP_SETTINGS, type BackupInfo, type BackupKind, type BackupSettings } from '@bookorbit/types';
 
-import { isBackupFileName } from './backup-archive';
+import { isBackupFileName, pgConnection } from './backup-archive';
 import { backupsToPrune, dueScheduleSlot, parseBackupSettings } from './backup-policy';
 import { assertRestorable } from './backup-restore';
 
@@ -97,5 +97,18 @@ describe('assertRestorable', () => {
 
   it('refuses a backup from a newer version', () => {
     expect(() => assertRestorable(manifest, new Set(['a']))).toThrow(/newer version of BookOrbit \(v9\)/);
+  });
+});
+
+describe('pgConnection', () => {
+  it('moves the password out of the address the tools are started with', () => {
+    const connection = pgConnection('postgres://bookorbit:s%40cret@db:5432/bookorbit?sslmode=require');
+    expect(connection.dbname).toBe('postgres://bookorbit@db:5432/bookorbit?sslmode=require');
+    expect(connection.env).toEqual({ PGPASSWORD: 's@cret' });
+  });
+
+  it('leaves an address without a password, or one that is not a URL, as it is', () => {
+    expect(pgConnection('postgres://bookorbit@db/bookorbit')).toEqual({ dbname: 'postgres://bookorbit@db/bookorbit', env: {} });
+    expect(pgConnection('host=db dbname=bookorbit')).toEqual({ dbname: 'host=db dbname=bookorbit', env: {} });
   });
 });

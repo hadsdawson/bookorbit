@@ -25,6 +25,8 @@ export interface BackupSettings {
   keep: number;
   /** Take a backup automatically before an update changes the database. */
   beforeUpdate: boolean;
+  /** Refuse to start an update when that backup could not be made, instead of updating without one. */
+  requireBeforeUpdate: boolean;
 }
 
 export const DEFAULT_BACKUP_SETTINGS: BackupSettings = {
@@ -34,6 +36,7 @@ export const DEFAULT_BACKUP_SETTINGS: BackupSettings = {
   timeZone: "UTC",
   keep: 7,
   beforeUpdate: true,
+  requireBeforeUpdate: false,
 };
 
 export const BACKUP_KEEP_MIN = 1;

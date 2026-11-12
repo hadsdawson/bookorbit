@@ -71,6 +71,10 @@ function handleBeforeUpdateChange(value: boolean) {
   if (form.value) form.value.beforeUpdate = value
 }
 
+function handleRequireBeforeUpdateChange(value: boolean) {
+  if (form.value) form.value.requireBeforeUpdate = value
+}
+
 function handleUseMyTimeZone() {
   if (form.value) form.value.timeZone = browserTimeZone
 }
@@ -255,6 +259,17 @@ async function handleConfirmDelete() {
           </div>
           <ToggleSwitch :model-value="form.beforeUpdate" class="self-start md:self-auto md:ml-4" @update:model-value="handleBeforeUpdateChange" />
         </div>
+        <div v-if="form.beforeUpdate" class="settings-row">
+          <div class="min-w-0">
+            <p class="settings-label">{{ t('settings.backups.requireBeforeUpdate') }}</p>
+            <p class="settings-hint settings-prose">{{ t('settings.backups.requireBeforeUpdateHint') }}</p>
+          </div>
+          <ToggleSwitch
+            :model-value="form.requireBeforeUpdate"
+            class="self-start md:self-auto md:ml-4"
+            @update:model-value="handleRequireBeforeUpdateChange"
+          />
+        </div>
         <div class="flex justify-end bg-card px-4 py-3 md:px-5">
           <Button :disabled="!dirty || busy === 'save'" @click="handleSave">
             <Loader2 v-if="busy === 'save'" class="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
@@ -270,6 +285,7 @@ async function handleConfirmDelete() {
         <div class="px-4 py-3.5 md:px-5 md:py-4">
           <code class="block px-3 py-2 rounded-md bg-muted text-foreground text-xs font-mono break-all select-all">{{ overview.location }}</code>
           <p class="settings-hint settings-prose mt-2">{{ t('settings.backups.contents') }}</p>
+          <p class="settings-hint settings-prose mt-2">{{ t('settings.backups.sensitive') }}</p>
           <p v-if="overview.locationInsideAppData" class="mt-2 flex items-start gap-2 text-xs text-foreground settings-prose">
             <AlertTriangle class="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden="true" />
             <span>{{ t('settings.backups.insideAppData') }}</span>

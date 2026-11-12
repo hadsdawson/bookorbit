@@ -23,4 +23,7 @@ export class UpdateBackupSettingsDto implements BackupSettings {
 
   @IsBoolean()
   beforeUpdate!: boolean;
+
+  @IsBoolean()
+  requireBeforeUpdate!: boolean;
 }

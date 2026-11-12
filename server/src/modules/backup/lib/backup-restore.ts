@@ -3,6 +3,8 @@ import { mkdir, readFile, rename, rm, writeFile } from 'fs/promises';
 import { join } from 'path';
 import type { Pool } from 'pg';
 
+import { sanitizeLogValue } from '../../../common/utils/log-sanitize.utils';
+
 import {
   createBackup,
   DATABASE_ENTRY,
@@ -10,6 +12,7 @@ import {
   extractEntry,
   isBackupFileName,
   readManifest,
+  replaceDatabaseFromDump,
   runPgTool,
   type BackupManifest,
 } from './backup-archive';
@@ -24,6 +27,21 @@ export interface RestoreResult {
   error?: string;
   /** The safety backup taken just before, for going back. */
   safetyBackup?: string;
+  /** The database was left without BookOrbit's tables, so starting up would create a new, empty one. */
+  databaseEmpty?: boolean;
+}
+
+/** Thrown to stop startup when carrying on would build a new, empty BookOrbit over a lost database. */
+export class DatabaseLostError extends Error {
+  constructor(safetyBackup: string | undefined, backupDir: string) {
+    super(
+      `A restore left the database empty. BookOrbit will not start, so it cannot create a new empty library in its place. ` +
+        (safetyBackup ? `Your data from before the restore is in ${safetyBackup} in ${backupDir}. ` : '') +
+        `To restore a backup, write {"name":"<backup file name>"} to ${RESTORE_MARKER} in ${backupDir} and restart. ` +
+        `To start fresh on purpose, delete ${RESTORE_RESULT} in ${backupDir} and restart.`,
+    );
+    this.name = 'DatabaseLostError';
+  }
 }
 
 export interface RestoreContext {
@@ -75,17 +93,22 @@ export async function readRestoreResult(backupDir: string): Promise<RestoreResul
 
 /**
  * Runs before migrations at startup, while nothing else is using the database. Takes a safety backup
- * of what is there now, replaces the database and data folders with the backup's, and puts the
- * safety backup back if loading the database fails. Migrations then bring an older backup up to date.
+ * of what is there now, then replaces the database and data folders with the backup's. Each step can
+ * be undone: the database is swapped in one transaction, and the data folders are unpacked beside
+ * the live ones first and put back if the swap fails. Migrations then bring an older backup up to date.
  */
 export async function runPendingRestore(context: RestoreContext): Promise<RestoreResult | null> {
   const name = await readPendingRestore(context.backupDir);
-  if (!name) return null;
+  if (!name) {
+    await assertDatabaseNotLost(context);
+    return null;
+  }
   // Cleared first: a restore that crashes the process must not run again on every restart.
   await cancelPendingRestore(context.backupDir);
   const backupPath = join(context.backupDir, name);
   context.log(`[backup.restore] [start] backup=${name} - restoring`);
   const startedAt = Date.now();
+  const hadDatabase = context.ledgerHashes.length > 0;
 
   let safetyBackup: string | undefined;
   let result: RestoreResult;
@@ -104,75 +127,104 @@ export async function runPendingRestore(context: RestoreContext): Promise<Restor
     });
     safetyBackup = safety.name;
 
-    await restoreDatabase(context, backupPath, safety.name);
-    await restoreDataDirs(context.appDataPath, backupPath, manifest.dataDirs);
+    const staged = await stageDataDirs(context.appDataPath, backupPath);
+    try {
+      await restoreDatabase(context, backupPath);
+      try {
+        await swapDataDirs(context.appDataPath, staged, manifest.dataDirs);
+      } catch (error) {
+        context.log(`[backup.restore] [fail] stage=data - swapping the data folders failed, putting the previous database back`);
+        await restoreDatabase(context, join(context.backupDir, safety.name));
+        throw error;
+      }
+    } finally {
+      await rm(staged, { recursive: true, force: true });
+    }
     result = { name, ok: true, finishedAt: new Date().toISOString(), safetyBackup };
     context.log(`[backup.restore] [end] backup=${name} durationMs=${Date.now() - startedAt} safetyBackup=${safetyBackup} - restored`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    result = { name, ok: false, finishedAt: new Date().toISOString(), error: message, safetyBackup };
-    context.log(`[backup.restore] [fail] backup=${name} durationMs=${Date.now() - startedAt} error="${message.replace(/"/g, "'")}" - restore failed`);
+    const databaseEmpty = hadDatabase && !(await hasMigrationLedger(context.pool));
+    result = { name, ok: false, finishedAt: new Date().toISOString(), error: message, safetyBackup, ...(databaseEmpty ? { databaseEmpty } : {}) };
+    context.log(
+      `[backup.restore] [fail] backup=${name} durationMs=${Date.now() - startedAt} errorClass=${error instanceof Error ? error.name : 'UnknownError'} error="${sanitizeLogValue(message)}" - restore failed`,
+    );
   }
   await writeFile(join(context.backupDir, RESTORE_RESULT), JSON.stringify(result));
+  if (result.databaseEmpty) throw new DatabaseLostError(safetyBackup, context.backupDir);
   return result;
 }
 
-async function restoreDatabase(context: RestoreContext, backupPath: string, safetyName: string): Promise<void> {
+/**
+ * A restore that lost the database stops every later start too, until a backup is restored or the
+ * result file is deleted on purpose. Without this the next start would quietly build an empty app.
+ */
+async function assertDatabaseNotLost(context: RestoreContext): Promise<void> {
+  const last = await readRestoreResult(context.backupDir);
+  if (!last?.databaseEmpty) return;
+  if (await hasMigrationLedger(context.pool)) return;
+  throw new DatabaseLostError(last.safetyBackup, context.backupDir);
+}
+
+async function hasMigrationLedger(pool: Pick<Pool, 'query'>): Promise<boolean> {
+  const table = await pool.query<{ name: string | null }>(`SELECT to_regclass('drizzle.__drizzle_migrations')::text AS name`);
+  return Boolean(table.rows[0]?.name);
+}
+
+async function restoreDatabase(context: RestoreContext, backupPath: string): Promise<void> {
   const dumpPath = join(context.backupDir, `.restore-${Date.now()}.dump`);
   try {
     await extractEntry(backupPath, DATABASE_ENTRY, dumpPath);
-    // Reads the dump's table of contents: a damaged file fails here, before the live database is touched.
+    // Reads the dump's table of contents: a damaged file fails here, before anything is run.
     await runPgTool('pg_restore', ['--list', dumpPath]);
-    try {
-      await loadDump(context, dumpPath);
-    } catch (error) {
-      context.log(`[backup.restore] [fail] stage=database - loading the backup failed, putting the previous database back`);
-      await extractEntry(join(context.backupDir, safetyName), DATABASE_ENTRY, dumpPath);
-      await loadDump(context, dumpPath);
-      throw error;
-    }
+    await replaceDatabaseFromDump(context.databaseUrl, dumpPath);
   } finally {
     await rm(dumpPath, { force: true });
   }
 }
 
-/** Empties BookOrbit's schemas and loads a dump into them, so no table from a newer version is left behind. */
-async function loadDump(context: RestoreContext, dumpPath: string): Promise<void> {
-  await context.pool.query('DROP SCHEMA IF EXISTS drizzle CASCADE');
-  await context.pool.query('DROP SCHEMA IF EXISTS public CASCADE');
-  await context.pool.query('CREATE SCHEMA public');
-  await runPgTool('pg_restore', [
-    '--no-owner',
-    '--no-privileges',
-    '--exit-on-error',
-    '--single-transaction',
-    `--dbname=${context.databaseUrl}`,
-    dumpPath,
-  ]);
+/** Unpacks the backup's data folders beside the live ones, so a failed unpack changes nothing. */
+async function stageDataDirs(appDataPath: string, backupPath: string): Promise<string> {
+  const incoming = join(appDataPath, '.restore-incoming');
+  await rm(incoming, { recursive: true, force: true });
+  await mkdir(incoming, { recursive: true });
+  try {
+    await extractDataDirs(backupPath, incoming);
+  } catch (error) {
+    await rm(incoming, { recursive: true, force: true });
+    throw error;
+  }
+  return incoming;
 }
 
 /**
- * Swaps each data folder for the backup's copy: unpacked beside the live one first, so a failed unpack
- * leaves the current folders untouched. Folders the backup does not have are left as they are.
+ * Swaps each data folder for the staged copy. The live folders are set aside, not deleted, until
+ * every swap has worked; if one fails they are all put back. Folders the backup does not have are
+ * left as they are.
  */
-async function restoreDataDirs(appDataPath: string, backupPath: string, dataDirs: readonly string[]): Promise<void> {
-  const incoming = join(appDataPath, '.restore-incoming');
+export async function swapDataDirs(appDataPath: string, incoming: string, dataDirs: readonly string[]): Promise<void> {
   const previous = join(appDataPath, '.restore-previous');
-  await rm(incoming, { recursive: true, force: true });
   await rm(previous, { recursive: true, force: true });
-  await mkdir(incoming, { recursive: true });
   await mkdir(previous, { recursive: true });
+  const swapped: { dir: string; hadLive: boolean }[] = [];
   try {
-    await extractDataDirs(backupPath, incoming);
     for (const dir of dataDirs) {
       const live = join(appDataPath, dir);
       const replacement = join(incoming, dir);
-      if (existsSync(live)) await rename(live, join(previous, dir));
+      const hadLive = existsSync(live);
+      if (hadLive) await rename(live, join(previous, dir));
+      swapped.push({ dir, hadLive });
       if (existsSync(replacement)) await rename(replacement, live);
       else await mkdir(live, { recursive: true });
     }
-  } finally {
-    await rm(incoming, { recursive: true, force: true });
+  } catch (error) {
+    for (const { dir, hadLive } of swapped.reverse()) {
+      const live = join(appDataPath, dir);
+      await rm(live, { recursive: true, force: true });
+      if (hadLive) await rename(join(previous, dir), live);
+    }
     await rm(previous, { recursive: true, force: true });
+    throw error;
   }
+  await rm(previous, { recursive: true, force: true });
 }

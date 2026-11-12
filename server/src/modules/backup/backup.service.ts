@@ -12,9 +12,19 @@ import { appConfig, dbConfig, storageConfig } from '../../config/config';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
 import { AppSettingsService } from '../app-settings/app-settings.service';
 import { BackupRepository } from './backup.repository';
-import { backupFileName, createBackup, isBackupFileName, listBackups, readManifest, resolveBackupDir } from './lib/backup-archive';
+import { backupFileName, createBackup, isBackupFileName, listBackups, PRIVATE_FILE_MODE, readManifest, resolveBackupDir } from './lib/backup-archive';
 import { shippedMigrationHashes } from './lib/backup-migrations';
-import { BACKUP_LAST_SLOT_KEY, BACKUP_SETTINGS_KEY, dueScheduleSlot, parseBackupSettings, pruneBackups } from './lib/backup-policy';
+import {
+  BACKUP_FAILED_SLOT_KEY,
+  BACKUP_LAST_ERROR_KEY,
+  BACKUP_LAST_SLOT_KEY,
+  BACKUP_SETTINGS_KEY,
+  dueScheduleSlot,
+  parseBackupSettings,
+  parseFailedSlot,
+  pruneBackups,
+  shouldAttemptSlot,
+} from './lib/backup-policy';
 import { assertRestorable, cancelPendingRestore, readPendingRestore, readRestoreResult, requestRestore } from './lib/backup-restore';
 
 /** Long enough for the restore response to reach the browser before BookOrbit stops to restart. */
@@ -25,7 +35,6 @@ export class BackupService {
   private readonly logger = new Logger(BackupService.name);
   private readonly backupDir: string;
   private running: BackupKind | null = null;
-  private lastError: string | null = null;
 
   constructor(
     private readonly repo: BackupRepository,
@@ -46,7 +55,7 @@ export class BackupService {
       locationInsideAppData: !location.startsWith('..') && !location.startsWith('/'),
       running: this.running,
       pendingRestore: await readPendingRestore(this.backupDir),
-      lastError: this.lastError,
+      lastError: (await this.appSettings.getValue(BACKUP_LAST_ERROR_KEY)) || null,
       lastRestore: await readRestoreResult(this.backupDir),
     };
   }
@@ -61,14 +70,26 @@ export class BackupService {
     return settings;
   }
 
-  /** Checked every minute; a backup runs once per slot after the chosen time, in the chosen time zone. */
+  /**
+   * Checked every minute; a backup runs once per slot after the chosen time, in the chosen time zone.
+   * A slot is only marked done once its backup worked: a failed one is tried again later, a few times.
+   */
   @Cron('0 * * * * *')
-  async runScheduled(): Promise<void> {
+  async runScheduled(now: Date = new Date()): Promise<void> {
+    if (this.running) return;
     const settings = await this.getSettings();
-    const slot = dueScheduleSlot(settings, new Date(), await this.appSettings.getValue(BACKUP_LAST_SLOT_KEY));
-    if (!slot || this.running) return;
-    await this.appSettings.setValue(BACKUP_LAST_SLOT_KEY, slot);
-    await this.create('scheduled').catch(() => undefined);
+    const slot = dueScheduleSlot(settings, now, await this.appSettings.getValue(BACKUP_LAST_SLOT_KEY));
+    if (!slot) return;
+    const failed = parseFailedSlot(await this.appSettings.getValue(BACKUP_FAILED_SLOT_KEY));
+    if (!shouldAttemptSlot(slot, failed, now)) return;
+    try {
+      await this.create('scheduled');
+      await this.appSettings.setValue(BACKUP_LAST_SLOT_KEY, slot);
+      if (failed) await this.appSettings.setValue(BACKUP_FAILED_SLOT_KEY, '');
+    } catch {
+      const attempts = failed?.slot === slot ? failed.attempts + 1 : 1;
+      await this.appSettings.setValue(BACKUP_FAILED_SLOT_KEY, JSON.stringify({ slot, attempts, lastAttemptAt: now.toISOString() }));
+    }
   }
 
   async create(kind: 'scheduled' | 'manual'): Promise<BackupInfo> {
@@ -87,14 +108,14 @@ export class BackupService {
       });
       const settings = await this.getSettings();
       const removed = await pruneBackups(this.backupDir, await listBackups(this.backupDir), settings.keep);
-      this.lastError = null;
+      await this.appSettings.setValue(BACKUP_LAST_ERROR_KEY, '');
       this.logger.log(
         `[backup.create] [end] kind=${kind} durationMs=${Date.now() - startedAt} backup=${backup.name} size=${backup.size} removed=${removed.length} - backed up`,
       );
       return backup;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.lastError = message;
+      await this.appSettings.setValue(BACKUP_LAST_ERROR_KEY, message).catch(() => undefined);
       this.logger.error(
         `[backup.create] [fail] kind=${kind} durationMs=${Date.now() - startedAt} errorClass=${error instanceof Error ? error.constructor.name : 'UnknownError'} error="${sanitizeLogValue(message)}" - backup failed`,
       );
@@ -126,7 +147,7 @@ export class BackupService {
     await mkdir(this.backupDir, { recursive: true });
     const partial = join(this.backupDir, `.upload-${Date.now()}.partial`);
     try {
-      await pipeline(file, createWriteStream(partial));
+      await pipeline(file, createWriteStream(partial, { mode: PRIVATE_FILE_MODE }));
       if (truncated()) throw new BadRequestException('The backup file is larger than the upload limit');
       const manifest = await readManifest(partial).catch((error: unknown) => {
         throw new BadRequestException(error instanceof Error ? error.message : 'Not a BookOrbit backup');
