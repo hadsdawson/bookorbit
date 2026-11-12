@@ -27,6 +27,7 @@ import {
   PanelBottom,
   Rss,
   ScrollText,
+  DatabaseBackup,
   Server,
   Shield,
   ShieldCheck,
@@ -554,6 +555,15 @@ export const SETTINGS_NAV: readonly SettingsNavGroup[] = [
         icon: Type,
         keywords: 'server font upload typeface available readers',
         isVisible: anyPermission('manage_app_settings'),
+      },
+      {
+        id: 'backups',
+        routeName: 'settings-admin-backups',
+        labelKey: 'settings.system.tabs.backups',
+        descriptionKey: 'settings.nav.descriptions.backups',
+        icon: DatabaseBackup,
+        keywords: 'backup restore download upload database export schedule safety',
+        isVisible: superuserOnly,
       },
       {
         id: 'audit-log',

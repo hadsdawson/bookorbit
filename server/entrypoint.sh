@@ -166,12 +166,32 @@ ensure_dir "$APP_DATA_PATH"
 ensure_dir "$APP_DATA_PATH/covers"
 ensure_dir "$book_bucket_path"
 
+# Fork only: backups go to BACKUP_PATH, else a folder mapped to /backups, else the data folder. A
+# folder that cannot be written to is reported but does not stop startup, since BookOrbit runs
+# fine without backups.
+backup_path="${BACKUP_PATH:-}"
+if [ -z "$backup_path" ] && [ -d /backups ]; then
+  backup_path=/backups
+fi
+
+warn_backup_path() {
+  if [ -n "$backup_path" ]; then
+    log "backups cannot be saved: $backup_path is not writable by UID:GID $APP_UID:$APP_GID. Give that user write access to the backups folder."
+  fi
+}
+
 if [ "$(id -u)" = "0" ]; then
   fix_owner "$APP_DATA_PATH"
   fix_owner "$book_bucket_path"
   check_writable_as_user "$APP_DATA_PATH"
   check_writable_as_user "$APP_DATA_PATH/covers"
   check_writable_as_user "$book_bucket_path"
+  if [ -n "$backup_path" ] && mkdir -p "$backup_path" 2>/dev/null; then
+    if [ "$backup_path" = "/backups" ] && [ "${BOOKORBIT_FIX_PERMISSIONS:-true}" = "true" ]; then
+      chown -R "$APP_UID:$APP_GID" /backups 2>/dev/null || true
+    fi
+    su-exec "$APP_UID:$APP_GID" sh -c 'touch "$1/.bookorbit-permission-test" && rm -f "$1/.bookorbit-permission-test"' sh "$backup_path" 2>/dev/null || warn_backup_path
+  fi
   exec su-exec "$APP_UID:$APP_GID" sh -c 'node dist/scripts/migrate.js && exec node --max-old-space-size="$NODE_MAX_OLD_SPACE_SIZE" dist/main.js'
 fi
 
