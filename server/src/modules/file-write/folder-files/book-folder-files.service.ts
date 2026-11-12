@@ -1,5 +1,6 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
-import { readFile, stat, writeFile } from 'fs/promises';
+import { Injectable, Logger, OnModuleDestroy, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { readFile, stat } from 'fs/promises';
 import { join } from 'path';
 import sharp from 'sharp';
 import { COVER_MEDIA, type CoverMedium, type FolderFilesEstimate, type FolderFilesStatus } from '@bookorbit/types';
@@ -10,8 +11,9 @@ import { sanitizeLogValue } from '../../../common/utils/log-sanitize.utils';
 import { BookCoverStore } from '../../book-cover-store/book-cover-store.service';
 import { FileLockService, bookOperationLockKey } from '../file-lock.service';
 import { FileWriteRepository } from '../file-write.repository';
-import { buildAbsMetadata, folderCoverFiles, METADATA_JSON_NAME } from './abs-metadata';
+import { buildAbsMetadata, folderCoverFiles, METADATA_JSON_NAME, readExplicitFlag } from './abs-metadata';
 import { BookFolderFilesRepository } from './book-folder-files.repository';
+import { FolderFileWriter } from './folder-file-writer';
 
 export type FolderFilesOutcome = { status: 'written' | 'unchanged'; files: string[] } | { status: 'skipped'; reason: string };
 
@@ -37,6 +39,7 @@ export class BookFolderFilesService implements OnModuleDestroy {
   private readonly waiting: Array<() => void> = [];
   private active = 0;
   private readonly runs = new Map<number, FolderFilesStatus>();
+  private readonly writer: FolderFileWriter;
 
   constructor(
     private readonly repo: BookFolderFilesRepository,
@@ -44,7 +47,11 @@ export class BookFolderFilesService implements OnModuleDestroy {
     private readonly coverStore: BookCoverStore,
     private readonly lockService: FileLockService,
     private readonly selfWrites: SelfWriteRegistry,
-  ) {}
+    @Optional() config?: ConfigService,
+  ) {
+    const appDataPath = config?.get<string>('storage.appDataPath');
+    this.writer = new FolderFileWriter(appDataPath ? join(appDataPath, 'folder-files') : null);
+  }
 
   onModuleDestroy(): void {
     for (const timer of this.timers.values()) clearTimeout(timer);
@@ -158,8 +165,10 @@ export class BookFolderFilesService implements OnModuleDestroy {
       const payload = await this.fileWriteRepo.loadPayload(bookId);
       if (payload) {
         const chapterSource = await this.repo.findChapterSource(bookId);
-        const json = buildAbsMetadata({ ...payload, ...chapterSource });
-        files.push({ path: join(target.folderPath, METADATA_JSON_NAME), bytes: Buffer.from(`${JSON.stringify(json, null, 2)}\n`) });
+        const metadataPath = join(target.folderPath, METADATA_JSON_NAME);
+        const explicit = readExplicitFlag(await readFile(metadataPath, 'utf8').catch(() => null));
+        const json = buildAbsMetadata({ ...payload, ...chapterSource, explicit });
+        files.push({ path: metadataPath, bytes: Buffer.from(`${JSON.stringify(json, null, 2)}\n`) });
       }
     }
 
@@ -174,12 +183,16 @@ export class BookFolderFilesService implements OnModuleDestroy {
 
     const written: string[] = [];
     await this.selfWrites.track(
-      safeFiles.map((file) => file.path),
+      safeFiles.flatMap((file) => [file.path, ...FolderFileWriter.sidePaths(file.path)]),
       async () => {
-        for (const file of safeFiles) {
-          if (await sameContent(file.path, file.bytes)) continue;
-          await writeFile(file.path, file.bytes);
-          written.push(file.path);
+        for (const [path, outcome] of await this.writer.write(bookId, safeFiles)) {
+          if (outcome === 'unchanged') continue;
+          written.push(path);
+          if (outcome === 'written-original-kept') {
+            this.logger.log(
+              `[${EVENT}] [end] bookId=${bookId} path="${sanitizeLogValue(path)}" - a file BookOrbit did not write was kept as .bak before being replaced`,
+            );
+          }
         }
       },
     );
@@ -213,14 +226,6 @@ export class BookFolderFilesService implements OnModuleDestroy {
 async function isDirectory(path: string): Promise<boolean> {
   try {
     return (await stat(path)).isDirectory();
-  } catch {
-    return false;
-  }
-}
-
-async function sameContent(path: string, bytes: Buffer): Promise<boolean> {
-  try {
-    return (await readFile(path)).equals(bytes);
   } catch {
     return false;
   }

@@ -94,6 +94,14 @@ describe('applyModifier', () => {
       expect(applyModifier('Ñame', 'initial', 'title')).toBe('N');
     });
 
+    it('files names that start with a digit or a symbol under #', () => {
+      expect(applyModifier('50 Cent', 'firstInitial', 'authors')).toBe('#');
+      expect(applyModifier('.hack Conglomerate', 'firstInitial', 'authors')).toBe('#');
+      expect(applyModifier("'Asta Bowen", 'firstInitial', 'authors')).toBe('#');
+      expect(applyModifier('1984', 'initial', 'title')).toBe('#');
+      expect(resolvePlaceholders('<{authors:firstInitial}|_>/{authors:first}', { authors: '50 Cent' }).text).toBe('#/50 Cent');
+    });
+
     it('keeps letters from other alphabets as they are', () => {
       expect(applyModifier('Фёдор Достоевский', 'initial', 'authors')).toBe('Д');
       expect(applyModifier('村上春樹', 'initial', 'authors')).toBe('村');
