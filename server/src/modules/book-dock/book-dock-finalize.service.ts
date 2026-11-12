@@ -70,6 +70,7 @@ import { UploadProcessorService, type UnitBookFileInput, type UnitBookRecords } 
 import { UploadStorageService } from '../upload/upload-storage.service';
 import { UploadValidatorService } from '../upload/upload-validator.service';
 import { inspectEpubMediaOverlayFields } from '../reader/epub/epub-media-overlay-capability';
+import { isAbsMetadataFile } from './abs-metadata-import';
 import { BookDockRepository } from './book-dock.repository';
 import { BookDockEventsService, BOOK_DOCK_FILE_INGESTED } from './book-dock-events.service';
 import { BookDockGateway } from './book-dock.gateway';
@@ -1552,7 +1553,9 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
     }
 
     if (meta.genres.length > 0) {
-      await this.metadataService.replaceGenres(bookId, meta.genres);
+      // Genres from an Audiobookshelf metadata.json arrive whole, to be tidied after filing.
+      const skipGenrePolicy = (await this.repo.findUnitFiles(row.id)).some((file) => file.role === 'metadata' && isAbsMetadataFile(file.fileName));
+      await this.metadataService.replaceGenres(bookId, meta.genres, { skipGenrePolicy });
     }
 
     if (meta.tags.length > 0) {

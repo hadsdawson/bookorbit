@@ -57,6 +57,8 @@ type RelationMutationExecutor = Pick<Db, 'delete' | 'execute' | 'insert' | 'sele
 interface RelationMutationOptions {
   executor?: RelationMutationExecutor;
   emitEvent?: boolean;
+  /** Genres a person brought in as they are, to tidy afterwards: the allowed-genre list is not applied. */
+  skipGenrePolicy?: boolean;
 }
 
 const MAX_RELATION_NAME_LENGTH = 200;
@@ -798,7 +800,7 @@ export class MetadataService {
 
   async replaceGenres(bookId: number, parsedGenres: string[], options: RelationMutationOptions = {}) {
     const requested = this.normalizeUniqueRelationNames(parsedGenres);
-    const uniqueGenres = this.genrePolicy ? await this.genrePolicy.filter(requested) : requested;
+    const uniqueGenres = this.genrePolicy && !options.skipGenrePolicy ? await this.genrePolicy.filter(requested) : requested;
     // A source offering only genres outside the allowed list says nothing about which allowed ones
     // apply, so the book keeps what it has rather than losing every genre.
     if (requested.length > 0 && uniqueGenres.length === 0) return;

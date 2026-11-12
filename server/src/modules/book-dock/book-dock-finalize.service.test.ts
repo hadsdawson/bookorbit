@@ -1588,9 +1588,21 @@ describe('BookDockFinalizeService', () => {
       }),
     );
     expect(metadataService.replaceAuthors).toHaveBeenCalledWith(15, [{ name: 'Author A', sortName: null }]);
-    expect(metadataService.replaceGenres).toHaveBeenCalledWith(15, ['Fantasy']);
+    expect(metadataService.replaceGenres).toHaveBeenCalledWith(15, ['Fantasy'], { skipGenrePolicy: false });
     expect(metadataService.replaceTags).toHaveBeenCalledWith(15, ['Owned', 'Fantasy']);
     expect(metadataScoreService.calculateAndSave).toHaveBeenCalledWith(15);
+  });
+
+  it('applyMetadata files Audiobookshelf genres without the allowed-genre list', async () => {
+    const { service, db, metadataService, repo } = makeService();
+    const updateChain = { set: vi.fn(), where: vi.fn().mockResolvedValue(undefined) };
+    updateChain.set.mockReturnValue(updateChain);
+    db.update.mockReturnValue(updateChain);
+    repo.findUnitFiles.mockResolvedValue([{ fileName: 'metadata.json', role: 'metadata' }]);
+
+    await (service as any).applyMetadata(15, makeRow({ selectedMetadata: { genres: ['Epic Fantasy'] } as BookDockMetadata, coverPath: null }));
+
+    expect(metadataService.replaceGenres).toHaveBeenCalledWith(15, ['Epic Fantasy'], { skipGenrePolicy: true });
   });
 
   it('applyMetadata propagates score persistence failures', async () => {
