@@ -95,6 +95,7 @@ export class BookDockMetadataFieldsDto {
   @NormalizeIdentifier() @IsOptional() @IsString() @MaxLength(13) isbn13?: string | null;
   @IsOptional() @IsString() @MaxLength(500) seriesName?: string | null;
   @IsOptional() @IsString() coverUrl?: string;
+  @IsOptional() @IsString() otherFormatCoverUrl?: string | null;
   @IsOptional() @IsString() @Matches(/^\d{4}-\d{2}-\d{2}$/) publishedDate?: string | null;
   @IsOptional() @IsInt() @Min(1000) @Max(2200) publishedYear?: number | null;
   @IsOptional() @IsInt() @Min(0) pageCount?: number | null;

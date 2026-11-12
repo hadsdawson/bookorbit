@@ -4,7 +4,7 @@ import { basename, dirname, extname, join, relative, sep } from 'path';
 import { mkdir, realpath, stat } from 'fs/promises';
 import { Readable } from 'stream';
 
-import { isAudioFormat, MetadataProviderKey, resolveBookDockSearchTitle, type BookDockMetadata } from '@bookorbit/types';
+import { isAudioFormat, isComicFormat, MetadataProviderKey, resolveBookDockSearchTitle, type BookDockMetadata } from '@bookorbit/types';
 import type { BookDockFileRow } from '../../db/schema';
 import { resolveSearchMediaKind } from '../../common/utils/book-media.utils';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
@@ -16,7 +16,8 @@ import { UploadStorageService } from '../upload/upload-storage.service';
 import { AppSettingsService } from '../app-settings/app-settings.service';
 import { MetadataFetchPipeline } from '../metadata-fetch/metadata-fetch-pipeline';
 import { isExternalProviderIdKey } from '../metadata-fetch/provider-ids/provider-id.store';
-import { inspectEpubMediaOverlayFields } from '../reader/epub/epub-media-overlay-capability';
+import type { MetadataSearchParams } from '../metadata-fetch/providers/metadata-search-params';
+import type { CacheDirective } from '../../common/provider-cache/provider-cache-spec';
 import { interpretRelease } from '../scanner/lib/release-plan';
 import { buildSingleBookCandidate } from '../scanner/lib/walk';
 import { BookDockDefaultTargetService } from './book-dock-default-target.service';
@@ -24,6 +25,7 @@ import { BookDockRepository } from './book-dock.repository';
 import { BookDockMetadataService } from './book-dock-metadata.service';
 import { BookDockEventsService, BOOK_DOCK_FILE_INGESTED } from './book-dock-events.service';
 import { BookDockGateway } from './book-dock.gateway';
+import { mergeFormatLookups, type MediumLookup } from './book-dock-both-formats';
 import { normalizeBookDockMetadata, normalizeBookDockMetadataSources } from './book-dock-metadata.utils';
 import { BookDockProcessingStateService } from './book-dock-processing-state.service';
 import { BookDockWorkQueue, type BookDockWorkPriority } from './book-dock-work-queue';
@@ -357,16 +359,6 @@ export class BookDockIngestService implements OnApplicationBootstrap, OnModuleDe
     return (await this.repo.bookLibraryExists(libraryId)) ? libraryId : null;
   }
 
-  private async isReadAlong(absolutePath: string, format: string | null): Promise<boolean> {
-    const startedAt = Date.now();
-    const fields = await inspectEpubMediaOverlayFields(absolutePath, format, (err) => {
-      this.logger.warn(
-        `[book_dock.media_overlay_capability] [fail] path="${sanitizeLogValue(absolutePath)}" durationMs=${Date.now() - startedAt} errorClass=${err instanceof Error ? err.name : 'Error'} error="${sanitizeLogValue(err instanceof Error ? err.message : String(err))}" - EPUB media-overlay inspection failed`,
-      );
-    });
-    return fields.mediaOverlayAvailable;
-  }
-
   private async autoFetchMetadataAsync(fileId: number, force = false): Promise<void> {
     if (!force) {
       const enabled = await this.appSettings.isBookDockAutoFetchEnabled();
@@ -377,62 +369,56 @@ export class BookDockIngestService implements OnApplicationBootstrap, OnModuleDe
     if (!row || row.status === 'error') return;
 
     const meta = row.embeddedMetadata;
+    const ownAudio = row.format != null && isAudioFormat(row.format);
     const params = {
       title: resolveBookDockSearchTitle(row.fileName, meta?.title),
       author: meta?.authors?.[0] ?? undefined,
       isbn: meta?.isbn13?.trim() || meta?.isbn10?.trim() || undefined,
-      isAudiobook: row.format != null && isAudioFormat(row.format),
-      mediaKind: resolveSearchMediaKind([{ format: row.format, role: 'content' }], row.format != null && isAudioFormat(row.format)),
+      isAudiobook: ownAudio,
+      mediaKind: resolveSearchMediaKind([{ format: row.format, role: 'content' }], ownAudio),
     };
     if (!params.title && !params.isbn) return;
     // The same field rules the book will be refreshed by once it is on a shelf: the library it is
-    // headed for, and a read-along EPUB counted as narrated, so audiobook sources answer for it.
-    // Auto-finalize never files a row another module owns, so its library says nothing about one.
+    // headed for. Auto-finalize never files a row another module owns, so its library says nothing about one.
     const libraryId = row.targetLibraryId ?? (row.autoFinalizeSuppressed ? null : await this.autoFinalizeLibraryId());
-    const coverMedia = { hasEbook: !params.isAudiobook, hasAudio: params.isAudiobook || (await this.isReadAlong(row.absolutePath, row.format)) };
+    // A manual refetch is live only: nothing on the dock would say a saved answer stood in for a
+    // provider that failed. Automatic ingest may answer from the metadata cache, by its settings.
+    const cacheDirective = force ? ({ policy: 'refresh', allowFallback: false } as const) : ({ policy: 'default', allowFallback: true } as const);
 
     await this.repo.update(fileId, { status: 'fetching' });
     this.emitChange();
     try {
-      const {
-        resolved,
-        sources,
-        providerIds = {},
-      } = await this.metadataFetchPipeline.runWithSources(
-        params,
-        {
-          isbn10: meta?.isbn10,
-          isbn13: meta?.isbn13,
-        },
-        libraryId ?? undefined,
-        // A dock file keeps one cover, its own medium's, so the other slot's search would be thrown away.
-        // A manual refetch is live only: nothing on the dock would say a saved answer stood in for a
-        // provider that failed. Automatic ingest may answer from the metadata cache.
-        {
-          coverMedia,
-          lockedCoverSlots: [params.isAudiobook ? 'ebook' : 'audio'],
-          cacheDirective: force ? { policy: 'refresh', allowFallback: false } : { policy: 'default', allowFallback: true },
-        },
-      );
-      // A dock file has one medium, so its one cover is that medium's slot.
-      if (params.isAudiobook) {
-        resolved.coverUrl = resolved.audioCoverUrl;
-        if (sources.audioCoverUrl) sources.coverUrl = sources.audioCoverUrl;
-      }
-      delete resolved.audioCoverUrl;
-      delete sources.audioCoverUrl;
-      const fetched = normalizeBookDockMetadata(resolved) ?? {};
-      for (const [provider, providerId] of Object.entries(providerIds)) {
-        if (!providerId) continue;
-        const field = BOOK_DOCK_PROVIDER_ID_FIELDS[provider as MetadataProviderKey];
-        if (field) {
-          (fetched as Record<string, unknown>)[field] = providerId;
-          sources[field] = provider;
-        } else if (isExternalProviderIdKey(provider)) {
-          // No column to name: an external provider's id rides along until the book is filed.
-          fetched.externalProviderIds = { ...fetched.externalProviderIds, [provider]: providerId };
-        }
-      }
+      // Both formats are looked up, whichever one was docked, so the book arrives with its
+      // narrators and duration as well as its pages, and with a cover for each format.
+      const lookUp = (medium: 'ebook' | 'audio') =>
+        this.lookUpMedium(
+          {
+            ...params,
+            // A file's own identifiers belong to its own format's edition.
+            isbn: medium === (ownAudio ? 'audio' : 'ebook') ? params.isbn : undefined,
+            isAudiobook: medium === 'audio',
+            mediaKind: medium === 'audio' ? 'audiobook' : ownAudio ? 'ebook' : params.mediaKind,
+          },
+          medium === (ownAudio ? 'audio' : 'ebook') ? { isbn10: meta?.isbn10, isbn13: meta?.isbn13 } : {},
+          medium,
+          libraryId,
+          cacheDirective,
+        );
+      const ownMedium = ownAudio ? 'audio' : 'ebook';
+      const otherMedium = ownAudio ? 'ebook' : 'audio';
+      const own = await lookUp(ownMedium);
+      // The other format is extra: if its lookup fails, the file still gets its own format's details.
+      // Comics have no audiobook edition to look up.
+      const lookUpOther = row.format != null && isComicFormat(row.format) ? Promise.resolve(emptyLookup()) : lookUp(otherMedium);
+      const other = await lookUpOther.catch((err: unknown) => {
+        this.logger.warn(
+          `[book_dock.other_format_lookup] [fail] fileId=${fileId} medium=${otherMedium} errorClass=${err instanceof Error ? err.name : 'Error'} error="${sanitizeLogValue(err instanceof Error ? err.message : String(err))}" - other format lookup failed`,
+        );
+        return emptyLookup();
+      });
+      const ebook = ownAudio ? other : own;
+      const audio = ownAudio ? own : other;
+      const { metadata: fetched, sources } = mergeFormatLookups(ebook, audio, ownAudio ? 'audio' : 'ebook');
       const fetchedMetadataSources = normalizeBookDockMetadataSources(sources);
       const updates =
         Object.keys(fetched).length > 0
@@ -455,6 +441,44 @@ export class BookDockIngestService implements OnApplicationBootstrap, OnModuleDe
       this.logger.warn(`Auto-fetch metadata failed for Book Dock file ${fileId}: ${err instanceof Error ? err.message : String(err)}`);
       await this.repo.update(fileId, { status: 'ready' });
     }
+  }
+
+  /** One format's lookup, shaped as Book Dock details: that format's cover becomes `coverUrl`. */
+  private async lookUpMedium(
+    params: MetadataSearchParams,
+    existingFields: { isbn10?: string | null; isbn13?: string | null },
+    medium: 'ebook' | 'audio',
+    libraryId: number | null,
+    cacheDirective: CacheDirective,
+  ): Promise<MediumLookup> {
+    const result = await this.metadataFetchPipeline.runWithSources(params, existingFields, libraryId ?? undefined, {
+      coverMedia: { hasEbook: medium === 'ebook', hasAudio: medium === 'audio' },
+      lockedCoverSlots: [medium === 'audio' ? 'ebook' : 'audio'],
+      cacheDirective,
+    });
+    const resolved = { ...result.resolved };
+    const sources = { ...result.sources };
+    const providerIds = result.providerIds ?? {};
+    if (medium === 'audio') {
+      resolved.coverUrl = resolved.audioCoverUrl;
+      if (sources.audioCoverUrl) sources.coverUrl = sources.audioCoverUrl;
+      else delete sources.coverUrl;
+    }
+    delete resolved.audioCoverUrl;
+    delete sources.audioCoverUrl;
+    const metadata = normalizeBookDockMetadata(resolved) ?? {};
+    for (const [provider, providerId] of Object.entries(providerIds)) {
+      if (!providerId) continue;
+      const field = BOOK_DOCK_PROVIDER_ID_FIELDS[provider as MetadataProviderKey];
+      if (field) {
+        (metadata as Record<string, unknown>)[field] = providerId;
+        sources[field] = provider;
+      } else if (isExternalProviderIdKey(provider)) {
+        // No column to name: an external provider's id rides along until the book is filed.
+        metadata.externalProviderIds = { ...metadata.externalProviderIds, [provider]: providerId };
+      }
+    }
+    return { metadata, sources };
   }
 
   private async resolveUniquePath(desiredPath: string): Promise<string> {
@@ -490,6 +514,10 @@ const BOOK_DOCK_PROVIDER_ID_FIELDS: Partial<Record<MetadataProviderKey, keyof Bo
   [MetadataProviderKey.LUBIMYCZYTAC]: 'lubimyczytacId',
   [MetadataProviderKey.ALADIN]: 'aladinId',
 };
+
+function emptyLookup(): MediumLookup {
+  return { metadata: {}, sources: {} };
+}
 
 function resolveSupportedFormat(row: Pick<BookDockFileRow, 'format' | 'absolutePath'>): string | null {
   const format = row.format ?? extname(row.absolutePath).toLowerCase().slice(1);
