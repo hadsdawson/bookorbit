@@ -74,6 +74,21 @@ const WINDOWS_RESERVED_NAMES = new Set([
 ]);
 const INVALID_SEGMENT_CHARS_REGEX = /[<>:"/\\|?*\u0000-\u001F]/g;
 
+/** Latin letters that carry no separate accent mark, so they do not reduce on their own. */
+const BASE_LETTERS: Record<string, string> = { Ø: "O", Ł: "L", Đ: "D", Æ: "A", Œ: "O", ß: "S", Þ: "T", Ð: "D", Ħ: "H", Ŧ: "T", Ŋ: "N", ı: "I" };
+
+/**
+ * A name's first letter as a plain capital, so "Ánya", "Émile" and "Øystein" file under A, E and O
+ * with everyone else rather than in folders of their own. Letters from other alphabets stay as
+ * they are.
+ */
+function plainInitial(text: string): string {
+  const first = Array.from(text.trim())[0];
+  if (!first) return "";
+  const base = first.normalize("NFD").replace(/\p{M}+/gu, "");
+  return (BASE_LETTERS[base] ?? BASE_LETTERS[base.toUpperCase()] ?? base).toUpperCase();
+}
+
 export function applyModifier(value: string, modifier: string, fieldName: string): string {
   if (!value) return value;
 
@@ -92,10 +107,10 @@ export function applyModifier(value: string, modifier: string, fieldName: string
         const lastSpace = firstAuthor.lastIndexOf(" ");
         target = lastSpace > 0 ? firstAuthor.substring(lastSpace + 1) : firstAuthor;
       }
-      return target.charAt(0).toUpperCase();
+      return plainInitial(target);
     }
     case "firstInitial":
-      return value.split(", ")[0].trim().charAt(0).toUpperCase();
+      return plainInitial(value.split(", ")[0].trim());
     case "max3": {
       const parts = value
         .split(", ")
