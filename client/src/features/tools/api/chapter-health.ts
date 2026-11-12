@@ -1,4 +1,5 @@
 import type {
+  ChapterAutoApplySettings,
   ChapterHealthCategory,
   ChapterHealthPage,
   ChapterHealthSummary,
@@ -50,4 +51,12 @@ export function clearFinishedChapterLookups(): Promise<{ removed: number }> {
 export async function dismissChapterReview(bookId: number): Promise<void> {
   const response = await api(`${BASE}/lookups/${bookId}`, { method: 'DELETE' })
   if (!response.ok) throw await apiError(response, 'tools.chapterHealth.errors.dismiss')
+}
+
+export function getChapterAutoApplySettings(): Promise<ChapterAutoApplySettings> {
+  return apiJson(`${BASE}/settings`, undefined, 'tools.chapterHealth.errors.load')
+}
+
+export function updateChapterAutoApplySettings(runtimeToleranceSeconds: number): Promise<ChapterAutoApplySettings> {
+  return apiJson(`${BASE}/settings`, jsonBody('PUT', { runtimeToleranceSeconds }), 'tools.chapterHealth.errors.tolerance')
 }

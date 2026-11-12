@@ -8025,7 +8025,9 @@
           "unsavedWithWarnings": "{count, plural, one {Unsaved changes, # warning} other {Unsaved changes, # warnings}}",
           "blocked": "{count, plural, one {Fix # problem to save} other {Fix # problems to save}}",
           "upToDate": "All changes saved",
-          "short": "Save"
+          "short": "Save",
+          "actionAndWrite": "Save and write to files",
+          "autoWriteHint": "This library writes chapters into the audio files whenever they are saved. The audio itself is copied unchanged."
         },
         "writeFiles": {
           "more": "More save options",
@@ -12432,6 +12434,10 @@
             "hint": "Title, authors, narrators, series, genres, description, chapters and more, in the layout Audiobookshelf reads."
           },
           "sharedNote": "Books that share a folder with other books are left alone, since their files could not be told apart."
+        },
+        "chaptersOnSave": {
+          "title": "Write chapters into audio files when saved",
+          "hint": "Saving chapters in the chapter editor, or applying them from a Find chapters on Audible run, also writes them into the M4B, M4A or MP3 files, without asking each time. The audio itself is copied unchanged."
         }
       },
       "reading": {
@@ -15147,13 +15153,22 @@
         "stop": "Stop",
         "clear": "Clear",
         "queued": "{count, plural, =0 {No book was queued} one {# book queued} other {# books queued}}",
-        "queuedWithSkipped": "{count, plural, =0 {No book was queued} one {# book queued} other {# books queued}}; {skipped, plural, one {# had no ASIN} other {# had no ASIN}}"
+        "queuedWithSkipped": "{count, plural, =0 {No book was queued} one {# book queued} other {# books queued}}; {skipped, plural, one {# had no ASIN} other {# had no ASIN}}",
+        "tolerance": {
+          "label": "Runtime must match within",
+          "seconds": "seconds",
+          "hint": "How far a book's length may differ from Audible's runtime for chapters to be applied without review. A bigger number applies more books on its own but risks timings that drift.",
+          "readOnly": "{seconds, plural, one {Applied without review when the runtime matches within # second.} other {Applied without review when the runtime matches within # seconds.}}",
+          "save": "Save",
+          "saved": "Runtime tolerance saved"
+        }
       },
       "errors": {
         "load": "Chapter health could not be loaded.",
         "enqueue": "The lookups could not be queued.",
         "cancel": "The lookups could not be changed.",
-        "dismiss": "The review could not be dismissed."
+        "dismiss": "The review could not be dismissed.",
+        "tolerance": "Could not save the runtime tolerance"
       }
     }
   },

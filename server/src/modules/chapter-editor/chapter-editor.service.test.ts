@@ -1114,6 +1114,41 @@ describe('ChapterEditorService.bulkLookup', () => {
     expect(bookService.verifyBookAccess).toHaveBeenCalledTimes(2);
   });
 
+  it('leaves the audio files alone after applying unless the library writes chapters on save', async () => {
+    const { service, lookupService, fileWriteService } = makeService();
+    lookupService.lookup.mockResolvedValue(CONFIDENT);
+    await service.bulkLookup(BOOK_ID, USER.id);
+    expect(fileWriteService.writeChapters).not.toHaveBeenCalled();
+  });
+
+  it('writes applied chapters into the audio files when the library writes chapters on save', async () => {
+    const { service, lookupService, fileWriteService } = makeService();
+    lookupService.lookup.mockResolvedValue(CONFIDENT);
+    fileWriteService.resolveChapterWriteStatus.mockResolvedValue({ available: true, reason: null, fileCount: 2, autoWrite: true });
+
+    await expect(service.bulkLookup(BOOK_ID, USER.id)).resolves.toMatchObject({ status: 'applied' });
+
+    expect(fileWriteService.writeChapters).toHaveBeenCalledWith(BOOK_ID, expect.any(Array), expect.any(Array), USER.id, expect.any(Function));
+  });
+
+  it('keeps the applied chapters when writing them into the files fails', async () => {
+    const { service, lookupService, fileWriteService, audiobookChapters } = makeService();
+    lookupService.lookup.mockResolvedValue(CONFIDENT);
+    fileWriteService.resolveChapterWriteStatus.mockResolvedValue({ available: true, reason: null, fileCount: 2, autoWrite: true });
+    fileWriteService.writeChapters.mockRejectedValue(new Error('disk full'));
+
+    await expect(service.bulkLookup(BOOK_ID, USER.id)).resolves.toMatchObject({ status: 'applied' });
+    expect(audiobookChapters.saveLookedUpChapters).toHaveBeenCalled();
+  });
+
+  it('uses the runtime tolerance it is given', async () => {
+    const { service, lookupService } = makeService();
+    lookupService.lookup.mockResolvedValue({ ...CONFIDENT, runtimeMs: 110_000, brandIntroMs: 0, brandOutroMs: 0 });
+
+    await expect(service.bulkLookup(BOOK_ID, USER.id)).resolves.toMatchObject({ status: 'review', reason: 'runtime_mismatch' });
+    await expect(service.bulkLookup(BOOK_ID, USER.id, { runtimeToleranceMs: 10_000 })).resolves.toMatchObject({ status: 'applied' });
+  });
+
   it('skips mutation when the queuer is gone', async () => {
     const { service, lookupService, audiobookChapters } = makeService();
     lookupService.lookup.mockResolvedValue(CONFIDENT);

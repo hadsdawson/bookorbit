@@ -48,7 +48,18 @@ export interface BookChapterWriteBack {
   reason: BookFileWriteDisabledReason | null;
   /** Audio files a write would touch. */
   fileCount: number;
+  /** The library writes chapters into the files on every save, so no confirmation is asked. */
+  autoWrite?: boolean;
 }
+
+/** How far a book's length may differ from Audible's runtime for a bulk lookup to apply chapters by itself. */
+export interface ChapterAutoApplySettings {
+  runtimeToleranceSeconds: number;
+  /** Whether the person asking may change it. */
+  canEdit: boolean;
+}
+
+export const CHAPTER_RUNTIME_TOLERANCE = { defaultSeconds: 2, minSeconds: 0, maxSeconds: 60 } as const;
 
 export interface BookChaptersState {
   chapters: AudiobookChapter[];

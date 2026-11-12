@@ -48,6 +48,8 @@ const compact = computed(() => width.value > 0 && width.value < COMPACT_PX)
 
 const canSave = computed(() => props.dirty && !props.saving && !props.writing && props.errorCount === 0)
 const canWrite = computed(() => Boolean(props.writeBack?.available) && !props.saving && !props.writing)
+/** This library writes chapters into the audio files on every save, so Save says so. */
+const autoWrite = computed(() => Boolean(props.writeBack?.available && props.writeBack.autoWrite))
 const writeReason = computed(() => (props.writeBack?.reason ? t(WRITE_REASON_KEYS[props.writeBack.reason]) : null))
 
 function handleSave() {
@@ -135,10 +137,18 @@ function handleLock(value: boolean) {
         {{ t('book.detail.chapters.save.discard') }}
       </Button>
       <div class="flex items-center">
-        <Button size="sm" type="button" class="rounded-e-none" :disabled="!canSave" @click="handleSave">
-          <Loader2 v-if="saving" :size="14" class="animate-spin motion-reduce:animate-none" aria-hidden="true" />
+        <Button
+          size="sm"
+          type="button"
+          class="rounded-e-none"
+          :disabled="!canSave"
+          :title="autoWrite ? t('book.detail.chapters.save.autoWriteHint') : undefined"
+          @click="handleSave"
+        >
+          <Loader2 v-if="saving || writing" :size="14" class="animate-spin motion-reduce:animate-none" aria-hidden="true" />
           <Save v-else :size="14" aria-hidden="true" />
-          {{ compact ? t('book.detail.chapters.save.short') : t('book.detail.chapters.save.action') }}
+          <template v-if="compact">{{ t('book.detail.chapters.save.short') }}</template>
+          <template v-else>{{ autoWrite ? t('book.detail.chapters.save.actionAndWrite') : t('book.detail.chapters.save.action') }}</template>
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger as-child>

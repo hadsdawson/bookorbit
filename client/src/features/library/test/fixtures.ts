@@ -35,6 +35,7 @@ export function makeLibrary(overrides: Partial<Library> = {}): Library {
     fileWriteAllFiles: false,
     fileWriteFolderCovers: 'off',
     fileWriteMetadataJson: false,
+    fileWriteChaptersOnSave: false,
     fileWriteReadAlongEnabled: false,
     fileWriteReadAlongMaxFileSizeMb: 1000,
     fileRenameEnabled: false,

@@ -132,6 +132,13 @@ describe('planAutoApply', () => {
     expect(planAutoApply(lookup(), RUNTIME_MS + 2_001)).toEqual({ kind: 'review', reason: 'runtime_mismatch' });
   });
 
+  it('takes a wider or narrower tolerance when one is given', () => {
+    expect(planAutoApply(lookup(), RUNTIME_MS + 9_000, 10_000)).toMatchObject({ kind: 'apply', offsetMs: 0 });
+    expect(planAutoApply(lookup(), RUNTIME_MS + 11_000, 10_000)).toEqual({ kind: 'review', reason: 'runtime_mismatch' });
+    expect(planAutoApply(lookup(), WITHOUT_BRANDING_MS + 1, 0)).toEqual({ kind: 'review', reason: 'runtime_mismatch' });
+    expect(planAutoApply(lookup(), WITHOUT_BRANDING_MS, 0)).toMatchObject({ kind: 'apply' });
+  });
+
   it('prefers the stripped reading when the branding is short enough for both to match', () => {
     const plan = planAutoApply(lookup({ brandIntroMs: 800, brandOutroMs: 700 }), RUNTIME_MS - 1_000);
 

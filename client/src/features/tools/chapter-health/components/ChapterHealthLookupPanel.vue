@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Loader2, Search } from '@lucide/vue'
-import type { ChapterLookupQueueState } from '@bookorbit/types'
+import { CHAPTER_RUNTIME_TOLERANCE, type ChapterAutoApplySettings, type ChapterLookupQueueState } from '@bookorbit/types'
 
 import { Button } from '@/components/ui/button'
 
@@ -13,9 +13,11 @@ const props = defineProps<{
   selectedCount: number
   canLookUp: boolean
   busy: boolean
+  autoApply?: ChapterAutoApplySettings | null
+  savingTolerance?: boolean
 }>()
 
-const emit = defineEmits<{ lookUp: []; cancel: []; clearFinished: [] }>()
+const emit = defineEmits<{ lookUp: []; cancel: []; clearFinished: []; saveTolerance: [seconds: number] }>()
 
 const { t } = useI18n()
 
@@ -35,6 +37,30 @@ const current = computed(() =>
     : null,
 )
 
+const toleranceDraft = ref<number | null>(null)
+watch(
+  () => props.autoApply?.runtimeToleranceSeconds,
+  (seconds) => {
+    toleranceDraft.value = seconds ?? null
+  },
+  { immediate: true },
+)
+const toleranceChanged = computed(
+  () =>
+    toleranceDraft.value !== null &&
+    props.autoApply !== null &&
+    props.autoApply !== undefined &&
+    toleranceDraft.value !== props.autoApply.runtimeToleranceSeconds,
+)
+
+function handleToleranceInput(event: Event): void {
+  const value = Number((event.target as HTMLInputElement).value)
+  if (!Number.isFinite(value)) return
+  toleranceDraft.value = Math.min(CHAPTER_RUNTIME_TOLERANCE.maxSeconds, Math.max(CHAPTER_RUNTIME_TOLERANCE.minSeconds, Math.round(value * 10) / 10))
+}
+function handleSaveTolerance(): void {
+  if (toleranceDraft.value !== null) emit('saveTolerance', toleranceDraft.value)
+}
 function handleLookUp(): void {
   emit('lookUp')
 }
@@ -83,6 +109,31 @@ function handleClear(): void {
         </span>
         <Button v-if="clearable > 0" variant="ghost" size="sm" @click="handleClear">{{ t('tools.chapterHealth.lookup.clear') }}</Button>
       </template>
+    </div>
+
+    <div v-if="autoApply" class="border-t border-border pt-3">
+      <div v-if="autoApply.canEdit" class="flex flex-wrap items-center gap-2 text-sm">
+        <label for="chapter-runtime-tolerance" class="text-foreground">{{ t('tools.chapterHealth.lookup.tolerance.label') }}</label>
+        <input
+          id="chapter-runtime-tolerance"
+          type="number"
+          class="input-field w-20"
+          :min="CHAPTER_RUNTIME_TOLERANCE.minSeconds"
+          :max="CHAPTER_RUNTIME_TOLERANCE.maxSeconds"
+          step="0.5"
+          :value="toleranceDraft ?? ''"
+          @change="handleToleranceInput"
+        />
+        <span class="text-muted-foreground">{{ t('tools.chapterHealth.lookup.tolerance.seconds') }}</span>
+        <Button v-if="toleranceChanged" size="sm" variant="outline" :disabled="savingTolerance" @click="handleSaveTolerance">
+          <Loader2 v-if="savingTolerance" class="animate-spin motion-reduce:animate-none" aria-hidden="true" />
+          {{ t('tools.chapterHealth.lookup.tolerance.save') }}
+        </Button>
+      </div>
+      <p v-else class="text-sm text-muted-foreground">
+        {{ t('tools.chapterHealth.lookup.tolerance.readOnly', { seconds: autoApply.runtimeToleranceSeconds }) }}
+      </p>
+      <p v-if="autoApply.canEdit" class="mt-1 max-w-2xl text-xs text-muted-foreground">{{ t('tools.chapterHealth.lookup.tolerance.hint') }}</p>
     </div>
   </section>
 </template>

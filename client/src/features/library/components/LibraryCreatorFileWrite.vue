@@ -17,6 +17,7 @@ const props = withDefaults(
     fileWriteWriteCover: boolean
     fileWriteFolderCovers: FolderCoverMedia
     fileWriteMetadataJson: boolean
+    fileWriteChaptersOnSave: boolean
     fileWriteEpubEnabled: boolean
     fileWriteEpubMaxFileSizeMb: number
     fileWriteFb2Enabled: boolean
@@ -43,6 +44,7 @@ const emit = defineEmits<{
   'update:fileWriteWriteCover': [value: boolean]
   'update:fileWriteFolderCovers': [value: FolderCoverMedia]
   'update:fileWriteMetadataJson': [value: boolean]
+  'update:fileWriteChaptersOnSave': [value: boolean]
   'update:fileWriteEpubEnabled': [value: boolean]
   'update:fileWriteEpubMaxFileSizeMb': [value: number]
   'update:fileWriteFb2Enabled': [value: boolean]
@@ -155,6 +157,10 @@ function handleFolderCoversChange(event: Event) {
   emit('update:fileWriteFolderCovers', (event.target as HTMLSelectElement).value as FolderCoverMedia)
 }
 
+function handleChaptersOnSaveChange(event: Event) {
+  emit('update:fileWriteChaptersOnSave', (event.target as HTMLInputElement).checked)
+}
+
 function handleMetadataJsonChange(event: Event) {
   emit('update:fileWriteMetadataJson', (event.target as HTMLInputElement).checked)
 }
@@ -206,6 +212,19 @@ function updateSize(row: FamilyRow, event: Event) {
         <span class="min-w-0">
           <span class="block text-[13px] font-medium text-foreground">{{ t('library.creator.fileWrite.cover.title') }}</span>
           <span class="block text-xs text-muted-foreground">{{ t('library.creator.fileWrite.cover.mediumHint') }}</span>
+        </span>
+      </label>
+
+      <label class="mb-3 flex cursor-pointer items-start gap-2.5">
+        <input
+          type="checkbox"
+          class="mt-0.5 size-4 shrink-0 accent-primary"
+          :checked="fileWriteChaptersOnSave"
+          @change="handleChaptersOnSaveChange"
+        />
+        <span class="min-w-0">
+          <span class="block text-[13px] font-medium text-foreground">{{ t('library.creator.fileWrite.chaptersOnSave.title') }}</span>
+          <span class="block text-xs text-muted-foreground">{{ t('library.creator.fileWrite.chaptersOnSave.hint') }}</span>
         </span>
       </label>
 

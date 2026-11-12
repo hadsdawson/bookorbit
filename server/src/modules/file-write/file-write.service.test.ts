@@ -1374,7 +1374,12 @@ describe('FileWriteService', () => {
         const { service, fileWriteRepo } = makeService();
         fileWriteRepo.findFilesForBook.mockResolvedValue([EBOOK, PART_2, PART_1]);
 
-        await expect(service.resolveChapterWriteStatus(5, [1, 2])).resolves.toEqual({ available: true, reason: null, fileCount: 2 });
+        await expect(service.resolveChapterWriteStatus(5, [1, 2])).resolves.toEqual({
+          available: true,
+          reason: null,
+          fileCount: 2,
+          autoWrite: false,
+        });
         expect(fileWriteRepo.findFilesForBook).toHaveBeenCalledWith(5);
         expect(fileWriteRepo.findLibraryFileWriteConfig).toHaveBeenCalledWith(2);
       });
@@ -1383,7 +1388,12 @@ describe('FileWriteService', () => {
         const { service, fileWriteRepo } = makeService();
         fileWriteRepo.findFilesForBook.mockResolvedValue([EBOOK]);
 
-        await expect(service.resolveChapterWriteStatus(5, [1, 2])).resolves.toEqual({ available: false, reason: 'no_primary_file', fileCount: 0 });
+        await expect(service.resolveChapterWriteStatus(5, [1, 2])).resolves.toEqual({
+          available: false,
+          reason: 'no_primary_file',
+          fileCount: 0,
+          autoWrite: false,
+        });
         expect(fileWriteRepo.findLibraryFileWriteConfig).not.toHaveBeenCalled();
       });
 
@@ -1402,7 +1412,7 @@ describe('FileWriteService', () => {
         fileWriteRepo.findFilesForBook.mockResolvedValue(files);
         fileWriteRepo.findLibraryFileWriteConfig.mockResolvedValue({ ...DEFAULT_LIB_CONFIG, ...config });
 
-        await expect(service.resolveChapterWriteStatus(5, [1, 2])).resolves.toEqual({ available: false, reason, fileCount: 2 });
+        await expect(service.resolveChapterWriteStatus(5, [1, 2])).resolves.toEqual({ available: false, reason, fileCount: 2, autoWrite: false });
       });
 
       it('treats a missing library as write-back off', async () => {
@@ -1410,7 +1420,12 @@ describe('FileWriteService', () => {
         fileWriteRepo.findFilesForBook.mockResolvedValue([PART_1]);
         fileWriteRepo.findLibraryFileWriteConfig.mockResolvedValue(null);
 
-        await expect(service.resolveChapterWriteStatus(5, [1])).resolves.toEqual({ available: false, reason: 'library_disabled', fileCount: 1 });
+        await expect(service.resolveChapterWriteStatus(5, [1])).resolves.toEqual({
+          available: false,
+          reason: 'library_disabled',
+          fileCount: 1,
+          autoWrite: false,
+        });
       });
     });
 

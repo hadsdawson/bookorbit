@@ -208,6 +208,7 @@ export class LibraryService {
       fileWriteAllFiles: dto.fileWriteAllFiles ?? false,
       fileWriteFolderCovers: dto.fileWriteFolderCovers ?? 'off',
       fileWriteMetadataJson: dto.fileWriteMetadataJson ?? false,
+      fileWriteChaptersOnSave: dto.fileWriteChaptersOnSave ?? false,
       fileWriteReadAlongEnabled: dto.fileWriteReadAlongEnabled ?? false,
       fileWriteReadAlongMaxFileSizeMb: dto.fileWriteReadAlongMaxFileSizeMb ?? 1000,
       fileRenameEnabled: dto.fileRenameEnabled ?? false,

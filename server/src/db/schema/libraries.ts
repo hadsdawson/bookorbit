@@ -54,6 +54,7 @@ export const libraries = pgTable(
     fileWriteWriteCover: boolean('file_write_write_cover').notNull().default(true),
     fileWriteFolderCovers: varchar('file_write_folder_covers', { length: 10 }).$type<FolderCoverMedia>().notNull().default('off'),
     fileWriteMetadataJson: boolean('file_write_metadata_json').notNull().default(false),
+    fileWriteChaptersOnSave: boolean('file_write_chapters_on_save').notNull().default(false),
     fileWriteEpubEnabled: boolean('file_write_epub_enabled').notNull().default(true),
     fileWriteEpubMaxFileSizeMb: integer('file_write_epub_max_file_size_mb').notNull().default(100),
     fileWriteFb2Enabled: boolean('file_write_fb2_enabled').notNull().default(false),

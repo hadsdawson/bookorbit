@@ -107,6 +107,7 @@ export class FileWriteRepository {
         fileWriteAllFiles: libraries.fileWriteAllFiles,
         fileWriteReadAlongEnabled: libraries.fileWriteReadAlongEnabled,
         fileWriteReadAlongMaxFileSizeMb: libraries.fileWriteReadAlongMaxFileSizeMb,
+        fileWriteChaptersOnSave: libraries.fileWriteChaptersOnSave,
       })
       .from(libraries)
       .where(eq(libraries.id, libraryId))
