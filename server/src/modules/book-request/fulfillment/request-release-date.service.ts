@@ -1,4 +1,5 @@
 import { Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { lastValueFrom, timeout, toArray } from 'rxjs';
 import { MetadataProviderKey } from '@bookorbit/types';
 import type { MetadataCandidate } from '@bookorbit/types';
@@ -7,7 +8,9 @@ import { foldTextForComparison, mainTitlePart, symmetricTitleSimilarity } from '
 import { sanitizeLogValue } from '../../../common/utils/log-sanitize.utils';
 import { parsePublishedDateKey, publishedYearFromDateKey } from '../../../common/utils/published-date.utils';
 import { AppSettingsService } from '../../app-settings/app-settings.service';
+import type { CacheDirective } from '../../../common/provider-cache/provider-cache-spec';
 import { MetadataFetchService } from '../../metadata-fetch/metadata-fetch.service';
+import { ProviderThrottleTracker } from '../../metadata-fetch/provider-throttle.tracker';
 import { BookRequestGateway } from '../book-request.gateway';
 import { BookRequestRepository } from '../book-request.repository';
 
@@ -24,6 +27,14 @@ const AUDIOBOOK_BACKFILL_KEY = 'book_request_audiobook_dates_backfilled_v1';
 const EBOOK_BACKFILL_KEY = 'book_request_ebook_dates_backfilled_v1';
 /** Spacing between catch-up lookups, so a long backlog does not hammer any one site. */
 const BACKFILL_DELAY_MS = 3_000;
+const RECHECK_LAST_RUN_KEY = 'book_request_weekly_recheck_last_run';
+const RECHECK_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
+/** Wider spacing than the one-time catch-up: this runs every week, so it stays a light, steady trickle. */
+const RECHECK_DELAY_MS = 5_000;
+/** A ceiling on one week's run, so even a huge backlog finishes in a couple of hours. */
+const RECHECK_MAX_REQUESTS = 1_000;
+/** The point of a re-check is a newer answer, so go live, but fall back to a stored answer if the site fails. */
+const RECHECK_DIRECTIVE: CacheDirective = { policy: 'refresh', allowFallback: true };
 
 interface RequestForDate {
   id: number;
@@ -31,6 +42,18 @@ interface RequestForDate {
   authors: string[];
   mediaKind: string;
   publishedDate: string | null;
+  coverUrl: string | null;
+}
+
+interface EnrichOptions {
+  /** The weekly re-check: an ebook with a date is looked up again, and a missing cover is filled. */
+  recheck?: boolean;
+}
+
+interface EnrichOutcome {
+  found: boolean;
+  dateChanged: boolean;
+  coverAdded: boolean;
 }
 
 /**
@@ -40,6 +63,10 @@ interface RequestForDate {
  * picked date is normally right, but a request made from an existing book's page carries none, so
  * an ebook without a full date is looked up on Amazon, Kobo, then Google Books. The date of the
  * first result whose title and author both match is kept; nothing changes without a confident match.
+ *
+ * Once a week every open request is checked again, since release dates move and pre-release books
+ * gain their cover art late: dates are updated and a request with no cover gets the matched result's.
+ * That run is spaced out, skips any site that has asked BookOrbit to slow down, and is capped.
  */
 @Injectable()
 export class RequestReleaseDateService implements OnApplicationBootstrap {
@@ -50,10 +77,52 @@ export class RequestReleaseDateService implements OnApplicationBootstrap {
     private readonly metadata: MetadataFetchService,
     private readonly gateway: BookRequestGateway,
     private readonly appSettings: AppSettingsService,
+    private readonly throttle: ProviderThrottleTracker,
   ) {}
+
+  private busy = false;
 
   onApplicationBootstrap(): void {
     void this.backfillAll();
+  }
+
+  /** Checked hourly; the re-check itself runs once seven days have passed since the last one began. */
+  @Cron('0 23 * * * *')
+  async runWeeklyRecheck(now: Date = new Date()): Promise<void> {
+    if (this.busy) return;
+    const lastRun = Date.parse((await this.appSettings.getValue(RECHECK_LAST_RUN_KEY)) ?? '');
+    if (Number.isFinite(lastRun) && now.getTime() - lastRun < RECHECK_INTERVAL_MS) return;
+    this.busy = true;
+    try {
+      // Marked before the run, so restarts during a long run never set off a second one that week.
+      await this.appSettings.setValue(RECHECK_LAST_RUN_KEY, now.toISOString());
+      await this.recheckAll();
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  private async recheckAll(): Promise<void> {
+    const ids = await this.repo.findOpenDatedIds(RECHECK_MAX_REQUESTS);
+    const startedAt = Date.now();
+    this.logger.log(`[book_request.weekly_recheck] [start] requests=${ids.length} - re-checking release dates and covers`);
+    let found = 0;
+    let datesChanged = 0;
+    let coversAdded = 0;
+    for (const [index, id] of ids.entries()) {
+      if (index > 0) await new Promise((resolve) => setTimeout(resolve, RECHECK_DELAY_MS));
+      try {
+        const outcome = await this.lookUp(id, { recheck: true });
+        if (outcome.found) found++;
+        if (outcome.dateChanged) datesChanged++;
+        if (outcome.coverAdded) coversAdded++;
+      } catch (error: unknown) {
+        this.logFailure(id, error);
+      }
+    }
+    this.logger.log(
+      `[book_request.weekly_recheck] [end] requests=${ids.length} durationMs=${Date.now() - startedAt} found=${found} datesChanged=${datesChanged} coversAdded=${coversAdded} - release dates and covers re-checked`,
+    );
   }
 
   /** Fire and forget: a request is never held up by a search on another site. */
@@ -62,30 +131,57 @@ export class RequestReleaseDateService implements OnApplicationBootstrap {
   }
 
   async enrich(requestId: number): Promise<boolean> {
-    const joined = await this.repo.findById(requestId);
-    if (!joined) return false;
-    const request = joined.request as RequestForDate;
-    if (!request.title.trim()) return false;
-    const kind = datedKind(request);
-    if (!kind) return false;
-
-    const startedAt = Date.now();
-    for (const provider of kind === 'audiobook' ? AUDIO_DATE_PROVIDERS : EBOOK_DATE_PROVIDERS) {
-      const date = await this.findDate(provider, kind, request);
-      if (!date) continue;
-      if (date !== request.publishedDate) {
-        await this.repo.setPublishedDate(request.id, date, publishedYearFromDateKey(date));
-        this.gateway.emitChanged();
-      }
-      this.logger.log(
-        `[book_request.release_date] [end] requestId=${request.id} mediaKind=${kind} provider=${provider} durationMs=${Date.now() - startedAt} changed=${date !== request.publishedDate} - release date found`,
-      );
-      return true;
-    }
-    return false;
+    return (await this.lookUp(requestId, {})).found;
   }
 
-  private async findDate(provider: MetadataProviderKey, kind: DatedKind, request: RequestForDate): Promise<string | null> {
+  private async lookUp(requestId: number, options: EnrichOptions): Promise<EnrichOutcome> {
+    const none: EnrichOutcome = { found: false, dateChanged: false, coverAdded: false };
+    const joined = await this.repo.findById(requestId);
+    if (!joined) return none;
+    const request = joined.request as RequestForDate;
+    if (!request.title.trim()) return none;
+    const kind = datedKind(request, options.recheck === true);
+    if (!kind) return none;
+
+    const wantCover = options.recheck === true && !request.coverUrl;
+    const startedAt = Date.now();
+    let date: string | null = null;
+    let cover: string | null = null;
+    let dateProvider: MetadataProviderKey | null = null;
+    for (const provider of kind === 'audiobook' ? AUDIO_DATE_PROVIDERS : EBOOK_DATE_PROVIDERS) {
+      if (options.recheck && this.throttle.isThrottled(provider)) continue;
+      const match = await this.findMatch(provider, kind, request, {
+        wantDate: !date,
+        wantCover: wantCover && !cover,
+        recheck: options.recheck === true,
+      });
+      if (!date && match.date) {
+        date = match.date;
+        dateProvider = provider;
+      }
+      cover ??= match.cover;
+      if (date && (!wantCover || cover)) break;
+    }
+
+    const dateChanged = date !== null && date !== request.publishedDate;
+    if (dateChanged) await this.repo.setPublishedDate(request.id, date!, publishedYearFromDateKey(date!));
+    const coverAdded = cover !== null && (await this.repo.setCoverUrlIfMissing(request.id, cover));
+    if (dateChanged || coverAdded) this.gateway.emitChanged();
+    if (date) {
+      this.logger.log(
+        `[book_request.release_date] [end] requestId=${request.id} mediaKind=${kind} provider=${dateProvider} recheck=${options.recheck === true} durationMs=${Date.now() - startedAt} changed=${dateChanged} coverAdded=${coverAdded} - release date found`,
+      );
+    }
+    return { found: date !== null, dateChanged, coverAdded };
+  }
+
+  /** The first matching result's date, and when wanted, the first matching result's cover. */
+  private async findMatch(
+    provider: MetadataProviderKey,
+    kind: DatedKind,
+    request: RequestForDate,
+    want: { wantDate: boolean; wantCover: boolean; recheck: boolean },
+  ): Promise<{ date: string | null; cover: string | null }> {
     const audio = kind === 'audiobook';
     const candidates = await lastValueFrom(
       this.metadata
@@ -99,15 +195,20 @@ export class RequestReleaseDateService implements OnApplicationBootstrap {
             maxCandidatesPerProvider: 5,
           },
           [provider],
+          ...(want.recheck ? [{ directive: RECHECK_DIRECTIVE }] : []),
         )
         .pipe(toArray(), timeout(SEARCH_TIMEOUT_MS)),
       { defaultValue: [] as MetadataCandidate[] },
     );
+    let date: string | null = null;
+    let cover: string | null = null;
     for (const candidate of candidates) {
-      const date = parsePublishedDateKey(candidate.publishedDate);
-      if (date && this.matches(request, candidate)) return date;
+      if (!this.matches(request, candidate)) continue;
+      if (want.wantDate && !date) date = parsePublishedDateKey(candidate.publishedDate) ?? null;
+      if (want.wantCover && !cover && isWebAddress(candidate.coverUrl)) cover = candidate.coverUrl;
+      if ((!want.wantDate || date) && (!want.wantCover || cover)) break;
     }
-    return null;
+    return { date, cover };
   }
 
   /** Same book: the main titles nearly agree and at least one author is shared. */
@@ -121,8 +222,13 @@ export class RequestReleaseDateService implements OnApplicationBootstrap {
   }
 
   private async backfillAll(): Promise<void> {
-    await this.backfillOnce('audiobook', AUDIOBOOK_BACKFILL_KEY, () => this.repo.findOpenAudiobookIds());
-    await this.backfillOnce('ebook', EBOOK_BACKFILL_KEY, () => this.repo.findOpenEbookIdsWithoutDate());
+    this.busy = true;
+    try {
+      await this.backfillOnce('audiobook', AUDIOBOOK_BACKFILL_KEY, () => this.repo.findOpenAudiobookIds());
+      await this.backfillOnce('ebook', EBOOK_BACKFILL_KEY, () => this.repo.findOpenEbookIdsWithoutDate());
+    } finally {
+      this.busy = false;
+    }
   }
 
   /** Brings existing open requests of one format up to date once, slowly, then never again. */
@@ -153,11 +259,18 @@ export class RequestReleaseDateService implements OnApplicationBootstrap {
   }
 }
 
-/** Which lookup a request gets, if any: every audiobook, and an ebook only when it has no full date. */
-function datedKind(request: RequestForDate): DatedKind | null {
+/**
+ * Which lookup a request gets, if any: every audiobook, and an ebook only when it has no full date,
+ * except in the weekly re-check, where an ebook's date is checked again too.
+ */
+function datedKind(request: RequestForDate, recheck: boolean): DatedKind | null {
   if (request.mediaKind === 'audiobook') return 'audiobook';
-  if (request.mediaKind === 'ebook' && !request.publishedDate) return 'ebook';
+  if (request.mediaKind === 'ebook' && (recheck || !request.publishedDate)) return 'ebook';
   return null;
+}
+
+function isWebAddress(value: string | undefined): value is string {
+  return typeof value === 'string' && /^https?:\/\//i.test(value);
 }
 
 function authorKey(name: string): string {

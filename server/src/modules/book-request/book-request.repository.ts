@@ -376,6 +376,27 @@ export class BookRequestRepository {
     return rows.map((row) => row.id);
   }
 
+  /** Open ebook and audiobook requests, oldest first, for the weekly re-check of dates and covers. */
+  async findOpenDatedIds(limit: number): Promise<number[]> {
+    const rows = await this.db
+      .select({ id: bookRequests.id })
+      .from(bookRequests)
+      .where(and(inArray(bookRequests.mediaKind, ['ebook', 'audiobook']), notInArray(bookRequests.status, [...SETTLED_BOOK_REQUEST_STATUSES])))
+      .orderBy(asc(bookRequests.id))
+      .limit(limit);
+    return rows.map((row) => row.id);
+  }
+
+  /** Fills a missing cover only, so art a person picked is never replaced. Returns whether it was set. */
+  async setCoverUrlIfMissing(id: number, coverUrl: string): Promise<boolean> {
+    const rows = await this.db
+      .update(bookRequests)
+      .set({ coverUrl })
+      .where(and(eq(bookRequests.id, id), isNull(bookRequests.coverUrl)))
+      .returning({ id: bookRequests.id });
+    return rows.length > 0;
+  }
+
   async setPublishedDate(id: number, publishedDate: string, publishedYear: number | null): Promise<void> {
     await this.db
       .update(bookRequests)
