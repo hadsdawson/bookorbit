@@ -6,6 +6,7 @@ import {
   desc,
   eq,
   exists,
+  gt,
   ilike,
   inArray,
   isNotNull,
@@ -376,12 +377,21 @@ export class BookRequestRepository {
     return rows.map((row) => row.id);
   }
 
-  /** Open ebook and audiobook requests, oldest first, for the weekly re-check of dates and covers. */
-  async findOpenDatedIds(limit: number): Promise<number[]> {
+  /**
+   * One batch of open ebook and audiobook requests for the weekly re-check, in id order starting
+   * after `afterId`, so successive runs work through a backlog larger than one run's limit.
+   */
+  async findOpenDatedIds(limit: number, afterId = 0): Promise<number[]> {
     const rows = await this.db
       .select({ id: bookRequests.id })
       .from(bookRequests)
-      .where(and(inArray(bookRequests.mediaKind, ['ebook', 'audiobook']), notInArray(bookRequests.status, [...SETTLED_BOOK_REQUEST_STATUSES])))
+      .where(
+        and(
+          inArray(bookRequests.mediaKind, ['ebook', 'audiobook']),
+          notInArray(bookRequests.status, [...SETTLED_BOOK_REQUEST_STATUSES]),
+          gt(bookRequests.id, afterId),
+        ),
+      )
       .orderBy(asc(bookRequests.id))
       .limit(limit);
     return rows.map((row) => row.id);
