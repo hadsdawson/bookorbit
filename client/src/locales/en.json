@@ -9471,7 +9471,7 @@
     "rescan": "Rescan",
     "uploadAction": "Upload",
     "uploading": "Uploading...",
-    "searchPlaceholder": "Search files...",
+    "searchPlaceholder": "Search title, author, series or file...",
     "setDestinationAction": "Set Destination",
     "bulkEditAction": "Bulk Edit",
     "applyFetched": "Apply Fetched",
