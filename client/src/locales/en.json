@@ -3028,6 +3028,7 @@
         "modFirst": "First value only",
         "modSort": "Last, First format",
         "modInitial": "First letter only",
+        "modFirstInitial": "First letter, by first name for authors",
         "modFixed2": "Two decimal places",
         "modMax3": "Up to three values, otherwise nothing",
         "folderOnlyPrefix": "End a pattern with",

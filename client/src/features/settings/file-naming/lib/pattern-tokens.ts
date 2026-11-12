@@ -24,6 +24,7 @@ export const MODIFIER_DESCRIPTION_KEYS: Record<PatternModifier, string> = {
   first: 'settings.reader.fileNaming.modFirst',
   sort: 'settings.reader.fileNaming.modSort',
   initial: 'settings.reader.fileNaming.modInitial',
+  firstInitial: 'settings.reader.fileNaming.modFirstInitial',
   fixed2: 'settings.reader.fileNaming.modFixed2',
   max3: 'settings.reader.fileNaming.modMax3',
   upper: 'settings.reader.fileNaming.modUpper',
