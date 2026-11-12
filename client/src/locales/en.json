@@ -3791,7 +3791,8 @@
         "book-dock": "Book Dock",
         "requests": "Requests",
         "maintenance": "Maintenance",
-        "audit-log": "Audit Log"
+        "audit-log": "Audit Log",
+        "backups": "Backups"
       },
       "requests": {
         "title": "Requests",
@@ -4418,7 +4419,8 @@
         "readerTts": "Read-aloud voice, speed, and narration defaults.",
         "adminTts": "Text-to-speech engines available to every reader on this server.",
         "apiKeys": "Keys that let scripts and other apps use BookOrbit as you.",
-        "adminApiKeys": "Allow API keys on this server and limit how long they last."
+        "adminApiKeys": "Allow API keys on this server and limit how long they last.",
+        "backups": "Scheduled backups, download, upload and restore."
       },
       "backToApp": "Back to library",
       "pageDescriptions": {
@@ -4478,6 +4480,63 @@
       "discardConfirm": "Discard changes",
       "moreActions": "More actions",
       "removeQuestion": "Remove this?"
+    },
+    "backups": {
+      "title": "Backups",
+      "subtitle": "Scheduled backups of BookOrbit's database and covers, with download, upload and restore.",
+      "schedule": "Schedule",
+      "frequency": "Automatic backups",
+      "frequencyHint": "When BookOrbit backs itself up. If it is off at that time, it backs up once it is back that day.",
+      "frequencies": {
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "off": "Off"
+      },
+      "day": "Day",
+      "time": "Time",
+      "timeZone": "Times are in {zone}.",
+      "useMyTimeZone": "Use {zone}",
+      "keep": "Backups to keep",
+      "keepHint": "Scheduled and manual backups beyond this number are deleted, oldest first. Uploaded backups are never deleted, and the last 3 safety backups from updates and restores are kept on top.",
+      "beforeUpdate": "Back up before updates",
+      "beforeUpdateHint": "When an update changes the database, BookOrbit backs up first while starting, so you can go back.",
+      "save": "Save",
+      "saved": "Backup settings saved",
+      "location": "Where backups are saved",
+      "contents": "Each backup holds the database (books' details, reading progress, requests, users and settings) plus chosen covers, author photos, avatars, custom icons, fonts and plugins. Your book files are not included.",
+      "insideAppData": "This folder is inside BookOrbit's own data folder, so a problem with that folder could take the backups with it. Map a separate folder to /backups in Docker to keep them apart.",
+      "list": "Backups",
+      "createNow": "Back up now",
+      "created": "Backup made ({size})",
+      "upload": "Upload",
+      "uploaded": "Backup uploaded",
+      "empty": "No backups yet.",
+      "pending": "Restoring on restart",
+      "download": "Download",
+      "restore": "Restore",
+      "delete": "Delete",
+      "deleted": "Backup deleted",
+      "kinds": {
+        "scheduled": "Scheduled",
+        "manual": "Manual",
+        "pre-update": "Before update",
+        "pre-restore": "Before restore",
+        "uploaded": "Uploaded"
+      },
+      "restoreTitle": "Restore this backup?",
+      "restoreBody": "Everything in BookOrbit goes back to how it was on {date}: books' details, reading progress, requests, users, settings and covers. Anything changed since then is lost. Your book files are not touched. BookOrbit first saves a safety backup of how things are now, then restarts and is unavailable for a minute or two. You may need to sign in again afterwards.",
+      "restoreConfirm": "Restore and restart",
+      "restoreFailed": "That backup cannot be restored",
+      "restartingTitle": "Restoring and restarting",
+      "restarting": "BookOrbit is restarting to restore the backup. This page will update when it is back, usually within a couple of minutes.",
+      "restartSlowTitle": "BookOrbit has not come back yet",
+      "restartSlow": "Check the container in Container Manager. If it is stopped, start it; the restore runs as it starts. Its log shows how the restore went.",
+      "lastRestoreOk": "Backup restored on {date}",
+      "lastRestoreFailed": "The restore on {date} did not complete; nothing was changed",
+      "safetyNote": "A safety backup of how things were just before is in the list as \"Before restore\", in case you want to go back.",
+      "lastErrorTitle": "The last backup failed",
+      "deleteTitle": "Delete this backup?",
+      "deleteBody": "The backup from {date} is deleted from the backups folder for good. Download it first if you want to keep a copy."
     }
   },
   "achievements": {
@@ -15430,7 +15489,8 @@
       "book-dock": "Book Dock",
       "requests": "Requests",
       "maintenance": "Maintenance",
-      "audit-log": "Audit Log"
+      "audit-log": "Audit Log",
+      "backups": "Backups"
     },
     "account": {
       "profile": "Account",

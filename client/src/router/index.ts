@@ -510,6 +510,13 @@ export const routes: RouteRecordRaw[] = [
             meta: { maxWidth: 'max-w-5xl', title: () => t('titles.system.requests') },
           },
           {
+            path: 'admin/backups',
+            name: 'settings-admin-backups',
+            component: () => import('@/features/settings/BackupsSettings.vue'),
+            props: { embedded: true },
+            meta: { maxWidth: 'max-w-3xl', title: () => t('titles.system.backups') },
+          },
+          {
             path: 'admin/audit-log',
             name: 'settings-admin-audit-log',
             component: () => import('@/features/audit/AuditLogPage.vue'),

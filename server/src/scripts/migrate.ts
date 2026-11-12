@@ -6,6 +6,7 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool } from 'pg';
 
 import { createPostgresClientConfig } from '../db/postgres-connection-config';
+import { runBackupStartup } from '../modules/backup/lib/backup-startup';
 import { dropUnreleasedMigrationRows, reconcileMigrationLedgerTimestamps } from './migration-ledger-compatibility';
 import { installPostgresExtensions } from './postgres-extensions';
 import { prepareLegacySeriesIndexColumns } from './series-index-migration-compatibility';
@@ -44,6 +45,7 @@ async function runMigrations() {
     await installPostgresExtensions(pool);
     const migrationsFolder = resolveMigrationsFolder();
     const migrationFiles = readMigrationFiles({ migrationsFolder });
+    await runBackupStartup(pool, migrationFiles);
     await dropUnreleasedMigrationRows(pool, migrationFiles);
     await reconcileMigrationLedgerTimestamps(pool, migrationFiles);
     await applySkippedMigrations(pool, migrationFiles);
