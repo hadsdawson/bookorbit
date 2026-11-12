@@ -83,6 +83,23 @@ describe('applyModifier', () => {
     });
   });
 
+  describe('plain initials', () => {
+    it('files accented and special Latin letters under their plain letter', () => {
+      expect(applyModifier('Ánya Fox', 'firstInitial', 'authors')).toBe('A');
+      expect(applyModifier('émile zola', 'firstInitial', 'authors')).toBe('E');
+      expect(applyModifier('Fredrik Ølander', 'initial', 'authors')).toBe('O');
+      expect(applyModifier('Stanisław Łem', 'initial', 'authors')).toBe('L');
+      expect(applyModifier('Ægir Smith', 'firstInitial', 'authors')).toBe('A');
+      expect(applyModifier('Çağan Irmak', 'firstInitial', 'authors')).toBe('C');
+      expect(applyModifier('Ñame', 'initial', 'title')).toBe('N');
+    });
+
+    it('keeps letters from other alphabets as they are', () => {
+      expect(applyModifier('Фёдор Достоевский', 'initial', 'authors')).toBe('Д');
+      expect(applyModifier('村上春樹', 'initial', 'authors')).toBe('村');
+    });
+  });
+
   describe('firstInitial', () => {
     it("uses the first letter of the first author's first name", () => {
       expect(applyModifier('Liz Allan', 'firstInitial', 'authors')).toBe('L');
