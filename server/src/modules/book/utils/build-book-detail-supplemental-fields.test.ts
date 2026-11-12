@@ -2,10 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { buildBookDetailSupplementalFields } from './build-book-detail-supplemental-fields';
 
 describe('buildBookDetailSupplementalFields', () => {
-  it('returns null supplemental state when no personal or media state exists', () => {
+  it('returns empty audio details for a book with no audio, so its fields can still be shown', () => {
     const result = buildBookDetailSupplementalFields({
       readStatus: null,
-      hasAudioFiles: false,
       narratorRows: [],
       audioMeta: { durationSeconds: undefined, abridged: undefined },
       chapters: null,
@@ -15,7 +14,7 @@ describe('buildBookDetailSupplementalFields', () => {
 
     expect(result).toEqual({
       readStatus: null,
-      audioMetadata: null,
+      audioMetadata: { narrators: [], durationSeconds: null, abridged: false, chapters: null, chaptersSource: null, chaptersUpdatedAt: null },
       comicMetadata: null,
       collections: [],
     });
@@ -30,7 +29,6 @@ describe('buildBookDetailSupplementalFields', () => {
         finishedAt: null,
         updatedAt: '2026-01-02T00:00:00.000Z',
       },
-      hasAudioFiles: true,
       narratorRows: [
         { id: 2, name: 'Narrator Two', sortName: 'Two, Narrator' },
         { id: 1, name: 'Narrator One', sortName: null },
@@ -65,7 +63,6 @@ describe('buildBookDetailSupplementalFields', () => {
   it('maps comic metadata and drops null fields to undefined', () => {
     const result = buildBookDetailSupplementalFields({
       readStatus: null,
-      hasAudioFiles: false,
       narratorRows: [],
       audioMeta: { durationSeconds: null, abridged: false },
       chapters: null,

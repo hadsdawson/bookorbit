@@ -1593,6 +1593,41 @@ describe('BookDockFinalizeService', () => {
     expect(metadataScoreService.calculateAndSave).toHaveBeenCalledWith(15);
   });
 
+  describe("the other format's cover", () => {
+    function setUp(unitFormats: string[], slotEmpty = true) {
+      const ctx = makeService();
+      const updateChain = { set: vi.fn(), where: vi.fn().mockResolvedValue(undefined) };
+      updateChain.set.mockReturnValue(updateChain);
+      ctx.db.update.mockReturnValue(updateChain);
+      ctx.repo.findUnitFiles.mockResolvedValue(unitFormats.map((format) => ({ role: 'content', format, fileName: `dune.${format}` })));
+      ctx.metadataService.coverSlotIsEmpty.mockResolvedValue(slotEmpty);
+      const row = makeRow({
+        format: 'epub',
+        coverPath: null,
+        selectedMetadata: { title: 'Dune', otherFormatCoverUrl: 'https://audible/dune.jpg' } as BookDockMetadata,
+      });
+      return { ...ctx, row };
+    }
+
+    it('fills the audiobook slot of an ebook-only book', async () => {
+      const { service, metadataService, row } = setUp(['epub']);
+      await (service as any).applyMetadata(15, row);
+      expect(metadataService.downloadAndSaveCover).toHaveBeenCalledWith([{ url: 'https://audible/dune.jpg' }], 15, 'audio');
+    });
+
+    it("leaves the slot to the folder's own audiobook file", async () => {
+      const { service, metadataService, row } = setUp(['epub', 'm4b']);
+      await (service as any).applyMetadata(15, row);
+      expect(metadataService.downloadAndSaveCover).not.toHaveBeenCalledWith(expect.anything(), 15, 'audio');
+    });
+
+    it('never replaces a cover already in the slot', async () => {
+      const { service, metadataService, row } = setUp(['epub'], false);
+      await (service as any).applyMetadata(15, row);
+      expect(metadataService.downloadAndSaveCover).not.toHaveBeenCalledWith(expect.anything(), 15, 'audio');
+    });
+  });
+
   it('applyMetadata files Audiobookshelf genres without the allowed-genre list', async () => {
     const { service, db, metadataService, repo } = makeService();
     const updateChain = { set: vi.fn(), where: vi.fn().mockResolvedValue(undefined) };

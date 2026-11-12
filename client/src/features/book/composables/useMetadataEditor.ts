@@ -2,7 +2,6 @@ import { computed, reactive, readonly, ref } from 'vue'
 import { api } from '@/lib/api'
 import { readApiErrorDetail } from '@/lib/api-error'
 import {
-  FORMAT_TO_GROUP,
   isKnownMetadataProviderKey,
   type BookCommunityRating,
   type BookDetail,
@@ -260,7 +259,8 @@ export function useMetadataEditor() {
     form.comicTeams = cm?.teams ?? []
     form.comicLocations = cm?.locations ?? []
     form.customMetadata = (book.customMetadata ?? []).map((field) => ({ ...field }))
-    includeAudioMetadata.value = book.audioMetadata != null || book.files.some((f) => f.format != null && FORMAT_TO_GROUP[f.format] === 'audio')
+    // Narrators, duration and abridged are editable on every book: they can be known before the audiobook arrives.
+    includeAudioMetadata.value = true
     snapshot.value = JSON.stringify(form)
     loadedBookId = book.id
     error.value = null

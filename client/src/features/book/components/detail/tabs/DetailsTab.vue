@@ -530,6 +530,13 @@ async function handleToggleReadAloudSync() {
 }
 const authorLinks = computed(() => props.book.authors.filter((author) => author.name.trim().length > 0))
 const narratorLine = computed(() => props.book.audioMetadata?.narrators?.map((n) => n.name).join(', ') || null)
+const audioDurationSeconds = computed(() => props.book.audioMetadata?.durationSeconds ?? null)
+const durationLabel = computed(() => (audioDurationSeconds.value != null ? formatDuration(audioDurationSeconds.value) : '-'))
+// Abridged is stored as a plain yes or no, so it only means something once an audiobook edition is known.
+const editionLabel = computed(() => {
+  if (audioDurationSeconds.value == null && !hasAudioFile.value) return '-'
+  return props.book.audioMetadata?.abridged ? t('book.detail.details.abridged') : t('book.detail.details.unabridged')
+})
 function formatDuration(seconds: number | null | undefined): string {
   if (seconds == null) return '-'
   const hours = Math.floor(seconds / 3600)
@@ -1474,9 +1481,9 @@ watch(
               </template>
             </span>
           </p>
-          <p v-if="narratorLine" class="mt-1 text-[13px] break-words">
+          <p class="mt-1 text-[13px] break-words">
             <span class="text-muted-foreground">{{ t('book.detail.details.narratedBy') }}</span>
-            <span class="ml-1 font-semibold">{{ narratorLine }}</span>
+            <span class="ml-1 font-semibold">{{ narratorLine ?? '-' }}</span>
           </p>
           <div v-if="seriesLinks.length" class="mt-2 flex flex-wrap gap-1.5">
             <template v-for="series in seriesLinks" :key="`m-${series.key}`">
@@ -1735,9 +1742,9 @@ watch(
               </template>
             </span>
           </p>
-          <p v-if="narratorLine" class="text-sm">
+          <p class="text-sm">
             <span class="text-muted-foreground">{{ t('book.detail.details.narratedBy') }}</span>
-            <span class="ml-1 font-medium text-foreground">{{ narratorLine }}</span>
+            <span class="ml-1 font-medium text-foreground">{{ narratorLine ?? '-' }}</span>
           </p>
           <template v-if="seriesLinks.length">
             <span class="text-muted-foreground text-xs">·</span>
@@ -2202,21 +2209,13 @@ watch(
             <dt class="shrink-0 text-[11px] font-medium text-muted-foreground">{{ t('book.detail.details.pages') }}</dt>
             <dd class="truncate text-[13px] font-medium">{{ book.pageCount || '-' }}</dd>
           </div>
-          <div
-            v-if="book.audioMetadata?.durationSeconds != null"
-            class="flex items-baseline justify-between gap-3 border-b border-border py-[6px] last:border-b-0"
-          >
+          <div class="flex items-baseline justify-between gap-3 border-b border-border py-[6px] last:border-b-0">
             <dt class="shrink-0 text-[11px] font-medium text-muted-foreground">{{ t('book.detail.details.duration') }}</dt>
-            <dd class="truncate text-[13px] font-medium">{{ formatDuration(book.audioMetadata.durationSeconds) }}</dd>
+            <dd class="truncate text-[13px] font-medium">{{ durationLabel }}</dd>
           </div>
-          <div
-            v-if="book.audioMetadata?.durationSeconds != null"
-            class="flex items-baseline justify-between gap-3 border-b border-border py-[6px] last:border-b-0"
-          >
+          <div class="flex items-baseline justify-between gap-3 border-b border-border py-[6px] last:border-b-0">
             <dt class="shrink-0 text-[11px] font-medium text-muted-foreground">{{ t('book.detail.details.edition') }}</dt>
-            <dd class="truncate text-[13px] font-medium">
-              {{ book.audioMetadata.abridged ? t('book.detail.details.abridged') : t('book.detail.details.unabridged') }}
-            </dd>
+            <dd class="truncate text-[13px] font-medium">{{ editionLabel }}</dd>
           </div>
           <div class="flex items-baseline justify-between gap-3 border-b border-border py-[6px] last:border-b-0">
             <dt class="shrink-0 text-[11px] font-medium text-muted-foreground">{{ t('book.detail.details.isbn') }}</dt>

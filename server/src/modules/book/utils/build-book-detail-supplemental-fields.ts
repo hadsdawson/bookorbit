@@ -35,7 +35,6 @@ type CollectionRow = {
 
 type SupplementalFieldInput = {
   readStatus: UserBookStatus | null;
-  hasAudioFiles: boolean;
   narratorRows: NarratorRow[];
   audioMeta: AudioMetaSource;
   chapters: AudiobookChapter[] | null;
@@ -43,14 +42,16 @@ type SupplementalFieldInput = {
   collections: CollectionRow[];
 };
 
+/**
+ * Always present, even for a book with no audio files: narrators and a duration can be known before
+ * the audiobook arrives, for example from a Book Dock lookup, and the details page always shows them.
+ * Whether a book has audio to play is read from its files, not from this.
+ */
 function buildAudioMetadata(
-  hasAudioFiles: boolean,
   narratorRows: NarratorRow[],
   audioMeta: AudioMetaSource,
   chapters: AudiobookChapter[] | null,
 ): BookDetailDto['audioMetadata'] {
-  if (!hasAudioFiles) return null;
-
   return {
     narrators: narratorRows.map<NarratorRef>((narrator, index) => ({
       id: narrator.id,
@@ -86,7 +87,6 @@ function buildComicMetadata(comicMeta: ComicMetaSource): ComicMetadataFields | n
 
 export function buildBookDetailSupplementalFields({
   readStatus,
-  hasAudioFiles,
   narratorRows,
   audioMeta,
   chapters,
@@ -95,7 +95,7 @@ export function buildBookDetailSupplementalFields({
 }: SupplementalFieldInput): Pick<BookDetailDto, 'readStatus' | 'audioMetadata' | 'comicMetadata' | 'collections'> {
   return {
     readStatus: readStatus ?? null,
-    audioMetadata: buildAudioMetadata(hasAudioFiles, narratorRows, audioMeta, chapters),
+    audioMetadata: buildAudioMetadata(narratorRows, audioMeta, chapters),
     comicMetadata: buildComicMetadata(comicMeta),
     collections,
   };

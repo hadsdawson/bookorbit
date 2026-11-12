@@ -360,6 +360,45 @@ describe('DetailsTab cover surface', () => {
     expect(wrapper.findAll('.book-cover-spine-layer').length).toBe(0)
   })
 
+  it('always shows narrators, duration and edition, with a dash when unknown', async () => {
+    const wrapper = mountDetails(
+      makeBook({ audioMetadata: { narrators: [], durationSeconds: null, abridged: false, chapters: null } } as Partial<BookDetail>),
+    )
+    await flushPromises()
+
+    const row = (label: string) =>
+      wrapper
+        .findAll('dt')
+        .find((dt) => dt.text() === label)
+        ?.element.nextElementSibling?.textContent?.trim()
+    expect(row('Duration')).toBe('-')
+    expect(row('Edition')).toBe('-')
+    expect(wrapper.text()).toContain('narrated by-')
+  })
+
+  it('shows a known duration and narrator for a book without audio files', async () => {
+    const wrapper = mountDetails(
+      makeBook({
+        audioMetadata: {
+          narrators: [{ id: 1, name: 'Scott Brick', sortName: null, displayOrder: 0 }],
+          durationSeconds: 75600,
+          abridged: false,
+          chapters: null,
+        },
+      } as Partial<BookDetail>),
+    )
+    await flushPromises()
+
+    const row = (label: string) =>
+      wrapper
+        .findAll('dt')
+        .find((dt) => dt.text() === label)
+        ?.element.nextElementSibling?.textContent?.trim()
+    expect(row('Duration')).not.toBe('-')
+    expect(row('Edition')).toBe('Unabridged')
+    expect(wrapper.text()).toContain('Scott Brick')
+  })
+
   it('links authors to their author detail pages', async () => {
     const wrapper = mountDetails(
       makeBook({

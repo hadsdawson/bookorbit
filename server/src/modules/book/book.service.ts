@@ -3686,7 +3686,6 @@ export class BookService {
     const hasStoredChapters = (storedChapters?.length ?? 0) > 0;
     const supplementalFields = buildBookDetailSupplementalFields({
       readStatus,
-      hasAudioFiles,
       narratorRows,
       audioMeta: {
         durationSeconds: meta?.durationSeconds,

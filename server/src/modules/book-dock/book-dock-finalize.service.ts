@@ -1482,6 +1482,23 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
   }
 
   /**
+   * The other format's cover from the Book Dock lookup, so its slot is ready before that format's
+   * files arrive. It only fills an empty slot: art already there, such as from the other file of a
+   * two-format folder, is never replaced.
+   */
+  private async applyOtherFormatCover(bookId: number, row: BookDockFileRow, medium: CoverMedium): Promise<void> {
+    const url =
+      normalizeBookDockMetadata(row.selectedMetadata)?.otherFormatCoverUrl ?? normalizeBookDockMetadata(row.fetchedMetadata)?.otherFormatCoverUrl;
+    if (!url) return;
+    const otherMedium: CoverMedium = medium === 'audio' ? 'ebook' : 'audio';
+    // A folder that brings the other format's file brings that file's own art, which comes first.
+    const unitFiles = await this.repo.findUnitFiles(row.id);
+    if (unitFiles.some((file) => file.role === 'content' && file.format != null && isAudioFormat(file.format) === (otherMedium === 'audio'))) return;
+    if (!(await this.metadataService.coverSlotIsEmpty(bookId, otherMedium))) return;
+    await this.metadataService.downloadAndSaveCover([{ url }], bookId, otherMedium);
+  }
+
+  /**
    * `lookedUpCoverUrl`: see `applyUnpickedCover`. A cover picked in the Book Dock is used as it is.
    * The staged cover was read from the unit's primary file, so it fills only that file's medium on
    * the book that owns it (`ownsStagedCover`); the other books of a loose-file unit get their own
@@ -1496,6 +1513,7 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
       ? await this.metadataService.downloadAndSaveCover([{ url: meta.coverUrl }], bookId, medium, { userChosen: true })
       : false;
     if (!picked) await this.applyUnpickedCover(bookId, row, medium, ownsStagedCover, lookedUpCoverUrl, null);
+    await this.applyOtherFormatCover(bookId, row, medium);
 
     const scalarFields = {
       title: meta.title ?? null,

@@ -49,6 +49,8 @@ export interface BookDockMetadata {
   /** Library tags to give the book when it is filed, often picked from `genres`. */
   tags?: string[];
   coverUrl?: string | null;
+  /** The other format's cover from a lookup: square art for an ebook file, a book cover for an audiobook. */
+  otherFormatCoverUrl?: string | null;
   durationSeconds?: number | null;
   abridged?: boolean | null;
   chapters?: AudiobookChapter[] | null;

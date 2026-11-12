@@ -4,7 +4,6 @@ import { mkdir, realpath, stat } from 'fs/promises';
 
 import { BookDockIngestService } from './book-dock-ingest.service';
 import { buildSingleBookCandidate } from '../scanner/lib/walk';
-import { inspectEpubMediaOverlayFields } from '../reader/epub/epub-media-overlay-capability';
 
 vi.mock('fs/promises', () => ({
   mkdir: vi.fn().mockResolvedValue(undefined),
@@ -509,7 +508,7 @@ describe('BookDockIngestService', () => {
       await (service as any).autoFetchMetadataAsync(8, true);
 
       expect(appSettings.isBookDockAutoFetchEnabled).not.toHaveBeenCalled();
-      expect(metadataFetchPipeline.runWithSources).toHaveBeenCalledTimes(1);
+      expect(metadataFetchPipeline.runWithSources).toHaveBeenCalledTimes(2);
       expect(repo.update).toHaveBeenLastCalledWith(
         8,
         expect.objectContaining({
@@ -699,12 +698,21 @@ describe('BookDockIngestService', () => {
       expect(metadataFetchPipeline.runWithSources).toHaveBeenCalledWith(expect.anything(), {}, undefined, expect.anything());
     });
 
-    it('asks about the file the row names when it checks for a read-along', async () => {
-      const { service, appSettings, repo, metadataFetchPipeline } = makeService();
-      appSettings.isBookDockAutoFetchEnabled.mockResolvedValue(true);
-      (metadataFetchPipeline as any).runWithSources = vi.fn().mockResolvedValue({ resolved: {}, sources: {} });
-      vi.mocked(inspectEpubMediaOverlayFields).mockClear();
+    function bothFormatsPipeline(
+      audio: { resolved: Record<string, unknown>; sources: Record<string, string>; providerIds?: Record<string, string> } | Error,
+    ) {
+      return vi.fn((params: { isAudiobook?: boolean }) => {
+        if (!params.isAudiobook) {
+          return Promise.resolve({
+            resolved: { title: 'Dune', publisher: 'Ace', pageCount: 604, isbn13: '9780441172719', coverUrl: 'https://google/dune.jpg' },
+            sources: { title: 'google', publisher: 'google', pageCount: 'google', isbn13: 'google', coverUrl: 'google' },
+          });
+        }
+        return audio instanceof Error ? Promise.reject(audio) : Promise.resolve(audio);
+      });
+    }
 
+    function dockEpub(repo: { findById: ReturnType<typeof vi.fn> }) {
       repo.findById.mockResolvedValue({
         id: 8,
         fileName: 'dune.epub',
@@ -713,67 +721,118 @@ describe('BookDockIngestService', () => {
         absolutePath: '/dock/dune.epub',
         embeddedMetadata: { title: 'Dune' },
       });
+    }
+
+    it('looks up the audiobook too: the ebook wins shared fields, the audiobook adds its own fields and cover', async () => {
+      const { service, appSettings, repo, metadataFetchPipeline } = makeService();
+      appSettings.isBookDockAutoFetchEnabled.mockResolvedValue(true);
+      dockEpub(repo);
+      (metadataFetchPipeline as any).runWithSources = bothFormatsPipeline({
+        resolved: {
+          title: 'Dune',
+          publisher: 'Macmillan Audio',
+          narrators: ['Scott Brick'],
+          durationSeconds: 75600,
+          abridged: false,
+          audioCoverUrl: 'https://audible/dune.jpg',
+          chapters: [{ title: 'One', startMs: 0 }],
+        },
+        sources: {
+          title: 'audible',
+          publisher: 'audible',
+          narrators: 'audible',
+          durationSeconds: 'audible',
+          abridged: 'audible',
+          audioCoverUrl: 'audible',
+          chapters: 'audible',
+        },
+        providerIds: { audible: 'B002V1OF70' },
+      });
+
       await (service as any).autoFetchMetadataAsync(8);
-      expect(inspectEpubMediaOverlayFields).toHaveBeenCalledWith('/dock/dune.epub', 'epub', expect.any(Function));
+
+      expect(metadataFetchPipeline.runWithSources).toHaveBeenNthCalledWith(1, expect.objectContaining({ isAudiobook: false }), {}, undefined, {
+        coverMedia: { hasEbook: true, hasAudio: false },
+        lockedCoverSlots: ['audio'],
+        cacheDirective: { policy: 'default', allowFallback: true },
+      });
+      expect(metadataFetchPipeline.runWithSources).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ isAudiobook: true, mediaKind: 'audiobook', isbn: undefined }),
+        {},
+        undefined,
+        {
+          coverMedia: { hasEbook: false, hasAudio: true },
+          lockedCoverSlots: ['ebook'],
+          cacheDirective: { policy: 'default', allowFallback: true },
+        },
+      );
+      expect(repo.update).toHaveBeenLastCalledWith(
+        8,
+        expect.objectContaining({
+          fetchedMetadata: {
+            title: 'Dune',
+            publisher: 'Ace',
+            pageCount: 604,
+            isbn13: '9780441172719',
+            coverUrl: 'https://google/dune.jpg',
+            otherFormatCoverUrl: 'https://audible/dune.jpg',
+            narrators: ['Scott Brick'],
+            durationSeconds: 75600,
+            abridged: false,
+            audibleId: 'B002V1OF70',
+          },
+          fetchedMetadataSources: expect.objectContaining({
+            publisher: 'google',
+            narrators: 'audible',
+            coverUrl: 'google',
+            otherFormatCoverUrl: 'audible',
+            audibleId: 'audible',
+          }),
+        }),
+      );
     });
 
-    it('keeps the ebook cover of a read-along and drops the audiobook art its search also found', async () => {
+    it('drops the audiobook answer when it found a different book', async () => {
       const { service, appSettings, repo, metadataFetchPipeline } = makeService();
       appSettings.isBookDockAutoFetchEnabled.mockResolvedValue(true);
-      vi.mocked(inspectEpubMediaOverlayFields).mockResolvedValueOnce({
-        mediaOverlayAvailable: true,
-        mediaOverlayDurationSeconds: 60,
-        mediaOverlayCheckedAt: new Date(),
+      dockEpub(repo);
+      (metadataFetchPipeline as any).runWithSources = bothFormatsPipeline({
+        resolved: { title: 'Dune Messiah', narrators: ['Scott Brick'], audioCoverUrl: 'https://audible/messiah.jpg' },
+        sources: { title: 'audible', narrators: 'audible', audioCoverUrl: 'audible' },
       });
-      repo.findById.mockResolvedValue({
-        id: 8,
-        fileName: 'dune.epub',
-        format: 'epub',
-        status: 'ready',
-        absolutePath: '/dock/dune.epub',
-        embeddedMetadata: { title: 'Dune' },
-      });
-      (metadataFetchPipeline as any).runWithSources = vi.fn().mockResolvedValue({
-        resolved: { title: 'Dune', coverUrl: 'https://goodreads/dune.jpg', audioCoverUrl: 'https://audible/dune.jpg' },
-        sources: { title: 'audible', coverUrl: 'goodreads', audioCoverUrl: 'audible' },
-      });
+
+      await (service as any).autoFetchMetadataAsync(8);
+
+      const fetched = repo.update.mock.calls.at(-1)![1].fetchedMetadata;
+      expect(fetched.narrators).toBeUndefined();
+      expect(fetched.otherFormatCoverUrl).toBeUndefined();
+      expect(fetched.publisher).toBe('Ace');
+    });
+
+    it("keeps the file's own format when the other lookup fails", async () => {
+      const { service, appSettings, repo, metadataFetchPipeline } = makeService();
+      appSettings.isBookDockAutoFetchEnabled.mockResolvedValue(true);
+      dockEpub(repo);
+      (metadataFetchPipeline as any).runWithSources = bothFormatsPipeline(new Error('audible down'));
 
       await (service as any).autoFetchMetadataAsync(8);
 
       expect(repo.update).toHaveBeenLastCalledWith(
         8,
-        expect.objectContaining({
-          fetchedMetadata: { title: 'Dune', coverUrl: 'https://goodreads/dune.jpg' },
-          fetchedMetadataSources: { title: 'audible', coverUrl: 'goodreads' },
-        }),
+        expect.objectContaining({ status: 'ready', fetchedMetadata: expect.objectContaining({ title: 'Dune', publisher: 'Ace' }) }),
       );
     });
 
-    it('counts a read-along EPUB as narrated, so audiobook sources can answer for it', async () => {
+    it('looks up only the comic itself for a comic file', async () => {
       const { service, appSettings, repo, metadataFetchPipeline } = makeService();
       appSettings.isBookDockAutoFetchEnabled.mockResolvedValue(true);
-      vi.mocked(inspectEpubMediaOverlayFields).mockResolvedValueOnce({
-        mediaOverlayAvailable: true,
-        mediaOverlayDurationSeconds: 3600,
-        mediaOverlayCheckedAt: new Date(),
-      });
-      repo.findById.mockResolvedValue({
-        id: 8,
-        fileName: 'dune.epub',
-        format: 'epub',
-        status: 'ready',
-        absolutePath: '/dock/dune.epub',
-        embeddedMetadata: { title: 'Dune' },
-      });
-      (metadataFetchPipeline as any).runWithSources = vi.fn().mockResolvedValue({ resolved: {}, sources: {} });
+      repo.findById.mockResolvedValue({ id: 8, fileName: 'Saga 01.cbz', format: 'cbz', status: 'ready', embeddedMetadata: { title: 'Saga' } });
+      (metadataFetchPipeline as any).runWithSources = vi.fn().mockResolvedValue({ resolved: { title: 'Saga' }, sources: { title: 'comicvine' } });
 
       await (service as any).autoFetchMetadataAsync(8);
 
-      expect(metadataFetchPipeline.runWithSources).toHaveBeenCalledWith(expect.objectContaining({ isAudiobook: false }), {}, undefined, {
-        coverMedia: { hasEbook: true, hasAudio: true },
-        lockedCoverSlots: ['audio'],
-        cacheDirective: { policy: 'default', allowFallback: true },
-      });
+      expect(metadataFetchPipeline.runWithSources).toHaveBeenCalledTimes(1);
     });
 
     it('stages the audiobook cover as the cover of a docked audio file', async () => {
@@ -1289,7 +1348,7 @@ describe('BookDockIngestService', () => {
       await (service as any).metadataQueue.waitForIdle();
 
       expect(metadataService.extractAndSave).toHaveBeenCalledTimes(2);
-      expect((metadataFetchPipeline as any).runWithSources).toHaveBeenCalledTimes(2);
+      expect((metadataFetchPipeline as any).runWithSources).toHaveBeenCalledTimes(4); // two files, two formats each
       expect(maxActiveFetches).toBe(1);
     } finally {
       randomSpy.mockRestore();
