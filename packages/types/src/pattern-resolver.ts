@@ -94,6 +94,8 @@ export function applyModifier(value: string, modifier: string, fieldName: string
       }
       return target.charAt(0).toUpperCase();
     }
+    case "firstInitial":
+      return value.split(", ")[0].trim().charAt(0).toUpperCase();
     case "max3": {
       const parts = value
         .split(", ")

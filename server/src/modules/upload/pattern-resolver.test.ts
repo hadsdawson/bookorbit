@@ -83,6 +83,19 @@ describe('applyModifier', () => {
     });
   });
 
+  describe('firstInitial', () => {
+    it("uses the first letter of the first author's first name", () => {
+      expect(applyModifier('Liz Allan', 'firstInitial', 'authors')).toBe('L');
+      expect(applyModifier('liz Allan, Brent Weeks', 'firstInitial', 'authors')).toBe('L');
+      expect(applyModifier('Voltaire', 'firstInitial', 'authors')).toBe('V');
+    });
+
+    it('resolves in a folder pattern and falls back when there is no author', () => {
+      expect(resolvePlaceholders('<{authors:firstInitial}|_>/{authors:first}', { authors: 'Liz Allan' }).text).toBe('L/Liz Allan');
+      expect(resolvePlaceholders('<{authors:firstInitial}|_>/x', { authors: '' }).text).toBe('_/x');
+    });
+  });
+
   describe('initial', () => {
     it('returns first letter of title uppercased', () => {
       expect(applyModifier('the name of the wind', 'initial', 'title')).toBe('T');
