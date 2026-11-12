@@ -3,7 +3,7 @@ import { computed, onActivated, onDeactivated, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { AlertCircle, ListChecks } from '@lucide/vue'
-import type { ChapterHealthCategory } from '@bookorbit/types'
+import type { ChapterAutoApplySettings, ChapterHealthCategory } from '@bookorbit/types'
 
 import PaginationNav from '@/components/PaginationNav.vue'
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,7 @@ import { errorMessage } from '@/lib/api-json'
 import { usePermissions } from '@/features/auth/composables/usePermissions'
 import { useLibraries } from '@/features/library/composables/useLibraries'
 import { useLibraryPermissions } from '@/features/library/composables/useLibraryPermissions'
+import { getChapterAutoApplySettings, updateChapterAutoApplySettings } from '../../api/chapter-health'
 import { useChapterHealth } from '../../composables/useChapterHealth'
 import ChapterHealthCategoryTabs from '../components/ChapterHealthCategoryTabs.vue'
 import ChapterHealthLookupPanel from '../components/ChapterHealthLookupPanel.vue'
@@ -26,6 +27,8 @@ const canUseTool = computed(() => hasPermission('library_edit_metadata'))
 /** The tool changes chapters, so it offers only the libraries the user may edit. */
 const editableLibraries = computed(() => libraries.value.filter((library) => hasLibraryPermission('library_edit_metadata', library.id, 'editor')))
 const enqueueing = ref(false)
+const autoApply = ref<ChapterAutoApplySettings | null>(null)
+const savingTolerance = ref(false)
 const showSkeleton = computed(() => health.loadingList.value && health.items.value.length === 0)
 const selectable = computed(() => health.canLookUp.value)
 
@@ -33,7 +36,28 @@ onMounted(() => {
   if (!canUseTool.value) return
   void fetchLibraries()
   void health.refresh()
+  void loadAutoApply()
 })
+
+async function loadAutoApply() {
+  try {
+    autoApply.value = await getChapterAutoApplySettings()
+  } catch {
+    autoApply.value = null
+  }
+}
+
+async function handleSaveTolerance(seconds: number) {
+  savingTolerance.value = true
+  try {
+    autoApply.value = await updateChapterAutoApplySettings(seconds)
+    toast.success(t('tools.chapterHealth.lookup.tolerance.saved'))
+  } catch (reason) {
+    toast.error(errorMessage(reason, 'tools.chapterHealth.errors.tolerance'))
+  } finally {
+    savingTolerance.value = false
+  }
+}
 
 // The Tools tabs stay alive between visits: no polling while hidden, and fresh counts on return.
 let activatedBefore = false
@@ -120,6 +144,9 @@ async function handleDismiss(bookId: number) {
       :selected-count="health.selected.value.size"
       :can-look-up="health.canLookUp.value"
       :busy="enqueueing"
+      :auto-apply="autoApply"
+      :saving-tolerance="savingTolerance"
+      @save-tolerance="handleSaveTolerance"
       @look-up="handleLookUp"
       @cancel="handleCancel"
       @clear-finished="handleClearFinished"

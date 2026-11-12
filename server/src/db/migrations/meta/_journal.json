@@ -1016,6 +1016,13 @@
       "when": 1794410794073,
       "tag": "0144_folder_covers_and_metadata_json",
       "breakpoints": true
+    },
+    {
+      "idx": 145,
+      "version": "7",
+      "when": 1794492310622,
+      "tag": "0145_chapters_write_on_save",
+      "breakpoints": true
     }
   ]
 }

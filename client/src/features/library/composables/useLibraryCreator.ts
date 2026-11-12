@@ -52,6 +52,7 @@ function blankForm() {
     fileWriteWriteCover: true,
     fileWriteFolderCovers: 'off' as FolderCoverMedia,
     fileWriteMetadataJson: false,
+    fileWriteChaptersOnSave: false,
     fileWriteEpubEnabled: true,
     fileWriteEpubMaxFileSizeMb: 100,
     fileWriteFb2Enabled: false,
@@ -202,6 +203,7 @@ export function useLibraryCreator() {
     form.fileWriteWriteCover = library.fileWriteWriteCover
     form.fileWriteFolderCovers = library.fileWriteFolderCovers ?? 'off'
     form.fileWriteMetadataJson = library.fileWriteMetadataJson ?? false
+    form.fileWriteChaptersOnSave = library.fileWriteChaptersOnSave ?? false
     form.fileWriteEpubEnabled = library.fileWriteEpubEnabled
     form.fileWriteEpubMaxFileSizeMb = library.fileWriteEpubMaxFileSizeMb
     form.fileWriteFb2Enabled = library.fileWriteFb2Enabled

@@ -12,6 +12,7 @@ describe('LibraryCreatorFileWrite', () => {
         fileWriteWriteCover: false,
         fileWriteFolderCovers: 'off',
         fileWriteMetadataJson: false,
+        fileWriteChaptersOnSave: false,
         fileWriteEpubEnabled: false,
         fileWriteEpubMaxFileSizeMb: 100,
         fileWriteFb2Enabled: false,
@@ -192,5 +193,13 @@ describe('LibraryCreatorFileWrite', () => {
     const json = wrapper.findAll('input[type="checkbox"]').at(-1)!
     await json.setValue(true)
     expect(wrapper.emitted('update:fileWriteMetadataJson')).toEqual([[true]])
+  })
+
+  it('offers writing chapters on save once writing to files is on', async () => {
+    expect(mountComponent({ fileWriteEnabled: false }).text()).not.toContain('Write chapters into audio files when saved')
+    const wrapper = mountComponent({ fileWriteEnabled: true })
+    const label = wrapper.findAll('label').find((candidate) => candidate.text().includes('Write chapters into audio files when saved'))!
+    await label.get('input[type="checkbox"]').setValue(true)
+    expect(wrapper.emitted('update:fileWriteChaptersOnSave')).toEqual([[true]])
   })
 })

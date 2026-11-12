@@ -65,6 +65,8 @@ export interface Library {
   fileWriteFolderCovers: FolderCoverMedia;
   /** Keeps an Audiobookshelf-style metadata.json, chapters included, in each book's folder. */
   fileWriteMetadataJson: boolean;
+  /** Writes chapters into the audio files whenever they are saved or applied from a lookup, without asking. */
+  fileWriteChaptersOnSave: boolean;
   fileWriteEpubEnabled: boolean;
   fileWriteEpubMaxFileSizeMb: number;
   fileWriteFb2Enabled: boolean;

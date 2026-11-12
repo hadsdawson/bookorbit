@@ -154,6 +154,10 @@ export class UpdateLibraryDto {
 
   @IsOptionalNotNull()
   @IsBoolean()
+  fileWriteChaptersOnSave?: boolean;
+
+  @IsOptionalNotNull()
+  @IsBoolean()
   fileWriteEpubEnabled?: boolean;
 
   @IsOptionalNotNull()

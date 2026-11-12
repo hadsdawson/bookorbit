@@ -80,4 +80,19 @@ describe('ChapterSaveBar write to files', () => {
     expect(wrapper!.get('[role="status"]').text()).toBe('Writing chapters into the audio files...')
     expect(wrapper!.get('button[aria-label="More save options"]').attributes('disabled')).toBeDefined()
   })
+
+  it('names the main button for writing too when the library writes chapters on every save', async () => {
+    await mountBar({ dirty: true, writeBack: { ...AVAILABLE, autoWrite: true } })
+    const save = wrapper!.findAll('button').find((button) => button.text().includes('Save and write to files'))
+    expect(save).toBeDefined()
+    expect(save!.attributes('title')).toContain('whenever they are saved')
+  })
+
+  it('keeps the plain label when the library does not write on save, or writing is unavailable', async () => {
+    await mountBar({ dirty: true })
+    expect(wrapper!.text()).toContain('Save chapters')
+    wrapper!.unmount()
+    await mountBar({ dirty: true, writeBack: { available: false, reason: 'library_disabled', fileCount: 3, autoWrite: true } })
+    expect(wrapper!.text()).toContain('Save chapters')
+  })
 })

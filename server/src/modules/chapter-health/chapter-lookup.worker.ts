@@ -1,9 +1,10 @@
-import { Inject, Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
 import { appConfig } from '../../config/config';
 import { ChapterEditorService } from '../chapter-editor/chapter-editor.service';
+import { ChapterAutoApplySettingsService } from './chapter-auto-apply-settings.service';
 import { ChapterHealthRepository } from './chapter-health.repository';
 
 const TICK_MS = 3_000;
@@ -29,6 +30,7 @@ export class ChapterLookupWorker implements OnModuleInit, OnModuleDestroy {
     private readonly repo: ChapterHealthRepository,
     private readonly editor: ChapterEditorService,
     @Inject(appConfig.KEY) private readonly app: ConfigType<typeof appConfig>,
+    @Optional() private readonly autoApplySettings?: ChapterAutoApplySettingsService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -71,7 +73,8 @@ export class ChapterLookupWorker implements OnModuleInit, OnModuleDestroy {
       `[${event}] [start] bookId=${job.bookId} userId=${job.userId ?? 'null'} attempt=${job.attemptCount} - bulk chapter lookup started`,
     );
     try {
-      const outcome = await this.editor.bulkLookup(job.bookId, job.userId);
+      const runtimeToleranceMs = await this.autoApplySettings?.runtimeToleranceMs();
+      const outcome = await this.editor.bulkLookup(job.bookId, job.userId, { runtimeToleranceMs });
       await this.repo.finish(job.bookId, outcome, job.claimToken);
       this.logger.log(
         `[${event}] [end] bookId=${job.bookId} durationMs=${Date.now() - startedAt} status=${outcome.status} reason=${outcome.reason ?? 'none'} - bulk chapter lookup finished`,

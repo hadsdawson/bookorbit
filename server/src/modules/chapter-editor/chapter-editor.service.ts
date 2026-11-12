@@ -322,7 +322,7 @@ export class ChapterEditorService {
    * certain enough to need nobody, otherwise say why it waits for a person. A list someone protected
    * is never replaced here. Access was checked when the book was queued.
    */
-  async bulkLookup(bookId: number, userId: number | null): Promise<BulkLookupOutcome> {
+  async bulkLookup(bookId: number, userId: number | null, options: { runtimeToleranceMs?: number } = {}): Promise<BulkLookupOutcome> {
     if (!(await this.canRunLookup(bookId, userId))) return { status: 'skipped', reason: 'access_changed', result: null };
     let context: EditorContext;
     try {
@@ -353,7 +353,7 @@ export class ChapterEditorService {
     if (await this.lockService.isFieldLocked(bookId, 'chapters')) return { status: 'review', reason: 'locked', result };
 
     if (!(await this.canRunLookup(bookId, userId))) return { status: 'skipped', reason: 'access_changed', result: null };
-    const plan = planAutoApply(lookup, totalDurationMs);
+    const plan = planAutoApply(lookup, totalDurationMs, options.runtimeToleranceMs);
     if (plan.kind === 'review') return { status: 'review', reason: plan.reason, result };
     try {
       await this.audiobookChapters.saveLookedUpChapters(bookId, plan.chapters, userId, {
@@ -366,7 +366,48 @@ export class ChapterEditorService {
       throw error;
     }
     this.fileWriteService.scheduleFolderFiles(bookId);
+    await this.writeAppliedChapters(bookId, userId);
     return { status: 'applied', reason: null, result: { ...result, chapterCount: plan.chapters.length } };
+  }
+
+  /**
+   * After a lookup applies chapters on its own, writes them into the audio files when the library
+   * asks for that on every save. A write that cannot go ahead or fails is logged; the applied
+   * chapters stay saved either way, and the book can be written by hand from its Chapters tab.
+   */
+  private async writeAppliedChapters(bookId: number, userId: number | null): Promise<void> {
+    if (userId === null) return;
+    const event = 'chapter_editor.auto_write';
+    const startedAt = Date.now();
+    try {
+      const context = await this.loadContext(bookId);
+      const status = await this.fileWriteService.resolveChapterWriteStatus(
+        bookId,
+        context.tracks.map((track) => track.id),
+      );
+      if (!status.autoWrite) return;
+      const { tracks } = this.timeline(context);
+      if (tracks.some((track) => track.startMs === null)) return;
+      const result = await this.fileWriteService.writeChapters(
+        bookId,
+        tracks.map((track) => ({ id: track.fileId, timelineStartMs: track.startMs! })),
+        this.editorChapters(context),
+        userId,
+        async () => {
+          const fresh = await this.loadContext(bookId);
+          this.assertCurrent(fresh, context.revision);
+          return {
+            files: this.timeline(fresh).tracks.map((track) => ({ id: track.fileId, timelineStartMs: track.startMs! })),
+            chapters: this.editorChapters(fresh),
+          };
+        },
+      );
+      this.logger.log(
+        `[${event}] [end] bookId=${bookId} durationMs=${Date.now() - startedAt} status=${result.status} filesWritten=${result.filesWritten} - looked-up chapters written into the files`,
+      );
+    } catch (error) {
+      this.logFailure(event, bookId, startedAt, error);
+    }
   }
 
   private async canRunLookup(bookId: number, userId: number | null): Promise<boolean> {

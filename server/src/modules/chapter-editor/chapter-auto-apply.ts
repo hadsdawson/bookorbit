@@ -8,8 +8,8 @@ import {
 
 import { normalizeAudiobookChapters } from '../../common/utils/audiobook-chapters.utils';
 
-/** How far the runtimes may differ for the timings to be taken as they are, without a stretch. */
-const RUNTIME_TOLERANCE_MS = 2_000;
+/** How far the runtimes may differ for the timings to be taken as they are, unless the setting says otherwise. */
+export const DEFAULT_RUNTIME_TOLERANCE_MS = 2_000;
 /** Chapters averaging shorter than this read as a list of tracks or sections, not chapters. */
 const MIN_AVERAGE_CHAPTER_MS = 30_000;
 
@@ -31,7 +31,11 @@ export function flattenLookupTree(nodes: readonly ChapterLookupNode[]): Audioboo
  * the book's length matches Audible's runtime either with its branding or without it, and the list
  * looks like chapters. Anything else is left for a person with the reason it stopped.
  */
-export function planAutoApply(lookup: ChapterLookupResult, totalDurationMs: number | null): AutoApplyPlan {
+export function planAutoApply(
+  lookup: ChapterLookupResult,
+  totalDurationMs: number | null,
+  runtimeToleranceMs: number = DEFAULT_RUNTIME_TOLERANCE_MS,
+): AutoApplyPlan {
   if (!totalDurationMs || totalDurationMs <= 0) return { kind: 'review', reason: 'unknown_length' };
   if (lookup.truncated) return { kind: 'review', reason: 'implausible' };
   if (lookup.isAccurate !== true) return { kind: 'review', reason: 'not_exact' };
@@ -40,7 +44,7 @@ export function planAutoApply(lookup: ChapterLookupResult, totalDurationMs: numb
   const withoutBranding = lookup.runtimeMs - lookup.brandIntroMs - lookup.brandOutroMs;
   const strippedError = Math.abs(totalDurationMs - withoutBranding);
   const fullError = Math.abs(totalDurationMs - lookup.runtimeMs);
-  if (Math.min(strippedError, fullError) > RUNTIME_TOLERANCE_MS) return { kind: 'review', reason: 'runtime_mismatch' };
+  if (Math.min(strippedError, fullError) > runtimeToleranceMs) return { kind: 'review', reason: 'runtime_mismatch' };
   if (strippedError === fullError && lookup.brandIntroMs > 0) return { kind: 'review', reason: 'runtime_mismatch' };
   const offsetMs = strippedError < fullError ? -lookup.brandIntroMs : 0;
 

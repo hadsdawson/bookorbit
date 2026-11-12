@@ -329,7 +329,8 @@ export class FileWriteService implements OnModuleDestroy {
   async resolveChapterWriteStatus(bookId: number, orderedFileIds: readonly number[]): Promise<BookChapterWriteBack> {
     const targets = await this.findChapterWriteTargets(bookId, orderedFileIds);
     const libConfig = targets[0] ? await this.fileWriteRepo.findLibraryFileWriteConfig(targets[0].libraryId) : null;
-    return this.chapterWriteStatus(libConfig, targets);
+    const status = this.chapterWriteStatus(libConfig, targets);
+    return { ...status, autoWrite: status.available && libConfig?.fileWriteChaptersOnSave === true };
   }
 
   /**

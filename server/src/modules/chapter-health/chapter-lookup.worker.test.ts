@@ -9,7 +9,7 @@ const APPLIED: BulkLookupOutcome = {
   result: { provider: 'audible', chapterCount: 12, runtimeMs: 37_206_520, totalDurationMs: 37_197_419, isAccurate: true },
 };
 
-function setup(options: { jobs?: Job[]; nodeEnv?: string } = {}) {
+function setup(options: { jobs?: Job[]; nodeEnv?: string; toleranceMs?: number } = {}) {
   const jobs = (options.jobs ?? []).map((job) => ({ ...job, claimToken: 'claim' }));
   const repo = {
     requeueProcessing: vi.fn().mockResolvedValue(undefined),
@@ -17,8 +17,13 @@ function setup(options: { jobs?: Job[]; nodeEnv?: string } = {}) {
     finish: vi.fn().mockResolvedValue(undefined),
     retryLater: vi.fn().mockResolvedValue(undefined),
   };
-  const editor = { bulkLookup: vi.fn<(bookId: number, userId: number | null) => Promise<BulkLookupOutcome>>().mockResolvedValue(APPLIED) };
-  const worker = new ChapterLookupWorker(repo as never, editor as never, { nodeEnv: options.nodeEnv ?? 'test' } as never);
+  const editor = {
+    bulkLookup: vi
+      .fn<(bookId: number, userId: number | null, options?: { runtimeToleranceMs?: number }) => Promise<BulkLookupOutcome>>()
+      .mockResolvedValue(APPLIED),
+  };
+  const settings = options.toleranceMs === undefined ? undefined : { runtimeToleranceMs: vi.fn().mockResolvedValue(options.toleranceMs) };
+  const worker = new ChapterLookupWorker(repo as never, editor as never, { nodeEnv: options.nodeEnv ?? 'test' } as never, settings as never);
   return { worker, repo, editor };
 }
 
@@ -76,8 +81,8 @@ describe('ChapterLookupWorker', () => {
     await tick(worker);
 
     expect(editor.bulkLookup.mock.calls).toEqual([
-      [41, 7],
-      [42, null],
+      [41, 7, { runtimeToleranceMs: undefined }],
+      [42, null, { runtimeToleranceMs: undefined }],
     ]);
     expect(repo.finish.mock.calls).toEqual([
       [41, APPLIED, 'claim'],
@@ -178,7 +183,7 @@ describe('ChapterLookupWorker', () => {
     expect(editor.bulkLookup).not.toHaveBeenCalled();
 
     await tick(worker);
-    expect(editor.bulkLookup).toHaveBeenCalledWith(41, 7);
+    expect(editor.bulkLookup).toHaveBeenCalledWith(41, 7, { runtimeToleranceMs: undefined });
   });
 
   it('claims nothing once the module is being destroyed', async () => {
@@ -188,5 +193,11 @@ describe('ChapterLookupWorker', () => {
     await tick(worker);
 
     expect(repo.claimNext).not.toHaveBeenCalled();
+  });
+
+  it('passes the configured runtime tolerance to each lookup', async () => {
+    const { worker, editor } = setup({ jobs: [{ bookId: 41, userId: 7, attemptCount: 0 }], toleranceMs: 9_000 });
+    await tick(worker);
+    expect(editor.bulkLookup).toHaveBeenCalledWith(41, 7, { runtimeToleranceMs: 9_000 });
   });
 });

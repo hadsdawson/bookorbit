@@ -1,0 +1,1 @@
+ALTER TABLE "libraries" ADD COLUMN "file_write_chapters_on_save" boolean DEFAULT false NOT NULL;

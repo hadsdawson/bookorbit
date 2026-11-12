@@ -40,6 +40,7 @@ function library(overrides: Partial<Library> & Pick<Library, 'id' | 'name'>): Li
     fileWriteAllFiles: false,
     fileWriteFolderCovers: 'off',
     fileWriteMetadataJson: false,
+    fileWriteChaptersOnSave: false,
     fileWriteReadAlongEnabled: false,
     fileWriteReadAlongMaxFileSizeMb: 1000,
     fileRenameEnabled: false,

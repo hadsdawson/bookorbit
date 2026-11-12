@@ -153,6 +153,10 @@ export class CreateLibraryDto {
 
   @IsOptionalNotNull()
   @IsBoolean()
+  fileWriteChaptersOnSave?: boolean;
+
+  @IsOptionalNotNull()
+  @IsBoolean()
   fileWriteEpubEnabled?: boolean;
 
   @IsOptionalNotNull()

@@ -276,8 +276,16 @@ async function saveDraft(options: { quiet?: boolean } = {}): Promise<boolean> {
   }
 }
 
+/** The library writes chapters into the audio files on every save, which the person already chose there. */
+const autoWrite = computed(() => state.value?.writeBack.available === true && state.value.writeBack.autoWrite === true)
+
 async function handleSave() {
-  await saveDraft()
+  if (!autoWrite.value) {
+    await saveDraft()
+    return
+  }
+  if (!(await saveDraft({ quiet: true }))) return
+  await writeSavedChapters()
 }
 
 // ── Write into the audio files ───────────────────────────────────────────────
@@ -302,6 +310,10 @@ async function handleWriteConfirm() {
   const mode = writeConfirm.value
   writeConfirm.value = null
   if (mode === 'saveAndWrite' && !(await saveDraft({ quiet: true }))) return
+  await writeSavedChapters()
+}
+
+async function writeSavedChapters() {
   try {
     const result = await store.writeToFiles()
     if (result.status === 'success') toast.success(t('book.detail.chapters.writeFiles.done', { count: result.filesTotal }))
