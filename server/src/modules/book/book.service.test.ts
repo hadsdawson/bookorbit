@@ -5517,7 +5517,7 @@ describe('BookService', () => {
       expect(result.readStatus).toBeNull();
       expect(result.rating).toBeNull();
       expect(result.communityRatings).toEqual([]);
-      expect(result.audioMetadata).toBeNull();
+      expect(result.audioMetadata).toEqual(expect.objectContaining({ narrators: [], durationSeconds: null }));
       expect(result.collections).toEqual([]);
       expect(result.comicMetadata).toBeNull();
       expect(result.lockedFields).toEqual([]);

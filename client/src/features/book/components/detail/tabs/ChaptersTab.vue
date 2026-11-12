@@ -7,6 +7,7 @@ import { toast } from 'vue-sonner'
 import { Download, FileSearch, History, ListChecks, ListPlus, Trash2, Wrench } from '@lucide/vue'
 import {
   BOOK_CHAPTERS_ERROR_CODES,
+  isAudioFormat,
   Permission,
   type AudibleRegion,
   type BookChapterVersionSummary,
@@ -77,7 +78,7 @@ const TOOLS: { tool: ChapterTool; key: string }[] = [
 
 const bookId = computed(() => props.book.id)
 // A book with only a read-along EPUB has narration to list but no audio files to cut.
-const hasAudioFiles = computed(() => props.book.audioMetadata != null)
+const hasAudioFiles = computed(() => props.book.files.some((file) => file.format != null && isAudioFormat(file.format)))
 const canEdit = computed(() => hasAudioFiles.value && hasLibraryPermission(Permission.LibraryEditMetadata, props.book.libraryId, 'editor'))
 
 const store = useBookChapters(bookId)

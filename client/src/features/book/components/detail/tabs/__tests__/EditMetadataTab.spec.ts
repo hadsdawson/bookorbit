@@ -619,10 +619,10 @@ describe('EditMetadataTab audiobook fields', () => {
     expect(renderedAudioFields(wrapper)).toEqual(AUDIO_FIELDS)
   })
 
-  it('hides the audiobook fields for an ebook-only book', async () => {
+  it('shows the audiobook fields for an ebook-only book too, so they can be filled before the audiobook arrives', async () => {
     const wrapper = mountTab(makeBook({ files: [makeFile(1, 'epub', 'primary')] } as Partial<BookDetail>))
     await flushPromises()
 
-    expect(renderedAudioFields(wrapper)).toEqual([])
+    expect(renderedAudioFields(wrapper)).toEqual(AUDIO_FIELDS)
   })
 })
