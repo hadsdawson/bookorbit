@@ -328,8 +328,9 @@ export class BookDockIngestService implements OnApplicationBootstrap, OnModuleDe
       const coversDir = join(this.bookDockPath, 'covers');
       await this.repo.update(fileId, { status: 'extracting' });
       this.emitChange();
-      await this.metadataService.extractAndSave(fileId, row.absolutePath, format, coversDir);
-      await this.autoFetchMetadataAsync(fileId, forceAutoFetch);
+      const { fromAudiobookshelf } = await this.metadataService.extractAndSave(fileId, row.absolutePath, format, coversDir);
+      // An Audiobookshelf folder's own details are the ones wanted, so the online lookup runs only when asked for.
+      if (!fromAudiobookshelf || forceAutoFetch) await this.autoFetchMetadataAsync(fileId, forceAutoFetch);
       this.emitChange();
       this.events.emit(BOOK_DOCK_FILE_INGESTED, fileId);
     } finally {

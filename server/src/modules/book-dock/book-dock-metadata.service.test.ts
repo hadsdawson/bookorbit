@@ -1,6 +1,8 @@
 vi.mock('fs/promises', () => ({
   mkdir: vi.fn(),
   writeFile: vi.fn(),
+  readFile: vi.fn(),
+  stat: vi.fn(),
 }));
 
 vi.mock('../metadata/lib/cover', () => ({
@@ -9,13 +11,15 @@ vi.mock('../metadata/lib/cover', () => ({
 }));
 
 import { Logger } from '@nestjs/common';
-import { mkdir, writeFile } from 'fs/promises';
+import { mkdir, readFile, stat, writeFile } from 'fs/promises';
 import type { ParsedBookData } from '../metadata/extractors/format-extractor.interface';
 import { generateThumbnail, imageExt } from '../metadata/lib/cover';
 import { BookDockMetadataService } from './book-dock-metadata.service';
 
 const mockMkdir = vi.mocked(mkdir);
 const mockWriteFile = vi.mocked(writeFile);
+const mockReadFile = vi.mocked(readFile);
+const mockStat = vi.mocked(stat);
 const mockGenerateThumbnail = vi.mocked(generateThumbnail);
 const mockImageExt = vi.mocked(imageExt);
 
@@ -69,6 +73,8 @@ const richMetadata: ParsedBookData = {
 function makeService() {
   const repo = {
     update: vi.fn().mockResolvedValue(undefined),
+    findById: vi.fn().mockResolvedValue({ id: 7, metadataEditedAt: null }),
+    findUnitFiles: vi.fn().mockResolvedValue([]),
   };
   const extractionService = {
     extractWithCoverFallback: vi.fn().mockResolvedValue({
@@ -209,6 +215,66 @@ describe('BookDockMetadataService', () => {
     expect(repo.update).toHaveBeenNthCalledWith(2, 11, {
       status: 'error',
       errorMessage: 'disk full',
+    });
+  });
+
+  describe('Audiobookshelf folders', () => {
+    const unitFiles = [
+      { absolutePath: '/dock/Kings/book.m4b', fileName: 'book.m4b', role: 'content' },
+      { absolutePath: '/dock/Kings/metadata.json', fileName: 'metadata.json', role: 'metadata' },
+      { absolutePath: '/dock/Kings/cover.jpg', fileName: 'cover.jpg', role: 'cover' },
+    ];
+    const absJson = JSON.stringify({
+      title: 'The Way of Kings',
+      authors: ['Brandon Sanderson'],
+      genres: ['Epic Fantasy'],
+      tags: ['Owned'],
+      asin: 'B003ZWFO7E',
+    });
+
+    function setUp(editedAt: Date | null = null) {
+      const ctx = makeService();
+      ctx.repo.findUnitFiles.mockResolvedValue(unitFiles);
+      ctx.repo.findById.mockResolvedValue({ id: 7, metadataEditedAt: editedAt });
+      mockStat.mockResolvedValue({ size: absJson.length } as never);
+      mockReadFile.mockImplementation(((path: string) => Promise.resolve(path.endsWith('.json') ? absJson : Buffer.from('folder-cover'))) as never);
+      return ctx;
+    }
+
+    it('lets metadata.json win field by field, chooses it, and uses the folder cover', async () => {
+      const { service, repo } = setUp();
+
+      await expect(service.extractAndSave(7, '/dock/Kings/book.m4b', 'm4b', '/book-dock/covers')).resolves.toEqual({ fromAudiobookshelf: true });
+
+      const saved = repo.update.mock.calls[1]![1] as { embeddedMetadata: Record<string, unknown>; selectedMetadata: Record<string, unknown> };
+      expect(saved.embeddedMetadata).toMatchObject({
+        title: 'The Way of Kings',
+        authors: ['Brandon Sanderson'],
+        genres: ['Epic Fantasy'],
+        tags: ['Owned'],
+        audibleId: 'B003ZWFO7E',
+        publisher: 'Ace',
+        narrators: ['Simon Vance'],
+      });
+      expect(saved.selectedMetadata).toEqual(saved.embeddedMetadata);
+      expect(mockWriteFile).toHaveBeenCalledWith('/book-dock/covers/7.jpg', Buffer.from('folder-cover'));
+    });
+
+    it("keeps a person's Book Dock edits when the file is read again", async () => {
+      const { service, repo } = setUp(new Date());
+
+      await service.extractAndSave(7, '/dock/Kings/book.m4b', 'm4b', '/book-dock/covers');
+
+      expect(repo.update.mock.calls[1]![1]).not.toHaveProperty('selectedMetadata');
+    });
+
+    it('falls back to the file itself when metadata.json is unreadable', async () => {
+      const { service, repo } = setUp();
+      mockReadFile.mockResolvedValue('{ broken' as never);
+      vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+
+      await expect(service.extractAndSave(7, '/dock/Kings/book.m4b', 'm4b', '/book-dock/covers')).resolves.toEqual({ fromAudiobookshelf: false });
+      expect(repo.update.mock.calls[1]![1]).toMatchObject({ embeddedMetadata: { title: 'Dune' }, status: 'ready' });
     });
   });
 });

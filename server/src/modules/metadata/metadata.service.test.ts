@@ -1592,6 +1592,29 @@ describe('MetadataService', () => {
     expect(db.delete).not.toHaveBeenCalled();
   });
 
+  it('replaceGenres keeps every genre when asked to skip the allowed list', async () => {
+    const { db } = makeDb();
+    const filter = vi.fn().mockResolvedValue([]);
+    const service = makeService(db, undefined, { genrePolicy: { filter } });
+    const inserted: string[] = [];
+    db.insert.mockImplementation((table: unknown) => ({
+      values: (rows: Array<{ name?: string }>) => {
+        if (table === genres) inserted.push(...rows.map((row) => row.name!));
+        return {
+          onConflictDoNothing: () =>
+            table === genres
+              ? { returning: () => Promise.resolve(rows.map((row, index) => ({ id: 1 + index, name: row.name }))) }
+              : Promise.resolve(undefined),
+        };
+      },
+    }));
+
+    await service.replaceGenres(12, ['Horror'], { skipGenrePolicy: true });
+
+    expect(filter).not.toHaveBeenCalled();
+    expect(inserted).toEqual(['Horror']);
+  });
+
   it('replaceGenres still clears every genre when asked for none', async () => {
     const { db } = makeDb();
     const service = makeService(db, undefined, { genrePolicy: { filter: vi.fn().mockResolvedValue([]) } });

@@ -60,7 +60,7 @@ function makeService(bookDockPath = '/books/book-dock') {
   };
 
   const metadataService = {
-    extractAndSave: vi.fn().mockResolvedValue(undefined),
+    extractAndSave: vi.fn().mockResolvedValue({ fromAudiobookshelf: false }),
   };
 
   const events = {
@@ -428,6 +428,22 @@ describe('BookDockIngestService', () => {
       expect(repo.update).toHaveBeenCalledWith(4, { status: 'pending', errorMessage: null });
       expect(autoFetchSpy).toHaveBeenCalledWith(4, true);
       expect((service as any).forcedAutoFetchFileIds.has(4)).toBe(false);
+    });
+
+    it('skips the automatic lookup for an Audiobookshelf folder but still runs a requested one', async () => {
+      const { service, repo, metadataService } = makeService();
+      const dockRow = { id: 4, status: 'pending', format: 'm4b', absolutePath: '/bucket/Book/book.m4b', errorMessage: null };
+      repo.findById.mockResolvedValue(dockRow);
+      repo.update.mockResolvedValue(dockRow);
+      metadataService.extractAndSave.mockResolvedValue({ fromAudiobookshelf: true });
+      const autoFetchSpy = vi.spyOn(service as any, 'autoFetchMetadataAsync').mockResolvedValue(undefined);
+
+      await (service as any).processMetadataJob(4);
+      expect(autoFetchSpy).not.toHaveBeenCalled();
+
+      (service as any).forcedAutoFetchFileIds.add(4);
+      await (service as any).processMetadataJob(4);
+      expect(autoFetchSpy).toHaveBeenCalledWith(4, true);
     });
 
     it('ignores missing, active, and unsupported rows', async () => {
@@ -1174,6 +1190,7 @@ describe('BookDockIngestService', () => {
             } else {
               resolveOlderStarted();
             }
+            return { fromAudiobookshelf: false };
           } finally {
             active--;
           }

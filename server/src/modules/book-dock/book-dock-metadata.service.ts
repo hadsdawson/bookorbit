@@ -1,13 +1,20 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { mkdir, writeFile } from 'fs/promises';
+import { mkdir, readFile, stat, writeFile } from 'fs/promises';
 import { join } from 'path';
 
-import type { BookDockMetadata, ComicMetadataFields } from '@bookorbit/types';
+import { isAudioFormat, type BookDockMetadata, type ComicMetadataFields } from '@bookorbit/types';
 import type { ParsedBookData } from '../metadata/extractors/format-extractor.interface';
 import { generateThumbnail, imageExt } from '../metadata/lib/cover';
 import { MetadataExtractionService } from '../metadata/metadata-extraction.service';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
+import { ABS_METADATA_MAX_BYTES, isAbsMetadataFile, parseAbsMetadataJson, pickAbsCoverFile } from './abs-metadata-import';
 import { BookDockRepository } from './book-dock.repository';
+
+/** What an Audiobookshelf folder brought: its metadata.json details and its own cover image. */
+interface AbsFolderData {
+  metadata: BookDockMetadata;
+  cover: Buffer | null;
+}
 
 @Injectable()
 export class BookDockMetadataService {
@@ -18,24 +25,35 @@ export class BookDockMetadataService {
     private readonly extractionService: MetadataExtractionService,
   ) {}
 
-  async extractAndSave(fileId: number, absolutePath: string, format: string, coversDir: string): Promise<void> {
+  /**
+   * Reads the file's own details and cover. When its folder holds an Audiobookshelf metadata.json,
+   * that file's details win field by field and become the row's chosen details, and the folder's
+   * cover image is used ahead of embedded art. `fromAudiobookshelf` says whether that happened.
+   */
+  async extractAndSave(fileId: number, absolutePath: string, format: string, coversDir: string): Promise<{ fromAudiobookshelf: boolean }> {
     const startedAt = Date.now();
     await this.repo.update(fileId, { status: 'extracting' });
     try {
       const extracted = await this.extractionService.extractWithCoverFallback(absolutePath, format);
-      const metadata = this.toBookDockMetadata(extracted.metadata);
-      const coverBytes = extracted.cover;
+      const embedded = this.toBookDockMetadata(extracted.metadata);
+      const abs = await this.readAbsFolderData(fileId, format);
+      const metadata = abs ? { ...withoutUndefined(embedded), ...abs.metadata } : embedded;
+      const coverBytes = abs?.cover ?? extracted.cover;
 
       let coverPath: string | null = null;
       if (coverBytes && coverBytes.length > 0) {
         coverPath = await this.saveCover(fileId, coverBytes, coversDir);
       }
 
+      // A person's own edits in the Book Dock are never replaced when a file is read again.
+      const keepEdits = abs ? (await this.repo.findById(fileId))?.metadataEditedAt != null : true;
       await this.repo.update(fileId, {
         embeddedMetadata: metadata,
+        ...(abs && !keepEdits ? { selectedMetadata: metadata } : {}),
         coverPath,
         status: 'ready',
       });
+      return { fromAudiobookshelf: abs !== null };
     } catch (err) {
       const errorClass = err instanceof Error ? err.name : 'Error';
       const errorMessage = sanitizeLogValue(err instanceof Error ? err.message : String(err));
@@ -46,6 +64,44 @@ export class BookDockMetadataService {
         status: 'error',
         errorMessage: err instanceof Error ? err.message : 'Metadata extraction failed',
       });
+      return { fromAudiobookshelf: false };
+    }
+  }
+
+  private async readAbsFolderData(fileId: number, format: string): Promise<AbsFolderData | null> {
+    const unitFiles = await this.repo.findUnitFiles(fileId);
+    const metadataFile = unitFiles.find((file) => file.role === 'metadata' && isAbsMetadataFile(file.fileName));
+    if (!metadataFile) return null;
+
+    const startedAt = Date.now();
+    const path = sanitizeLogValue(metadataFile.absolutePath);
+    try {
+      if ((await stat(metadataFile.absolutePath)).size > ABS_METADATA_MAX_BYTES) {
+        this.logger.warn(
+          `[book_dock.abs_metadata] [fail] fileId=${fileId} path="${path}" durationMs=${Date.now() - startedAt} errorClass=TooLarge error="file too large" - metadata.json skipped`,
+        );
+        return null;
+      }
+      const metadata = parseAbsMetadataJson(await readFile(metadataFile.absolutePath, 'utf8'), { audio: isAudioFormat(format) });
+      if (!metadata) {
+        this.logger.warn(
+          `[book_dock.abs_metadata] [fail] fileId=${fileId} path="${path}" durationMs=${Date.now() - startedAt} errorClass=InvalidJson error="not a JSON object" - metadata.json skipped`,
+        );
+        return null;
+      }
+      const coverFile = pickAbsCoverFile(unitFiles.filter((file) => file.role === 'cover'));
+      const cover = coverFile ? await readFile(coverFile.absolutePath).catch(() => null) : null;
+      this.logger.log(
+        `[book_dock.abs_metadata] [end] fileId=${fileId} path="${path}" durationMs=${Date.now() - startedAt} fields=${Object.keys(metadata).length} cover=${cover !== null} - Audiobookshelf details read`,
+      );
+      return { metadata, cover };
+    } catch (err) {
+      const errorClass = err instanceof Error ? err.name : 'Error';
+      const errorMessage = sanitizeLogValue(err instanceof Error ? err.message : String(err));
+      this.logger.warn(
+        `[book_dock.abs_metadata] [fail] fileId=${fileId} path="${path}" durationMs=${Date.now() - startedAt} errorClass=${errorClass} error="${errorMessage}" - metadata.json unreadable`,
+      );
+      return null;
     }
   }
 
@@ -146,4 +202,8 @@ function normalizeBookDockComicMetadata(
     if (Array.isArray(entries) && entries.length > 0) metadata[field] = entries;
   }
   return metadata;
+}
+
+function withoutUndefined(metadata: BookDockMetadata): BookDockMetadata {
+  return Object.fromEntries(Object.entries(metadata).filter(([, value]) => value !== undefined)) as BookDockMetadata;
 }
