@@ -182,6 +182,7 @@ describe('UserRepository', () => {
       .mockReturnValueOnce({ from: rowsFrom })
       .mockReturnValueOnce({ from: tagFilterFrom })
       .mockReturnValueOnce({ from: genreFilterFrom })
+      .mockReturnValueOnce({ from: genreFilterFrom })
       .mockReturnValueOnce({ from: libraryAccessFrom });
 
     const result = await repo.findAll({ page: 0, pageSize: 25, sortBy: 'username', sortDir: 'asc' });
@@ -336,7 +337,11 @@ describe('UserRepository', () => {
     const filterWhere = vi.fn().mockResolvedValue([]);
     const filterFrom = vi.fn().mockReturnValue({ where: filterWhere });
 
-    select.mockReturnValueOnce({ from }).mockReturnValueOnce({ from: filterFrom }).mockReturnValueOnce({ from: filterFrom });
+    select
+      .mockReturnValueOnce({ from })
+      .mockReturnValueOnce({ from: filterFrom })
+      .mockReturnValueOnce({ from: filterFrom })
+      .mockReturnValueOnce({ from: filterFrom });
 
     await expect(repo.findByIdWithPermissions(99)).resolves.toBeNull();
   });
@@ -392,7 +397,11 @@ describe('UserRepository', () => {
     const filterWhere = vi.fn().mockResolvedValue([]);
     const filterFrom = vi.fn().mockReturnValue({ where: filterWhere });
 
-    select.mockReturnValueOnce({ from }).mockReturnValueOnce({ from: filterFrom }).mockReturnValueOnce({ from: filterFrom });
+    select
+      .mockReturnValueOnce({ from })
+      .mockReturnValueOnce({ from: filterFrom })
+      .mockReturnValueOnce({ from: filterFrom })
+      .mockReturnValueOnce({ from: filterFrom });
 
     const user = await repo.findByIdWithPermissions(3);
 

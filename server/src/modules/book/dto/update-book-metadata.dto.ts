@@ -1,6 +1,13 @@
-import { IsArray, IsBoolean, IsInt, IsNumber, IsOptional, IsString, Matches, Max, MaxLength, Min, ValidateNested } from 'class-validator';
+import { IsArray, IsBoolean, IsIn, IsInt, IsNumber, IsOptional, IsString, Matches, Max, MaxLength, Min, ValidateNested } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { SERIES_INDEX_MAX_LENGTH, SERIES_INDEX_PATTERN, type MetadataProviderKey, type SeriesIndex } from '@bookorbit/types';
+import {
+  AGE_RATINGS,
+  SERIES_INDEX_MAX_LENGTH,
+  SERIES_INDEX_PATTERN,
+  type AgeRating,
+  type MetadataProviderKey,
+  type SeriesIndex,
+} from '@bookorbit/types';
 import { IsExternalProviderMap } from '../../../common/decorators/is-external-provider-map.decorator';
 import { IsMetadataProviderKey } from '../../../common/decorators/is-metadata-provider-key.decorator';
 import { MAX_SERIES_TOTAL_BOOKS } from '../../../common/utils/series-total-books.utils';
@@ -55,6 +62,8 @@ export class CommunityRatingDto {
 }
 
 export class UpdateBookMetadataDto {
+  /** Fork: null clears it. Saved for the book's whole series when it is in one. */
+  @IsOptional() @IsIn(AGE_RATINGS) ageRating?: AgeRating | null;
   @IsOptional() @IsString() @MaxLength(1000) title?: string | null;
   @IsOptional() @IsString() @MaxLength(1000) subtitle?: string | null;
   @IsOptional() @IsString() description?: string | null;

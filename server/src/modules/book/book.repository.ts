@@ -14,7 +14,8 @@ import type {
   TemporalJumpBucketPrecision,
   TemporalJumpBucketUnit,
 } from '@bookorbit/types';
-import type { BookCardLinkInfo, UnscopedBookRecommendation } from '@bookorbit/types';
+import type { AgeRating, BookCardLinkInfo, UnscopedBookRecommendation } from '@bookorbit/types';
+import { isAgeRating, NOT_RATED } from '@bookorbit/types';
 import { READ_ALONG_FORMAT_PRIORITY, getBookMediaKind, isAudioFormat, isComicFormat, normalizeCoverAspectRatio } from '@bookorbit/types';
 import { buildContentFilterClauses } from '../../common/utils/content-filter-sql.utils';
 import { rankFileRowsByBook } from '../../common/utils/primary-file-selection.utils';
@@ -32,6 +33,8 @@ import { LINK_FOLDED_BY_PREFERENCE_SQL, LINK_FOLDED_BY_SORT_SQL, LINK_FOLDED_COU
 import { preserveOutgoingChapters } from '../../db/preserve-audiobook-revision';
 import { DB } from '../../db';
 import * as schema from '../../db/schema';
+import { effectiveAgeRatingSql } from '../../common/utils/content-filter-sql.utils';
+import { setBookAgeRating } from '../../common/utils/age-rating-write.utils';
 import {
   authors,
   bookAuthors,
@@ -1105,7 +1108,9 @@ export class BookRepository {
           book_metadata.hardcover_edition_id,
           book_metadata.metadata_score,
           ${collectionPosition} AS collection_position,
-          NULLIF(lower(btrim(book_metadata.series_name)), '') AS norm_series
+          NULLIF(lower(btrim(book_metadata.series_name)), '') AS norm_series,
+          book_metadata.title_sort_key,
+          book_metadata.series_name_sort_key
         FROM books
         INNER JOIN libraries ON libraries.id = books.library_id
         LEFT JOIN book_metadata ON book_metadata.book_id = books.id
@@ -1246,8 +1251,8 @@ export class BookRepository {
           base.hardcover_edition_id,
           base.metadata_score,
           base.primary_author_sort_name AS author_sort_name,
-          COALESCE(base.norm_series, lower(base.title)) AS sort_title,
-          base.norm_series AS sort_series,
+          COALESCE(base.series_name_sort_key, base.title_sort_key) AS sort_title,
+          base.series_name_sort_key AS sort_series,
           COALESCE(sa.latest_added_at, base.added_at) AS sort_added_at,
           COALESCE(sa.first_collection_position, base.collection_position) AS sort_collection_position,
           sa.book_count,
@@ -1458,7 +1463,9 @@ export class BookRepository {
           book_metadata.publisher,
           book_metadata.page_count,
           book_metadata.metadata_score,
-          NULLIF(lower(btrim(book_metadata.series_name)), '') AS norm_series
+          NULLIF(lower(btrim(book_metadata.series_name)), '') AS norm_series,
+          book_metadata.title_sort_key,
+          book_metadata.series_name_sort_key
           ${source.baseExtraSelect}
         FROM books
         LEFT JOIN book_metadata ON book_metadata.book_id = books.id
@@ -1487,8 +1494,8 @@ export class BookRepository {
           base.metadata_score,
           ubr.rating,
           base.primary_author_sort_name AS author_sort_name,
-          COALESCE(base.norm_series, lower(base.title)) AS sort_title,
-          base.norm_series AS sort_series,
+          COALESCE(base.series_name_sort_key, base.title_sort_key) AS sort_title,
+          base.series_name_sort_key AS sort_series,
           COALESCE(sl.latest_added_at, base.added_at) AS sort_added_at
           ${source.representativeExtraSelect}
         FROM base_rows base
@@ -2549,6 +2556,17 @@ export class BookRepository {
       result.set(row.bookId, existing);
     }
     return result;
+  }
+
+  async setAgeRating(bookId: number, ageRating: AgeRating | null, executor: MetadataUpdateExecutor = this.db): Promise<number[]> {
+    return setBookAgeRating(executor, bookId, ageRating);
+  }
+
+  /** Fork: the rating readers are filtered by, as `effectiveAgeRatingSql` works it out, or null when unrated. */
+  async findEffectiveAgeRating(bookId: number): Promise<AgeRating | null> {
+    const result = await this.db.execute<{ age_rating: number | string | null }>(sql`SELECT ${effectiveAgeRatingSql(sql`${bookId}`)} AS age_rating`);
+    const value = Number(result.rows[0]?.age_rating ?? NOT_RATED);
+    return isAgeRating(value) ? value : null;
   }
 
   async updateMetadataFields(

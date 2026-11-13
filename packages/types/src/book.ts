@@ -326,6 +326,11 @@ export type BookDetail = {
   seriesIndex: SeriesIndex | null;
   seriesMemberships?: BookSeriesMembership[];
   rating: number | null;
+  /**
+   * Fork: the book's age rating as readers are filtered by it: the series' rating when the book is
+   * in a rated series, otherwise its own. Absent from servers without age ratings.
+   */
+  ageRating?: import("./age-rating").AgeRating | null;
   personalNote: string | null;
   personalNoteUpdatedAt: string | null;
   communityRatings: BookCommunityRating[];

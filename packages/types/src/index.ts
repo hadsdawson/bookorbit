@@ -38,6 +38,7 @@ export * from "./query";
 export * from "./jump-buckets";
 export * from "./reader-settings";
 export * from "./scanner";
+export * from "./age-rating";
 export * from "./search";
 export * from "./opds";
 export * from "./kobo";

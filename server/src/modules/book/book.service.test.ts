@@ -171,6 +171,8 @@ function makeService(
     setHardcoverEditionIdIfEmpty: vi.fn(),
     updateAddedAt: vi.fn(),
     replaceCommunityRatings: vi.fn(),
+    findEffectiveAgeRating: vi.fn().mockResolvedValue(null),
+    setAgeRating: vi.fn().mockResolvedValue([]),
     withTransaction: vi.fn(),
     deleteByIds: vi.fn(),
     deleteByIdsAndInvalidateScanState: vi.fn(),

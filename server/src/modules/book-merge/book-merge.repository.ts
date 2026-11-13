@@ -342,7 +342,8 @@ export class BookMergeRepository {
     for (const row of rows) {
       const userId = Number(row.user_id);
       const rules = byUser.get(userId) ?? { includeTagIds: [], excludeTagIds: [], includeGenreIds: [], excludeGenreIds: [] };
-      const key = `${row.filter_type}${row.kind === 'tag' ? 'TagIds' : 'GenreIds'}` as keyof Omit<ContentFilterRules, 'exemptRequestsFromUserId'>;
+      const key = `${row.filter_type}${row.kind === 'tag' ? 'TagIds' : 'GenreIds'}` as
+        'includeTagIds' | 'excludeTagIds' | 'includeGenreIds' | 'excludeGenreIds';
       rules[key].push(Number(row.item_id));
       byUser.set(userId, rules);
     }

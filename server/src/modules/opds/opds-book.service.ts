@@ -92,22 +92,26 @@ const OPDS_SORT_MAP: Record<Exclude<OpdsSortOrder, LastReadSortOrder>, SQL[]> = 
   updated_asc: [sql`${books.updatedAt} ASC`, sql`${books.id} ASC`],
   recently_read: [sql`${userBookStatus.updatedAt} DESC NULLS LAST`, sql`${books.id} ASC`],
   recently_read_asc: [sql`${userBookStatus.updatedAt} ASC NULLS LAST`, sql`${books.id} ASC`],
-  title_asc: [sql`${bookMetadata.title} ASC NULLS LAST`, sql`${books.id} ASC`],
-  title_desc: [sql`${bookMetadata.title} DESC NULLS LAST`, sql`${books.id} ASC`],
-  author_asc: [sql`${books.primaryAuthorSortName} ASC NULLS LAST`, sql`${bookMetadata.title} ASC NULLS LAST`, sql`${books.id} ASC`],
-  author_desc: [sql`${books.primaryAuthorSortName} DESC NULLS LAST`, sql`${bookMetadata.title} ASC NULLS LAST`, sql`${books.id} ASC`],
+  title_asc: [sql`${bookMetadata.titleSortKey} ASC NULLS LAST`, sql`${books.id} ASC`],
+  title_desc: [sql`${bookMetadata.titleSortKey} DESC NULLS LAST`, sql`${books.id} ASC`],
+  author_asc: [sql`${books.primaryAuthorSortName} ASC NULLS LAST`, sql`${bookMetadata.titleSortKey} ASC NULLS LAST`, sql`${books.id} ASC`],
+  author_desc: [sql`${books.primaryAuthorSortName} DESC NULLS LAST`, sql`${bookMetadata.titleSortKey} ASC NULLS LAST`, sql`${books.id} ASC`],
   published_asc: [
     sql`coalesce(${bookMetadata.publishedDate}, make_date(${bookMetadata.publishedYear}, 1, 1)) ASC NULLS LAST`,
-    sql`${bookMetadata.title} ASC NULLS LAST`,
+    sql`${bookMetadata.titleSortKey} ASC NULLS LAST`,
     sql`${books.id} ASC`,
   ],
   published_desc: [
     sql`coalesce(${bookMetadata.publishedDate}, make_date(${bookMetadata.publishedYear}, 1, 1)) DESC NULLS LAST`,
-    sql`${bookMetadata.title} ASC NULLS LAST`,
+    sql`${bookMetadata.titleSortKey} ASC NULLS LAST`,
     sql`${books.id} ASC`,
   ],
-  series_asc: [sql`${bookMetadata.seriesName} ASC NULLS LAST`, ...seriesIndexOrderBy(bookMetadata.seriesIndex, 'ASC'), sql`${books.id} ASC`],
-  series_desc: [sql`${bookMetadata.seriesName} DESC NULLS LAST`, ...seriesIndexOrderBy(bookMetadata.seriesIndex, 'DESC'), sql`${books.id} ASC`],
+  series_asc: [sql`${bookMetadata.seriesNameSortKey} ASC NULLS LAST`, ...seriesIndexOrderBy(bookMetadata.seriesIndex, 'ASC'), sql`${books.id} ASC`],
+  series_desc: [
+    sql`${bookMetadata.seriesNameSortKey} DESC NULLS LAST`,
+    ...seriesIndexOrderBy(bookMetadata.seriesIndex, 'DESC'),
+    sql`${books.id} ASC`,
+  ],
 };
 
 const READ_STATUS_BUCKETS = {
@@ -960,7 +964,7 @@ export class OpdsBookService {
     if (seriesIds.length === 0) return new Map();
     const memberOrder = [
       ...seriesIndexOrderBy(bookSeriesMemberships.seriesIndex, 'ASC'),
-      sql`${bookMetadata.title} ASC NULLS LAST`,
+      sql`${bookMetadata.titleSortKey} ASC NULLS LAST`,
       sql`${books.id} ASC`,
     ];
 
@@ -1622,7 +1626,11 @@ export class OpdsBookService {
 
   private buildContextSeriesOrder(sortOrder: OpdsSortOrder): SQL[] {
     const direction = sortOrder === 'series_desc' ? 'DESC' : 'ASC';
-    return [...seriesIndexOrderBy(bookSeriesMemberships.seriesIndex, direction), sql`${bookMetadata.title} ASC NULLS LAST`, sql`${books.id} ASC`];
+    return [
+      ...seriesIndexOrderBy(bookSeriesMemberships.seriesIndex, direction),
+      sql`${bookMetadata.titleSortKey} ASC NULLS LAST`,
+      sql`${books.id} ASC`,
+    ];
   }
 
   private fetchContextSeriesRows(bookIds: number[], filter: SeriesFilter): Promise<ContextSeriesRow[]> {

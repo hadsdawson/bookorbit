@@ -1,7 +1,8 @@
 import { sql } from 'drizzle-orm';
-import { check, index, integer, pgTable, primaryKey, serial, timestamp, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
+import { check, index, integer, pgTable, primaryKey, serial, smallint, text, timestamp, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
 
 import { books } from './books';
+import { sortKeyFromColumn } from './sort-key';
 
 export const bookSeries = pgTable(
   'book_series',
@@ -9,6 +10,9 @@ export const bookSeries = pgTable(
     id: serial('id').primaryKey(),
     name: varchar('name', { length: 500 }).notNull(),
     normalizedName: varchar('normalized_name', { length: 500 }).notNull(),
+    nameSortKey: text('name_sort_key').generatedAlwaysAs(() => sortKeyFromColumn('name')),
+    /** Fork: applies to every book in the series, including ones added later. */
+    ageRating: smallint('age_rating'),
     expectedBookCount: integer('expected_book_count'),
     expectedBookCountSource: varchar('expected_book_count_source', { length: 50 }),
     expectedBookCountUpdatedAt: timestamp('expected_book_count_updated_at', { withTimezone: true }),
@@ -23,6 +27,8 @@ export const bookSeries = pgTable(
     index('book_series_name_trgm_idx').using('gin', t.name.op('gin_trgm_ops')),
     index('book_series_name_unaccent_trgm_idx').using('gin', sql`public.bookorbit_unaccent(${t.name}) gin_trgm_ops`),
     index('book_series_name_lower_idx').on(sql`lower(${t.name})`),
+    index('book_series_name_sort_key_idx').on(t.nameSortKey),
+    check('book_series_age_rating_chk', sql`${t.ageRating} IS NULL OR ${t.ageRating} IN (0, 10, 13, 16, 18)`),
     // Ceiling mirrors MAX_SERIES_TOTAL_BOOKS; a provider cannot persist a total that would
     // make the series gap finder enumerate an unbounded range.
     check(

@@ -68,6 +68,8 @@ const {
   excludeTagItems,
   includeGenreItems,
   excludeGenreItems,
+  includeAgeRatings,
+  excludeAgeRatings,
   seeOwnRequestedBooks,
   contentFiltersEnabled,
   loading,
@@ -600,6 +602,8 @@ async function handleSubmit() {
             v-model:exclude-tags="excludeTagItems"
             v-model:include-genres="includeGenreItems"
             v-model:exclude-genres="excludeGenreItems"
+            v-model:include-age-ratings="includeAgeRatings"
+            v-model:exclude-age-ratings="excludeAgeRatings"
             v-model:see-own-requested-books="seeOwnRequestedBooks"
             :is-edit="isEdit"
             :is-superuser-target="isSuperuserTarget"

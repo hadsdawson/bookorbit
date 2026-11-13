@@ -16,6 +16,9 @@ export type StatusGroupLabels = {
   complete: string
 }
 
+/** Fork: the leading words the server's name sort ignores. */
+const LEADING_ARTICLE = /^(the|an|a)\s+/i
+
 const STATUS_ORDER = ['inProgress', 'hasGaps', 'notStarted', 'complete'] as const
 type StatusKey = (typeof STATUS_ORDER)[number]
 
@@ -37,7 +40,8 @@ export function groupSeries(items: SeriesSummary[], grouping: SeriesGrouping, st
   const buckets = new Map<string, SeriesSummary[]>()
   const keyOf = (series: SeriesSummary): string => {
     if (grouping === 'letter') {
-      const first = series.name.trim().charAt(0).toUpperCase()
+      // Matches the server's name sort, so "The Expanse" is grouped under E where it is sorted.
+      const first = series.name.trim().replace(LEADING_ARTICLE, '').charAt(0).toUpperCase()
       return /^\p{Lu}$/u.test(first) ? first : '#'
     }
     if (grouping === 'library') return series.libraryNames[0] ?? ''

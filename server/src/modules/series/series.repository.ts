@@ -130,10 +130,24 @@ export class SeriesRepository {
       ELSE (count(distinct CASE WHEN ${userBookStatus.status} = 'read' THEN ${books.id} END)::float / count(distinct ${books.id})::float)
       END`;
     const nameExpr = sql<string>`${bookSeries.name}`;
+    // Fork: name sorts ignore a leading "The", "A" or "An"; the name itself breaks ties.
+    const nameSortExpr = sql<string>`COALESCE(${bookSeries.nameSortKey}, lower(${bookSeries.name}))`;
+    // The first author by sort name ("Herbert, Frank") among the series' books, as book lists sort by author.
+    const authorSortExpr = sql<string | null>`min(${books.primaryAuthorSortName})`;
 
     const hasGapsExpr = this.buildHasGapsExpression(bookCountExpr);
     const completionHaving = this.buildCompletionHaving(params.completionStatus, bookCountExpr, readCountExpr, hasGapsExpr);
-    const sortExpr = this.buildSortExpression(params.sort, params.order, nameExpr, bookCountExpr, lastAddedExpr, readProgressExpr, params.q);
+    const sortExpr = this.buildSortExpression(
+      params.sort,
+      params.order,
+      nameSortExpr,
+      nameExpr,
+      authorSortExpr,
+      bookCountExpr,
+      lastAddedExpr,
+      readProgressExpr,
+      params.q,
+    );
 
     // Facets are counted before the completion filter, so the tab a user is standing on can
     // still show what the other tabs hold. One pass replaces the separate total query.
@@ -607,18 +621,20 @@ export class SeriesRepository {
   private buildSortExpression(
     sort: SeriesListSort,
     order: SortDirection,
+    nameSortExpr: SQL<string>,
     nameExpr: SQL<string>,
+    authorSortExpr: SQL<string | null>,
     bookCountExpr: SQL<number>,
     lastAddedExpr: SQL<string | null>,
     readProgressExpr: SQL<number>,
     query?: string,
   ): SQL[] {
     const dir = order === 'asc' ? asc : desc;
-    const tiebreaker = asc(nameExpr);
+    const tiebreaker = asc(nameSortExpr);
 
     switch (sort) {
       case 'relevance': {
-        if (!query) return [asc(nameExpr)];
+        if (!query) return [asc(nameSortExpr), asc(nameExpr)];
         const authorScore = sql`COALESCE(max((
           SELECT max(${seriesSearchScore(authors.name, query, 800, 680, 520, 340)})
           FROM ${bookAuthors}
@@ -634,9 +650,11 @@ export class SeriesRepository {
         return [dir(lastAddedExpr), tiebreaker];
       case 'readProgress':
         return [dir(readProgressExpr), tiebreaker];
+      case 'author':
+        return [sql`${authorSortExpr} ${sql.raw(order === 'asc' ? 'ASC' : 'DESC')} NULLS LAST`, tiebreaker];
       case 'name':
       default:
-        return [dir(nameExpr)];
+        return [dir(nameSortExpr), asc(nameExpr)];
     }
   }
 
@@ -645,7 +663,7 @@ export class SeriesRepository {
 
     switch (sort) {
       case 'title':
-        return [dir(bookMetadata.title), asc(books.id)];
+        return [dir(bookMetadata.titleSortKey), asc(books.id)];
       case 'addedAt':
         return [dir(books.addedAt), asc(books.id)];
       case 'seriesIndex':

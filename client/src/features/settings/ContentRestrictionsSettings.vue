@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { ShieldAlert } from '@lucide/vue'
 import { api } from '@/lib/api'
 import type { ContentFilterRulesWithNames } from '@bookorbit/types'
+import { AGE_RATING_LABEL_KEYS } from '@/lib/age-rating'
 
 const { t } = useI18n()
 
@@ -27,7 +28,14 @@ onMounted(async () => {
 
   <template v-else-if="filters">
     <div
-      v-if="!filters.includeTags?.length && !filters.excludeTags?.length && !filters.includeGenres?.length && !filters.excludeGenres?.length"
+      v-if="
+        !filters.includeTags?.length &&
+        !filters.excludeTags?.length &&
+        !filters.includeGenres?.length &&
+        !filters.excludeGenres?.length &&
+        !filters.includeAgeRatings?.length &&
+        !filters.excludeAgeRatings?.length
+      "
       class="settings-empty-state"
       data-testid="restrictions-empty-state"
     >
@@ -97,6 +105,34 @@ onMounted(async () => {
               class="inline-flex items-center rounded-full bg-destructive/10 px-3 py-1 text-xs font-medium text-destructive"
             >
               {{ genre.name }}
+            </span>
+          </div>
+        </section>
+
+        <section v-if="filters.includeAgeRatings?.length" class="space-y-2 px-4 py-3.5 md:px-5 md:py-4" data-testid="allowed-age-ratings">
+          <p class="settings-label">{{ t('settings.account.restrictions.allowedAgeRatings.title') }}</p>
+          <p class="settings-hint">{{ t('settings.account.restrictions.allowedAgeRatings.description') }}</p>
+          <div class="flex flex-wrap gap-2 pt-1">
+            <span
+              v-for="rating in filters.includeAgeRatings"
+              :key="rating"
+              class="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
+            >
+              {{ t(AGE_RATING_LABEL_KEYS[rating]) }}
+            </span>
+          </div>
+        </section>
+
+        <section v-if="filters.excludeAgeRatings?.length" class="space-y-2 px-4 py-3.5 md:px-5 md:py-4" data-testid="blocked-age-ratings">
+          <p class="settings-label">{{ t('settings.account.restrictions.blockedAgeRatings.title') }}</p>
+          <p class="settings-hint">{{ t('settings.account.restrictions.blockedAgeRatings.description') }}</p>
+          <div class="flex flex-wrap gap-2 pt-1">
+            <span
+              v-for="rating in filters.excludeAgeRatings"
+              :key="rating"
+              class="inline-flex items-center rounded-full bg-destructive/10 px-3 py-1 text-xs font-medium text-destructive"
+            >
+              {{ t(AGE_RATING_LABEL_KEYS[rating]) }}
             </span>
           </div>
         </section>

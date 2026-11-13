@@ -11,6 +11,7 @@ import {
   primaryKey,
   real,
   serial,
+  smallint,
   text,
   timestamp,
   unique,
@@ -36,6 +37,7 @@ import type { AudiobookChapter, AudiobookChapterSource, ChapterLookupQueueStatus
 import { users } from './auth';
 import { books } from './books';
 import { bookSeries } from './series';
+import { sortKeyFromColumn } from './sort-key';
 
 export const bookMetadata = pgTable(
   'book_metadata',
@@ -44,6 +46,7 @@ export const bookMetadata = pgTable(
       .primaryKey()
       .references(() => books.id, { onDelete: 'cascade' }),
     title: varchar('title', { length: 1000 }),
+    titleSortKey: text('title_sort_key').generatedAlwaysAs(() => sortKeyFromColumn('title')),
     subtitle: varchar('subtitle', { length: 1000 }),
     description: text('description'),
     isbn10: varchar('isbn10', { length: 10 }),
@@ -55,7 +58,10 @@ export const bookMetadata = pgTable(
     pageCount: integer('page_count'),
     seriesId: integer('series_id').references(() => bookSeries.id, { onDelete: 'set null' }),
     seriesName: varchar('series_name', { length: 500 }),
+    seriesNameSortKey: text('series_name_sort_key').generatedAlwaysAs(() => sortKeyFromColumn('series_name')),
     seriesIndex: varchar('series_index', { length: 20 }),
+    /** Youngest age the book suits (0 = all ages). A series' own rating, when set, overrides it. */
+    ageRating: smallint('age_rating'),
     rating: integer('rating'),
     coverSource: varchar('cover_source', { length: 9 }),
     googleBooksId: varchar('google_books_id', { length: 50 }),
@@ -112,6 +118,10 @@ export const bookMetadata = pgTable(
     index('bm_title_unaccent_trgm_idx').using('gin', sql`public.bookorbit_unaccent(${t.title}) gin_trgm_ops`),
     index('bm_title_lower_idx').on(sql`lower(${t.title})`),
     index('bm_title_book_id_idx').on(t.title, t.bookId),
+    index('bm_title_sort_key_book_id_idx').on(t.titleSortKey, t.bookId),
+    index('bm_series_name_sort_key_idx').on(t.seriesNameSortKey),
+    index('bm_age_rating_idx').on(t.ageRating),
+    check('bm_age_rating_chk', sql`${t.ageRating} IS NULL OR ${t.ageRating} IN (0, 10, 13, 16, 18)`),
     index('bm_subtitle_unaccent_trgm_idx').using('gin', sql`public.bookorbit_unaccent(${t.subtitle}) gin_trgm_ops`),
     index('bm_series_trgm_idx').using('gin', t.seriesName.op('gin_trgm_ops')),
     index('bm_series_unaccent_trgm_idx').using('gin', sql`public.bookorbit_unaccent(${t.seriesName}) gin_trgm_ops`),

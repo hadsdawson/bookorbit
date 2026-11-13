@@ -2164,6 +2164,11 @@ export class BookService {
         normalizedLockedFields = await this.bookMetadataLockService.replaceLockedFields(id, options.lockedFields, tx);
       }
 
+      // Last, so the series it spreads to are the ones the save above left the book in.
+      if (dto.ageRating !== undefined) {
+        await this.bookRepo.setAgeRating(id, dto.ageRating ?? null, tx);
+      }
+
       this.throwIfMetadataUpdateFailpoint('beforeTransactionCommit');
     });
 
@@ -3661,17 +3666,19 @@ export class BookService {
 
   async getDetail(id: number, user: RequestUser): Promise<BookDetailDto> {
     await this.verifyBookAccess(id, user);
-    const [result, personalRating, personalNote, readStatus, comicMeta, collectionRows, readAloudSyncMode, coverContext, linked] = await Promise.all([
-      this.bookRepo.findById(id),
-      this.bookRepo.findRatingByBookAndUser(id, user.id),
-      this.userBookNoteService.findOne(user.id, id),
-      this.userBookStatusService.findOne(user.id, id),
-      this.comicMetadataService.findByBookId(id),
-      this.bookRepo.findCollectionsByBookId(id, user.id),
-      this.bookRepo.findReadAloudSyncMode(user.id, id),
-      this.coverStore.contextFor(id),
-      this.findLinkedBooks(id, user),
-    ]);
+    const [result, personalRating, personalNote, readStatus, comicMeta, collectionRows, readAloudSyncMode, coverContext, linked, ageRating] =
+      await Promise.all([
+        this.bookRepo.findById(id),
+        this.bookRepo.findRatingByBookAndUser(id, user.id),
+        this.userBookNoteService.findOne(user.id, id),
+        this.userBookStatusService.findOne(user.id, id),
+        this.comicMetadataService.findByBookId(id),
+        this.bookRepo.findCollectionsByBookId(id, user.id),
+        this.bookRepo.findReadAloudSyncMode(user.id, id),
+        this.coverStore.contextFor(id),
+        this.findLinkedBooks(id, user),
+        this.bookRepo.findEffectiveAgeRating(id),
+      ]);
     if (!result || !coverContext) throw new NotFoundException(`Book ${id} not found`);
 
     const { book, authorRows, genreRows, tagRows, fileRows, narratorRows, seriesMembershipRows, communityRatingRows } = result;
@@ -3723,6 +3730,7 @@ export class BookService {
       seriesIndex: meta?.seriesIndex ?? null,
       seriesMemberships: seriesMembershipRows,
       rating: personalRating,
+      ageRating,
       personalNote: personalNote?.note ?? null,
       personalNoteUpdatedAt: personalNote ? new Date(personalNote.updatedAt) : null,
       communityRatings: this.mapCommunityRatingRows(communityRatingRows),

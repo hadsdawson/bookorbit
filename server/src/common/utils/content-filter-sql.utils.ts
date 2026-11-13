@@ -1,7 +1,7 @@
-import { SQL, and, eq, inArray, notExists, exists, or, sql } from 'drizzle-orm';
+import { SQL, and, eq, inArray, notExists, notInArray, exists, or, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import type { ContentFilterRules } from '@bookorbit/types';
+import { NOT_RATED, type ContentFilterRules } from '@bookorbit/types';
 import * as schema from '../../db/schema';
 
 type Db = NodePgDatabase<typeof schema>;
@@ -20,6 +20,12 @@ type Db = NodePgDatabase<typeof schema>;
  * Exclude semantics (applied independently, after include):
  * - excludeTagIds: book must NOT have any of these tags.
  * - excludeGenreIds: book must NOT have any of these genres.
+ *
+ * Age ratings (fork, applied independently of tags and genres):
+ * - A book's rating is its series' rating when it is in a rated series, otherwise its own, and
+ *   NOT_RATED (-1) when neither is set, so "Not rated" can be included or excluded like a rating.
+ * - includeAgeRatings: the book's rating must be one of these.
+ * - excludeAgeRatings: the book's rating must not be one of these.
  *
  * Exemption (applied last, over the whole set):
  * - exemptRequestsFromUserId: a book that fulfilled a request this user made or joined passes
@@ -75,6 +81,11 @@ export function buildContentFilterClauses(contentFilters: ContentFilterRules, db
     clauses.push(notExists(sq));
   }
 
+  const includeAges = contentFilters.includeAgeRatings ?? [];
+  const excludeAges = contentFilters.excludeAgeRatings ?? [];
+  if (includeAges.length > 0) clauses.push(inArray(effectiveAgeRatingSql(), includeAges));
+  if (excludeAges.length > 0) clauses.push(notInArray(effectiveAgeRatingSql(), excludeAges));
+
   if (clauses.length === 0) return clauses;
 
   // Exemption wraps the whole rule set rather than joining the include side, because a book the
@@ -118,4 +129,19 @@ export function buildContentFilterClauses(contentFilters: ContentFilterRules, db
   }
 
   return clauses;
+}
+
+/**
+ * A book's age rating as readers are filtered by it, for the book in the outer query's `books` row:
+ * the strictest rating among its series, else its own, else NOT_RATED. Both lookups are by primary
+ * key or indexed book id, so this stays cheap per row.
+ */
+export function effectiveAgeRatingSql(bookId: SQL | typeof schema.books.id = schema.books.id): SQL<number> {
+  return sql<number>`COALESCE(
+    (SELECT max(${schema.bookSeries.ageRating}) FROM ${schema.bookSeriesMemberships}
+      INNER JOIN ${schema.bookSeries} ON ${schema.bookSeries.id} = ${schema.bookSeriesMemberships.seriesId}
+      WHERE ${schema.bookSeriesMemberships.bookId} = ${bookId}),
+    (SELECT ${schema.bookMetadata.ageRating} FROM ${schema.bookMetadata} WHERE ${schema.bookMetadata.bookId} = ${bookId}),
+    ${NOT_RATED}
+  )`;
 }

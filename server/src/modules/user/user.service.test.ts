@@ -764,6 +764,8 @@ describe('UserService', () => {
       excludeTagIds: [],
       includeGenreIds: [],
       excludeGenreIds: [3],
+      includeAgeRatings: [],
+      excludeAgeRatings: [],
     });
     expect(userRepo.update).toHaveBeenCalledWith(5, { seeOwnRequestedBooks: true });
   });
@@ -798,6 +800,8 @@ describe('UserService', () => {
       excludeTagIds: [],
       includeGenreIds: [],
       excludeGenreIds: [3],
+      includeAgeRatings: [],
+      excludeAgeRatings: [],
     });
   });
 
