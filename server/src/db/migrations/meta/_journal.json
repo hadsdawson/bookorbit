@@ -1037,6 +1037,13 @@
       "when": 1794595062517,
       "tag": "0147_new_releases",
       "breakpoints": true
+    },
+    {
+      "idx": 148,
+      "version": "7",
+      "when": 1794598600658,
+      "tag": "0148_rename_on_add_file",
+      "breakpoints": true
     }
   ]
 }

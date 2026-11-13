@@ -1314,7 +1314,9 @@
           "fileRename": "Rename files",
           "on": "{name}: on",
           "off": "{name}: off",
-          "legendHint": "Dashed means off"
+          "legendHint": "Dashed means off",
+          "renameOnAddFile": "Rename added files",
+          "renameOnAddFileHint": "Every file added to a book is renamed to this library's naming pattern, whoever adds it."
         },
         "stateOn": "On",
         "stateOff": "Off",
@@ -1404,7 +1406,10 @@
           "fileWriteOn": "\"{name}\" will write details into its files the next time they are saved",
           "fileWriteOff": "\"{name}\" will no longer write details into its files",
           "renameOn": "\"{name}\" will rename files to your naming pattern the next time their details are saved",
-          "renameOff": "\"{name}\" will no longer rename files"
+          "renameOff": "\"{name}\" will no longer rename files",
+          "renameOnAddFileAria": "Always rename files added to books in {name}",
+          "renameOnAddFileOn": "Files added to books in {name} are now always renamed",
+          "renameOnAddFileOff": "Files added to books in {name} keep their names unless renamed"
         },
         "historyFor": "Scan history for {name}",
         "scanNothingNew": "nothing new yet",
@@ -6914,7 +6919,9 @@
         "uploadingProgress": "{done} of {total} uploading...",
         "renameAfter": "Rename all book files after upload",
         "uploadCount": "Upload ({count})",
-        "upload": "Upload"
+        "upload": "Upload",
+        "renameLocked": "Files are renamed to the library's naming pattern",
+        "renameLockedHint": "Always on for this library. An admin can change it in Settings > Libraries."
       },
       "addSession": {
         "errors": {

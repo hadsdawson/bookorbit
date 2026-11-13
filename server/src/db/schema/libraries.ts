@@ -71,6 +71,8 @@ export const libraries = pgTable(
     fileWriteReadAlongEnabled: boolean('file_write_read_along_enabled').notNull().default(false),
     fileWriteReadAlongMaxFileSizeMb: integer('file_write_read_along_max_file_size_mb').notNull().default(1000),
     fileRenameEnabled: boolean('file_rename_enabled').notNull().default(false),
+    /** Fork: a file added to a book is always renamed to the naming pattern, whoever adds it. */
+    renameOnAddFile: boolean('rename_on_add_file').notNull().default(false),
 
     // File naming pattern for uploads (null = use global default)
     fileNamingPattern: varchar('file_naming_pattern', { length: 500 }),

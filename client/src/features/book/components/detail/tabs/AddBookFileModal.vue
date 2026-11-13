@@ -9,6 +9,8 @@ import { formatBytes } from '@/lib/formatting'
 const props = defineProps<{
   bookId: number
   canRenameFiles: boolean
+  /** The library renames every added file itself; the box shows that and cannot be cleared. */
+  renameLocked?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -89,7 +91,8 @@ function onFileInputChange(e: Event) {
 
 async function handleUpload() {
   if (pendingCount.value === 0 || isUploading.value) return
-  await startUpload(props.bookId, { renameAfter: props.canRenameFiles && renameAfter.value })
+  // A locked library renames on the server once the uploads go quiet, so the client asks for nothing.
+  await startUpload(props.bookId, { renameAfter: !props.renameLocked && props.canRenameFiles && renameAfter.value })
 }
 
 function fileRowClass(status: string): string {
@@ -286,6 +289,15 @@ function formatPillClass(filename: string): string {
             <span v-else-if="isUploading" class="text-xs text-muted-foreground tabular-nums">{{
               t('book.detail.addFile.uploadingProgress', { done: doneCount, total: files.length })
             }}</span>
+            <label
+              v-else-if="renameLocked"
+              class="flex items-center gap-2 select-none"
+              :title="t('book.detail.addFile.renameLockedHint')"
+              data-testid="rename-locked"
+            >
+              <input type="checkbox" class="w-3.5 h-3.5 rounded-xs border-border accent-primary" checked disabled />
+              <span class="text-xs text-muted-foreground">{{ t('book.detail.addFile.renameLocked') }}</span>
+            </label>
             <label v-else-if="canRenameFiles" class="flex items-center gap-2 cursor-pointer select-none">
               <input
                 v-model="renameAfter"

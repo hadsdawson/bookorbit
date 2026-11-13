@@ -212,6 +212,7 @@ export class LibraryService {
       fileWriteReadAlongEnabled: dto.fileWriteReadAlongEnabled ?? false,
       fileWriteReadAlongMaxFileSizeMb: dto.fileWriteReadAlongMaxFileSizeMb ?? 1000,
       fileRenameEnabled: dto.fileRenameEnabled ?? false,
+      renameOnAddFile: dto.renameOnAddFile ?? false,
     });
 
     const folders = await this.libraryRepo.insertFolders(folderPaths.map((path) => ({ libraryId: library.id, path })));

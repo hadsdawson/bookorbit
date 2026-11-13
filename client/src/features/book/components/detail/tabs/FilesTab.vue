@@ -18,6 +18,7 @@ import FilesHeroBar from '../files/FilesHeroBar.vue'
 import FileListCard from '../files/FileListCard.vue'
 import FileDetailCard from '../files/FileDetailCard.vue'
 import WriteBackCard from '../files/WriteBackCard.vue'
+import { useLibraries } from '@/features/library/composables/useLibraries'
 import AddBookFileModal from './AddBookFileModal.vue'
 import ReadAloudDialog from '@/features/read-aloud/components/ReadAloudDialog.vue'
 import ReadAloudJobCard from '@/features/read-aloud/components/ReadAloudJobCard.vue'
@@ -34,6 +35,9 @@ const { downloadFile: downloadBookFile } = useBookDownload()
 const { hasPermission, isDemoRestrictedAccount } = usePermissions()
 const { hasLibraryPermission } = useLibraryPermissions()
 const canEditMetadata = computed(() => hasLibraryPermission('library_edit_metadata', props.book?.libraryId, 'editor'))
+const { libraries } = useLibraries()
+/** The library renames every added file itself, so the upload's own choice is moot. */
+const renameLocked = computed(() => libraries.value.some((library) => library.id === props.book?.libraryId && library.renameOnAddFile))
 const { user } = useAuth()
 
 const book = toRef(props, 'book')
@@ -587,6 +591,7 @@ async function confirmDelete() {
     v-if="addFileModalOpen"
     :book-id="book.id"
     :can-rename-files="canEditMetadata"
+    :rename-locked="renameLocked"
     @close="closeAddFileModal"
     @uploaded="onFilesAdded"
   />
