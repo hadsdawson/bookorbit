@@ -1,6 +1,6 @@
 import { of } from 'rxjs';
 
-import { RequestReleaseDateService } from './request-release-date.service';
+import { isSettledDate, RequestReleaseDateService } from './request-release-date.service';
 
 function makeService(byProvider: Record<string, unknown[]>, request: Record<string, unknown> = {}) {
   const repo = {
@@ -109,6 +109,14 @@ describe('RequestReleaseDateService', () => {
   describe('weekly re-check', () => {
     const lease = { mediaKind: 'ebook', title: 'The Lease of Nature', authors: ['Anderson Boyd'], publishedDate: '2026-05-19' };
 
+    // Before the dates below, so they are releases still to come.
+    beforeEach(() => {
+      vi.useFakeTimers({ now: new Date('2026-02-01T12:00:00Z'), toFake: ['Date'] });
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
     async function recheck(service: RequestReleaseDateService, repo: { findOpenDatedIds: ReturnType<typeof vi.fn> }) {
       repo.findOpenDatedIds.mockResolvedValue([7]);
       await service.runWeeklyRecheck(new Date('2026-11-15T10:23:00Z'));
@@ -174,7 +182,64 @@ describe('RequestReleaseDateService', () => {
 
       appSettings.getValue.mockResolvedValue('2026-11-08T10:23:00.000Z');
       await recheck(service, repo);
-      expect(repo.findOpenDatedIds).toHaveBeenCalledWith(1000);
+      expect(repo.findOpenDatedIds).toHaveBeenCalledWith(1000, 0);
+    });
+
+    it('keeps the date of a book that is already out when another past date turns up', async () => {
+      vi.setSystemTime(new Date('2026-11-15T10:23:00Z'));
+      const { service, repo, appSettings } = makeService(
+        { amazon: [{ title: 'The Lease of Nature', authors: ['Anderson Boyd'], publishedDate: '2024-01-09' }] },
+        { ...lease, coverUrl: 'https://img.example/picked.jpg' },
+      );
+      appSettings.getValue.mockResolvedValue(null);
+      await recheck(service, repo);
+      expect(repo.setPublishedDate).not.toHaveBeenCalled();
+    });
+
+    it('does not replace a date on a title match alone', async () => {
+      const { service, repo, appSettings } = makeService(
+        { amazon: [{ title: 'The Lease of Nature', authors: ['Someone Else'], publishedDate: '2026-07-07' }] },
+        { ...lease, authors: [], coverUrl: 'https://img.example/picked.jpg' },
+      );
+      appSettings.getValue.mockResolvedValue(null);
+      await recheck(service, repo);
+      expect(repo.setPublishedDate).not.toHaveBeenCalled();
+    });
+
+    it('carries on from where a capped run stopped, then starts over', async () => {
+      const { service, repo, appSettings } = makeService({});
+      const settings = new Map<string, string>();
+      appSettings.getValue.mockImplementation((key: string) => Promise.resolve(settings.get(key) ?? null));
+      appSettings.setValue.mockImplementation((key: string, value: string) => {
+        settings.set(key, value);
+        return Promise.resolve();
+      });
+      repo.findById.mockResolvedValue(null);
+      vi.spyOn(globalThis, 'setTimeout').mockImplementation(((fn: () => void) => {
+        fn();
+        return 0;
+      }) as never);
+      const full = Array.from({ length: 1000 }, (_, index) => index + 1);
+
+      repo.findOpenDatedIds.mockResolvedValueOnce(full);
+      await service.runWeeklyRecheck(new Date('2026-02-01T10:23:00Z'));
+      expect(settings.get('book_request_weekly_recheck_cursor')).toBe('1000');
+
+      repo.findOpenDatedIds.mockResolvedValueOnce([1001, 1002]);
+      await service.runWeeklyRecheck(new Date('2026-02-09T10:23:00Z'));
+      expect(repo.findOpenDatedIds).toHaveBeenLastCalledWith(1000, 1000);
+      expect(settings.get('book_request_weekly_recheck_cursor')).toBe('');
+      vi.restoreAllMocks();
+    });
+  });
+
+  describe('isSettledDate', () => {
+    const now = new Date('2026-11-15T00:00:00Z');
+    it('settles only when the date on file and the one found are both in the past', () => {
+      expect(isSettledDate('2026-05-19', '2024-01-09', now)).toBe(true);
+      expect(isSettledDate('2026-05-19', '2027-01-09', now)).toBe(false);
+      expect(isSettledDate('2027-05-19', '2026-01-09', now)).toBe(false);
+      expect(isSettledDate(null, '2024-01-09', now)).toBe(false);
     });
   });
 });

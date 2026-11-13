@@ -11,6 +11,19 @@ import { BookDockRepository } from './book-dock.repository';
 import type { CombineBookDockDto } from './dto';
 
 /**
+ * What stops a file being filed whether it joins a book or stands alone. A name clash or a duplicate
+ * found for a file on its own says nothing about joining, so those are left to the filing itself.
+ */
+const BLOCKING_PREVIEW_STATUSES: ReadonlySet<string> = new Set([
+  'missing_destination',
+  'unsupported_layout',
+  'invalid_target',
+  'invalid_format',
+  'access_denied',
+  'error',
+]);
+
+/**
  * Files two or more docked files as one book: the primary file is filed as a new book, then every
  * other file is added to that book as another format, through the same join a person can pick by
  * hand for a single file. Nothing new about where files go or who may file them lives here.
@@ -45,7 +58,7 @@ export class BookDockCombineService {
       user.id,
       user.isSuperuser,
       canManageAll,
-      [primaryFileId],
+      [primaryFileId, ...others],
       false,
       undefined,
       dto.defaultLibraryId,
@@ -63,6 +76,16 @@ export class BookDockCombineService {
     }
     if (!primaryPreview.canJoinBook) {
       throw new BadRequestException('Combining files needs a library that keeps each book in its own folder');
+    }
+    for (const fileId of others) {
+      const item = preview.items.find((candidate) => candidate.fileId === fileId);
+      const name = rows.find((row) => row.id === fileId)?.fileName ?? `file ${fileId}`;
+      if (!item || BLOCKING_PREVIEW_STATUSES.has(item.status)) {
+        throw new BadRequestException(`${name} cannot be filed as it is, so nothing was combined${item?.message ? `: ${item.message}` : ''}`);
+      }
+      if (!item.canJoinBook) {
+        throw new BadRequestException(`${name} goes to a library that cannot hold it in the same book, so nothing was combined`);
+      }
     }
 
     const primary = await this.finalizeService.finalize(

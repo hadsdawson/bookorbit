@@ -5,7 +5,15 @@ import { BookDockCombineService } from './book-dock-combine.service';
 const user = { id: 1, isSuperuser: false } as never;
 
 function makeService(
-  options: { canJoinBook?: boolean; previewStatus?: string; primaryFiled?: boolean; targetLibraryId?: number; formatPriority?: string[] } = {},
+  options: {
+    canJoinBook?: boolean;
+    previewStatus?: string;
+    otherStatus?: string;
+    otherCanJoinBook?: boolean;
+    primaryFiled?: boolean;
+    targetLibraryId?: number;
+    formatPriority?: string[];
+  } = {},
 ) {
   const repo = {
     findByIds: vi.fn().mockResolvedValue([
@@ -16,7 +24,11 @@ function makeService(
   const finalizeService = {
     previewFinalize: vi.fn().mockImplementation((_u: unknown, _s: unknown, _m: unknown, fileIds: number[]) =>
       Promise.resolve({
-        items: fileIds.map((fileId) => ({ fileId, status: options.previewStatus ?? 'ready', canJoinBook: options.canJoinBook ?? true })),
+        items: fileIds.map((fileId, index) => ({
+          fileId,
+          status: (index === 0 ? options.previewStatus : options.otherStatus) ?? 'ready',
+          canJoinBook: (index === 0 ? options.canJoinBook : options.otherCanJoinBook) ?? true,
+        })),
       }),
     ),
     finalize: vi.fn().mockImplementation((_u, _s, _m, fileIds: number[], _a, _e, _l, _f, overrides?: Array<{ joinBook: unknown }>) =>
@@ -108,5 +120,23 @@ describe('BookDockCombineService', () => {
     const { service, repo } = makeService();
     repo.findByIds.mockResolvedValue([{ id: 11, fileName: 'Book A.m4b' }]);
     await expect(service.combine({ fileIds: [11, 12] }, user, false)).rejects.toThrow(BadRequestException);
+  });
+
+  it('files nothing when one of the other files cannot be filed', async () => {
+    const { service, finalizeService } = makeService({ otherStatus: 'missing_destination' });
+    await expect(service.combine({ fileIds: [11, 12] }, user, false)).rejects.toThrow(/Book A\.m4b cannot be filed.*nothing was combined/);
+    expect(finalizeService.finalize).not.toHaveBeenCalled();
+  });
+
+  it('files nothing when one of the other files could not join the book', async () => {
+    const { service, finalizeService } = makeService({ otherCanJoinBook: false });
+    await expect(service.combine({ fileIds: [11, 12] }, user, false)).rejects.toThrow(BadRequestException);
+    expect(finalizeService.finalize).not.toHaveBeenCalled();
+  });
+
+  it('leaves a name clash on another file to the filing itself', async () => {
+    const { service, finalizeService } = makeService({ otherStatus: 'destination_conflict' });
+    await service.combine({ fileIds: [11, 12] }, user, false);
+    expect(finalizeService.finalize).toHaveBeenCalledTimes(2);
   });
 });
