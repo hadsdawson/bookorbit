@@ -5,17 +5,17 @@ import type { CommunityRatingsRefreshStatus } from '@bookorbit/types'
 import CommunityRatingsView from './CommunityRatingsView.vue'
 
 const api = vi.hoisted(() => ({
-  getCommunityRatingsRefreshStatus: vi.fn(),
-  setCommunityRatingsRefreshSchedule: vi.fn(),
-  startCommunityRatingsRefresh: vi.fn(),
-  cancelCommunityRatingsRefresh: vi.fn(),
+  getCommunityRatingsRefreshStatus: vi.fn<() => Promise<CommunityRatingsRefreshStatus>>(),
+  setCommunityRatingsRefreshSchedule: vi.fn<(schedule: string) => Promise<CommunityRatingsRefreshStatus>>(),
+  startCommunityRatingsRefresh: vi.fn<() => Promise<CommunityRatingsRefreshStatus>>(),
+  cancelCommunityRatingsRefresh: vi.fn<() => Promise<CommunityRatingsRefreshStatus>>(),
 }))
 
 vi.mock('../../api/community-ratings', () => api)
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({ t: (key: string, params?: Record<string, unknown>) => (params ? `${key} ${JSON.stringify(params)}` : key) }),
 }))
-vi.mock('vue-sonner', () => ({ toast: { error: vi.fn() } }))
+vi.mock('vue-sonner', () => ({ toast: { error: vi.fn<(message: string) => void>() } }))
 
 function makeStatus(overrides: Partial<CommunityRatingsRefreshStatus> = {}): CommunityRatingsRefreshStatus {
   return { schedule: 'off', running: false, run: null, booksWithRatings: 120, nextScheduledAt: null, ...overrides }
