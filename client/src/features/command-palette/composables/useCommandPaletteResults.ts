@@ -49,7 +49,7 @@ export interface PaletteTabOption {
   count: number
 }
 
-const ALL_TAB_LIMITS = { books: 5, authors: 3, series: 3, places: 5, settings: 4, actions: 3 } as const
+const ALL_TAB_LIMITS = { books: 5, dock: 5, authors: 3, series: 3, places: 5, settings: 4, actions: 3 } as const
 const TAB_PAGE_SIZE = 20
 const ENTITY_DEBOUNCE_MS = 250
 const CONTINUE_READING_LIMIT = 4
@@ -97,7 +97,7 @@ export function useCommandPaletteResults(query: Ref<string>, tab: Ref<PaletteTab
   const authorTotal = ref(0)
   const series = ref<SeriesSummary[]>([])
   const seriesTotal = ref(0)
-  /** Book Dock is searched with every query so its tab shows a real count, but its results stay out of All. */
+  /** Fork: Book Dock is searched with every query, for its own tab and for its group in All, right after Books. */
   const canSearchDock = computed(() => hasPermission(Permission.BookDockAccess))
   const dockFiles = ref<BookDockFile[]>([])
   const dockTotal = ref(0)
@@ -299,7 +299,8 @@ export function useCommandPaletteResults(query: Ref<string>, tab: Ref<PaletteTab
       { id: 'series', label: t('commandPalette.tabs.series'), count: seriesTotal.value },
       { id: 'settings', label: t('commandPalette.tabs.settings'), count: settingsHits.value.length },
     ]
-    const all = options.reduce((sum, option) => sum + option.count, 0) + placeHits.value.length
+    const dockCount = canSearchDock.value ? dockTotal.value : 0
+    const all = options.reduce((sum, option) => sum + option.count, 0) + placeHits.value.length + dockCount
     const result: PaletteTabOption[] = [
       { id: 'all', label: t('commandPalette.tabs.all'), count: all },
       ...options.filter((option) => option.count > 0),
@@ -350,6 +351,13 @@ export function useCommandPaletteResults(query: Ref<string>, tab: Ref<PaletteTab
       if (books.total.value > ALL_TAB_LIMITS.books) items.push(moreRow(t('commandPalette.showAllBooks', { count: books.bookTotal.value }), 'books'))
       result.push({ id: 'books', label: t('commandPalette.sections.books'), count: books.bookTotal.value, items })
     }
+    if (dockFiles.value.length) {
+      const items: PaletteItem[] = dockFiles.value
+        .slice(0, ALL_TAB_LIMITS.dock)
+        .map((file) => ({ kind: 'dockFile' as const, key: `dock:${file.id}`, file }))
+      if (dockTotal.value > ALL_TAB_LIMITS.dock) items.push(moreRow(t('commandPalette.showAllDock', { count: dockTotal.value }), 'dock'))
+      result.push({ id: 'dock', label: t('commandPalette.sections.dock'), count: dockTotal.value, items })
+    }
     if (authorItems.length) {
       const items = authorItems.slice(0, ALL_TAB_LIMITS.authors)
       if (authorTotal.value > ALL_TAB_LIMITS.authors) items.push(moreRow(t('commandPalette.showAllAuthors', { count: authorTotal.value }), 'authors'))
@@ -375,8 +383,8 @@ export function useCommandPaletteResults(query: Ref<string>, tab: Ref<PaletteTab
     return result
   })
 
-  /** A slow Book Dock search only holds up its own tab, since nothing else shows its results. */
-  const dockPending = computed(() => tab.value === 'dock' && dockLoading.value)
+  /** A slow Book Dock search holds up only the tabs that show its results: its own and All. */
+  const dockPending = computed(() => (tab.value === 'dock' || tab.value === 'all') && dockLoading.value)
   const loading = computed(() => isSearching.value && (books.loading.value || entitiesLoading.value || dockPending.value))
   const settled = computed(() => isSearching.value && books.settled.value && !entitiesLoading.value && !dockPending.value)
 

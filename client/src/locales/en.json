@@ -15768,6 +15768,7 @@
     "showAllBooks": "{count, plural, one {Show # book} other {Show all # books}}",
     "showAllAuthors": "{count, plural, one {Show # author} other {Show all # authors}}",
     "showAllSeries": "{count, plural, one {Show # series} other {Show all # series}}",
+    "showAllDock": "{count, plural, one {Show # Book Dock file} other {Show all # Book Dock files}}",
     "showAllSettings": "{count, plural, one {Show # setting} other {Show all # settings}}",
     "actions": {
       "lightTheme": "Switch to light theme",
