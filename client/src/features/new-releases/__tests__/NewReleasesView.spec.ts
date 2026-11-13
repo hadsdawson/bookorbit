@@ -8,7 +8,8 @@ const mocks = vi.hoisted(() => ({
   followAllForReleases: vi.fn<(kind: string) => Promise<{ added: number }>>(),
   listReleaseFollows: vi.fn<() => Promise<{ items: never[]; total: number }>>(),
   unfollowForReleases: vi.fn<(id: number) => Promise<void>>(),
-  setNewReleasesRetention: vi.fn<(days: number) => Promise<unknown>>(),
+  saveNewReleasesSettings: vi.fn<(settings: unknown) => Promise<unknown>>(),
+  requestNewRelease: vi.fn<(id: number, formats: string[]) => Promise<{ requested: string[] }>>(),
 }))
 
 vi.mock('vue-sonner', () => ({ toast: { success: vi.fn<() => void>(), error: vi.fn<() => void>() } }))
@@ -56,7 +57,8 @@ describe('NewReleasesView', () => {
     mocks.setNewReleaseHidden.mockReset().mockResolvedValue(undefined)
     mocks.followAllForReleases.mockReset().mockResolvedValue({ added: 3 })
     mocks.listReleaseFollows.mockReset().mockResolvedValue({ items: [], total: 0 })
-    mocks.setNewReleasesRetention.mockReset().mockResolvedValue({ delivery: null, retentionDays: 60 })
+    mocks.saveNewReleasesSettings.mockReset().mockResolvedValue({ delivery: null, retentionDays: 60 })
+    mocks.requestNewRelease.mockReset().mockResolvedValue({ requested: ['ebook'] })
   })
 
   it('lists upcoming books by month with both format dates and why they are listed', async () => {
@@ -74,7 +76,7 @@ describe('NewReleasesView', () => {
   it('hides a book from the list', async () => {
     const wrapper = mount(NewReleasesView)
     await flushPromises()
-    await wrapper.get('[data-testid="new-release-item"] button').trigger('click')
+    await wrapper.get('[data-testid="hide-release"]').trigger('click')
     await flushPromises()
     expect(mocks.setNewReleaseHidden).toHaveBeenCalledWith(1, true)
     expect(wrapper.find('[data-testid="new-release-item"]').exists()).toBe(false)
@@ -117,7 +119,34 @@ describe('NewReleasesView', () => {
     await flushPromises()
     await wrapper.get('[data-testid="new-releases-retention"]').setValue('60')
     await flushPromises()
-    expect(mocks.setNewReleasesRetention).toHaveBeenCalledWith(60)
+    expect(mocks.saveNewReleasesSettings).toHaveBeenCalledWith({ retentionDays: 60 })
     expect(mocks.getNewReleases).toHaveBeenCalledTimes(2)
+  })
+  it('requests a book that has one dated format and shows it as requested', async () => {
+    mocks.getNewReleases.mockResolvedValue(overview({ items: [{ ...overview().items[0]!, audiobookDate: null, state: null }] }))
+    const wrapper = mount(NewReleasesView)
+    await flushPromises()
+    await wrapper.get('[data-testid="request-release"]').trigger('click')
+    await flushPromises()
+    expect(mocks.requestNewRelease).toHaveBeenCalledWith(1, ['ebook'])
+    expect(wrapper.find('[data-testid="request-release"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="new-release-item"]').text()).toContain('Requested')
+  })
+
+  it('offers no Request button for a book already requested', async () => {
+    const wrapper = mount(NewReleasesView)
+    await flushPromises()
+    expect(wrapper.find('[data-testid="request-release"]').exists()).toBe(false)
+  })
+
+  it('saves how new books reach this user, or goes back to the server default', async () => {
+    const wrapper = mount(NewReleasesView)
+    await flushPromises()
+    await wrapper.get('[data-testid="new-releases-delivery"]').setValue('request')
+    await flushPromises()
+    expect(mocks.saveNewReleasesSettings).toHaveBeenCalledWith({ delivery: 'request' })
+    await wrapper.get('[data-testid="new-releases-delivery"]').setValue('default')
+    await flushPromises()
+    expect(mocks.saveNewReleasesSettings).toHaveBeenLastCalledWith({ delivery: null })
   })
 })

@@ -6,7 +6,8 @@ import { RequirePermission } from '../../common/decorators/require-permission.de
 import type { RequestUser } from '../../common/types/request-user';
 import { CreateReleaseFollowDto, FindReleaseFollowQueryDto, FollowAllDto, ListReleaseFollowsQueryDto } from './dto/follow.dto';
 import { SetReleaseStateDto } from './dto/set-release-state.dto';
-import { UpdateNewReleasesSettingsDto } from './dto/update-settings.dto';
+import { RequestReleaseDto } from './dto/request-release.dto';
+import { UpdateNewReleasesServerSettingsDto, UpdateNewReleasesSettingsDto } from './dto/update-settings.dto';
 import { NewReleasesService } from './new-releases.service';
 
 @Controller('new-releases')
@@ -21,7 +22,14 @@ export class NewReleasesController {
 
   @Put('settings')
   updateSettings(@CurrentUser() user: RequestUser, @Body() dto: UpdateNewReleasesSettingsDto) {
-    return this.service.updateUserSettings(user, dto.retentionDays);
+    return this.service.updateUserSettings(user, dto);
+  }
+
+  @Post(':id/request')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission(Permission.NewReleasesAccess, Permission.BookRequestAccess)
+  requestRelease(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number, @Body() dto: RequestReleaseDto) {
+    return this.service.requestRelease(user, id, dto.formats);
   }
 
   @Get('follows')
@@ -56,5 +64,22 @@ export class NewReleasesController {
   @HttpCode(HttpStatus.NO_CONTENT)
   setState(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number, @Body() dto: SetReleaseStateDto) {
     return this.service.setState(user, id, dto.state);
+  }
+}
+
+/** The server-wide defaults: what format a new book is requested in, and whether it is requested or suggested. */
+@Controller('new-releases/server-settings')
+@RequirePermission(Permission.ManageBookRequests)
+export class NewReleasesAdminController {
+  constructor(private readonly service: NewReleasesService) {}
+
+  @Get()
+  get() {
+    return this.service.serverSettings();
+  }
+
+  @Put()
+  update(@Body() dto: UpdateNewReleasesServerSettingsDto) {
+    return this.service.updateServerSettings(dto);
   }
 }

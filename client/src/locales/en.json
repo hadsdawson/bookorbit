@@ -16266,7 +16266,9 @@
       "unfollow": "Could not unfollow.",
       "followAll": "Could not follow everything.",
       "hide": "Could not change that book.",
-      "saveSettings": "Could not save that setting."
+      "saveSettings": "Could not save that setting.",
+      "request": "Could not request that book.",
+      "loadServerSettings": "Could not load the New Releases defaults."
     },
     "view": {
       "list": "List",
@@ -16289,6 +16291,35 @@
         "audiobook": "Audiobook",
         "ebook-audiobook": "Ebook and audiobook"
       }
+    },
+    "delivery": {
+      "label": "When a new book is found",
+      "default": "Server default: {choice}",
+      "suggest": "Suggest it to me",
+      "request": "Request it for me",
+      "saved": "Saved how new books reach you"
+    },
+    "request": {
+      "button": "Request",
+      "named": "Request {title}",
+      "both": "Ebook and audiobook",
+      "ebook": "Ebook",
+      "audiobook": "Audiobook",
+      "done": "{count, plural, one {Requested {title}} other {Requested {title} in both formats}}"
+    },
+    "server": {
+      "title": "New Releases",
+      "hint": "What happens when New Releases finds a book from someone's follows. Each person can choose for themselves on their New Releases page; this is what applies until they do.",
+      "format": "Format to request",
+      "formatHint": "Only formats with a confirmed release date are requested.",
+      "formats": {
+        "ebook": "Ebook",
+        "audiobook": "Audiobook",
+        "both": "Ebook and audiobook"
+      },
+      "delivery": "New books",
+      "deliveryHint": "Suggest lists them to request by hand. Request files the request as soon as a date is confirmed, following each person's usual approval rules.",
+      "saved": "New Releases defaults saved"
     }
   }
 }

@@ -1,7 +1,10 @@
 import type {
-  NewReleaseRetentionDays,
+  NewReleaseRequestFormat,
+  NewReleaseRequestResult,
   NewReleasesOverview,
+  NewReleasesServerSettings,
   NewReleasesUserSettings,
+  UpdateNewReleasesUserSettingsPayload,
   ReleaseFollow,
   ReleaseFollowKind,
   ReleaseFollowPage,
@@ -56,6 +59,18 @@ export function setNewReleaseHidden(id: number, hidden: boolean): Promise<void> 
   return apiSend(`${BASE}/${id}/state`, jsonBody('PUT', { state: hidden ? 'dismissed' : null }), 'newReleases.errors.hide')
 }
 
-export function setNewReleasesRetention(retentionDays: NewReleaseRetentionDays): Promise<NewReleasesUserSettings> {
-  return apiJson(`${BASE}/settings`, jsonBody('PUT', { retentionDays }), 'newReleases.errors.saveSettings')
+export function saveNewReleasesSettings(settings: UpdateNewReleasesUserSettingsPayload): Promise<NewReleasesUserSettings> {
+  return apiJson(`${BASE}/settings`, jsonBody('PUT', settings), 'newReleases.errors.saveSettings')
+}
+
+export function requestNewRelease(id: number, formats: NewReleaseRequestFormat[]): Promise<NewReleaseRequestResult> {
+  return apiJson(`${BASE}/${id}/request`, jsonBody('POST', { formats }), 'newReleases.errors.request')
+}
+
+export function getNewReleasesServerSettings(): Promise<NewReleasesServerSettings> {
+  return apiJson(`${BASE}/server-settings`, undefined, 'newReleases.errors.loadServerSettings')
+}
+
+export function saveNewReleasesServerSettings(settings: NewReleasesServerSettings): Promise<NewReleasesServerSettings> {
+  return apiJson(`${BASE}/server-settings`, jsonBody('PUT', settings), 'newReleases.errors.saveSettings')
 }

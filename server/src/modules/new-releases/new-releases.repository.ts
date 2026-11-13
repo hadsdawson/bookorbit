@@ -367,11 +367,59 @@ export class NewReleasesRepository {
       });
   }
 
-  async saveRetentionDays(userId: number, retentionDays: number): Promise<void> {
+  /** Saves the fields given; one left undefined keeps its stored value. */
+  async saveUserSettings(userId: number, settings: { retentionDays?: number; delivery?: string | null }): Promise<void> {
+    const set: Partial<typeof schema.releaseUserSettings.$inferInsert> = {};
+    if (settings.retentionDays !== undefined) set.retentionDays = settings.retentionDays;
+    if (settings.delivery !== undefined) set.delivery = settings.delivery;
+    if (Object.keys(set).length === 0) return;
     await this.db
       .insert(schema.releaseUserSettings)
-      .values({ userId, retentionDays })
-      .onConflictDoUpdate({ target: schema.releaseUserSettings.userId, set: { retentionDays } });
+      .values({ userId, ...set })
+      .onConflictDoUpdate({ target: schema.releaseUserSettings.userId, set });
+  }
+
+  async findReleaseById(id: number): Promise<UpcomingReleaseRow | null> {
+    const [row] = await this.db.select().from(schema.upcomingReleases).where(eq(schema.upcomingReleases.id, id)).limit(1);
+    return row ?? null;
+  }
+
+  /**
+   * Books to request for people who chose to have new releases requested for them: still to come,
+   * not in a library, matched by one of their follows, and not yet requested or hidden by them.
+   * Only active users who hold New Releases access (or are administrators) are asked for. Bounded,
+   * soonest first, so a large backlog is worked through over several runs.
+   */
+  async findPendingAutoRequests(defaultDelivery: string, limit: number): Promise<{ userId: number; releaseId: number }[]> {
+    const result = await this.db.execute<{ user_id: number; release_id: number }>(sql`
+      SELECT DISTINCT ON (r.release_date, r.id, u.id) u.id AS user_id, r.id AS release_id
+      FROM upcoming_releases r
+      JOIN release_follows f
+        ON (f.kind = 'author' AND f.name_key = ANY(r.author_keys)) OR (f.kind = 'series' AND f.name_key = r.series_key)
+      JOIN users u ON u.id = f.user_id AND u.active
+      LEFT JOIN release_user_settings us ON us.user_id = u.id
+      LEFT JOIN release_user_states st ON st.user_id = u.id AND st.release_id = r.id
+      WHERE r.release_date > current_date
+        AND r.owned_book_id IS NULL
+        AND st.state IS NULL
+        AND COALESCE(us.delivery, ${defaultDelivery}) = 'request'
+        AND (u.is_superuser OR EXISTS (
+          SELECT 1 FROM user_permissions p WHERE p.user_id = u.id AND p.permission_name = 'new_releases_access'
+        ))
+      ORDER BY r.release_date, r.id, u.id
+      LIMIT ${limit}
+    `);
+    return result.rows.map((row) => ({ userId: row.user_id, releaseId: row.release_id }));
+  }
+
+  async setRequested(userId: number, releaseId: number): Promise<void> {
+    await this.db
+      .insert(schema.releaseUserStates)
+      .values({ userId, releaseId, state: 'requested' })
+      .onConflictDoUpdate({
+        target: [schema.releaseUserStates.userId, schema.releaseUserStates.releaseId],
+        set: { state: 'requested', updatedAt: new Date() },
+      });
   }
 
   async findUserSettings(userId: number): Promise<typeof schema.releaseUserSettings.$inferSelect | null> {

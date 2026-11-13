@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import DownloadClientsPanel from './DownloadClientsPanel.vue'
 import RequestAutomationPanel from './RequestAutomationPanel.vue'
 import RequestIndexersPanel from './RequestIndexersPanel.vue'
+import NewReleasesServerSettings from '@/features/new-releases/components/NewReleasesServerSettings.vue'
 import SettingsPageHeader from './SettingsPageHeader.vue'
 import SettingsTabs from './components/SettingsTabs.vue'
 import { useRouteTab } from '@/composables/useRouteTab'
@@ -70,8 +71,9 @@ function handleEncryptionState(configured: boolean) {
     <!-- Narrower than the rest of the page: this tab is mostly prose, and a switch explaining
          itself over the full width of a list view is a line too long to read comfortably. Wrapped
          rather than passed as a class, because the panel has a v-if root and would not inherit it. -->
-    <div v-else class="max-w-3xl">
+    <div v-else class="max-w-3xl space-y-6">
       <RequestAutomationPanel />
+      <NewReleasesServerSettings />
     </div>
   </div>
 </template>
