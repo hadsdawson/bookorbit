@@ -1030,6 +1030,13 @@
       "when": 1794569604644,
       "tag": "0146_age_ratings_and_sort_keys",
       "breakpoints": true
+    },
+    {
+      "idx": 147,
+      "version": "7",
+      "when": 1794595062517,
+      "tag": "0147_new_releases",
+      "breakpoints": true
     }
   ]
 }

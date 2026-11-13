@@ -1,5 +1,6 @@
 export * from "./audit";
 export * from "./age-rating";
+export * from "./new-releases";
 export * from "./network-profile";
 export * from "./account-activity";
 export * from "./auth";

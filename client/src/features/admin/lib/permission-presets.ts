@@ -20,7 +20,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
   },
   {
     id: 'bookRequests',
-    use: [Permission.BookRequestAccess, Permission.BookRequestAutoApprove, Permission.BookRequestSelfFulfill],
+    use: [Permission.BookRequestAccess, Permission.BookRequestAutoApprove, Permission.BookRequestSelfFulfill, Permission.NewReleasesAccess],
     manage: [Permission.ManageBookRequests],
   },
   {

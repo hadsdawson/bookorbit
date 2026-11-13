@@ -8,6 +8,7 @@ export enum Permission {
   LibraryGenerateReadAloud = "library_generate_read_aloud",
   BookDockAccess = "book_dock_access",
   BookRequestAccess = "book_request_access",
+  NewReleasesAccess = "new_releases_access",
   DemoRestricted = "demo_restricted",
 
   // Devices & Access
@@ -49,6 +50,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   [Permission.LibraryGenerateReadAloud]: "Generate read-aloud books",
   [Permission.BookDockAccess]: "Book Dock",
   [Permission.BookRequestAccess]: "Request books",
+  [Permission.NewReleasesAccess]: "New Releases",
   [Permission.DemoRestricted]: "Demo restricted",
   [Permission.KoboSync]: "Kobo sync",
   [Permission.KoreaderSync]: "KOReader sync",
@@ -102,6 +104,8 @@ export const PERMISSION_REQUIRES: Partial<Record<Permission, readonly Permission
   // Auto-approve only decides what happens to a request the holder submits, so it says nothing
   // at all without the permission that lets them submit one.
   [Permission.BookRequestAutoApprove]: [Permission.BookRequestAccess],
+  // New Releases files requests, so it rides on the permission to make them.
+  [Permission.NewReleasesAccess]: [Permission.BookRequestAccess],
 };
 
 /** Every permission the given selection implies must also be held, itself included. */

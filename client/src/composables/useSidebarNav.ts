@@ -1,7 +1,20 @@
 import { computed, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, type RouteLocationNormalizedLoaded, type RouteLocationRaw } from 'vue-router'
-import { BarChart3, BookPlus, Building2, Highlighter, History, LayoutDashboard, Library, PackageOpen, Trophy, Users, Wrench } from '@lucide/vue'
+import {
+  BarChart3,
+  BookPlus,
+  Building2,
+  CalendarClock,
+  Highlighter,
+  History,
+  LayoutDashboard,
+  Library,
+  PackageOpen,
+  Trophy,
+  Users,
+  Wrench,
+} from '@lucide/vue'
 import { Permission, type BrowseCounts, type SidebarSectionId } from '@bookorbit/types'
 import { useAuth } from '@/features/auth/composables/useAuth'
 import { usePermissions } from '@/features/auth/composables/usePermissions'
@@ -149,6 +162,16 @@ export const SIDEBAR_NAV_REGISTRY: readonly SidebarNavEntry[] = [
     badge: (context) =>
       context.outstandingRequestTotal > 0 ? { value: context.outstandingRequestTotal, label: context.outstandingRequestLabel, tone: 'accent' } : null,
     returnsWithWork: true,
+  },
+  // Fork: upcoming books from followed authors and series.
+  {
+    id: 'new-releases',
+    labelKey: 'components.sidebar.newReleases',
+    icon: CalendarClock,
+    zone: 'primary',
+    to: { name: 'new-releases' },
+    isActive: (route) => route.name === 'new-releases',
+    permission: 'new_releases_access',
   },
   {
     id: 'tools',
