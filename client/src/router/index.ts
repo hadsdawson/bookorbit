@@ -715,6 +715,12 @@ export const routes: RouteRecordRaw[] = [
             meta: { title: () => t('titles.chapterHealth') },
           },
           {
+            path: 'community-ratings',
+            name: 'tools-community-ratings',
+            component: () => import('@/features/tools/community-ratings/views/CommunityRatingsView.vue'),
+            meta: { title: () => t('titles.communityRatings') },
+          },
+          {
             path: ':pathMatch(.*)*',
             redirect: { name: 'tools-entity-manager' },
           },

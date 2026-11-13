@@ -3234,6 +3234,41 @@ export class BookService {
    * An explicit refresh goes live (a provider that fails may still answer from the cache, and the
    * response says which did); the bulk refresh passes its own directive so it can use the cache.
    */
+  /**
+   * Fork: looks up only the community ratings for a book and stores what the providers return.
+   * Runs for the server itself, on a schedule or from Tools, so no person's access is checked and
+   * nothing but ratings is written. A book whose ratings are locked is left alone.
+   */
+  async refreshCommunityRatings(id: number): Promise<{ status: 'updated' | 'unchanged' | 'skipped'; outboundRequests: number }> {
+    const found = await this.bookRepo.findById(id);
+    const meta = found?.book.book_metadata;
+    if (!found || meta?.lockedFields?.includes('communityRating')) return { status: 'skipped', outboundRequests: 0 };
+
+    const { book, authorRows, fileRows } = found;
+    const isAudiobook = resolveIsAudiobook(fileRows, meta, book.books.primaryFileId);
+    const searchParams: MetadataSearchParams = {
+      title: meta?.title ?? undefined,
+      author: authorRows[0]?.name ?? undefined,
+      isbn: meta?.isbn13?.trim() || meta?.isbn10?.trim() || undefined,
+      seriesName: meta?.seriesName ?? undefined,
+      seriesIndex: meta?.seriesIndex ?? undefined,
+      existingProviderIds: { ...this.collectExistingProviderIds(meta ?? {}), ...(await this.providerIdStore?.read(id)) },
+      hardcoverEditionId: meta?.hardcoverEditionId ?? undefined,
+      isAudiobook,
+      mediaKind: resolveSearchMediaKind(fileRows, isAudiobook, book.books.primaryFileId),
+      maxCandidatesPerProvider: 1,
+    };
+    // Nothing is passed as existing, so a fill-missing rule still returns ratings, and both cover
+    // slots count as locked so no cover is searched for.
+    const { resolved, cache } = await this.pipeline.runWithSources(searchParams, {}, book.books.libraryId, {
+      lockedCoverSlots: [...COVER_MEDIA],
+      cacheDirective: EXPLICIT_REFRESH_DIRECTIVE,
+    });
+    const ratings = this.normalizeCommunityRatingInputs(resolved.communityRatings) ?? [];
+    const changed = await this.bookRepo.upsertCommunityRatings(id, ratings);
+    return { status: changed ? 'updated' : 'unchanged', outboundRequests: cache.outboundRequests };
+  }
+
   async refreshMetadata(
     id: number,
     preview: boolean,

@@ -2610,6 +2610,38 @@ export class BookRepository {
     await executor.update(books).set({ updatedAt: now }).where(eq(books.id, bookId));
   }
 
+  /**
+   * Fork: stores freshly fetched ratings without touching the ones other providers hold. Every
+   * provider that answered has its row stamped as checked; the book only counts as changed, and
+   * only then syncs to devices again, when a number actually moved.
+   */
+  async upsertCommunityRatings(bookId: number, ratings: Array<{ provider: string; rating: number; ratingCount: number | null }>): Promise<boolean> {
+    if (ratings.length === 0) return false;
+    const now = new Date();
+    return this.db.transaction(async (tx) => {
+      const existing = await tx
+        .select({ provider: bookCommunityRatings.provider, rating: bookCommunityRatings.rating, ratingCount: bookCommunityRatings.ratingCount })
+        .from(bookCommunityRatings)
+        .where(eq(bookCommunityRatings.bookId, bookId));
+      const before = new Map(existing.map((row) => [row.provider, row]));
+      const changed = ratings.some((rating) => {
+        const current = before.get(rating.provider);
+        return !current || Math.abs(current.rating - rating.rating) > 0.001 || current.ratingCount !== rating.ratingCount;
+      });
+      await tx
+        .insert(bookCommunityRatings)
+        .values(
+          ratings.map((rating) => ({ bookId, provider: rating.provider, rating: rating.rating, ratingCount: rating.ratingCount, updatedAt: now })),
+        )
+        .onConflictDoUpdate({
+          target: [bookCommunityRatings.bookId, bookCommunityRatings.provider],
+          set: { rating: sql`excluded.rating`, ratingCount: sql`excluded.rating_count`, updatedAt: now },
+        });
+      if (changed) await tx.update(books).set({ updatedAt: now }).where(eq(books.id, bookId));
+      return changed;
+    });
+  }
+
   async bulkUpdateMetadataFields(
     bookIds: number[],
     fields: Partial<typeof bookMetadata.$inferInsert>,

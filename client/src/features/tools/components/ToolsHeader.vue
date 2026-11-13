@@ -35,6 +35,10 @@ const sections = computed<ToolSection[]>(() => {
     result.push({ label: t('tools.header.chapterHealth'), routeName: 'tools-chapter-health' })
   }
 
+  if (hasPermission('manage_metadata_config')) {
+    result.push({ label: t('tools.header.communityRatings'), routeName: 'tools-community-ratings' })
+  }
+
   return result
 })
 

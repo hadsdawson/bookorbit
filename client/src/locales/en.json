@@ -14522,7 +14522,33 @@
       "bulkRename": "Bulk Rename",
       "duplicateBooks": "Duplicate Books",
       "missingResources": "Missing Resources",
-      "chapterHealth": "Chapter Health"
+      "chapterHealth": "Chapter Health",
+      "communityRatings": "Community Ratings"
+    },
+    "communityRatings": {
+      "title": "Community ratings",
+      "description": "Ratings from Goodreads, Amazon and other providers change over time. This looks them up again for every book that already has one. Only ratings are changed, and books whose ratings are locked are skipped.",
+      "runTitle": "Update now",
+      "bookCount": "{count, plural, =0 {No books have community ratings yet.} one {# book has community ratings.} other {# books have community ratings.}}",
+      "run": "Update ratings",
+      "stop": "Stop",
+      "progress": "{processed} of {total} books checked, {updated} updated",
+      "slowNote": "This runs slowly on purpose so no provider is flooded. You can leave this page; it carries on, even after a restart.",
+      "lastRun": "Last update finished {at}: {processed} books checked, {updated} updated, {failed} failed.",
+      "lastRunStopped": "Last update was stopped {at}: {processed} books checked, {updated} updated, {failed} failed.",
+      "scheduleTitle": "Update automatically",
+      "scheduleHint": "Monthly starts an update 30 days after the last one began.",
+      "nextRun": "Next automatic update: {at}",
+      "schedules": {
+        "off": "Off",
+        "monthly": "Monthly"
+      },
+      "errors": {
+        "load": "Could not load the community ratings update.",
+        "save": "Could not save the change.",
+        "start": "Could not start the update.",
+        "stop": "Could not stop the update."
+      }
     },
     "entityTypes": {
       "authors": "Authors",
@@ -15523,6 +15549,7 @@
     "bookRequestReleases": "Pick a release",
     "tts": "Text-to-Speech",
     "chapterHealth": "Chapter Health",
+    "communityRatings": "Community Ratings",
     "readingHistory": "Reading History"
   },
   "tts": {
