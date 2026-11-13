@@ -7981,7 +7981,10 @@
           "primary": "Primary",
           "content": "Alternate",
           "supplement": "Supplement",
-          "cover": "Cover"
+          "cover": "Cover",
+          "ebookCover": "Ebook cover",
+          "audiobookCover": "Audiobook cover",
+          "metadata": "Metadata"
         },
         "reader": {
           "none": "No reader",
