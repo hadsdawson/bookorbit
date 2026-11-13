@@ -210,24 +210,26 @@ describe('useCommandPaletteResults', () => {
     ])
   })
 
-  it('offers Book Dock as a tab only to users with access, and leaves it out of All', async () => {
+  it('offers Book Dock only to users with access', async () => {
     const { query, tabs, sections } = setup()
     query.value = 'dune'
     await vi.runAllTimersAsync()
     expect(tabs.value.map((option) => option.id)).not.toContain('dock')
+    expect(sections.value.some((section) => section.id === 'dock')).toBe(false)
+    expect(mocks.api).not.toHaveBeenCalledWith(expect.stringContaining('/book-dock/files'))
 
     mocks.permissions.add('book_dock_access')
     const withAccess = setup()
     withAccess.query.value = 'dune'
     await vi.runAllTimersAsync()
     expect(withAccess.tabs.value.map((option) => option.id)).toContain('dock')
-    expect(withAccess.sections.value.some((section) => section.id === 'dock')).toBe(false)
-    expect(sections.value.some((section) => section.id === 'dock')).toBe(false)
   })
 
-  it('counts Book Dock matches before its tab is opened', async () => {
+  it('lists Book Dock matches in All right after Books, and counts them', async () => {
     mocks.permissions.add('book_dock_access')
     const { query, tab, sections, tabs } = setup()
+    mocks.books.value = [book(1, 'Dune')]
+    mocks.bookTotal.value = 1
     mocks.api.mockImplementation(async (url: string) =>
       String(url).includes('/book-dock/files')
         ? {
@@ -241,13 +243,58 @@ describe('useCommandPaletteResults', () => {
     await vi.runAllTimersAsync()
 
     expect(mocks.api).toHaveBeenCalledWith(expect.stringContaining('/api/v1/book-dock/files?search=dune'))
+    expect(sections.value.map((section) => section.id).slice(0, 2)).toEqual(['books', 'dock'])
+    expect(sections.value.find((section) => section.id === 'dock')?.items.map((item) => item.key)).toEqual(['dock:5'])
+    expect(tabs.value.find((option) => option.id === 'all')?.count).toBe(2)
     expect(tabs.value.find((option) => option.id === 'dock')?.count).toBe(1)
-    expect(sections.value.some((section) => section.id === 'dock')).toBe(false)
 
     tab.value = 'dock'
     await vi.runAllTimersAsync()
     expect(sections.value[0]?.items.map((item) => item.key)).toEqual(['dock:5'])
-    expect(tabs.value.find((option) => option.id === 'dock')?.count).toBe(1)
+  })
+
+  it('shows five Book Dock matches in All with a link to the rest', async () => {
+    mocks.permissions.add('book_dock_access')
+    const { query, sections } = setup()
+    const files = Array.from({ length: 7 }, (_, index) => ({
+      id: index + 1,
+      fileName: `Dune ${index + 1}.epub`,
+      format: 'epub',
+      selectedMetadata: {},
+    }))
+    mocks.api.mockImplementation(async (url: string) =>
+      String(url).includes('/book-dock/files')
+        ? { ok: true, json: async () => ({ items: files, total: 7 }) }
+        : { ok: true, json: async () => ({ items: [] }) },
+    )
+
+    query.value = 'dune'
+    await vi.runAllTimersAsync()
+
+    const dock = sections.value.find((section) => section.id === 'dock')
+    expect(dock?.items.map((item) => item.key)).toEqual(['dock:1', 'dock:2', 'dock:3', 'dock:4', 'dock:5', 'more:dock'])
+    expect(sections.value[0]?.id).toBe('dock')
+  })
+
+  it('waits for Book Dock before All says nothing was found', async () => {
+    mocks.permissions.add('book_dock_access')
+    const { query, settled } = setup()
+    let release: (value: unknown) => void = () => undefined
+    mocks.api.mockImplementation((url: string) =>
+      String(url).includes('/book-dock/files')
+        ? new Promise((resolve) => {
+            release = resolve
+          })
+        : Promise.resolve({ ok: true, json: async () => ({ items: [] }) }),
+    )
+
+    query.value = 'dune'
+    await vi.advanceTimersByTimeAsync(300)
+    expect(settled.value).toBe(false)
+
+    release({ ok: true, json: async () => ({ items: [], total: 0 }) })
+    await vi.runAllTimersAsync()
+    expect(settled.value).toBe(true)
   })
 
   it('shows only the chosen kind on a tab', async () => {
