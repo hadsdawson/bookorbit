@@ -41,9 +41,15 @@ import { uploadError } from './upload-errors';
 type Db = NodePgDatabase<typeof schema>;
 type StoredUploadResult = UploadResult & { absolutePath: string; created: boolean; libraryId: number };
 
+/** How long a book's uploads must stay quiet before a library-forced rename runs. */
+const LOCKED_RENAME_DELAY_MS = 5_000;
+
 @Injectable()
 export class UploadService {
   private readonly logger = new Logger(UploadService.name);
+
+  private readonly lockedRenameTimers = new Map<number, NodeJS.Timeout>();
+  private lockedRenameDelayMs = LOCKED_RENAME_DELAY_MS;
 
   constructor(
     @Inject(DB) private readonly db: Db,
@@ -209,6 +215,7 @@ export class UploadService {
         allowedFormats: libraries.allowedFormats,
         organizationMode: libraries.organizationMode,
         libraryFolderPath: libraryFolders.path,
+        renameOnAddFile: libraries.renameOnAddFile,
       })
       .from(books)
       .innerJoin(libraries, eq(books.libraryId, libraries.id))
@@ -291,6 +298,7 @@ export class UploadService {
         `[${event}] [end] bookId=${bookId} userId=${user.id} fileId=${result.id} format=${format} sizeBytes=${sizeBytes} durationMs=${Date.now() - startedAt} - add file to book completed`,
       );
 
+      if (bookRow.renameOnAddFile) this.scheduleLockedRename(bookId, user.id);
       return result;
     } catch (caught) {
       let err = caught;
@@ -424,6 +432,43 @@ export class UploadService {
       mediaOverlay: mediaOverlayCapabilityFromFields({ format: inserted.format, ...mediaOverlayFields }),
       bookStatus: finalStatus,
     };
+  }
+
+  /**
+   * Fork: in a library set to rename every file added to a book, the rename runs once the last of a
+   * batch of files has landed. Waiting for a quiet moment means one rename per batch rather than one
+   * racing another for every file, and it happens whoever added the file, from any client.
+   */
+  private scheduleLockedRename(bookId: number, userId: number): void {
+    const pending = this.lockedRenameTimers.get(bookId);
+    if (pending) clearTimeout(pending);
+    const timer = setTimeout(() => {
+      this.lockedRenameTimers.delete(bookId);
+      void this.runLockedRename(bookId, userId);
+    }, this.lockedRenameDelayMs);
+    timer.unref();
+    this.lockedRenameTimers.set(bookId, timer);
+  }
+
+  private async runLockedRename(bookId: number, userId: number): Promise<void> {
+    const event = 'book.rename_on_add_file';
+    const startedAt = Date.now();
+    this.logger.log(`[${event}] [start] bookId=${bookId} userId=${userId} - renaming files to the library's naming pattern`);
+    try {
+      const fileRenameService = this.resolveFileRenameService();
+      if (!fileRenameService) throw new Error('File rename service is not available');
+      await fileRenameService.performRename(bookId, userId, true, false);
+      this.logger.log(`[${event}] [end] bookId=${bookId} userId=${userId} durationMs=${Date.now() - startedAt} - files renamed`);
+    } catch (error) {
+      this.logger.warn(
+        `[${event}] [fail] bookId=${bookId} userId=${userId} durationMs=${Date.now() - startedAt} errorClass=${error instanceof Error ? error.name : 'UnknownError'} error="${sanitizeLogValue(error instanceof Error ? error.message : String(error))}" - rename after adding a file failed`,
+      );
+    }
+  }
+
+  /** Shortens the quiet period, for tests. */
+  setLockedRenameDelayForTesting(delayMs: number): void {
+    this.lockedRenameDelayMs = delayMs;
   }
 
   async renameBookFiles(bookId: number, user: RequestUser): Promise<void> {

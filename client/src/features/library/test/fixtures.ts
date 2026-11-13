@@ -39,6 +39,7 @@ export function makeLibrary(overrides: Partial<Library> = {}): Library {
     fileWriteReadAlongEnabled: false,
     fileWriteReadAlongMaxFileSizeMb: 1000,
     fileRenameEnabled: false,
+    renameOnAddFile: false,
     folders: [{ id: 30, path: '/books', createdAt: '2026-01-01T00:00:00.000Z' }],
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',

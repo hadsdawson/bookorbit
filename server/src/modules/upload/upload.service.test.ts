@@ -1634,4 +1634,28 @@ describe('UploadService', () => {
       await expect(service.renameBookFiles(10, user)).rejects.toThrow(ServiceUnavailableException);
     });
   });
+
+  describe('rename on add file (library setting)', () => {
+    it('renames once after a batch of added files goes quiet, as the uploader', async () => {
+      vi.useFakeTimers();
+      try {
+        const renameService = { performRename: vi.fn().mockResolvedValue({ status: 'success' }) };
+        moduleRef.get.mockReturnValue(renameService);
+        service.setLockedRenameDelayForTesting(1_000);
+        const schedule = (service as unknown as { scheduleLockedRename(bookId: number, userId: number): void }).scheduleLockedRename.bind(service);
+
+        schedule(10, user.id);
+        await vi.advanceTimersByTimeAsync(500);
+        schedule(10, user.id);
+        await vi.advanceTimersByTimeAsync(999);
+        expect(renameService.performRename).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(1);
+
+        expect(renameService.performRename).toHaveBeenCalledTimes(1);
+        expect(renameService.performRename).toHaveBeenCalledWith(10, user.id, true, false);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
 });

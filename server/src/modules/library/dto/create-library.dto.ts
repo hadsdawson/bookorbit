@@ -232,4 +232,8 @@ export class CreateLibraryDto {
   @IsOptionalNotNull()
   @IsBoolean()
   fileRenameEnabled?: boolean;
+
+  @IsOptionalNotNull()
+  @IsBoolean()
+  renameOnAddFile?: boolean;
 }

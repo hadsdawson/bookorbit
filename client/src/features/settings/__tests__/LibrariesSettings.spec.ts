@@ -111,6 +111,7 @@ function makeLibrary(overrides: Partial<Library> = {}): Library {
     fileWriteReadAlongEnabled: false,
     fileWriteReadAlongMaxFileSizeMb: 1000,
     fileRenameEnabled: false,
+    renameOnAddFile: false,
     folders: [{ id: 1, path: '/books', createdAt: '2024-01-01T00:00:00.000Z' }],
     createdAt: '2024-01-01T00:00:00.000Z',
     updatedAt: '2024-01-01T00:00:00.000Z',
@@ -318,16 +319,17 @@ describe('LibrariesSettings ledger', () => {
   })
 
   describe('automation', () => {
-    it('spells out all four settings with their state, on or off', async () => {
+    it('spells out all five settings with their state, on or off', async () => {
       librariesRef.value = [makeLibrary({ watch: true, autoScanCronExpression: null, fileWriteEnabled: false, fileRenameEnabled: true })]
       const wrapper = await mountLoaded()
       const items = wrapper.get('[data-testid="libraries-ledger-list"]').findAll('li')
-      expect(items).toHaveLength(4)
+      expect(items).toHaveLength(5)
       expect(items.map((item) => item.text().replace(/\s+/g, ' '))).toEqual([
         'Watch foldersOn',
         'Scheduled scanOff',
         'Write to fileOff',
         'Rename filesOn',
+        'Rename added filesOff',
       ])
     })
 
@@ -339,6 +341,7 @@ describe('LibrariesSettings ledger', () => {
       expect(switchFor('watch').attributes('aria-checked')).toBe('true')
       expect(switchFor('fileWrite').attributes('aria-checked')).toBe('false')
       expect(switchFor('fileRename').attributes('aria-checked')).toBe('true')
+      expect(switchFor('renameOnAddFile').attributes('aria-checked')).toBe('false')
       expect(switchFor('watch').attributes('aria-label')).toBe('Watch folders for Test Library')
     })
 

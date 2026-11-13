@@ -221,7 +221,12 @@ function isJustFinished(libraryId: number): boolean {
   return justFinished.value.has(libraryId)
 }
 
-type AutomationPatch = { watch: boolean } | { fileWriteEnabled: boolean } | { fileRenameEnabled: boolean } | { autoScanCronExpression: string | null }
+type AutomationPatch =
+  | { watch: boolean }
+  | { fileWriteEnabled: boolean }
+  | { fileRenameEnabled: boolean }
+  | { renameOnAddFile: boolean }
+  | { autoScanCronExpression: string | null }
 
 /**
  * Saves one automation setting straight from the row. Both fields are optional on PATCH, so nothing else
@@ -251,6 +256,7 @@ const TOGGLE_MESSAGES: Record<AutomationToggle, { on: string; off: string }> = {
   watch: { on: 'settings.admin.libraries.quick.watchOn', off: 'settings.admin.libraries.quick.watchOff' },
   fileWriteEnabled: { on: 'settings.admin.libraries.quick.fileWriteOn', off: 'settings.admin.libraries.quick.fileWriteOff' },
   fileRenameEnabled: { on: 'settings.admin.libraries.quick.renameOn', off: 'settings.admin.libraries.quick.renameOff' },
+  renameOnAddFile: { on: 'settings.admin.libraries.quick.renameOnAddFileOn', off: 'settings.admin.libraries.quick.renameOnAddFileOff' },
 }
 
 function toggleSetting(lib: LibraryType, setting: AutomationToggle) {

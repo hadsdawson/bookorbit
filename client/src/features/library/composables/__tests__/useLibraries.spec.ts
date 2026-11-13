@@ -46,6 +46,7 @@ function makeLibrary(overrides: Partial<Library> = {}): Library {
     fileWriteReadAlongEnabled: false,
     fileWriteReadAlongMaxFileSizeMb: 1000,
     fileRenameEnabled: false,
+    renameOnAddFile: false,
     folders: [],
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',

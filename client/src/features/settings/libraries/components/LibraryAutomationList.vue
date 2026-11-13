@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { CalendarClock, Check, ChevronDown, Eye, FileEdit, Pencil } from '@lucide/vue'
+import { CalendarClock, Check, ChevronDown, Eye, FileEdit, FileUp, Pencil } from '@lucide/vue'
 import type { Library } from '@bookorbit/types'
 import ToggleSwitch from '@/components/ui/ToggleSwitch.vue'
 import {
@@ -17,7 +17,7 @@ import { formatSchedule } from '../lib/library-schedule'
 
 const props = withDefaults(defineProps<{ library: Library; interactive?: boolean; saving?: boolean }>(), { interactive: false, saving: false })
 
-export type AutomationToggle = 'watch' | 'fileWriteEnabled' | 'fileRenameEnabled'
+export type AutomationToggle = 'watch' | 'fileWriteEnabled' | 'fileRenameEnabled' | 'renameOnAddFile'
 
 const emit = defineEmits<{
   toggle: [library: Library, setting: AutomationToggle]
@@ -77,6 +77,16 @@ const rows = computed(() => {
       title: '',
       setting: 'fileRenameEnabled' as AutomationToggle,
       aria: t('settings.admin.libraries.quick.renameAria', { name: props.library.name }),
+    },
+    {
+      key: 'renameOnAddFile',
+      icon: FileUp,
+      on: props.library.renameOnAddFile,
+      label: t('settings.admin.libraries.capability.renameOnAddFile'),
+      value: props.library.renameOnAddFile ? on : off,
+      title: t('settings.admin.libraries.capability.renameOnAddFileHint'),
+      setting: 'renameOnAddFile' as AutomationToggle,
+      aria: t('settings.admin.libraries.quick.renameOnAddFileAria', { name: props.library.name }),
     },
   ]
 })

@@ -85,6 +85,8 @@ export interface Library {
   fileWriteReadAlongEnabled: boolean;
   fileWriteReadAlongMaxFileSizeMb: number;
   fileRenameEnabled: boolean;
+  /** Fork: a file added to a book is always renamed to the library's naming pattern. */
+  renameOnAddFile: boolean;
   folders: LibraryFolder[];
   bookCount?: number;
   createdAt: string;

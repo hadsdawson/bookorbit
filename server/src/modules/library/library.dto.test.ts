@@ -162,6 +162,7 @@ describe('Library DTO validation', () => {
       'fileWriteReadAlongEnabled',
       'fileWriteReadAlongMaxFileSizeMb',
       'fileRenameEnabled',
+      'renameOnAddFile',
     ];
     const createBase = { name: 'Books', icon: 'BookOpen', folders: ['/books'] };
 

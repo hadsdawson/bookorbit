@@ -50,6 +50,7 @@ export class LibraryRepository {
         scanMode: libraries.scanMode,
         fileWriteEnabled: libraries.fileWriteEnabled,
         fileRenameEnabled: libraries.fileRenameEnabled,
+        renameOnAddFile: libraries.renameOnAddFile,
         createdAt: libraries.createdAt,
         updatedAt: libraries.updatedAt,
         bookCount: sql<number>`count(${books.id})::int`,
