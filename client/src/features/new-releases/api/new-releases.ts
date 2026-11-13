@@ -1,4 +1,11 @@
-import type { NewReleasesOverview, ReleaseFollow, ReleaseFollowKind, ReleaseFollowPage } from '@bookorbit/types'
+import type {
+  NewReleaseRetentionDays,
+  NewReleasesOverview,
+  NewReleasesUserSettings,
+  ReleaseFollow,
+  ReleaseFollowKind,
+  ReleaseFollowPage,
+} from '@bookorbit/types'
 
 import { apiJson, apiSend, jsonBody } from '@/lib/api-json'
 
@@ -47,4 +54,8 @@ export function unfollowForReleases(id: number): Promise<void> {
 
 export function setNewReleaseHidden(id: number, hidden: boolean): Promise<void> {
   return apiSend(`${BASE}/${id}/state`, jsonBody('PUT', { state: hidden ? 'dismissed' : null }), 'newReleases.errors.hide')
+}
+
+export function setNewReleasesRetention(retentionDays: NewReleaseRetentionDays): Promise<NewReleasesUserSettings> {
+  return apiJson(`${BASE}/settings`, jsonBody('PUT', { retentionDays }), 'newReleases.errors.saveSettings')
 }

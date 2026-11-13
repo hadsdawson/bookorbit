@@ -2,20 +2,37 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
-import { BellRing, BookOpen, CalendarClock, EyeOff, Headphones, Loader2, Search, UserRound, Library, X } from '@lucide/vue'
-import type { NewReleaseItem, ReleaseFollow, ReleaseFollowKind } from '@bookorbit/types'
+import { BellRing, BookOpen, CalendarClock, CalendarDays, EyeOff, Headphones, List, Loader2, Search, UserRound, Library, X } from '@lucide/vue'
+import {
+  NEW_RELEASE_RETENTION_DAYS,
+  type NewReleaseItem,
+  type NewReleaseRetentionDays,
+  type ReleaseFollow,
+  type ReleaseFollowKind,
+} from '@bookorbit/types'
 
 import { Button } from '@/components/ui/button'
 import { formatDate, formatNumber, formatRelativeFromNow } from '@/i18n/formatters'
 import { errorMessage } from '@/lib/api-json'
-import { parseReleaseDate, useNewReleases, useReleaseFollowList } from '../composables/useNewReleases'
+import NewReleasesCalendar from '../components/NewReleasesCalendar.vue'
+import {
+  isReleased,
+  parseReleaseDate,
+  readReleaseView,
+  saveReleaseView,
+  useNewReleases,
+  useReleaseFollowList,
+  type ReleaseView,
+} from '../composables/useNewReleases'
 
 const { t } = useI18n()
-const { overview, loading, failed, groups, followTotal, anySource, load, hide, unhide, followAll } = useNewReleases()
+const { overview, loading, failed, groups, followTotal, anySource, load, hide, unhide, followAll, setRetention } = useNewReleases()
 const follows = useReleaseFollowList()
 
 type Tab = 'upcoming' | 'following'
 const tab = ref<Tab>('upcoming')
+const view = ref<ReleaseView>(readReleaseView())
+const savingRetention = ref(false)
 const followingAll = ref<ReleaseFollowKind | null>(null)
 const brokenCovers = ref(new Set<number>())
 
@@ -55,6 +72,29 @@ function showsCover(item: NewReleaseItem): boolean {
 function handleCoverError(event: Event) {
   const id = Number((event.currentTarget as HTMLElement | null)?.dataset.releaseId)
   if (Number.isFinite(id)) brokenCovers.value = new Set([...brokenCovers.value, id])
+}
+
+function selectList() {
+  view.value = 'list'
+  saveReleaseView('list')
+}
+
+function selectCalendar() {
+  view.value = 'calendar'
+  saveReleaseView('calendar')
+}
+
+async function handleRetentionChange(event: Event) {
+  const value = Number((event.target as HTMLSelectElement).value) as NewReleaseRetentionDays
+  savingRetention.value = true
+  try {
+    await setRetention(value)
+    toast.success(t('newReleases.retention.saved', { days: value }))
+  } catch (error) {
+    toast.error(errorMessage(error, 'newReleases.errors.saveSettings'))
+  } finally {
+    savingRetention.value = false
+  }
 }
 
 function selectUpcoming() {
@@ -195,6 +235,18 @@ onMounted(load)
               {{ t('newReleases.pending', { count: overview.pendingChecks }) }}
             </p>
             <p v-else-if="lastCheckedLabel" class="text-xs text-muted-foreground">{{ lastCheckedLabel }}</p>
+            <label class="flex flex-wrap items-center gap-2 pt-1 text-xs text-muted-foreground">
+              {{ t('newReleases.retention.label') }}
+              <select
+                class="select-field h-8 w-28"
+                :value="overview.user.retentionDays"
+                :disabled="savingRetention"
+                data-testid="new-releases-retention"
+                @change="handleRetentionChange"
+              >
+                <option v-for="days in NEW_RELEASE_RETENTION_DAYS" :key="days" :value="days">{{ t('newReleases.retention.days', { days }) }}</option>
+              </select>
+            </label>
           </div>
           <div class="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" :disabled="followingAll !== null" data-testid="follow-all-authors" @click="handleFollowAllAuthors">
@@ -211,80 +263,116 @@ onMounted(load)
         </section>
 
         <template v-if="tab === 'upcoming'">
-          <div v-if="groups.length === 0" class="rounded-lg border border-dashed border-border p-8 text-center" data-testid="new-releases-empty">
-            <CalendarClock :size="28" class="mx-auto text-muted-foreground" aria-hidden="true" />
-            <p class="mt-2 text-sm font-medium text-foreground">
-              {{ followTotal === 0 ? t('newReleases.empty.noFollowsTitle') : t('newReleases.empty.nothingTitle') }}
-            </p>
-            <p class="mt-1 text-sm text-muted-foreground">
-              {{ followTotal === 0 ? t('newReleases.empty.noFollowsHint') : t('newReleases.empty.nothingHint') }}
-            </p>
+          <div class="flex justify-end">
+            <div class="flex items-center gap-1 rounded-lg border border-border bg-muted/50 p-1">
+              <button
+                type="button"
+                class="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                :class="view === 'list' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'"
+                :aria-pressed="view === 'list'"
+                @click="selectList"
+              >
+                <List :size="13" aria-hidden="true" />
+                {{ t('newReleases.view.list') }}
+              </button>
+              <button
+                type="button"
+                class="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                :class="view === 'calendar' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'"
+                :aria-pressed="view === 'calendar'"
+                data-testid="new-releases-calendar-view"
+                @click="selectCalendar"
+              >
+                <CalendarDays :size="13" aria-hidden="true" />
+                {{ t('newReleases.view.calendar') }}
+              </button>
+            </div>
           </div>
 
-          <section v-for="group in groups" :key="group.key" class="space-y-2" data-testid="new-releases-month">
-            <h2 class="sticky top-0 z-10 bg-background/95 py-1 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-              {{ monthLabel(group.date) }}
-            </h2>
-            <ul class="divide-y divide-border/60 rounded-lg border border-border/70 bg-card">
-              <li v-for="item in group.items" :key="item.id" class="flex gap-3 p-3" data-testid="new-release-item">
-                <img
-                  v-if="showsCover(item)"
-                  :src="item.coverUrl ?? undefined"
-                  :data-release-id="item.id"
-                  alt=""
-                  loading="lazy"
-                  class="h-[72px] w-12 shrink-0 rounded-xs border border-border bg-muted object-cover"
-                  @error="handleCoverError"
-                />
-                <div
-                  v-else
-                  class="flex h-[72px] w-12 shrink-0 items-center justify-center rounded-xs border border-border bg-muted"
-                  aria-hidden="true"
-                >
-                  <BookOpen :size="16" class="text-muted-foreground" />
-                </div>
+          <NewReleasesCalendar v-if="view === 'calendar'" :items="overview.items" />
 
-                <div class="min-w-0 flex-1 space-y-1">
-                  <div class="flex min-w-0 flex-wrap items-center gap-2">
-                    <p class="min-w-0 truncate text-sm font-semibold text-foreground">{{ item.title }}</p>
-                    <span
-                      v-if="item.state === 'requested'"
-                      class="inline-flex h-5 shrink-0 items-center gap-1 rounded-full border border-info/40 bg-info/10 px-2 text-xs font-medium text-info"
-                    >
-                      <span class="size-1.5 rounded-full bg-current" aria-hidden="true" />
-                      {{ t('newReleases.item.requested') }}
-                    </span>
-                  </div>
-                  <p class="truncate text-xs text-muted-foreground">{{ item.authors.join(', ') }}</p>
-                  <p v-if="seriesLine(item)" class="truncate text-xs text-muted-foreground">{{ seriesLine(item) }}</p>
-                  <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-foreground tabular-nums">
-                    <span v-if="item.ebookDate" class="inline-flex items-center gap-1">
-                      <BookOpen :size="12" class="text-muted-foreground" aria-hidden="true" />
-                      {{ t('newReleases.item.ebookOn', { date: dayLabel(item.ebookDate) }) }}
-                    </span>
-                    <span v-if="item.audiobookDate" class="inline-flex items-center gap-1">
-                      <Headphones :size="12" class="text-muted-foreground" aria-hidden="true" />
-                      {{ t('newReleases.item.audiobookOn', { date: dayLabel(item.audiobookDate) }) }}
-                    </span>
-                  </div>
-                  <p class="flex items-center gap-1 truncate text-xs text-muted-foreground">
-                    <BellRing :size="11" class="shrink-0" aria-hidden="true" />
-                    <span class="truncate">{{ becauseLine(item) }}</span>
-                  </p>
-                </div>
+          <template v-else>
+            <div v-if="groups.length === 0" class="rounded-lg border border-dashed border-border p-8 text-center" data-testid="new-releases-empty">
+              <CalendarClock :size="28" class="mx-auto text-muted-foreground" aria-hidden="true" />
+              <p class="mt-2 text-sm font-medium text-foreground">
+                {{ followTotal === 0 ? t('newReleases.empty.noFollowsTitle') : t('newReleases.empty.nothingTitle') }}
+              </p>
+              <p class="mt-1 text-sm text-muted-foreground">
+                {{ followTotal === 0 ? t('newReleases.empty.noFollowsHint') : t('newReleases.empty.nothingHint') }}
+              </p>
+            </div>
 
-                <button
-                  type="button"
-                  class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                  :title="t('newReleases.item.hide')"
-                  :aria-label="t('newReleases.item.hideNamed', { title: item.title })"
-                  @click="handleHide(item)"
-                >
-                  <EyeOff :size="15" aria-hidden="true" />
-                </button>
-              </li>
-            </ul>
-          </section>
+            <section v-for="group in groups" :key="group.key" class="space-y-2" data-testid="new-releases-month">
+              <h2 class="sticky top-0 z-10 bg-background/95 py-1 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                {{ monthLabel(group.date) }}
+              </h2>
+              <ul class="divide-y divide-border/60 rounded-lg border border-border/70 bg-card">
+                <li v-for="item in group.items" :key="item.id" class="flex gap-3 p-3" data-testid="new-release-item">
+                  <img
+                    v-if="showsCover(item)"
+                    :src="item.coverUrl ?? undefined"
+                    :data-release-id="item.id"
+                    alt=""
+                    loading="lazy"
+                    class="h-[72px] w-12 shrink-0 rounded-xs border border-border bg-muted object-cover"
+                    @error="handleCoverError"
+                  />
+                  <div
+                    v-else
+                    class="flex h-[72px] w-12 shrink-0 items-center justify-center rounded-xs border border-border bg-muted"
+                    aria-hidden="true"
+                  >
+                    <BookOpen :size="16" class="text-muted-foreground" />
+                  </div>
+
+                  <div class="min-w-0 flex-1 space-y-1">
+                    <div class="flex min-w-0 flex-wrap items-center gap-2">
+                      <p class="min-w-0 truncate text-sm font-semibold text-foreground">{{ item.title }}</p>
+                      <span
+                        v-if="item.state === 'requested'"
+                        class="inline-flex h-5 shrink-0 items-center gap-1 rounded-full border border-info/40 bg-info/10 px-2 text-xs font-medium text-info"
+                      >
+                        <span class="size-1.5 rounded-full bg-current" aria-hidden="true" />
+                        {{ t('newReleases.item.requested') }}
+                      </span>
+                      <span
+                        v-if="isReleased(item.releaseDate)"
+                        class="inline-flex h-5 shrink-0 items-center rounded-full border border-border bg-muted px-2 text-xs font-medium text-muted-foreground"
+                      >
+                        {{ t('newReleases.item.released') }}
+                      </span>
+                    </div>
+                    <p class="truncate text-xs text-muted-foreground">{{ item.authors.join(', ') }}</p>
+                    <p v-if="seriesLine(item)" class="truncate text-xs text-muted-foreground">{{ seriesLine(item) }}</p>
+                    <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-foreground tabular-nums">
+                      <span v-if="item.ebookDate" class="inline-flex items-center gap-1">
+                        <BookOpen :size="12" class="text-muted-foreground" aria-hidden="true" />
+                        {{ t('newReleases.item.ebookOn', { date: dayLabel(item.ebookDate) }) }}
+                      </span>
+                      <span v-if="item.audiobookDate" class="inline-flex items-center gap-1">
+                        <Headphones :size="12" class="text-muted-foreground" aria-hidden="true" />
+                        {{ t('newReleases.item.audiobookOn', { date: dayLabel(item.audiobookDate) }) }}
+                      </span>
+                    </div>
+                    <p class="flex items-center gap-1 truncate text-xs text-muted-foreground">
+                      <BellRing :size="11" class="shrink-0" aria-hidden="true" />
+                      <span class="truncate">{{ becauseLine(item) }}</span>
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                    :title="t('newReleases.item.hide')"
+                    :aria-label="t('newReleases.item.hideNamed', { title: item.title })"
+                    @click="handleHide(item)"
+                  >
+                    <EyeOff :size="15" aria-hidden="true" />
+                  </button>
+                </li>
+              </ul>
+            </section>
+          </template>
         </template>
 
         <section v-else class="space-y-3" data-testid="new-releases-follows">

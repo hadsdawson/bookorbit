@@ -10,6 +10,7 @@ import {
   type NewReleaseRetentionDays,
   type NewReleasesOverview,
   type NewReleasesServerSettings,
+  type NewReleasesUserSettings,
   type ReleaseFollow,
   type ReleaseFollowKind,
   type ReleaseFollowPage,
@@ -225,6 +226,12 @@ export class NewReleasesService implements OnApplicationBootstrap {
   async setState(user: RequestUser, releaseId: number, state: 'dismissed' | null): Promise<void> {
     if (!(await this.repository.releaseExists(releaseId))) throw new NotFoundException('Release not found');
     await this.repository.setUserState(user.id, releaseId, state);
+  }
+
+  async updateUserSettings(user: RequestUser, retentionDays: NewReleaseRetentionDays): Promise<NewReleasesUserSettings> {
+    await this.repository.saveRetentionDays(user.id, retentionDays);
+    const saved = await this.repository.findUserSettings(user.id);
+    return { delivery: (saved?.delivery as NewReleaseDelivery | null) ?? null, retentionDays };
   }
 
   async serverSettings(): Promise<NewReleasesServerSettings> {
