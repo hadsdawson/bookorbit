@@ -7,11 +7,16 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { THEME_STYLES, type ThemeStyleDefinition } from '@/lib/theme-styles'
 import { ACCENT_ROWS, BACKGROUND_OPTIONS, RADIUS_OPTIONS, useThemeStore } from '@/stores/theme'
 import SurfacePalettePicker from '@/components/SurfacePalettePicker.vue'
+import ColorThemePicker from '@/components/ColorThemePicker.vue'
 import GlowReachPicker from '@/components/GlowReachPicker.vue'
 import AppearancePreferenceStorage from './AppearancePreferenceStorage.vue'
 
 const { t } = useI18n()
 const themeStore = useThemeStore()
+/** A color theme brings its own surfaces and accent, so their pickers step aside while one is on. */
+const colorThemeOn = computed(() => themeStore.colorTheme !== 'none')
+const showSurfacePalette = computed(() => themeStore.appearanceControls.surfacePalette && !colorThemeOn.value)
+
 const showSurfaceBrightness = computed(() => themeStore.resolvedTheme === 'dark' && themeStore.appearanceControls.brightness)
 
 const backgroundGroups = computed<{ label: string; ids: string[] }[]>(() => [
@@ -91,7 +96,18 @@ function handleBrightnessInput(event: Event) {
           </div>
         </div>
 
-        <div v-if="themeStore.appearanceControls.surfacePalette" class="settings-row">
+        <div class="settings-row">
+          <div>
+            <p class="settings-label">
+              {{ t('settings.appearance.theme.colorTheme.label') }}
+            </p>
+            <p class="settings-hint settings-prose">
+              {{ t('settings.appearance.theme.colorTheme.hint') }}
+            </p>
+          </div>
+          <ColorThemePicker class="self-start md:w-96 md:shrink-0" />
+        </div>
+        <div v-if="showSurfacePalette" class="settings-row">
           <div>
             <p class="settings-label">
               {{ t('settings.appearance.theme.surfacePalette.label') }}
@@ -148,7 +164,7 @@ function handleBrightnessInput(event: Event) {
           </div>
         </div>
 
-        <div class="px-4 py-3.5 md:px-5 md:py-4 bg-card">
+        <div v-if="!colorThemeOn" class="px-4 py-3.5 md:px-5 md:py-4 bg-card">
           <p class="settings-label mb-0.5">
             {{ t('settings.appearance.theme.accentColor.label') }}
           </p>

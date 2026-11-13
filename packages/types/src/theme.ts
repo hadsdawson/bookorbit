@@ -141,6 +141,27 @@ export const SURFACE_PALETTE_IDS = [
 export type SurfacePalette = (typeof SURFACE_PALETTE_IDS)[number];
 export const DEFAULT_SURFACE_PALETTE: SurfacePalette = "steel";
 
+/** Fork only. Whole-app color themes that repaint surfaces, buttons, links, icons and pills on top of
+ *  any style. "none" leaves the style and accent as they are. */
+export const COLOR_THEME_IDS = [
+  "none",
+  "velvet-night",
+  "neon-city",
+  "graphite-citrus",
+  "cotton-candy",
+  "tropical-punch",
+  "synthwave",
+  "ocean-sunset",
+  "blueberry-lemon",
+  "arctic-aurora",
+  "peach-fuzz",
+  "royal-jewel",
+  "bubblegum-pop",
+  "noir-red",
+] as const;
+export type ColorTheme = (typeof COLOR_THEME_IDS)[number];
+export const DEFAULT_COLOR_THEME: ColorTheme = "none";
+
 export interface ThemePreferences {
   theme: Theme;
   accent: Accent;
@@ -156,4 +177,6 @@ export interface ThemePreferences {
   /** How far the accent glow reaches down the page, as a percent of the style's own reach; 0 turns it off.
    *  Optional for the same reason; absent means GLOW_REACH_DEFAULT. */
   glowReach?: number;
+  /** Optional for the same reason; absent means "none". */
+  colorTheme?: ColorTheme;
 }

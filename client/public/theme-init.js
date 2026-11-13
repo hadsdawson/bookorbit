@@ -28,6 +28,7 @@
   var radius = readStoredValue('radius', 'default')
   var style = readStoredValue('style', 'nostalgia')
   var surfacePalette = readStoredValue('surfacePalette', 'steel')
+  var colorTheme = readStoredValue('colorTheme', 'none')
   var rawReach = localStorage.getItem('glowReach')
   var storedReach = rawReach === null ? 50 : Number(rawReach)
   var glowReach = isFinite(storedReach) ? Math.min(200, Math.max(0, storedReach)) : 50
@@ -38,6 +39,7 @@
   if (radius !== 'default') root.classList.add('radius-' + radius)
   root.setAttribute('data-style', isAppShellPath(window.location.pathname) ? style : 'bookorbit')
   root.setAttribute('data-surface', surfacePalette)
+  root.setAttribute('data-color-theme', isAppShellPath(window.location.pathname) ? colorTheme : 'none')
   root.style.setProperty('--glow-reach', String(glowReach / 100))
   root.setAttribute('data-glow', glowReach > 0 ? 'on' : 'off')
 })()

@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import AccentPicker from '@/components/AccentPicker.vue'
+import ColorThemePicker from '@/components/ColorThemePicker.vue'
 import BackgroundPicker from '@/components/BackgroundPicker.vue'
 import GlowReachPicker from '@/components/GlowReachPicker.vue'
 import RadiusPicker from '@/components/RadiusPicker.vue'
@@ -28,6 +29,9 @@ defineProps<{
 
 const { t } = useI18n()
 const themeStore = useThemeStore()
+/** A color theme brings its own accent and surfaces, so those pickers step aside while one is on. */
+const colorThemeOn = computed(() => themeStore.colorTheme !== 'none')
+const showSurfacePalette = computed(() => themeStore.appearanceControls.surfacePalette && !colorThemeOn.value)
 const showSurfaceOpacity = computed(() => themeStore.appearanceControls.surfaceOpacity)
 const showSurfaceBrightness = computed(() => themeStore.resolvedTheme === 'dark' && themeStore.appearanceControls.brightness)
 
@@ -79,6 +83,10 @@ function openSheet() {
             <ThemePicker block />
           </div>
           <div class="space-y-2">
+            <span class="text-[13px] text-muted-foreground">{{ t('components.appHeader.colorTheme') }}</span>
+            <ColorThemePicker />
+          </div>
+          <div v-if="!colorThemeOn" class="space-y-2">
             <div class="flex items-baseline justify-between gap-2">
               <span class="text-[13px] text-muted-foreground">{{ t('components.appHeader.accent') }}</span>
               <span class="truncate text-[13px] font-medium text-foreground">{{ accentLabel }}</span>
@@ -89,7 +97,7 @@ function openSheet() {
             <span class="text-[13px] text-muted-foreground">{{ t('components.appHeader.style') }}</span>
             <StylePicker block />
           </div>
-          <div v-if="themeStore.appearanceControls.surfacePalette" class="space-y-2">
+          <div v-if="showSurfacePalette" class="space-y-2">
             <span class="text-[13px] text-muted-foreground">{{ t('components.appHeader.surfacePalette') }}</span>
             <SurfacePalettePicker />
           </div>
@@ -139,6 +147,11 @@ function openSheet() {
         </section>
 
         <section class="space-y-2 rounded-lg border border-border bg-card p-3">
+          <h3 class="text-sm font-medium text-foreground">{{ t('components.appHeader.colorTheme') }}</h3>
+          <ColorThemePicker />
+        </section>
+
+        <section v-if="!colorThemeOn" class="space-y-2 rounded-lg border border-border bg-card p-3">
           <div class="flex items-baseline justify-between gap-2">
             <h3 class="text-sm font-medium text-foreground">{{ t('components.appHeader.accent') }}</h3>
             <span class="truncate text-[13px] text-muted-foreground">{{ accentLabel }}</span>
@@ -151,7 +164,7 @@ function openSheet() {
             <h3 class="text-sm font-medium text-foreground">{{ t('components.appHeader.style') }}</h3>
             <StylePicker touch />
           </div>
-          <div v-if="themeStore.appearanceControls.surfacePalette" class="space-y-2 border-t border-border pt-3">
+          <div v-if="showSurfacePalette" class="space-y-2 border-t border-border pt-3">
             <h3 class="text-sm font-medium text-foreground">{{ t('components.appHeader.surfacePalette') }}</h3>
             <SurfacePalettePicker touch />
           </div>

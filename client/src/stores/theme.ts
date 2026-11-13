@@ -5,6 +5,9 @@ import {
   type Background,
   ACCENT_IDS,
   type Accent,
+  COLOR_THEME_IDS,
+  type ColorTheme,
+  DEFAULT_COLOR_THEME,
   DEFAULT_STYLE,
   DEFAULT_SURFACE_PALETTE,
   GLOW_REACH_DEFAULT,
@@ -140,11 +143,14 @@ export const useThemeStore = defineStore('theme', () => {
   const style = ref<Style>(storedChoice('style', STYLE_IDS, DEFAULT_STYLE))
   const surfacePalette = ref<SurfacePalette>(storedChoice('surfacePalette', SURFACE_PALETTE_IDS, DEFAULT_SURFACE_PALETTE))
   const glowReach = ref<number>(clampGlowReach(storage.get<unknown>('glowReach', GLOW_REACH_DEFAULT)))
+  const colorTheme = ref<ColorTheme>(storedChoice('colorTheme', COLOR_THEME_IDS, DEFAULT_COLOR_THEME))
 
   /** A style dresses the app shell only; sign-in pages and readers always paint as BookOrbit. */
   const styleScopeActive = ref(isAppShellPath(window.location.pathname))
   const appliedStyle = computed<Style>(() => (styleScopeActive.value ? style.value : 'bookorbit'))
   const appliedStyleDefinition = computed(() => getThemeStyle(appliedStyle.value))
+  /** Like a style, a color theme only dresses the app shell. */
+  const appliedColorTheme = computed<ColorTheme>(() => (styleScopeActive.value ? colorTheme.value : 'none'))
   const styleDefinition = computed(() => getThemeStyle(style.value))
   const appearanceControls = computed(() => getAppearanceControls(style.value))
 
@@ -162,6 +168,7 @@ export const useThemeStore = defineStore('theme', () => {
       appliedStyle.value,
       appliedStyleDefinition.value.controls.surfacePalette ? surfacePalette.value : '',
       resolvedTheme.value === 'dark' ? appliedBrightness.value : '',
+      appliedColorTheme.value,
     ].join(':'),
   )
 
@@ -228,6 +235,10 @@ export const useThemeStore = defineStore('theme', () => {
     surfacePalette.value = palette
   }
 
+  function setColorTheme(next: ColorTheme) {
+    colorTheme.value = next
+  }
+
   function setGlowReach(reach: number) {
     glowReach.value = clampGlowReach(reach)
   }
@@ -253,6 +264,7 @@ export const useThemeStore = defineStore('theme', () => {
   watch(appliedStyle, (s) => root.setAttribute('data-style', s), SYNC)
   watch(surfacePalette, (palette) => root.setAttribute('data-surface', palette), SYNC)
   watch(glowReach, applyGlowReach, SYNC)
+  watch(appliedColorTheme, (value) => root.setAttribute('data-color-theme', value), SYNC)
   watch(appearanceKey, applyThemeColorMeta, { immediate: true, flush: 'post' })
 
   watch(theme, (t) => storage.set('theme', t), { immediate: true })
@@ -264,6 +276,7 @@ export const useThemeStore = defineStore('theme', () => {
   watch(style, (s) => storage.set('style', s), { immediate: true })
   watch(surfacePalette, (palette) => storage.set('surfacePalette', palette), { immediate: true })
   watch(glowReach, (reach) => storage.set('glowReach', reach), { immediate: true })
+  watch(colorTheme, (value) => storage.set('colorTheme', value), { immediate: true })
 
   return {
     theme,
@@ -276,6 +289,7 @@ export const useThemeStore = defineStore('theme', () => {
     style,
     surfacePalette,
     glowReach,
+    colorTheme,
     appliedStyle,
     styleDefinition,
     appearanceControls,
@@ -291,6 +305,7 @@ export const useThemeStore = defineStore('theme', () => {
     setStyle,
     setSurfacePalette,
     setGlowReach,
+    setColorTheme,
     setStyleScopeActive,
   }
 })

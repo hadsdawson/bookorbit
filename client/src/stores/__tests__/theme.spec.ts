@@ -255,6 +255,29 @@ describe('useThemeStore', () => {
       expect(localStorage.getItem('surfacePalette')).toBe('"sepia"')
     })
 
+    it('starts with no color theme, then paints and persists one', async () => {
+      document.documentElement.removeAttribute('data-color-theme')
+      setActivePinia(createPinia())
+      const store = useThemeStore()
+
+      expect(store.colorTheme).toBe('none')
+      expect(document.documentElement.getAttribute('data-color-theme')).toBe('none')
+      store.setColorTheme('cotton-candy')
+      expect(document.documentElement.getAttribute('data-color-theme')).toBe('cotton-candy')
+      await nextTick()
+      expect(localStorage.getItem('colorTheme')).toBe('"cotton-candy"')
+    })
+
+    it('leaves standalone pages without a color theme', () => {
+      localStorage.setItem('colorTheme', '"synthwave"')
+      window.history.replaceState(null, '', '/login')
+      setActivePinia(createPinia())
+      const store = useThemeStore()
+
+      expect(store.colorTheme).toBe('synthwave')
+      expect(document.documentElement.getAttribute('data-color-theme')).toBe('none')
+    })
+
     it('rejects unknown stored ids', () => {
       localStorage.setItem('style', '"retro"')
       localStorage.setItem('surfacePalette', '"teal"')

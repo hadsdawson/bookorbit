@@ -15,6 +15,7 @@ import {
   MAX_SERVER_FONTS,
   STYLE_IDS,
   SUPPORTED_LOCALES,
+  COLOR_THEME_IDS,
   SURFACE_PALETTE_IDS,
 } from '@bookorbit/types';
 
@@ -373,6 +374,20 @@ describe('UserPreferencesService', () => {
 
   it('upsertThemePreferences rejects an unknown style', async () => {
     await expect(service.upsertThemePreferences(11, { ...validThemePreferences, style: 'retro' } as never)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(repo.upsert).not.toHaveBeenCalled();
+  });
+
+  it.each(COLOR_THEME_IDS)('upsertThemePreferences accepts the %s color theme', async (colorTheme) => {
+    const preferences = { ...validThemePreferences, colorTheme };
+
+    await expect(service.upsertThemePreferences(11, preferences)).resolves.toBeUndefined();
+    expect(repo.upsert).toHaveBeenCalledWith(11, 'theme', preferences);
+  });
+
+  it('upsertThemePreferences rejects an unknown color theme', async () => {
+    await expect(service.upsertThemePreferences(11, { ...validThemePreferences, colorTheme: 'rainbow' } as never)).rejects.toBeInstanceOf(
       BadRequestException,
     );
     expect(repo.upsert).not.toHaveBeenCalled();
