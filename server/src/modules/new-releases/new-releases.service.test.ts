@@ -38,6 +38,8 @@ describe('NewReleasesService', () => {
     recordCheck: ReturnType<typeof vi.fn<NewReleasesRepository['recordCheck']>>;
     findLibraryAuthorsPage: ReturnType<typeof vi.fn<NewReleasesRepository['findLibraryAuthorsPage']>>;
     insertFollowsIfMissing: ReturnType<typeof vi.fn<NewReleasesRepository['insertFollowsIfMissing']>>;
+    saveRetentionDays: ReturnType<typeof vi.fn<NewReleasesRepository['saveRetentionDays']>>;
+    findUserSettings: ReturnType<typeof vi.fn<NewReleasesRepository['findUserSettings']>>;
   };
   let lookup: ReturnType<typeof vi.fn<ReleaseSourcesService['lookup']>>;
   let service: NewReleasesService;
@@ -51,6 +53,8 @@ describe('NewReleasesService', () => {
       recordCheck: vi.fn<NewReleasesRepository['recordCheck']>().mockResolvedValue(undefined),
       findLibraryAuthorsPage: vi.fn<NewReleasesRepository['findLibraryAuthorsPage']>(),
       insertFollowsIfMissing: vi.fn<NewReleasesRepository['insertFollowsIfMissing']>(),
+      saveRetentionDays: vi.fn<NewReleasesRepository['saveRetentionDays']>().mockResolvedValue(undefined),
+      findUserSettings: vi.fn<NewReleasesRepository['findUserSettings']>().mockResolvedValue({ userId: 3, delivery: 'request', retentionDays: 60 }),
     };
     lookup = vi.fn<ReleaseSourcesService['lookup']>();
     service = new NewReleasesService(
@@ -110,5 +114,10 @@ describe('NewReleasesService', () => {
       expect.objectContaining({ name: 'Émile Zola', nameKey: 'emilezola', authorId: 1 }),
       expect.objectContaining({ name: 'Jane Writer', nameKey: 'janewriter', authorId: 2 }),
     ]);
+  });
+
+  it('saves how long released books stay listed and keeps the delivery choice', async () => {
+    await expect(service.updateUserSettings(user, 60)).resolves.toEqual({ delivery: 'request', retentionDays: 60 });
+    expect(repository.saveRetentionDays).toHaveBeenCalledWith(3, 60);
   });
 });

@@ -16223,7 +16223,7 @@
       "noFollowsTitle": "You're not following anyone yet",
       "noFollowsHint": "Use Follow on an author or series page, or follow everything in your library above.",
       "nothingTitle": "Nothing coming up yet",
-      "nothingHint": "Books with a confirmed release date show up here once a book site lists them. Checks run in the background every week."
+      "nothingHint": "Books with a confirmed release date show up here once a book site lists them. Checks run in the background every week, and released books drop off after the period you choose."
     },
     "item": {
       "seriesNumber": "{series} #{number}",
@@ -16234,7 +16234,8 @@
       "hide": "Hide",
       "hideNamed": "Hide {title}",
       "hidden": "Hid {title}",
-      "undo": "Undo"
+      "undo": "Undo",
+      "released": "Out now"
     },
     "following": {
       "search": "Search followed names",
@@ -16264,7 +16265,30 @@
       "follow": "Could not follow.",
       "unfollow": "Could not unfollow.",
       "followAll": "Could not follow everything.",
-      "hide": "Could not change that book."
+      "hide": "Could not change that book.",
+      "saveSettings": "Could not save that setting."
+    },
+    "view": {
+      "list": "List",
+      "calendar": "Calendar"
+    },
+    "retention": {
+      "label": "Keep released books listed for",
+      "days": "{days} days",
+      "saved": "Released books now stay listed for {days} days"
+    },
+    "calendar": {
+      "today": "Today",
+      "previous": "Previous month",
+      "next": "Next month",
+      "more": "+{count} more",
+      "nothingThatDay": "Nothing comes out this day.",
+      "dayWithBooks": "{date}, {count, plural, one {# book} other {# books}}",
+      "formats": {
+        "ebook": "Ebook",
+        "audiobook": "Audiobook",
+        "ebook-audiobook": "Ebook and audiobook"
+      }
     }
   }
 }

@@ -6,6 +6,7 @@ import { RequirePermission } from '../../common/decorators/require-permission.de
 import type { RequestUser } from '../../common/types/request-user';
 import { CreateReleaseFollowDto, FindReleaseFollowQueryDto, FollowAllDto, ListReleaseFollowsQueryDto } from './dto/follow.dto';
 import { SetReleaseStateDto } from './dto/set-release-state.dto';
+import { UpdateNewReleasesSettingsDto } from './dto/update-settings.dto';
 import { NewReleasesService } from './new-releases.service';
 
 @Controller('new-releases')
@@ -16,6 +17,11 @@ export class NewReleasesController {
   @Get()
   overview(@CurrentUser() user: RequestUser) {
     return this.service.overview(user);
+  }
+
+  @Put('settings')
+  updateSettings(@CurrentUser() user: RequestUser, @Body() dto: UpdateNewReleasesSettingsDto) {
+    return this.service.updateUserSettings(user, dto.retentionDays);
   }
 
   @Get('follows')

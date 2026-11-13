@@ -367,6 +367,13 @@ export class NewReleasesRepository {
       });
   }
 
+  async saveRetentionDays(userId: number, retentionDays: number): Promise<void> {
+    await this.db
+      .insert(schema.releaseUserSettings)
+      .values({ userId, retentionDays })
+      .onConflictDoUpdate({ target: schema.releaseUserSettings.userId, set: { retentionDays } });
+  }
+
   async findUserSettings(userId: number): Promise<typeof schema.releaseUserSettings.$inferSelect | null> {
     const [row] = await this.db.select().from(schema.releaseUserSettings).where(eq(schema.releaseUserSettings.userId, userId)).limit(1);
     return row ?? null;

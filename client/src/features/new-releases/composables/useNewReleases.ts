@@ -1,9 +1,41 @@
 import { computed, ref } from 'vue'
-import type { NewReleaseItem, NewReleasesOverview, ReleaseFollow, ReleaseFollowKind } from '@bookorbit/types'
+import type { NewReleaseItem, NewReleaseRetentionDays, NewReleasesOverview, ReleaseFollow, ReleaseFollowKind } from '@bookorbit/types'
 
-import { followAllForReleases, getNewReleases, listReleaseFollows, setNewReleaseHidden, unfollowForReleases } from '../api/new-releases'
+import {
+  followAllForReleases,
+  getNewReleases,
+  listReleaseFollows,
+  setNewReleaseHidden,
+  setNewReleasesRetention,
+  unfollowForReleases,
+} from '../api/new-releases'
 
 export const FOLLOW_PAGE_SIZE = 50
+
+export type ReleaseView = 'list' | 'calendar'
+const VIEW_KEY = 'bookorbit.newReleases.view'
+
+/** The last view this browser used; per viewer, so it lives in the browser. */
+export function readReleaseView(): ReleaseView {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'calendar' ? 'calendar' : 'list'
+  } catch {
+    return 'list'
+  }
+}
+
+export function saveReleaseView(view: ReleaseView): void {
+  try {
+    localStorage.setItem(VIEW_KEY, view)
+  } catch {
+    // A view that cannot be remembered still applies now.
+  }
+}
+
+/** Whether a release date has passed, by the local calendar. */
+export function isReleased(releaseDate: string, today: Date = new Date()): boolean {
+  return parseReleaseDate(releaseDate) <= new Date(today.getFullYear(), today.getMonth(), today.getDate())
+}
 
 export interface ReleaseMonthGroup {
   key: string
@@ -69,7 +101,13 @@ export function useNewReleases() {
     return added
   }
 
-  return { overview, loading, failed, groups, followTotal, anySource, load, hide, unhide, followAll }
+  /** Shorter keeps fewer released books, so the list is fetched again under the new period. */
+  async function setRetention(retentionDays: NewReleaseRetentionDays): Promise<void> {
+    await setNewReleasesRetention(retentionDays)
+    await load()
+  }
+
+  return { overview, loading, failed, groups, followTotal, anySource, load, hide, unhide, followAll, setRetention }
 }
 
 /** The Following tab: a searchable, paged list of what this user follows. */
