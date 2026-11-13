@@ -693,6 +693,7 @@ export class BookConsolidationRepository {
     await tx.execute(sql`update book_requests set target_book_id = ${k}, updated_at = now() where target_book_id = ${s} ${keep}`);
     await tx.execute(sql`update upload_sessions set target_book_id = ${k}, updated_at = now() where target_book_id = ${s}`);
     await tx.execute(sql`update upload_sessions set result_book_id = ${k}, updated_at = now() where result_book_id = ${s}`);
+    await tx.execute(sql`update upcoming_releases set owned_book_id = ${k} where owned_book_id = ${s}`);
     await tx.execute(sql`
       insert into book_duplicate_dismissals (user_id, kind, book_id_a, book_id_b, created_at)
       select user_id, kind,

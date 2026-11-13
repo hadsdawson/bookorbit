@@ -84,6 +84,8 @@ export const BOOK_MERGE_RULES: Readonly<Record<string, BookMergeRuleKind>> = {
   'book_links.book_id': 'repoint',
   'book_link_groups.lead_book_id': 'repoint',
   'book_merges.target_book_id': 'flatten',
+  // Fork: New Releases. A release already in the library stays hidden under the kept book.
+  'upcoming_releases.owned_book_id': 'repoint',
 };
 
 /** Columns whose foreign key is ON DELETE SET NULL. Deleting the source would orphan them, so none may be left to the delete. */
@@ -95,4 +97,5 @@ export const BOOK_MERGE_SET_NULL_COLUMNS = [
   'upload_sessions.result_book_id',
   'reading_attempts.book_id',
   'book_link_groups.lead_book_id',
+  'upcoming_releases.owned_book_id',
 ] as const;
