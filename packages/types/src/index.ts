@@ -1,4 +1,5 @@
 export * from "./audit";
+export * from "./age-rating";
 export * from "./network-profile";
 export * from "./account-activity";
 export * from "./auth";
@@ -38,7 +39,6 @@ export * from "./query";
 export * from "./jump-buckets";
 export * from "./reader-settings";
 export * from "./scanner";
-export * from "./age-rating";
 export * from "./search";
 export * from "./opds";
 export * from "./kobo";

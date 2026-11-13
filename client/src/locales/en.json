@@ -1,4 +1,14 @@
 {
+  "ageRating": {
+    "label": "Age rating",
+    "allAges": "All Ages",
+    "age10": "10+",
+    "age13": "13+",
+    "age16": "16+",
+    "age18": "18+",
+    "notRated": "Not rated",
+    "appliesToSeries": "Saved for every book in {count, plural, one {{series}} other {these series: {series}}}."
+  },
   "common": {
     "resetSortAria": "Reset sort to default",
     "save": "Save",
@@ -15436,16 +15446,6 @@
     "closeImage": "Close image",
     "previousImage": "Previous image",
     "nextImage": "Next image"
-  },
-  "ageRating": {
-    "label": "Age rating",
-    "allAges": "All Ages",
-    "age10": "10+",
-    "age13": "13+",
-    "age16": "16+",
-    "age18": "18+",
-    "notRated": "Not rated",
-    "appliesToSeries": "Saved for every book in {count, plural, one {{series}} other {these series: {series}}}."
   },
   "titles": {
     "dashboard": "Dashboard",
