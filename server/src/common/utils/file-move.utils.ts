@@ -4,6 +4,9 @@ import { mkdir, open, readdir, rename as fsRename, rm, rmdir, stat, unlink } fro
 import { dirname, isAbsolute, join, normalize, relative, sep } from 'path';
 import { Writable } from 'stream';
 import { pipeline } from 'stream/promises';
+import { Logger } from '@nestjs/common';
+
+import { sanitizeLogValue } from './log-sanitize.utils';
 
 export const MAX_PATH_LENGTH = 4096;
 
@@ -155,6 +158,8 @@ export async function moveFileBack(from: string, to: string): Promise<void> {
   await unlink(from);
 }
 
+const cleanupLogger = new Logger('FileCleanup');
+
 /** Files the operating system or NAS leaves in folders on its own. They never make a folder worth keeping. */
 const SYSTEM_JUNK_FILES = new Set(['.ds_store', 'thumbs.db', 'ehthumbs.db', 'desktop.ini', '.directory']);
 /** Synology's and QNAP's thumbnail caches, which they recreate whenever they need them. */
@@ -173,21 +178,27 @@ function isSystemJunk(name: string, isDirectory: boolean): boolean {
  * the like) counts as empty and they are cleared with it. Anything else, even one stray file, keeps
  * the folder and stops the climb, so nothing a person put there is ever deleted.
  */
-export async function removeEmptyDirs(directory: string, stopAtRoot: string): Promise<void> {
+export async function removeEmptyDirs(directory: string, stopAtRoot: string): Promise<string[]> {
+  const removed: string[] = [];
   let current = normalize(directory);
   while (isInsideRoot(stopAtRoot, current)) {
     try {
       const entries = await readdir(current, { withFileTypes: true });
-      if (!entries.every((entry) => (entry.isFile() || entry.isDirectory()) && isSystemJunk(entry.name, entry.isDirectory()))) return;
+      if (!entries.every((entry) => (entry.isFile() || entry.isDirectory()) && isSystemJunk(entry.name, entry.isDirectory()))) break;
       for (const entry of entries) {
         await rm(join(current, entry.name), { recursive: entry.isDirectory(), force: true });
       }
       await rmdir(current);
+      removed.push(current);
+      cleanupLogger.log(
+        `[files.remove_empty_dir] [end] path="${sanitizeLogValue(current)}" systemFilesCleared=${entries.length} - empty folder removed`,
+      );
     } catch {
-      return;
+      break;
     }
     current = dirname(current);
   }
+  return removed;
 }
 
 /**

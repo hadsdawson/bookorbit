@@ -287,6 +287,15 @@ describe('removeEmptyDirs', () => {
     expect(await pathExists(root)).toBe(true);
   });
 
+  it('reports each folder it removed, deepest first', async () => {
+    const root = join(workDir, 'library');
+    const bookDir = join(root, 'Author', 'Book');
+    await mkdir(bookDir, { recursive: true });
+    await writeFile(join(root, 'keep.txt'), 'x');
+
+    expect(await removeEmptyDirs(bookDir, root)).toEqual([bookDir, join(root, 'Author')]);
+  });
+
   it('stops at a directory that still has files', async () => {
     const root = join(workDir, 'library');
     const bookDir = join(root, 'Author', 'Book');

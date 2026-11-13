@@ -77,16 +77,21 @@ const INVALID_SEGMENT_CHARS_REGEX = /[<>:"/\\|?*\u0000-\u001F]/g;
 /** Latin letters that carry no separate accent mark, so they do not reduce on their own. */
 const BASE_LETTERS: Record<string, string> = { Ø: "O", Ł: "L", Đ: "D", Æ: "A", Œ: "O", ß: "S", Þ: "T", Ð: "D", Ħ: "H", Ŧ: "T", Ŋ: "N", ı: "I" };
 
+/** Where names that do not start with a letter are filed. */
+const OTHER_INITIAL = "#";
+
 /**
  * A name's first letter as a plain capital, so "Ánya", "Émile" and "Øystein" file under A, E and O
  * with everyone else rather than in folders of their own. Letters from other alphabets stay as
- * they are.
+ * they are. A name that starts with a digit or a symbol ("50 Cent", ".hack") files under "#", so
+ * those never scatter into a folder per character.
  */
 function plainInitial(text: string): string {
   const first = Array.from(text.trim())[0];
   if (!first) return "";
   const base = first.normalize("NFD").replace(/\p{M}+/gu, "");
-  return (BASE_LETTERS[base] ?? BASE_LETTERS[base.toUpperCase()] ?? base).toUpperCase();
+  const letter = (BASE_LETTERS[base] ?? BASE_LETTERS[base.toUpperCase()] ?? base).toUpperCase();
+  return /^\p{L}/u.test(letter) ? letter : OTHER_INITIAL;
 }
 
 export function applyModifier(value: string, modifier: string, fieldName: string): string {

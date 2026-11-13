@@ -42,6 +42,8 @@ export interface AbsMetadataSource {
   abridged: boolean;
   chapters: readonly AudiobookChapter[];
   durationSeconds: number | null;
+  /** BookOrbit keeps no such flag of its own, so it is carried over from the folder's existing file. */
+  explicit?: boolean;
 }
 
 export const METADATA_JSON_NAME = 'metadata.json';
@@ -65,7 +67,7 @@ export function buildAbsMetadata(source: AbsMetadataSource): AbsMetadataJson {
     isbn: source.isbn13 ?? source.isbn10,
     asin: source.audibleId ?? source.amazonId,
     language: source.language,
-    explicit: false,
+    explicit: source.explicit === true,
     abridged: source.abridged,
   };
 }
@@ -99,4 +101,15 @@ export function folderCoverFiles(setting: FolderCoverMedia, available: ReadonlyS
   if ((setting === 'ebook' || setting === 'both') && available.has('ebook')) wanted.push('ebook');
   if (wanted.length === 1) return [{ medium: wanted[0], name: PRIMARY_COVER_NAME }];
   return wanted.map((medium) => ({ medium, name: medium === 'audio' ? PRIMARY_COVER_NAME : EBOOK_COVER_NAME }));
+}
+
+/** The `explicit` flag of a metadata.json already in the folder, so rewriting the file never clears it. */
+export function readExplicitFlag(text: string | null): boolean {
+  if (!text) return false;
+  try {
+    const value: unknown = JSON.parse(text);
+    return typeof value === 'object' && value !== null && (value as { explicit?: unknown }).explicit === true;
+  } catch {
+    return false;
+  }
 }

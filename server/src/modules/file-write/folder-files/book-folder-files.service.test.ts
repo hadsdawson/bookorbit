@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import sharp from 'sharp';
@@ -85,6 +85,7 @@ function makeService(
     coverStore as never,
     new FileLockService(),
     new SelfWriteRegistry(),
+    { get: () => join(root, 'app-data') } as never,
   );
   return { service, repo, fileWriteRepo, coverStore };
 }
@@ -113,6 +114,66 @@ describe('BookFolderFilesService', () => {
 
     expect(outcome.status).toBe('unchanged');
     expect((await stat(join(folder, 'metadata.json'))).mtimeMs).toBe(before);
+  });
+
+  it('keeps a file it did not write as .bak before replacing it, once', async () => {
+    const original = JSON.stringify({ title: 'From Audiobookshelf', tags: ['keep me'] });
+    await writeFile(join(folder, 'metadata.json'), original);
+    await writeFile(join(folder, 'cover.jpg'), 'my own cover');
+    const { service, fileWriteRepo } = makeService();
+
+    await service.writeForBook(7);
+    expect(await readFile(join(folder, 'metadata.json.bak'), 'utf8')).toBe(original);
+    expect(await readFile(join(folder, 'cover.jpg.bak'), 'utf8')).toBe('my own cover');
+
+    const payload = await fileWriteRepo.loadPayload();
+    fileWriteRepo.loadPayload.mockResolvedValue({ ...payload, title: 'Renamed' });
+    await service.writeForBook(7);
+    expect(JSON.parse(await readFile(join(folder, 'metadata.json'), 'utf8')).title).toBe('Renamed');
+    expect(await readFile(join(folder, 'metadata.json.bak'), 'utf8')).toBe(original);
+  });
+
+  it('makes no .bak of files it wrote itself, but does of one edited by hand since', async () => {
+    const { service, fileWriteRepo } = makeService({ folderCovers: 'off' });
+    await service.writeForBook(7);
+    const payload = await fileWriteRepo.loadPayload();
+    fileWriteRepo.loadPayload.mockResolvedValue({ ...payload, title: 'Second' });
+    await service.writeForBook(7);
+    await expect(stat(join(folder, 'metadata.json.bak'))).rejects.toThrow();
+
+    await writeFile(join(folder, 'metadata.json'), '{"title":"Edited by hand"}');
+    fileWriteRepo.loadPayload.mockResolvedValue({ ...payload, title: 'Third' });
+    await service.writeForBook(7);
+    expect(await readFile(join(folder, 'metadata.json.bak'), 'utf8')).toBe('{"title":"Edited by hand"}');
+  });
+
+  it('adopts a file that already holds what it would write, without a .bak', async () => {
+    const first = makeService({ folderCovers: 'off' });
+    await first.service.writeForBook(7);
+    await rm(join(root, 'app-data'), { recursive: true, force: true });
+    const second = makeService({ folderCovers: 'off' });
+    expect((await second.service.writeForBook(7)).status).toBe('unchanged');
+    const payload = await second.fileWriteRepo.loadPayload();
+    second.fileWriteRepo.loadPayload.mockResolvedValue({ ...payload, title: 'Changed' });
+    await second.service.writeForBook(7);
+    await expect(stat(join(folder, 'metadata.json.bak'))).rejects.toThrow();
+  });
+
+  it('keeps the explicit flag of the metadata.json already in the folder', async () => {
+    await writeFile(join(folder, 'metadata.json'), JSON.stringify({ title: 'From Audiobookshelf', explicit: true }));
+    const { service, fileWriteRepo } = makeService({ folderCovers: 'off' });
+    await service.writeForBook(7);
+    expect(JSON.parse(await readFile(join(folder, 'metadata.json'), 'utf8')).explicit).toBe(true);
+    const payload = await fileWriteRepo.loadPayload();
+    fileWriteRepo.loadPayload.mockResolvedValue({ ...payload, title: 'Renamed' });
+    await service.writeForBook(7);
+    expect(JSON.parse(await readFile(join(folder, 'metadata.json'), 'utf8'))).toMatchObject({ title: 'Renamed', explicit: true });
+  });
+
+  it('leaves no temporary files behind', async () => {
+    const { service } = makeService();
+    await service.writeForBook(7);
+    expect((await readdir(folder)).sort()).toEqual(['cover-ebook.jpg', 'cover.jpg', 'metadata.json']);
   });
 
   it('writes only the JSON when covers are off', async () => {
