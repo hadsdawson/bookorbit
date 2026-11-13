@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import type { BookRequestItem } from '@bookorbit/types'
 
 import RequestListTable from '../components/RequestListTable.vue'
-import { useRequestTableColumns } from '../composables/useRequestTableColumns'
+import { completeOrder, useRequestTableColumns } from '../composables/useRequestTableColumns'
 
 function request(overrides: Partial<BookRequestItem> = {}): BookRequestItem {
   return {
@@ -118,6 +118,47 @@ describe('RequestListTable columns', () => {
         .findAll('col')
         .some((col) => col.attributes('style')?.includes('300px')),
     ).toBe(true)
+  })
+})
+
+describe('RequestListTable column order and cover', () => {
+  afterEach(() => {
+    useRequestTableColumns().reset()
+  })
+
+  function columnOrder(wrapper: ReturnType<typeof render>): string[] {
+    return wrapper.findAll('thead th[data-column]').map((th) => th.attributes('data-column')!)
+  }
+
+  it('draws headers and cells in the saved order', () => {
+    useRequestTableColumns().moveTo('state', 'cover')
+    const wrapper = render([request()])
+    expect(columnOrder(wrapper).slice(0, 3)).toEqual(['state', 'cover', 'title'])
+    expect(wrapper.findAll('tbody tr')[0]!.findAll('td')).toHaveLength(wrapper.findAll('thead th').length)
+  })
+
+  it('moves a column one step with the arrow keys on its grip', async () => {
+    const wrapper = render([request()])
+    await wrapper.find('thead th[data-column="released"] button[draggable="true"]').trigger('keydown', { key: 'ArrowLeft' })
+    const order = columnOrder(wrapper)
+    expect(order.indexOf('released')).toBeLessThan(order.indexOf('mediaKind'))
+  })
+
+  it('can hide the actions column', () => {
+    useRequestTableColumns().setVisible('actions', false)
+    expect(columnOrder(render([request()]))).not.toContain('actions')
+  })
+
+  it('sizes the cover from the cover column width', () => {
+    useRequestTableColumns().setWidth('cover', 124)
+    const style = render([request()]).find('tbody td div[aria-hidden="true"], tbody td img').attributes('style')
+    expect(style).toContain('width: 100px')
+    expect(style).toContain('height: 145px')
+  })
+
+  it('keeps a saved order and slots new columns in beside their default neighbour', () => {
+    const saved = ['title', 'mediaKind', 'released', 'requester', 'age', 'tracking', 'state', 'outcome']
+    expect(completeOrder(saved)).toEqual(['cover', 'title', 'mediaKind', 'released', 'requester', 'age', 'tracking', 'state', 'outcome', 'actions'])
   })
 })
 
