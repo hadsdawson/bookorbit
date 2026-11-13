@@ -171,6 +171,7 @@ function makeService(
     setHardcoverEditionIdIfEmpty: vi.fn(),
     updateAddedAt: vi.fn(),
     replaceCommunityRatings: vi.fn(),
+    upsertCommunityRatings: vi.fn(),
     withTransaction: vi.fn(),
     deleteByIds: vi.fn(),
     deleteByIdsAndInvalidateScanState: vi.fn(),
@@ -1034,6 +1035,64 @@ describe('BookService', () => {
   });
 
   describe('metadata refresh + update', () => {
+    describe('refreshCommunityRatings', () => {
+      const found = (lockedFields: string[] = []) => ({
+        book: {
+          books: { id: 1, libraryId: 7, primaryFileId: null },
+          book_metadata: { title: 'Dune', isbn13: '978123', isbn10: null, goodreadsId: 'gr-1', lockedFields },
+        },
+        authorRows: [{ id: 1, name: 'Frank Herbert', sortName: null }],
+        genreRows: [],
+        narratorRows: [],
+        communityRatingRows: [],
+        fileRows: [{ format: 'epub', role: 'primary', mediaOverlayAvailable: false }],
+      });
+
+      it('stores only the ratings the providers return, and never looks for a cover', async () => {
+        const { service, bookRepo, pipeline, libraryService } = makeService();
+        bookRepo.findById.mockResolvedValue(found());
+        bookRepo.upsertCommunityRatings.mockResolvedValue(true);
+        pipeline.runWithSources.mockResolvedValue({
+          cache: { servedProviders: [], outboundRequests: 2 },
+          resolved: { title: 'Another Title', communityRatings: [{ provider: 'goodreads', rating: 4.27, ratingCount: 1500, updatedAt: 'now' }] },
+          sources: {},
+          providerIds: {},
+        });
+        const updateSpy = vi.spyOn(service, 'updateMetadata');
+
+        await expect(service.refreshCommunityRatings(1)).resolves.toEqual({ status: 'updated', outboundRequests: 2 });
+
+        expect(pipeline.runWithSources).toHaveBeenCalledWith(
+          expect.objectContaining({ title: 'Dune', author: 'Frank Herbert', existingProviderIds: expect.objectContaining({ goodreads: 'gr-1' }) }),
+          {},
+          7,
+          expect.objectContaining({ lockedCoverSlots: ['ebook', 'audio'] }),
+        );
+        expect(bookRepo.upsertCommunityRatings).toHaveBeenCalledWith(1, [{ provider: 'goodreads', rating: 4.27, ratingCount: 1500 }]);
+        expect(updateSpy).not.toHaveBeenCalled();
+        expect(libraryService.verifyAccessLevel).not.toHaveBeenCalled();
+      });
+
+      it('leaves a book whose ratings are locked, or that is gone, alone', async () => {
+        const { service, bookRepo, pipeline } = makeService();
+        bookRepo.findById.mockResolvedValueOnce(found(['communityRating'])).mockResolvedValueOnce(null);
+
+        await expect(service.refreshCommunityRatings(1)).resolves.toEqual({ status: 'skipped', outboundRequests: 0 });
+        await expect(service.refreshCommunityRatings(2)).resolves.toEqual({ status: 'skipped', outboundRequests: 0 });
+        expect(pipeline.runWithSources).not.toHaveBeenCalled();
+      });
+
+      it('reports unchanged when no number moved', async () => {
+        const { service, bookRepo, pipeline } = makeService();
+        bookRepo.findById.mockResolvedValue(found());
+        bookRepo.upsertCommunityRatings.mockResolvedValue(false);
+        pipeline.runWithSources.mockResolvedValue({ cache: NO_CACHE_USE, resolved: {}, sources: {}, providerIds: {} });
+
+        await expect(service.refreshCommunityRatings(1)).resolves.toEqual({ status: 'unchanged', outboundRequests: 0 });
+        expect(bookRepo.upsertCommunityRatings).toHaveBeenCalledWith(1, []);
+      });
+    });
+
     it('refreshMetadata preview returns resolved fields without mutating metadata', async () => {
       const { service, bookRepo, libraryService, pipeline, metadataService, coverStore } = makeService();
       const user = makeUser();
