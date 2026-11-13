@@ -581,6 +581,12 @@ export const routes: RouteRecordRaw[] = [
         ],
       },
       {
+        path: '/new-releases',
+        name: 'new-releases',
+        component: () => import('@/features/new-releases/views/NewReleasesView.vue'),
+        meta: { titleRow: true, requiredPermission: Permission.NewReleasesAccess, title: () => t('titles.newReleases') },
+      },
+      {
         path: '/whats-new',
         name: 'whats-new',
         component: () => import('@/features/whats-new/WhatsNewView.vue'),

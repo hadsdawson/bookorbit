@@ -12,6 +12,7 @@ import SearchFreshButton from '@/features/metadata-cache/components/SearchFreshB
 import type { MetadataCacheSummary } from '@/features/metadata-cache/lib/metadata-cache'
 import { isSafeWebsite, lifeDateLabel } from '../lib/author-facts'
 import { authorProviderLabel, authorProviderSourceUrl } from '../lib/author-metadata-match'
+import FollowReleasesButton from '@/features/new-releases/components/FollowReleasesButton.vue'
 
 const props = defineProps<{
   author: AuthorDetail
@@ -138,40 +139,43 @@ watch(resolvedBio, () => {
               <p v-if="author.sortName && author.sortName !== author.name" class="text-sm text-muted-foreground">{{ author.sortName }}</p>
             </div>
 
-            <DropdownMenu v-if="showMenu">
-              <DropdownMenuTrigger as-child>
-                <button
-                  class="mt-0.5 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-muted px-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/70"
-                >
-                  <MoreHorizontal :size="14" />
-                  {{ t('author.header.actions') }}
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" class="w-44">
-                <DropdownMenuItem v-if="canUpdate" @click="emit('edit')">
-                  <Pencil class="mr-2 h-4 w-4" />
-                  {{ t('author.header.editAuthor') }}
-                </DropdownMenuItem>
-                <DropdownMenuItem v-if="canMerge" @click="emit('merge')">
-                  <UsersRound class="mr-2 h-4 w-4" />
-                  {{ t('author.header.mergeAuthors') }}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator v-if="canUpdate" />
-                <DropdownMenuItem v-if="canUpdate" :disabled="refreshing" @click="emit('refresh')">
-                  <RefreshCcw class="mr-2 h-4 w-4" :class="refreshing ? 'animate-spin' : ''" />
-                  {{ refreshing ? t('author.header.refreshing') : t('author.header.refreshMetadata') }}
-                </DropdownMenuItem>
-                <DropdownMenuItem v-if="canUpdate" @click="handleFindMatch">
-                  <UserRoundSearch class="mr-2 h-4 w-4" />
-                  {{ t('author.header.findMatch') }}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator v-if="canDelete && (canUpdate || canMerge)" />
-                <DropdownMenuItem v-if="canDelete" class="text-destructive focus:text-destructive" @click="emit('delete')">
-                  <Trash2 class="mr-2 h-4 w-4" />
-                  {{ t('author.header.deleteAuthor') }}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div class="flex shrink-0 items-start gap-2">
+              <FollowReleasesButton kind="author" :name="author.name" :author-id="author.id" class="mt-0.5" />
+              <DropdownMenu v-if="showMenu">
+                <DropdownMenuTrigger as-child>
+                  <button
+                    class="mt-0.5 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-muted px-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/70"
+                  >
+                    <MoreHorizontal :size="14" />
+                    {{ t('author.header.actions') }}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" class="w-44">
+                  <DropdownMenuItem v-if="canUpdate" @click="emit('edit')">
+                    <Pencil class="mr-2 h-4 w-4" />
+                    {{ t('author.header.editAuthor') }}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem v-if="canMerge" @click="emit('merge')">
+                    <UsersRound class="mr-2 h-4 w-4" />
+                    {{ t('author.header.mergeAuthors') }}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator v-if="canUpdate" />
+                  <DropdownMenuItem v-if="canUpdate" :disabled="refreshing" @click="emit('refresh')">
+                    <RefreshCcw class="mr-2 h-4 w-4" :class="refreshing ? 'animate-spin' : ''" />
+                    {{ refreshing ? t('author.header.refreshing') : t('author.header.refreshMetadata') }}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem v-if="canUpdate" @click="handleFindMatch">
+                    <UserRoundSearch class="mr-2 h-4 w-4" />
+                    {{ t('author.header.findMatch') }}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator v-if="canDelete && (canUpdate || canMerge)" />
+                  <DropdownMenuItem v-if="canDelete" class="text-destructive focus:text-destructive" @click="emit('delete')">
+                    <Trash2 class="mr-2 h-4 w-4" />
+                    {{ t('author.header.deleteAuthor') }}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
           <div class="mt-3">

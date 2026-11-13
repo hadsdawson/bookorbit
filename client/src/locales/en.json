@@ -10875,7 +10875,8 @@
         "hide": "Hide",
         "alwaysShown": "{name} is always shown",
         "returnsWithWork": "Shows when work is waiting"
-      }
+      },
+      "newReleases": "New Releases"
     },
     "selectionActionBar": {
       "setReadingStatus": "Set reading status",
@@ -15637,7 +15638,8 @@
     "tts": "Text-to-Speech",
     "chapterHealth": "Chapter Health",
     "communityRatings": "Community Ratings",
-    "readingHistory": "Reading History"
+    "readingHistory": "Reading History",
+    "newReleases": "New Releases"
   },
   "tts": {
     "readerControls": {
@@ -16198,6 +16200,71 @@
         "title": "Page Turner",
         "description": "Read 500 pages this month"
       }
+    }
+  },
+  "newReleases": {
+    "title": "New Releases",
+    "description": "Books that aren't out yet from the authors and series you follow.",
+    "tabs": {
+      "upcoming": "Upcoming",
+      "following": "Following"
+    },
+    "followSummary": "Following {authors} authors and {series} series",
+    "pending": "{count, plural, one {Looking up # followed name. New books appear as they are found.} other {Looking up # followed names. New books appear as they are found.}}",
+    "lastChecked": "Last checked {when}",
+    "noSources": "No book sites are turned on for New Releases. An admin can turn on Hardcover, Audible or Google Books in Settings > Metadata.",
+    "followAll": {
+      "author": "Follow all authors",
+      "series": "Follow all series",
+      "authorDone": "{count, plural, =0 {You already follow every author in your libraries.} one {Now following # more author.} other {Now following # more authors.}}",
+      "seriesDone": "{count, plural, =0 {You already follow every series in your libraries.} one {Now following # more series.} other {Now following # more series.}}"
+    },
+    "empty": {
+      "noFollowsTitle": "You're not following anyone yet",
+      "noFollowsHint": "Use Follow on an author or series page, or follow everything in your library above.",
+      "nothingTitle": "Nothing coming up yet",
+      "nothingHint": "Books with a confirmed release date show up here once a book site lists them. Checks run in the background every week."
+    },
+    "item": {
+      "seriesNumber": "{series} #{number}",
+      "because": "Because you follow {names}",
+      "ebookOn": "Ebook {date}",
+      "audiobookOn": "Audiobook {date}",
+      "requested": "Requested",
+      "hide": "Hide",
+      "hideNamed": "Hide {title}",
+      "hidden": "Hid {title}",
+      "undo": "Undo"
+    },
+    "following": {
+      "search": "Search followed names",
+      "kind": "Show",
+      "all": "Authors and series",
+      "authors": "Authors",
+      "series": "Series",
+      "none": "Nothing followed matches.",
+      "seriesBy": "by {author}",
+      "unfollow": "Unfollow",
+      "unfollowNamed": "Unfollow {name}",
+      "count": "Showing {shown} of {total}",
+      "more": "Load more"
+    },
+    "follow": {
+      "follow": "Follow",
+      "following": "Following",
+      "authorHint": "Follow {name} for upcoming books",
+      "seriesHint": "Follow {name} for upcoming books in the series",
+      "unfollowHint": "Stop following {name}",
+      "followed": "Following {name} for new releases",
+      "unfollowed": "Stopped following {name}"
+    },
+    "errors": {
+      "load": "Could not load New Releases.",
+      "loadFollows": "Could not load what you follow.",
+      "follow": "Could not follow.",
+      "unfollow": "Could not unfollow.",
+      "followAll": "Could not follow everything.",
+      "hide": "Could not change that book."
     }
   }
 }

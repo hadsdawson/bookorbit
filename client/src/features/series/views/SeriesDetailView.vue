@@ -32,6 +32,7 @@ import { fetchSeriesBooks } from '../api/series'
 import { groupSeriesBooksByMedia } from '../composables/useSeriesBookMediaGroups'
 import { useSeriesDetail } from '../composables/useSeriesDetail'
 import { useCoverStack, MAX_VISIBLE as MAX_STACK_VISIBLE } from '../composables/useCoverStack'
+import FollowReleasesButton from '@/features/new-releases/components/FollowReleasesButton.vue'
 import {
   PORTRAIT_STACK_FRAME_ASPECT_RATIO,
   centeredBottomScaleTransform,
@@ -554,15 +555,18 @@ defineOptions({ name: 'SeriesDetailView' })
                   </div>
                 </div>
 
-                <button
-                  v-if="canEditMetadata && books.length > 0"
-                  class="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-2.5 text-sm transition-colors hover:bg-muted disabled:opacity-40 sm:px-3 md:w-auto"
-                  :disabled="openingSeriesEditor || loadingBooks"
-                  @click="editSeriesMetadata"
-                >
-                  <Pencil :size="14" />
-                  {{ openingSeriesEditor ? t('series.detail.preparingEditor') : t('series.detail.editMetadata') }}
-                </button>
+                <div class="flex w-full shrink-0 flex-col gap-2 sm:flex-row md:w-auto">
+                  <FollowReleasesButton v-if="seriesId !== null" kind="series" :name="seriesInfo.name" :series-id="seriesId" />
+                  <button
+                    v-if="canEditMetadata && books.length > 0"
+                    class="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-2.5 text-sm transition-colors hover:bg-muted disabled:opacity-40 sm:px-3 md:w-auto"
+                    :disabled="openingSeriesEditor || loadingBooks"
+                    @click="editSeriesMetadata"
+                  >
+                    <Pencil :size="14" />
+                    {{ openingSeriesEditor ? t('series.detail.preparingEditor') : t('series.detail.editMetadata') }}
+                  </button>
+                </div>
               </div>
 
               <div class="mt-3 grid max-w-md gap-3 sm:grid-cols-2">
