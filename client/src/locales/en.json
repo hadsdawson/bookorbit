@@ -10758,6 +10758,7 @@
       "dashboard": "Dashboard",
       "authors": "Authors",
       "series": "Series",
+      "publishers": "Publishers",
       "tools": "Tools",
       "libraries": "Libraries",
       "newLibrary": "New Library",
@@ -15453,6 +15454,40 @@
     "previousImage": "Previous image",
     "nextImage": "Next image"
   },
+  "publishers": {
+    "title": "Publishers",
+    "searchPlaceholder": "Search publishers",
+    "sortLabel": "Sort publishers",
+    "sort": {
+      "name_asc": "Name, A to Z",
+      "name_desc": "Name, Z to A",
+      "bookCount_desc": "Most books first",
+      "bookCount_asc": "Fewest books first"
+    },
+    "total": "{count, plural, one {# publisher} other {# publishers}}",
+    "bookCount": "{count, plural, one {# book} other {# books}}",
+    "select": "Select {name}",
+    "selectedCount": "{count, plural, one {# selected} other {# selected}}",
+    "merge": "Merge",
+    "mergeHint": "Select two or more publishers to merge them into one.",
+    "clearSelection": "Clear",
+    "rename": "Rename",
+    "renameNamed": "Rename {name}",
+    "renamed": "Renamed {from} to {to}.",
+    "merged": "{count, plural, one {Merged # publisher into {into}.} other {Merged # publishers into {into}.}}",
+    "empty": "No publishers found.",
+    "noBooks": "No books from this publisher.",
+    "loadMore": "Load more",
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {page} of {pages}",
+    "errors": {
+      "load": "Could not load publishers.",
+      "loadBooks": "Could not load this publisher's books.",
+      "rename": "Could not rename the publisher.",
+      "merge": "Could not merge the publishers."
+    }
+  },
   "titles": {
     "dashboard": "Dashboard",
     "libraries": "Libraries",
@@ -15466,6 +15501,7 @@
     "statistics": "Statistics",
     "authors": "Authors",
     "series": "Series",
+    "publishers": "Publishers",
     "entityManager": "Entity Manager",
     "bulkRename": "Bulk Rename",
     "duplicateBooks": "Duplicate Books",
