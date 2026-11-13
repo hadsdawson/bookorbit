@@ -1,11 +1,13 @@
 import { spawn, type ChildProcess } from 'child_process';
 import { createReadStream, createWriteStream, existsSync, statSync } from 'fs';
-import { chmod, mkdir, readdir, rename, rm, stat } from 'fs/promises';
+import { chmod, mkdir, opendir, readdir, rename, rm, stat } from 'fs/promises';
 import { basename, join } from 'path';
 import { pipeline } from 'stream/promises';
 import { ZipArchive } from 'archiver';
 import * as unzipper from 'unzipper';
 import type { BackupInfo, BackupKind } from '@bookorbit/types';
+
+import { BACKUP_PROGRESS_INTERVAL_MS, type BackupProgress } from './backup-progress';
 
 export const BACKUP_FORMAT = 'bookorbit-backup';
 export const BACKUP_FORMAT_VERSION = 1;
@@ -43,6 +45,8 @@ export interface CreateBackupOptions {
   appVersion: string;
   migrationHashes: string[];
   now?: Date;
+  onProgress?: (progress: BackupProgress) => void;
+  progressIntervalMs?: number;
 }
 
 /** Resolves the folder backups live in: BACKUP_PATH, else a mounted /backups, else inside the app data folder. */
@@ -189,14 +193,21 @@ export async function createBackup(options: CreateBackupOptions): Promise<Backup
   const partialPath = `${finalPath}.partial`;
   const dumpPath = join(options.backupDir, `.${name}.dump`);
 
+  const report = options.onProgress ?? (() => undefined);
+  const intervalMs = options.progressIntervalMs ?? BACKUP_PROGRESS_INTERVAL_MS;
+
   try {
     const connection = pgConnection(options.databaseUrl);
+    const databaseStartedAt = Date.now();
+    report({ step: 'database', phase: 'start' });
     await runPgTool(
       'pg_dump',
       ['--format=custom', '--no-owner', '--no-privileges', `--file=${dumpPath}`, `--dbname=${connection.dbname}`],
       connection.env,
     );
     await chmod(dumpPath, PRIVATE_FILE_MODE);
+    const dumpBytes = (await stat(dumpPath)).size;
+    report({ step: 'database', phase: 'end', durationMs: Date.now() - databaseStartedAt, bytes: dumpBytes });
 
     const dataDirs = BACKED_UP_DATA_DIRS.filter((dir) => isDirectory(join(options.appDataPath, dir)));
     const manifest: BackupManifest = {
@@ -209,7 +220,29 @@ export async function createBackup(options: CreateBackupOptions): Promise<Backup
       dataDirs,
     };
 
+    const filesStartedAt = Date.now();
+    report({ step: 'files', phase: 'start', dirs: dataDirs });
+    const found = await countFiles(dataDirs.map((dir) => join(options.appDataPath, dir)));
     const archive = new ZipArchive({ zlib: { level: 6 } });
+    const copied = { files: 0, bytes: 0 };
+    let lastReportAt = filesStartedAt;
+    archive.on('entry', (entry) => {
+      if (entry.type !== 'file' || !entry.name.startsWith(DATA_ENTRY_PREFIX)) return;
+      copied.files++;
+      copied.bytes += entry.stats?.size ?? 0;
+      const now = Date.now();
+      if (now - lastReportAt < intervalMs) return;
+      lastReportAt = now;
+      report({
+        step: 'files',
+        phase: 'progress',
+        durationMs: now - filesStartedAt,
+        filesDone: copied.files,
+        filesFound: found.files,
+        bytesDone: copied.bytes,
+        bytesFound: found.bytes,
+      });
+    });
     const done = pipeline(archive, createWriteStream(partialPath, { mode: PRIVATE_FILE_MODE }));
     archive.append(JSON.stringify(manifest, null, 2), { name: MANIFEST_ENTRY });
     // The dump is already compressed, and so are the images; storing them avoids a second, slow pass.
@@ -222,6 +255,7 @@ export async function createBackup(options: CreateBackupOptions): Promise<Backup
     }
     await archive.finalize();
     await done;
+    report({ step: 'files', phase: 'end', durationMs: Date.now() - filesStartedAt, files: copied.files, bytes: copied.bytes });
     await rename(partialPath, finalPath);
     const size = (await stat(finalPath)).size;
     return { name, kind: options.kind, createdAt: manifest.createdAt, size, appVersion: options.appVersion };
@@ -302,6 +336,23 @@ export async function extractDataDirs(zipPath: string, targetDir: string): Promi
 
 export function openBackupStream(path: string) {
   return createReadStream(path);
+}
+
+async function countFiles(dirs: string[]): Promise<{ files: number; bytes: number }> {
+  const total = { files: 0, bytes: 0 };
+  const pending = [...dirs];
+  while (pending.length > 0) {
+    const dir = pending.pop() as string;
+    for await (const entry of await opendir(dir)) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) pending.push(path);
+      else if (entry.isFile()) {
+        total.files++;
+        total.bytes += (await stat(path)).size;
+      }
+    }
+  }
+  return total;
 }
 
 function isDirectory(path: string): boolean {
