@@ -2,6 +2,7 @@ import { resolve } from 'path';
 import type { MigrationMeta } from 'drizzle-orm/migrator';
 import type { Pool } from 'pg';
 
+import { sanitizeLogValue } from '../../../common/utils/log-sanitize.utils';
 import { createBackup, listBackups, resolveBackupDir } from './backup-archive';
 import { BACKUP_SETTINGS_KEY, parseBackupSettings, pruneBackups } from './backup-policy';
 import { runPendingRestore } from './backup-restore';
@@ -53,9 +54,16 @@ export async function runBackupStartup(
     log(`[backup.pre_update] [end] durationMs=${Date.now() - startedAt} backup=${backup.name} size=${backup.size} - backed up before the update`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const refuse = settings.requireBeforeUpdate && env.BACKUP_SKIP_PRE_UPDATE?.trim().toLowerCase() !== 'true';
     console.error(
-      `[backup.pre_update] [fail] durationMs=${Date.now() - startedAt} error="${message.replace(/"/g, "'")}" - no backup was taken before this update; continuing`,
+      `[backup.pre_update] [fail] durationMs=${Date.now() - startedAt} errorClass=${error instanceof Error ? error.name : 'UnknownError'} error="${sanitizeLogValue(message)}" - no backup was taken before this update; ${refuse ? 'the update is refused' : 'continuing'}`,
     );
+    if (refuse) {
+      throw new Error(
+        `BookOrbit is set not to update without a backup, and the backup failed: ${message}. Fix the backups folder and restart, or set BACKUP_SKIP_PRE_UPDATE=true to update once without a backup.`,
+        { cause: error },
+      );
+    }
   }
 }
 

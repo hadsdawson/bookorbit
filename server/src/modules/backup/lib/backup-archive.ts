@@ -1,6 +1,6 @@
-import { spawn } from 'child_process';
+import { spawn, type ChildProcess } from 'child_process';
 import { createReadStream, createWriteStream, existsSync, statSync } from 'fs';
-import { mkdir, readdir, rename, rm, stat } from 'fs/promises';
+import { chmod, mkdir, readdir, rename, rm, stat } from 'fs/promises';
 import { basename, join } from 'path';
 import { pipeline } from 'stream/promises';
 import { ZipArchive } from 'archiver';
@@ -19,6 +19,8 @@ export const DATA_ENTRY_PREFIX = 'data/';
  * they are large, and either replaceable or about to be filed away.
  */
 export const BACKED_UP_DATA_DIRS = ['covers', 'authors', 'users', 'icons', 'fonts', 'plugins'] as const;
+/** A backup holds password hashes and saved credentials, so only BookOrbit's own user may read it. */
+export const PRIVATE_FILE_MODE = 0o600;
 /** Largest manifest we will read, so a crafted upload cannot ask for gigabytes of memory. */
 const MAX_MANIFEST_BYTES = 1024 * 1024;
 
@@ -55,25 +57,117 @@ export function resolveBackupDir(appDataPath: string, env: NodeJS.ProcessEnv = p
   return join(appDataPath, 'backups');
 }
 
-/** pg_dump and pg_restore from the image's PostgreSQL 18 client, or whatever is on PATH. */
-export function resolvePgTool(name: 'pg_dump' | 'pg_restore', env: NodeJS.ProcessEnv = process.env): string {
-  const override = env[name === 'pg_dump' ? 'PG_DUMP_PATH' : 'PG_RESTORE_PATH']?.trim();
+export type PgTool = 'pg_dump' | 'pg_restore' | 'psql';
+const PG_TOOL_OVERRIDES: Record<PgTool, string> = { pg_dump: 'PG_DUMP_PATH', pg_restore: 'PG_RESTORE_PATH', psql: 'PSQL_PATH' };
+
+/** The image's PostgreSQL 18 client tools, or whatever is on PATH. */
+export function resolvePgTool(name: PgTool, env: NodeJS.ProcessEnv = process.env): string {
+  const override = env[PG_TOOL_OVERRIDES[name]]?.trim();
   if (override) return override;
   const bundled = `/usr/libexec/postgresql18/${name}`;
   return existsSync(bundled) ? bundled : name;
 }
 
-export function runPgTool(name: 'pg_dump' | 'pg_restore', args: string[]): Promise<void> {
+/**
+ * Splits the password out of a database URL, so it is handed to the tools through their environment
+ * and never appears in the process list. Anything that is not a URL is passed through untouched.
+ */
+export function pgConnection(databaseUrl: string): { dbname: string; env: NodeJS.ProcessEnv } {
+  try {
+    const url = new URL(databaseUrl);
+    if (!url.password) return { dbname: databaseUrl, env: {} };
+    const password = decodeURIComponent(url.password);
+    url.password = '';
+    return { dbname: url.toString(), env: { PGPASSWORD: password } };
+  } catch {
+    return { dbname: databaseUrl, env: {} };
+  }
+}
+
+function describeExit(name: string, code: number | null, stderr: string): Error {
+  return new Error(`${name} exited with code ${code}: ${stderr.trim().split('\n').slice(-3).join(' ')}`);
+}
+
+function collectStderr(child: ChildProcess): () => string {
+  let stderr = '';
+  child.stderr?.on('data', (chunk: Buffer) => {
+    if (stderr.length < 8_000) stderr += chunk.toString();
+  });
+  return () => stderr;
+}
+
+export function runPgTool(name: PgTool, args: string[], env: NodeJS.ProcessEnv = {}): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawn(resolvePgTool(name), args, { stdio: ['ignore', 'ignore', 'pipe'] });
-    let stderr = '';
-    child.stderr.on('data', (chunk: Buffer) => {
-      if (stderr.length < 8_000) stderr += chunk.toString();
-    });
+    const child = spawn(resolvePgTool(name), args, { stdio: ['ignore', 'ignore', 'pipe'], env: { ...process.env, ...env } });
+    const stderr = collectStderr(child);
     child.once('error', (error) => reject(new Error(`${name} could not start: ${error.message}`)));
     child.once('close', (code) => {
       if (code === 0) resolve();
-      else reject(new Error(`${name} exited with code ${code}: ${stderr.trim().split('\n').slice(-3).join(' ')}`));
+      else reject(describeExit(name, code, stderr()));
+    });
+  });
+}
+
+/**
+ * Replaces the whole database with a dump inside one transaction: the old schemas are dropped and
+ * the dump loaded together, so a dump that fails to load leaves the database exactly as it was.
+ * pg_restore turns the dump into SQL and psql runs it, since only psql can put the drop and the
+ * load in the same transaction.
+ */
+export function replaceDatabaseFromDump(databaseUrl: string, dumpPath: string): Promise<void> {
+  const connection = pgConnection(databaseUrl);
+  return new Promise((resolve, reject) => {
+    const restore = spawn(resolvePgTool('pg_restore'), ['--no-owner', '--no-privileges', '--file=-', dumpPath], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    const psql = spawn(
+      resolvePgTool('psql'),
+      [
+        '--no-psqlrc',
+        '--quiet',
+        '--single-transaction',
+        '--set=ON_ERROR_STOP=1',
+        '--command=DROP SCHEMA IF EXISTS drizzle CASCADE; DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;',
+        '--file=-',
+        `--dbname=${connection.dbname}`,
+      ],
+      { stdio: ['pipe', 'ignore', 'pipe'], env: { ...process.env, ...connection.env } },
+    );
+    const restoreStderr = collectStderr(restore);
+    const psqlStderr = collectStderr(psql);
+    const exits: Partial<Record<'pg_restore' | 'psql', number | null>> = {};
+    let settled = false;
+    const fail = (error: Error) => {
+      if (settled) return;
+      settled = true;
+      restore.kill();
+      psql.kill();
+      reject(error);
+    };
+    const finish = () => {
+      if (settled || !('pg_restore' in exits) || !('psql' in exits)) return;
+      if (exits.pg_restore !== 0) return fail(describeExit('pg_restore', exits.pg_restore ?? null, restoreStderr()));
+      if (exits.psql !== 0) return fail(describeExit('psql', exits.psql ?? null, psqlStderr()));
+      settled = true;
+      resolve();
+    };
+    restore.once('error', (error) => fail(new Error(`pg_restore could not start: ${error.message}`)));
+    psql.once('error', (error) => fail(new Error(`psql could not start: ${error.message}`)));
+    // psql stopping early closes the pipe under pg_restore; its own exit code carries the reason.
+    psql.stdin.on('error', () => undefined);
+    // psql commits when its input ends, so the input is only ended once pg_restore has succeeded:
+    // a dump that stops halfway kills psql instead, and the open transaction is rolled back.
+    restore.stdout.pipe(psql.stdin, { end: false });
+    restore.once('close', (code) => {
+      exits.pg_restore = code;
+      if (code !== 0) return fail(describeExit('pg_restore', code, restoreStderr()));
+      psql.stdin.end();
+      finish();
+    });
+    psql.once('close', (code) => {
+      exits.psql = code;
+      if (code !== 0) return fail(describeExit('psql', code, psqlStderr()));
+      finish();
     });
   });
 }
@@ -96,7 +190,13 @@ export async function createBackup(options: CreateBackupOptions): Promise<Backup
   const dumpPath = join(options.backupDir, `.${name}.dump`);
 
   try {
-    await runPgTool('pg_dump', ['--format=custom', '--no-owner', '--no-privileges', `--file=${dumpPath}`, `--dbname=${options.databaseUrl}`]);
+    const connection = pgConnection(options.databaseUrl);
+    await runPgTool(
+      'pg_dump',
+      ['--format=custom', '--no-owner', '--no-privileges', `--file=${dumpPath}`, `--dbname=${connection.dbname}`],
+      connection.env,
+    );
+    await chmod(dumpPath, PRIVATE_FILE_MODE);
 
     const dataDirs = BACKED_UP_DATA_DIRS.filter((dir) => isDirectory(join(options.appDataPath, dir)));
     const manifest: BackupManifest = {
@@ -110,7 +210,7 @@ export async function createBackup(options: CreateBackupOptions): Promise<Backup
     };
 
     const archive = new ZipArchive({ zlib: { level: 6 } });
-    const done = pipeline(archive, createWriteStream(partialPath));
+    const done = pipeline(archive, createWriteStream(partialPath, { mode: PRIVATE_FILE_MODE }));
     archive.append(JSON.stringify(manifest, null, 2), { name: MANIFEST_ENTRY });
     // The dump is already compressed, and so are the images; storing them avoids a second, slow pass.
     // The zip plugin reads `store` per entry even though the shared entry type does not list it.
@@ -176,7 +276,7 @@ export async function extractEntry(zipPath: string, entryPath: string, targetPat
   const directory = await unzipper.Open.file(zipPath);
   const entry = directory.files.find((file) => file.path === entryPath);
   if (!entry) throw new Error(`Backup is missing ${entryPath}`);
-  await pipeline(entry.stream(), createWriteStream(targetPath));
+  await pipeline(entry.stream(), createWriteStream(targetPath, { mode: PRIVATE_FILE_MODE }));
 }
 
 /**

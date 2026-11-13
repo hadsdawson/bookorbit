@@ -12,6 +12,35 @@ import {
 
 export const BACKUP_SETTINGS_KEY = 'backup_settings';
 export const BACKUP_LAST_SLOT_KEY = 'backup_last_scheduled_slot';
+export const BACKUP_LAST_ERROR_KEY = 'backup_last_error';
+export const BACKUP_FAILED_SLOT_KEY = 'backup_failed_scheduled_slot';
+/** A scheduled backup that fails is tried again this many times in all, this far apart. */
+export const SCHEDULED_ATTEMPTS = 3;
+export const SCHEDULED_RETRY_MS = 30 * 60 * 1000;
+
+export interface FailedSlot {
+  slot: string;
+  attempts: number;
+  lastAttemptAt: string;
+}
+
+export function parseFailedSlot(raw: string | null | undefined): FailedSlot | null {
+  try {
+    const value = raw ? (JSON.parse(raw) as Partial<FailedSlot>) : null;
+    if (!value || typeof value.slot !== 'string' || !Number.isInteger(value.attempts) || typeof value.lastAttemptAt !== 'string') return null;
+    return { slot: value.slot, attempts: value.attempts!, lastAttemptAt: value.lastAttemptAt };
+  } catch {
+    return null;
+  }
+}
+
+/** Whether a due slot should be attempted now, given how its earlier attempts went. */
+export function shouldAttemptSlot(slot: string, failed: FailedSlot | null, now: Date): boolean {
+  if (!failed || failed.slot !== slot) return true;
+  if (failed.attempts >= SCHEDULED_ATTEMPTS) return false;
+  const last = Date.parse(failed.lastAttemptAt);
+  return !Number.isFinite(last) || now.getTime() - last >= SCHEDULED_RETRY_MS;
+}
 /** Safety copies made before an update or a restore; the newest few are kept whatever the main count. */
 const SAFETY_KINDS: readonly BackupKind[] = ['pre-update', 'pre-restore'];
 const SAFETY_KEEP = 3;
@@ -35,6 +64,7 @@ export function parseBackupSettings(raw: string | null | undefined): BackupSetti
     timeZone: typeof value.timeZone === 'string' && isValidTimeZone(value.timeZone) ? value.timeZone : defaults.timeZone,
     keep: Number.isInteger(value.keep) && value.keep! >= BACKUP_KEEP_MIN && value.keep! <= BACKUP_KEEP_MAX ? value.keep! : defaults.keep,
     beforeUpdate: typeof value.beforeUpdate === 'boolean' ? value.beforeUpdate : defaults.beforeUpdate,
+    requireBeforeUpdate: typeof value.requireBeforeUpdate === 'boolean' ? value.requireBeforeUpdate : defaults.requireBeforeUpdate,
   };
 }
 

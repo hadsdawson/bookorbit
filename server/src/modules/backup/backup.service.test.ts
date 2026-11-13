@@ -76,6 +76,41 @@ describe('BackupService', () => {
     expect(archive.createBackup).toHaveBeenCalledWith(expect.objectContaining({ kind: 'scheduled' }));
   });
 
+  it('keeps the failure message across a restart', async () => {
+    const first = makeService();
+    archive.createBackup.mockRejectedValueOnce(new Error('disk full'));
+    await expect(first.service.create('manual')).rejects.toThrow(/disk full/);
+    const restarted = makeService(Object.fromEntries(first.values));
+    expect((await restarted.service.overview()).lastError).toBe('disk full');
+  });
+
+  it('tries a failed scheduled backup again after a wait, and gives up after three attempts', async () => {
+    const { service } = makeService({ backup_settings: JSON.stringify({ frequency: 'daily', time: '02:00', timeZone: 'America/Chicago', keep: 7 }) });
+    archive.createBackup.mockRejectedValue(new Error('disk full'));
+    const at = (minutes: number) => new Date(Date.parse('2026-11-12T08:30:00Z') + minutes * 60_000);
+    await service.runScheduled(at(0));
+    await service.runScheduled(at(5));
+    expect(archive.createBackup).toHaveBeenCalledTimes(1);
+    await service.runScheduled(at(31));
+    await service.runScheduled(at(62));
+    await service.runScheduled(at(93));
+    expect(archive.createBackup).toHaveBeenCalledTimes(3);
+  });
+
+  it('marks the slot done only when a retried backup works', async () => {
+    const { service, values } = makeService({
+      backup_settings: JSON.stringify({ frequency: 'daily', time: '02:00', timeZone: 'America/Chicago', keep: 7 }),
+    });
+    archive.createBackup.mockRejectedValueOnce(new Error('disk full'));
+    const at = (minutes: number) => new Date(Date.parse('2026-11-12T08:30:00Z') + minutes * 60_000);
+    await service.runScheduled(at(0));
+    expect(values.get('backup_last_scheduled_slot')).toBeUndefined();
+    await service.runScheduled(at(31));
+    await service.runScheduled(at(62));
+    expect(archive.createBackup).toHaveBeenCalledTimes(2);
+    expect(values.get('backup_last_scheduled_slot')).toBe('daily:2026-11-12');
+  });
+
   it('saves only valid settings', async () => {
     const { service, values } = makeService();
     const saved = await service.saveSettings({
@@ -85,6 +120,7 @@ describe('BackupService', () => {
       timeZone: 'America/Chicago',
       keep: 5,
       beforeUpdate: false,
+      requireBeforeUpdate: true,
     });
     expect(saved).toMatchObject({ frequency: 'weekly', time: '03:15', keep: 5 });
     expect(JSON.parse(values.get('backup_settings')!)).toEqual(saved);
