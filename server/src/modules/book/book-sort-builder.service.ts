@@ -51,9 +51,10 @@ export function customMetadataValueColumn(fieldId: number, fieldTypes: CustomMet
   return type ? (CUSTOM_VALUE_COLUMNS[type] ?? null) : null;
 }
 
+// Fork: titles and series names sort on their stored keys, which drop a leading "The", "A" or "An".
 const SORT_FIELD_MAP: Partial<Record<SortField, AnyColumn>> = {
-  title: bookMetadata.title,
-  series: bookMetadata.seriesName,
+  title: bookMetadata.titleSortKey,
+  series: bookMetadata.seriesNameSortKey,
   seriesIndex: bookMetadata.seriesIndex,
   addedAt: books.addedAt,
   updatedAt: books.updatedAt,
@@ -72,7 +73,7 @@ export class BookSortBuilder {
       if (!D) continue;
       this.appendField(result, field, D, sort, userId, customFieldTypes, context);
     }
-    if (result.length === 0) result.push(sql`${bookMetadata.title} ASC NULLS LAST`);
+    if (result.length === 0) result.push(sql`${bookMetadata.titleSortKey} ASC NULLS LAST`);
     result.push(sql`${books.id} ASC`);
     return result;
   }
@@ -106,7 +107,7 @@ export class BookSortBuilder {
         const q = context?.query?.trim();
         if (!q) throw new BadRequestException('relevance sort requires a non-empty search query');
         result.push(sql`${this.buildRelevanceScore(q)} ${sql.raw(D)}`);
-        result.push(sql`${bookMetadata.title} ASC NULLS LAST`);
+        result.push(sql`${bookMetadata.titleSortKey} ASC NULLS LAST`);
         break;
       }
       case 'author':
@@ -175,7 +176,7 @@ export class BookSortBuilder {
       case 'seriesIndex':
         result.push(...seriesIndexOrderBy(bookMetadata.seriesIndex, D));
         if (!allSorts.some((s) => s.field === 'series')) {
-          result.push(sql`${bookMetadata.seriesName} ${sql.raw(D)} NULLS LAST`);
+          result.push(sql`${bookMetadata.seriesNameSortKey} ${sql.raw(D)} NULLS LAST`);
         }
         break;
       case 'format':

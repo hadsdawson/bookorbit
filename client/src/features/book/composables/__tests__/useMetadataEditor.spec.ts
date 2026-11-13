@@ -351,6 +351,25 @@ describe('useMetadataEditor', () => {
     })
   })
 
+  it('loads the age rating and sends it, or null to clear it, only when changed', async () => {
+    const book = makeBook({ ageRating: 13 })
+    apiMock.mockResolvedValue({ ok: true, json: async () => book })
+
+    const { form, load, save } = useMetadataEditor()
+    load(book)
+    expect(form.ageRating).toBe(13)
+    form.publisher = 'Changed'
+    await save(book.id, [])
+    let { metadata } = JSON.parse(String((apiMock.mock.calls[0] as [string, RequestInit])[1].body)) as { metadata: Record<string, unknown> }
+    expect(metadata).not.toHaveProperty('ageRating')
+
+    load(makeBook({ ageRating: 13 }))
+    form.ageRating = null
+    await save(book.id, [])
+    ;({ metadata } = JSON.parse(String((apiMock.mock.calls[1] as [string, RequestInit])[1].body)) as { metadata: Record<string, unknown> })
+    expect(metadata).toEqual({ ageRating: null })
+  })
+
   it('normalizes a zero page count to null in the save payload', async () => {
     const book = makeBook({ pageCount: 320 })
     apiMock.mockResolvedValue({ ok: true, json: async () => book })

@@ -3,6 +3,7 @@ import {
   ArrayMinSize,
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsNumber,
@@ -15,15 +16,22 @@ import {
   Min,
   ValidateIf,
   ValidateNested,
-  type ValidationArguments,
+  ValidatorConstraint,
   registerDecorator,
+  type ValidationArguments,
   type ValidationOptions,
   type ValidatorConstraintInterface,
-  ValidatorConstraint,
 } from 'class-validator';
 import { BOOK_DOCK_COMBINE_MAX_FILES } from '@bookorbit/types';
 import { Type } from 'class-transformer';
-import { SERIES_INDEX_MAX_LENGTH, SERIES_INDEX_PATTERN, type MetadataProviderKey, type SeriesIndex } from '@bookorbit/types';
+import {
+  AGE_RATINGS,
+  SERIES_INDEX_MAX_LENGTH,
+  SERIES_INDEX_PATTERN,
+  type AgeRating,
+  type MetadataProviderKey,
+  type SeriesIndex,
+} from '@bookorbit/types';
 import { IsExternalProviderMap } from '../../../common/decorators/is-external-provider-map.decorator';
 import { IsMetadataProviderKey } from '../../../common/decorators/is-metadata-provider-key.decorator';
 import { NormalizeIdentifier } from '../../../common/decorators/normalize-identifier.decorator';
@@ -106,6 +114,7 @@ export class BookDockMetadataFieldsDto {
   @IsOptional() @IsArray() @IsString({ each: true }) narrators?: string[];
   @IsOptional() @IsInt() @Min(0) durationSeconds?: number | null;
   @IsOptional() @IsBoolean() abridged?: boolean | null;
+  @IsOptional() @IsIn(AGE_RATINGS) ageRating?: AgeRating | null;
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => BookDockAudiobookChapterDto) chapters?: BookDockAudiobookChapterDto[] | null;
   @IsOptional()
   @IsArray()

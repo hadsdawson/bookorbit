@@ -72,6 +72,7 @@ let searchTimer: ReturnType<typeof setTimeout> | null = null
 
 const sortLabels = computed<Record<SeriesListSort, string>>(() => ({
   name: t('series.list.sort.name'),
+  author: t('series.list.sort.author'),
   bookCount: t('series.list.sort.bookCount'),
   lastAddedAt: t('series.list.sort.recentAdditions'),
   readProgress: t('series.list.sort.readingProgress'),
@@ -93,7 +94,7 @@ const statusGroupLabels = computed(() => ({
 
 const isDefaultSort = computed(() => sort.value === 'name' && order.value === 'asc')
 const sortSummary = computed(() => sortLabels.value[sort.value])
-const SERIES_SORT_FIELDS: SeriesListSort[] = ['name', 'bookCount', 'lastAddedAt', 'readProgress']
+const SERIES_SORT_FIELDS: SeriesListSort[] = ['name', 'author', 'bookCount', 'lastAddedAt', 'readProgress']
 const SERIES_GROUPINGS: SeriesGrouping[] = ['none', 'letter', 'library', 'status']
 
 const statusLabels = computed<Record<CompletionStatus, string>>(() => ({
@@ -130,7 +131,7 @@ function parseGrouping(value: unknown): SeriesGrouping {
 }
 
 function parseSort(value: unknown): SeriesListSort {
-  return value === 'bookCount' || value === 'lastAddedAt' || value === 'readProgress' || value === 'name' ? value : 'name'
+  return SERIES_SORT_FIELDS.includes(value as SeriesListSort) ? (value as SeriesListSort) : 'name'
 }
 
 function parseOrder(value: unknown): SortDirection {

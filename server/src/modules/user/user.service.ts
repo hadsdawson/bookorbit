@@ -558,6 +558,8 @@ export class UserService {
       excludeTagIds: dto.excludeTagIds ?? [],
       includeGenreIds: dto.includeGenreIds ?? [],
       excludeGenreIds: dto.excludeGenreIds ?? [],
+      includeAgeRatings: dto.includeAgeRatings ?? [],
+      excludeAgeRatings: dto.excludeAgeRatings ?? [],
     };
     await this.contentFilterRepo.replaceFilters(targetUserId, filters);
 

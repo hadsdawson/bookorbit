@@ -26,6 +26,7 @@ const PASSTHROUGH_FIELDS = [
   'coverUrl',
   'otherFormatCoverUrl',
   'abridged',
+  'ageRating',
   'googleBooksId',
   'goodreadsId',
   'amazonId',

@@ -44,7 +44,8 @@ import {
   Permission,
   resolveUploadPath,
 } from '@bookorbit/types';
-import type { BookRequestImportFormats, CoverMedium } from '@bookorbit/types';
+import type { AgeRating, BookRequestImportFormats, CoverMedium } from '@bookorbit/types';
+import { isAgeRating } from '@bookorbit/types';
 import type { FileRole } from '../scanner/lib/classify';
 import type { RequestUser } from '../../common/types/request-user';
 import { ProviderIdStore } from '../metadata-fetch/provider-ids/provider-id.store';
@@ -52,6 +53,7 @@ import { BookReadService } from '../book/book-read.service';
 import { NotificationService } from '../notification/notification.service';
 import { SeriesIdentityService } from '../../common/services/series-identity.service';
 import { SeriesMembershipService } from '../../common/services/series-membership.service';
+import { setBookAgeRating } from '../../common/utils/age-rating-write.utils';
 import { chapterProvenance, normalizeAudiobookChapters } from '../../common/utils/audiobook-chapters.utils';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
 import { resolveExistingPathSpelling } from '../../common/utils/path-identity.utils';
@@ -153,6 +155,7 @@ type NormalizedFinalizeMetadata = {
   authors: string[];
   genres: string[];
   tags: string[];
+  ageRating: AgeRating | null;
   coverUrl: string | null;
   googleBooksId: string | null;
   goodreadsId: string | null;
@@ -1556,6 +1559,10 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
       await this.seriesMemberships?.syncPrimaryFromMetadata(bookId);
     }
 
+    // After the memberships above, so a rating chosen here spreads to the series the book joined.
+    // No rating chosen leaves alone a rating the series already has, which then applies to this book.
+    if (meta.ageRating !== null) await setBookAgeRating(this.db, bookId, meta.ageRating);
+
     if (meta.externalProviderIds) await this.providerIdStore?.write(bookId, meta.externalProviderIds);
     if (meta.communityRatings !== undefined) {
       await this.bookReadService.replaceCommunityRatings(bookId, meta.communityRatings);
@@ -1772,6 +1779,7 @@ function normalizeFinalizeMetadata(meta: BookDockMetadata | null | undefined): N
     authors: normalizeStringArray(normalizedMeta?.authors, 500),
     genres: normalizeStringArray(normalizedMeta?.genres, 200),
     tags: normalizeStringArray(normalizedMeta?.tags, 200),
+    ageRating: isAgeRating(normalizedMeta?.ageRating) ? normalizedMeta.ageRating : null,
     coverUrl: normalizeText(normalizedMeta?.coverUrl),
     googleBooksId: normalizeText(normalizedMeta?.googleBooksId, 50),
     goodreadsId: normalizeText(normalizedMeta?.goodreadsId, 50),

@@ -9,6 +9,7 @@ import {
   pgTable,
   primaryKey,
   serial,
+  smallint,
   text,
   timestamp,
   uniqueIndex,
@@ -239,4 +240,20 @@ export const userContentFilterGenres = pgTable(
       .references(() => genres.id, { onDelete: 'cascade' }),
   },
   (t) => [primaryKey({ columns: [t.userId, t.filterType, t.genreId] }), index('user_content_filter_genres_genre_id_idx').on(t.genreId)],
+);
+
+/** Fork: which age ratings a user may see. NOT_RATED (-1) stands for books with no rating. */
+export const userContentFilterAgeRatings = pgTable(
+  'user_content_filter_age_ratings',
+  {
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    filterType: contentFilterTypeEnum('filter_type').notNull(),
+    ageRating: smallint('age_rating').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.filterType, t.ageRating] }),
+    check('user_content_filter_age_ratings_value_chk', sql`${t.ageRating} IN (-1, 0, 10, 13, 16, 18)`),
+  ],
 );

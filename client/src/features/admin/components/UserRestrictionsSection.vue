@@ -2,9 +2,10 @@
 import { computed, useId } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ShieldAlert } from '@lucide/vue'
-import { Permission, PERMISSION_LABELS } from '@bookorbit/types'
+import { Permission, PERMISSION_LABELS, type AgeRatingFilterValue } from '@bookorbit/types'
 import ContentFilterChipInput from '@/components/ui/ContentFilterChipInput.vue'
 import ToggleSwitch from '@/components/ui/ToggleSwitch.vue'
+import AgeRatingFilterPicker from './AgeRatingFilterPicker.vue'
 import { RESTRICTION_PERMISSIONS } from '../lib/permission-presets'
 import { useTagSearchWithIds, useGenreSearchWithIds } from '../composables/useContentFilterSearch'
 import type { NamedItem } from '../composables/useUserForm'
@@ -25,6 +26,8 @@ const includeTags = defineModel<NamedItem[]>('includeTags', { required: true })
 const excludeTags = defineModel<NamedItem[]>('excludeTags', { required: true })
 const includeGenres = defineModel<NamedItem[]>('includeGenres', { required: true })
 const excludeGenres = defineModel<NamedItem[]>('excludeGenres', { required: true })
+const includeAgeRatings = defineModel<AgeRatingFilterValue[]>('includeAgeRatings', { required: true })
+const excludeAgeRatings = defineModel<AgeRatingFilterValue[]>('excludeAgeRatings', { required: true })
 const seeOwnRequestedBooks = defineModel<boolean>('seeOwnRequestedBooks', { required: true })
 
 const { t } = useI18n()
@@ -47,6 +50,17 @@ const restrictions = computed(() =>
 
 function toggleRestriction(permissionName: string) {
   emit('toggle', permissionName)
+}
+
+// A rating can be shown only or hidden, not both: picking one side takes it off the other.
+function handleIncludeAgeRatings(values: AgeRatingFilterValue[]) {
+  includeAgeRatings.value = values
+  excludeAgeRatings.value = excludeAgeRatings.value.filter((value) => !values.includes(value))
+}
+
+function handleExcludeAgeRatings(values: AgeRatingFilterValue[]) {
+  excludeAgeRatings.value = values
+  includeAgeRatings.value = includeAgeRatings.value.filter((value) => !values.includes(value))
 }
 
 function toggleContentFilters(enabled: boolean) {
@@ -112,6 +126,20 @@ function toggleContentFilters(enabled: boolean) {
           />
           <p class="settings-hint">{{ t('adminFeature.userForm.excludeGenresHint') }}</p>
         </div>
+        <AgeRatingFilterPicker
+          :model-value="includeAgeRatings"
+          :label="t('adminFeature.userForm.includeAgeRatings')"
+          :hint="t('adminFeature.userForm.includeAgeRatingsHint')"
+          test-id="include-age-ratings"
+          @update:model-value="handleIncludeAgeRatings"
+        />
+        <AgeRatingFilterPicker
+          :model-value="excludeAgeRatings"
+          :label="t('adminFeature.userForm.excludeAgeRatings')"
+          :hint="t('adminFeature.userForm.excludeAgeRatingsHint')"
+          test-id="exclude-age-ratings"
+          @update:model-value="handleExcludeAgeRatings"
+        />
         <label class="flex cursor-pointer items-start gap-2 focus-within:ring-2 focus-within:ring-ring @lg:col-span-2">
           <input v-model="seeOwnRequestedBooks" type="checkbox" class="mt-0.5 size-4 shrink-0 rounded-xs border-input accent-primary" />
           <span>

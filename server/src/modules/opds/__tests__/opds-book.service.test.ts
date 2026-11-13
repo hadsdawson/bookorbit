@@ -706,7 +706,7 @@ describe('OpdsBookService', () => {
       expect(renderSql(ranked.rn).sql).toContain(
         'PARTITION BY "book_series_memberships"."series_id" ORDER BY CASE WHEN "book_series_memberships"."series_index" IS NULL',
       );
-      expect(renderSql(ranked.rn).sql).toContain('"book_metadata"."title" ASC NULLS LAST, "books"."id" ASC');
+      expect(renderSql(ranked.rn).sql).toContain('"book_metadata"."title_sort_key" ASC NULLS LAST, "books"."id" ASC');
       const outer = renderSql(selectChains(db)[4]!.where.mock.calls[0]![0]);
       expect(outer.sql).toMatch(/ <= \$2$/);
       expect(outer.params[1]).toBe(40);
@@ -774,17 +774,17 @@ describe('OpdsBookService', () => {
     });
 
     it.each([
-      ['title_asc', '"book_metadata"."title"', '"book_metadata"."title" ASC NULLS LAST, "books"."id" ASC'],
-      ['title_desc', '"book_metadata"."title"', '"book_metadata"."title" DESC NULLS LAST, "books"."id" ASC'],
+      ['title_asc', '"book_metadata"."title"', '"book_metadata"."title_sort_key" ASC NULLS LAST, "books"."id" ASC'],
+      ['title_desc', '"book_metadata"."title"', '"book_metadata"."title_sort_key" DESC NULLS LAST, "books"."id" ASC'],
       [
         'author_asc',
         '"books"."primary_author_sort_name"',
-        '"books"."primary_author_sort_name" ASC NULLS LAST, "book_metadata"."title" ASC NULLS LAST, "books"."id" ASC',
+        '"books"."primary_author_sort_name" ASC NULLS LAST, "book_metadata"."title_sort_key" ASC NULLS LAST, "books"."id" ASC',
       ],
       [
         'author_desc',
         '"books"."primary_author_sort_name"',
-        '"books"."primary_author_sort_name" DESC NULLS LAST, "book_metadata"."title" ASC NULLS LAST, "books"."id" ASC',
+        '"books"."primary_author_sort_name" DESC NULLS LAST, "book_metadata"."title_sort_key" ASC NULLS LAST, "books"."id" ASC',
       ],
     ] as const)('numbers %s book buckets with the page order', async (sortOrder, key, order) => {
       const { service, db } = makeService([
@@ -812,7 +812,9 @@ describe('OpdsBookService', () => {
       await testable(service).paginatedBookQuery({ kind: 'where' }, 'author_asc', 1, 25, 7);
 
       const page = selectChains(db)[0]!;
-      expect(orderText(page)).toBe('"books"."primary_author_sort_name" ASC NULLS LAST, "book_metadata"."title" ASC NULLS LAST, "books"."id" ASC');
+      expect(orderText(page)).toBe(
+        '"books"."primary_author_sort_name" ASC NULLS LAST, "book_metadata"."title_sort_key" ASC NULLS LAST, "books"."id" ASC',
+      );
       expect(page.groupBy).not.toHaveBeenCalled();
     });
   });
@@ -925,7 +927,7 @@ describe('OpdsBookService', () => {
     await testable(service).paginatedBookQuery({ kind: 'where' }, sortOrder, 1, 25, 7);
 
     expect(orderText(selectChains(db)[0]!)).toBe(
-      `coalesce("book_metadata"."published_date", make_date("book_metadata"."published_year", 1, 1)) ${direction} NULLS LAST, "book_metadata"."title" ASC NULLS LAST, "books"."id" ASC`,
+      `coalesce("book_metadata"."published_date", make_date("book_metadata"."published_year", 1, 1)) ${direction} NULLS LAST, "book_metadata"."title_sort_key" ASC NULLS LAST, "books"."id" ASC`,
     );
   });
 

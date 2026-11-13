@@ -6,6 +6,8 @@ import { X, BookOpen, Check, Trash2, Sparkles, ArrowLeft, Wand2, AlertCircle, Pl
 import {
   getBookMediaKind,
   resolveBookDockSearchTitle,
+  isAgeRating,
+  type AgeRating,
   type BookDockFile,
   type CoverMedium,
   type BookDockMetadata,
@@ -18,6 +20,7 @@ import {
 } from '@bookorbit/types'
 import BookDockStatusBadge from './BookDockStatusBadge.vue'
 import IdentifierInput from '@/components/ui/IdentifierInput.vue'
+import AgeRatingSelect from '@/features/book/components/AgeRatingSelect.vue'
 import ChipInput from '@/components/ui/ChipInput.vue'
 import InputWithSuggestions from '@/components/ui/InputWithSuggestions.vue'
 import { useSeriesNameSearch } from '@/features/book/composables/useMetadataFieldSearch'
@@ -74,6 +77,7 @@ const form = reactive({
   seriesIndex: '',
   genres: '',
   tags: '',
+  ageRating: null as AgeRating | null,
 })
 const selectedCoverUrl = ref('')
 const passthroughMetadata = ref<BookDockMetadata>({})
@@ -155,6 +159,7 @@ watch(
     form.seriesIndex = m.seriesIndex != null ? String(m.seriesIndex) : ''
     form.genres = m.genres?.join(', ') ?? ''
     form.tags = m.tags?.join(', ') ?? ''
+    form.ageRating = isAgeRating(m.ageRating) ? m.ageRating : null
     selectedCoverUrl.value = m.coverUrl ?? ''
     metaView.value = 'editor'
 
@@ -199,6 +204,7 @@ function buildMetadataPatchFromForm(): Partial<BookDockMetadata> {
           .filter(Boolean)
       : undefined,
     tags: form.tags ? splitList(form.tags) : undefined,
+    ageRating: form.ageRating,
     coverUrl: selectedCoverUrl.value || undefined,
   }
 }
@@ -607,6 +613,14 @@ onMounted(() => {
                 v-model="form.language"
                 class="mt-1 w-full h-8 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-1 focus:ring-ring"
                 @input="onFieldChange"
+              />
+            </label>
+            <label>
+              <span class="text-xs font-medium text-muted-foreground">{{ t('ageRating.label') }}</span>
+              <AgeRatingSelect
+                v-model="form.ageRating"
+                select-class="mt-1 w-full h-8 rounded-lg border border-input bg-background px-2 text-sm outline-none focus:ring-1 focus:ring-ring"
+                @update:model-value="onFieldChange"
               />
             </label>
             <label>

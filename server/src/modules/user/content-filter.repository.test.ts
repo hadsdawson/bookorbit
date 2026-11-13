@@ -41,6 +41,13 @@ describe('ContentFilterRepository', () => {
       .mockResolvedValueOnce([
         { filterType: 'include', genreId: 3 },
         { filterType: 'exclude', genreId: 4 },
+      ])
+      // The user row is read through limit(), so its where() hands the chain on.
+      .mockReturnValueOnce(mockDb)
+      .mockResolvedValueOnce([
+        { filterType: 'include', ageRating: 0 },
+        { filterType: 'include', ageRating: -1 },
+        { filterType: 'exclude', ageRating: 18 },
       ]);
 
     await expect(repo.findByUserId(7)).resolves.toEqual({
@@ -48,14 +55,16 @@ describe('ContentFilterRepository', () => {
       excludeTagIds: [2],
       includeGenreIds: [3],
       excludeGenreIds: [4],
+      includeAgeRatings: [0, -1],
+      excludeAgeRatings: [18],
     });
   });
 
   it('findByUserId carries the exemption only for a user who has it', async () => {
-    mockDb.where.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    mockDb.where.mockResolvedValueOnce([]).mockResolvedValueOnce([]).mockReturnValueOnce(mockDb).mockResolvedValueOnce([]);
     await expect(repo.findByUserId(7)).resolves.not.toHaveProperty('exemptRequestsFromUserId');
 
-    mockDb.where.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    mockDb.where.mockResolvedValueOnce([]).mockResolvedValueOnce([]).mockReturnValueOnce(mockDb).mockResolvedValueOnce([]);
     mockDb.limit.mockResolvedValueOnce([{ seeOwnRequestedBooks: true }]);
     await expect(repo.findByUserId(7)).resolves.toMatchObject({ exemptRequestsFromUserId: 7 });
   });
@@ -69,13 +78,17 @@ describe('ContentFilterRepository', () => {
       .mockResolvedValueOnce([
         { filterType: 'include', genreId: 3, genreName: 'Fantasy' },
         { filterType: 'exclude', genreId: 4, genreName: 'Thriller' },
-      ]);
+      ])
+      .mockReturnValueOnce(mockDb)
+      .mockResolvedValueOnce([{ filterType: 'exclude', ageRating: 16 }]);
 
     await expect(repo.findByUserIdWithNames(7)).resolves.toEqual({
       includeTags: [{ id: 1, name: 'Sci-Fi' }],
       excludeTags: [{ id: 2, name: 'Horror' }],
       includeGenres: [{ id: 3, name: 'Fantasy' }],
       excludeGenres: [{ id: 4, name: 'Thriller' }],
+      includeAgeRatings: [],
+      excludeAgeRatings: [16],
       seeOwnRequestedBooks: false,
     });
   });
@@ -215,10 +228,35 @@ describe('ContentFilterRepository', () => {
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([{ genreId: 2 }])
       .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([]);
 
     await expect(repo.hasContentFilters(7)).resolves.toBe(true);
     await expect(repo.hasContentFilters(8)).resolves.toBe(false);
+  });
+
+  it('hasContentFilters counts an age rating rule alone', async () => {
+    mockDb.limit
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ ageRating: 18 }]);
+    await expect(repo.hasContentFilters(7)).resolves.toBe(true);
+  });
+
+  it('replaceFilters stores age ratings, with exclude winning over include for the same rating', async () => {
+    const tx = makeTx();
+    mockDb.transaction.mockImplementation(async (cb: (db: typeof tx) => Promise<void>) => cb(tx));
+
+    await repo.replaceFilters(7, { ...EMPTY_CONTENT_FILTER_RULES, includeAgeRatings: [0, 10, 13, 13], excludeAgeRatings: [13, -1] });
+
+    expect(tx.delete).toHaveBeenNthCalledWith(3, schema.userContentFilterAgeRatings);
+    expect(tx.insert).toHaveBeenCalledWith(schema.userContentFilterAgeRatings);
+    expect(tx.values).toHaveBeenCalledWith([
+      { userId: 7, filterType: 'include', ageRating: 0 },
+      { userId: 7, filterType: 'include', ageRating: 10 },
+      { userId: 7, filterType: 'exclude', ageRating: 13 },
+      { userId: 7, filterType: 'exclude', ageRating: -1 },
+    ]);
   });
 
   it('hasAnyContentFilters returns an empty set for no user ids', async () => {
@@ -227,8 +265,11 @@ describe('ContentFilterRepository', () => {
   });
 
   it('hasAnyContentFilters merges matching tag and genre user ids', async () => {
-    mockDb.where.mockResolvedValueOnce([{ userId: 1 }, { userId: 2 }]).mockResolvedValueOnce([{ userId: 2 }, { userId: 3 }]);
+    mockDb.where
+      .mockResolvedValueOnce([{ userId: 1 }, { userId: 2 }])
+      .mockResolvedValueOnce([{ userId: 2 }, { userId: 3 }])
+      .mockResolvedValueOnce([{ userId: 4 }]);
 
-    await expect(repo.hasAnyContentFilters([1, 2, 3, 4])).resolves.toEqual(new Set([1, 2, 3]));
+    await expect(repo.hasAnyContentFilters([1, 2, 3, 4])).resolves.toEqual(new Set([1, 2, 3, 4]));
   });
 });
