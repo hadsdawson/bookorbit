@@ -325,8 +325,8 @@ describe('SeriesDetailView', () => {
 
     expect(wrapper.find('[data-testid="virtual-book-grid"]').exists()).toBe(true)
     expect(wrapper.findAll('[data-testid="virtual-book-grid"]')).toHaveLength(1)
-    expect(wrapper.find('[data-testid="series-books-section-heading"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="series-media-group-books"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="series-books-section-heading"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="series-media-group-books"]').exists()).toBe(false)
   })
 
   it('falls back to book counts when a server does not return volume counts', async () => {
@@ -378,7 +378,27 @@ describe('SeriesDetailView', () => {
     expect(wrapper.find('[role="progressbar"]').exists()).toBe(false)
   })
 
-  it('shows grouped media sections with labels and counts by default', async () => {
+  it('lists every format under one Books heading by default', async () => {
+    mocks.items = ref([
+      makeBook({ id: 7, files: [{ id: 1, format: 'epub', role: 'primary', sizeBytes: null }] }),
+      makeBook({ id: 8, files: [{ id: 2, format: 'm4b', role: 'primary', sizeBytes: null }] }),
+      makeBook({ id: 9, files: [{ id: 3, format: 'cbz', role: 'primary', sizeBytes: null }] }),
+    ])
+    mocks.total = ref(3)
+    mocks.seriesInfo = ref({ ...makeSeriesInfo(), bookCount: 3 })
+
+    const wrapper = mountView()
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="series-books-section-heading"]').text()).toBe('Books')
+    expect(wrapper.find('[data-testid="series-media-group-audiobooks"]').exists()).toBe(false)
+    const grids = wrapper.findAll('[data-testid="virtual-book-grid"]')
+    expect(grids).toHaveLength(1)
+    expect(grids[0]?.attributes('data-book-ids')).toBe('7,8,9')
+  })
+
+  it('shows grouped media sections with labels and counts when grouping is on', async () => {
+    localStorage.setItem(GROUP_BY_MEDIA_STORAGE_KEY, 'true')
     mocks.items = ref([
       makeBook({ id: 7, files: [{ id: 1, format: 'epub', role: 'primary', sizeBytes: null }] }),
       makeBook({ id: 8, files: [{ id: 2, format: 'pdf', role: 'primary', sizeBytes: null }] }),
@@ -408,6 +428,7 @@ describe('SeriesDetailView', () => {
   })
 
   it('shows a mixed ebook and audiobook in both media sections', async () => {
+    localStorage.setItem(GROUP_BY_MEDIA_STORAGE_KEY, 'true')
     mocks.items = ref([
       makeBook({
         id: 7,
@@ -431,6 +452,7 @@ describe('SeriesDetailView', () => {
   })
 
   it('switches between grouped and plain grid rendering', async () => {
+    localStorage.setItem(GROUP_BY_MEDIA_STORAGE_KEY, 'true')
     mocks.items = ref([
       makeBook({ id: 7, files: [{ id: 1, format: 'epub', role: 'primary', sizeBytes: null }] }),
       makeBook({ id: 8, files: [{ id: 2, format: 'm4b', role: 'primary', sizeBytes: null }] }),
@@ -458,7 +480,7 @@ describe('SeriesDetailView', () => {
   })
 
   it('loads the stored group by media preference', async () => {
-    localStorage.setItem(GROUP_BY_MEDIA_STORAGE_KEY, 'false')
+    localStorage.setItem(GROUP_BY_MEDIA_STORAGE_KEY, 'true')
     mocks.items = ref([
       makeBook({ id: 7, files: [{ id: 1, format: 'epub', role: 'primary', sizeBytes: null }] }),
       makeBook({ id: 8, files: [{ id: 2, format: 'm4b', role: 'primary', sizeBytes: null }] }),
@@ -469,10 +491,10 @@ describe('SeriesDetailView', () => {
     const wrapper = mountView()
     await nextTick()
 
-    expect(wrapper.get('[data-testid="series-books-section-heading"]').text()).toBe('Books')
-    expect(wrapper.find('[data-testid="series-media-group-books"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="series-media-group-audiobooks"]').exists()).toBe(false)
-    expect(wrapper.findAll('[data-testid="virtual-book-grid"]')).toHaveLength(1)
+    expect(wrapper.find('[data-testid="series-books-section-heading"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="series-media-group-books"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="series-media-group-audiobooks"]').exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid="virtual-book-grid"]')).toHaveLength(2)
   })
 
   it('opens AddToCollectionSheet with the clicked book id from grid actions', async () => {

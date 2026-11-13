@@ -71,6 +71,7 @@ import {
 } from '@bookorbit/types'
 import { useBookMergeSync } from '@/features/book/composables/useBookMergeSync'
 import { useBookLinkSync } from '@/features/book/composables/useBookLinkSync'
+import { useBookEvents } from '@/features/book/composables/useBookEvents'
 import EntityNotFound from '@/components/EntityNotFound.vue'
 
 const MergeBooksSheet = defineAsyncComponent(() => import('@/features/book/components/merge/MergeBooksSheet.vue'))
@@ -357,6 +358,10 @@ const { scheduleRefresh: scheduleLinkRefresh } = useBookLinkSync({
   refresh: refreshAfterLinkChange,
   affectsScope: linkChangeAffectsView,
 })
+
+// A smart scope is a saved filter, so a metadata edit can move a book into or out of it. The
+// listing is asked again shortly after any save, instead of waiting for a page refresh.
+useBookEvents().onBookMetadataChanged(scheduleLinkRefresh)
 
 function handleBooksLinked() {
   exitSelectionMode()

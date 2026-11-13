@@ -8,6 +8,7 @@ import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
 import type {
   BookMergedEvent,
   BookLinksChangedEvent,
+  BookMetadataChangedEvent,
   BookDuplicateResolutionEvent,
   BookMergeJobEvent,
   BookMissingEvent,
@@ -22,6 +23,8 @@ import type {
 } from '@bookorbit/types';
 import {
   ACHIEVEMENT_EVENT_BOOK_PROGRESS_CHANGED,
+  BOOK_EVENT_METADATA_CHANGED,
+  type BookMetadataChangedPayload,
   AchievementEventsService,
   type BookProgressChangedPayload,
 } from '../achievement/achievement-events.service';
@@ -41,6 +44,10 @@ export class ScanGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   private readonly handleBookProgressChanged = (payload: BookProgressChangedPayload): void => {
     this.emitBookProgressChanged(payload);
   };
+  private readonly handleBookMetadataChanged = (payload: BookMetadataChangedPayload): void => {
+    const event: BookMetadataChangedEvent = { bookIds: payload.bookIds };
+    this.server?.to(`user:${payload.userId}`).emit('book:metadata-changed', event);
+  };
   private readonly handleCoverChanged = (event: CoverRefreshedEvent): void => {
     this.emitCoverRefreshed(event);
   };
@@ -59,11 +66,13 @@ export class ScanGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
   onModuleInit(): void {
     this.achievementEvents.on(ACHIEVEMENT_EVENT_BOOK_PROGRESS_CHANGED, this.handleBookProgressChanged);
+    this.achievementEvents.on(BOOK_EVENT_METADATA_CHANGED, this.handleBookMetadataChanged);
     this.coverEvents?.on(BOOK_COVER_CHANGED, this.handleCoverChanged);
   }
 
   onModuleDestroy(): void {
     this.achievementEvents.removeListener(ACHIEVEMENT_EVENT_BOOK_PROGRESS_CHANGED, this.handleBookProgressChanged);
+    this.achievementEvents.removeListener(BOOK_EVENT_METADATA_CHANGED, this.handleBookMetadataChanged);
     this.coverEvents?.removeListener(BOOK_COVER_CHANGED, this.handleCoverChanged);
   }
 

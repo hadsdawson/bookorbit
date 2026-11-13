@@ -4,6 +4,7 @@ import type {
   BookLinksChangedEvent,
   BookMergedEvent,
   BookMergeJobEvent,
+  BookMetadataChangedEvent,
   BookMissingEvent,
   BookMovedEvent,
   BookProgressChangedEvent,
@@ -18,6 +19,7 @@ type BookProgressChangedCallback = (event: BookProgressChangedEvent) => void
 type BookMergedCallback = (event: BookMergedEvent) => void
 type BookMergeJobCallback = (event: BookMergeJobEvent) => void
 type BookLinksChangedCallback = (event: BookLinksChangedEvent) => void
+type BookMetadataChangedCallback = (event: BookMetadataChangedEvent) => void
 
 const missingCallbacks = new Set<BookIdsCallback>()
 const restoredCallbacks = new Set<BookIdsCallback>()
@@ -28,6 +30,7 @@ const mergedCallbacks = new Set<BookMergedCallback>()
 const mergeProgressCallbacks = new Set<BookMergeJobCallback>()
 const mergeFinishedCallbacks = new Set<BookMergeJobCallback>()
 const linksChangedCallbacks = new Set<BookLinksChangedCallback>()
+const metadataChangedCallbacks = new Set<BookMetadataChangedCallback>()
 
 let pendingMissingCount = 0
 let pendingRestoredCount = 0
@@ -112,6 +115,10 @@ function ensureInitialized() {
   socket.on('book:links-changed', (event: BookLinksChangedEvent) => {
     for (const cb of linksChangedCallbacks) cb(event)
   })
+
+  socket.on('book:metadata-changed', (event: BookMetadataChangedEvent) => {
+    for (const cb of metadataChangedCallbacks) cb(event)
+  })
 }
 
 function registerCallback<T extends (...args: never[]) => void>(callbacks: Set<T>, cb: T): () => void {
@@ -162,7 +169,13 @@ export function useBookEvents() {
     return registerCallback(linksChangedCallbacks, cb)
   }
 
+  /** This person saved a change to these books' metadata, here or in another tab. */
+  function onBookMetadataChanged(cb: BookMetadataChangedCallback): () => void {
+    return registerCallback(metadataChangedCallbacks, cb)
+  }
+
   return {
+    onBookMetadataChanged,
     onBookMissing,
     onBookRestored,
     onBookMoved,

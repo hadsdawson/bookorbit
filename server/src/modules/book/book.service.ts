@@ -111,6 +111,7 @@ import {
   ACHIEVEMENT_EVENT_BOOK_HARDCOVER_EDITION_CHANGED,
   ACHIEVEMENT_EVENT_BOOK_RATING_CHANGED,
   AchievementEventsService,
+  BOOK_EVENT_METADATA_CHANGED,
 } from '../achievement/achievement-events.service';
 import { BookMetadataLockService } from '../book-metadata-lock/book-metadata-lock.service';
 import { BookCoverStore } from '../book-cover-store/book-cover-store.service';
@@ -2193,6 +2194,7 @@ export class BookService {
     }
 
     if (hasMetadataUpdate) {
+      this.achievementEvents?.emit(BOOK_EVENT_METADATA_CHANGED, { userId: user.id, bookIds: [id] });
       this.embedder?.embedBook(id).catch((err: Error) => this.logger.warn(`Embedding failed for book ${id}: ${err.message}`));
       const hasRenameRelevantField =
         dto.seriesMemberships !== undefined ||
@@ -4144,6 +4146,7 @@ export class BookService {
   }
 
   private async triggerPostMetadataUpdateEffects(bookIds: number[], userId: number): Promise<void> {
+    if (bookIds.length > 0) this.achievementEvents?.emit(BOOK_EVENT_METADATA_CHANGED, { userId, bookIds });
     for (const bookId of bookIds) {
       this.fileWriteService?.scheduleWrite(bookId, 'auto', userId);
       this.fileRenameService?.scheduleRename(bookId, userId);
