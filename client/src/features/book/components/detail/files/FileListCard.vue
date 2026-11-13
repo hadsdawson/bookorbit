@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ChevronDown, MoreVertical } from '@lucide/vue'
 import { formatBytes } from '@/lib/formatting'
@@ -39,6 +39,8 @@ const { t } = useI18n()
  * single Play row and opens on request, which is the difference between a page and a wall.
  */
 const expandedGroups = ref<Set<string>>(new Set())
+/** With audio in the folder, a plain cover.jpg is the audiobook's cover. */
+const hasAudio = computed(() => props.groups.some((group) => group.key === 'audio' && group.files.length > 0))
 const showAllTracks = ref<Set<string>>(new Set())
 
 watch(
@@ -225,7 +227,7 @@ function handleCopyPath(file: TreeFile) {
               </span>
               <span class="row-stacked mt-1 hidden text-[11.5px] leading-none text-muted-foreground tabular-nums">{{ stackedMeta(file) }}</span>
             </span>
-            <FileRoleBadge v-if="file.role !== 'content' && file.role !== 'primary'" :role="file.role" class="pointer-events-none relative" />
+            <FileRoleBadge :role="file.role" :file-name="file.leaf" :has-audio="hasAudio" class="pointer-events-none relative" />
             <span
               v-if="progressOf(file) > 0"
               class="pointer-events-none relative inline-flex h-[18px] shrink-0 items-center rounded-xs bg-primary/15 px-1.5 text-[9.5px] font-bold uppercase tracking-wider text-primary tabular-nums"
