@@ -3,8 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import PublishersView from './PublishersView.vue'
 
-const api = vi.hoisted(() => ({ browseEntities: vi.fn(), renameEntity: vi.fn(), mergeEntities: vi.fn() }))
-const push = vi.hoisted(() => vi.fn())
+const api = vi.hoisted(() => ({
+  browseEntities: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  renameEntity: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  mergeEntities: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+}))
+const push = vi.hoisted(() => vi.fn<(to: unknown) => void>())
 
 vi.mock('@/features/tools/api/entity-manager', () => api)
 vi.mock('vue-router', async (importOriginal) => ({
@@ -14,7 +18,7 @@ vi.mock('vue-router', async (importOriginal) => ({
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({ t: (key: string, params?: Record<string, unknown>) => (params ? `${key} ${JSON.stringify(params)}` : key) }),
 }))
-vi.mock('vue-sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
+vi.mock('vue-sonner', () => ({ toast: { success: vi.fn<(message: string) => void>(), error: vi.fn<(message: string) => void>() } }))
 vi.mock('@vueuse/core', () => ({ useDebounceFn: (fn: () => void) => fn }))
 
 const stubs = {

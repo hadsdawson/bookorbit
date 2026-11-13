@@ -4,15 +4,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import PublisherDetailView from './PublisherDetailView.vue'
 
 const mocks = vi.hoisted(() => ({
-  api: vi.fn(),
-  renameEntity: vi.fn(),
-  push: vi.fn(),
-  replace: vi.fn(),
+  api: vi.fn<(url: string, init: { body: string }) => Promise<unknown>>(),
+  renameEntity: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  push: vi.fn<(to: unknown) => void>(),
+  replace: vi.fn<(to: unknown) => void>(),
   route: { params: { name: 'Tor' } },
 }))
 
 vi.mock('@/lib/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('@/lib/api')>()), api: mocks.api }))
-vi.mock('@/features/tools/api/entity-manager', () => ({ browseEntities: vi.fn(), mergeEntities: vi.fn(), renameEntity: mocks.renameEntity }))
+vi.mock('@/features/tools/api/entity-manager', () => ({
+  browseEntities: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  mergeEntities: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  renameEntity: mocks.renameEntity,
+}))
 vi.mock('vue-router', async (importOriginal) => ({
   ...(await importOriginal<typeof import('vue-router')>()),
   useRoute: () => mocks.route,
@@ -21,7 +25,7 @@ vi.mock('vue-router', async (importOriginal) => ({
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({ t: (key: string, params?: Record<string, unknown>) => (params ? `${key} ${JSON.stringify(params)}` : key) }),
 }))
-vi.mock('vue-sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
+vi.mock('vue-sonner', () => ({ toast: { success: vi.fn<(message: string) => void>(), error: vi.fn<(message: string) => void>() } }))
 vi.mock('@/composables/useDisplaySettings', () => ({ useDisplaySettings: () => ({ portraitCoverSize: { value: 160 }, gridGap: { value: 16 } }) }))
 
 const stubs = {
