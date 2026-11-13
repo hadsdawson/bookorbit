@@ -85,3 +85,22 @@ export interface NewReleasesOverview {
   /** Followed names not looked up yet, so the page can say results are still coming. */
   pendingChecks: number;
 }
+
+export const NEW_RELEASE_REQUEST_FORMATS = ["ebook", "audiobook"] as const;
+export type NewReleaseRequestFormat = (typeof NEW_RELEASE_REQUEST_FORMATS)[number];
+
+/** Which formats to request a listed book in. */
+export interface NewReleaseRequestPayload {
+  formats: NewReleaseRequestFormat[];
+}
+
+export interface NewReleaseRequestResult {
+  /** The formats a request now exists for, new or one the user joined. */
+  requested: NewReleaseRequestFormat[];
+}
+
+/** A user's own settings; a field left out is unchanged, and a null delivery follows the server default. */
+export interface UpdateNewReleasesUserSettingsPayload {
+  retentionDays?: NewReleaseRetentionDays;
+  delivery?: NewReleaseDelivery | null;
+}

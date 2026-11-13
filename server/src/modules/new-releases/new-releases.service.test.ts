@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { RequestUser } from '../../common/types/request-user';
 import type { AppSettingsService } from '../app-settings/app-settings.service';
+import type { AuthService } from '../auth/auth.service';
+import type { BookRequestService } from '../book-request/book-request.service';
 import type { LibraryService } from '../library/library.service';
 import type { NewReleasesRepository } from './new-releases.repository';
 import type { SourceRelease } from './release-merge';
@@ -38,10 +40,16 @@ describe('NewReleasesService', () => {
     recordCheck: ReturnType<typeof vi.fn<NewReleasesRepository['recordCheck']>>;
     findLibraryAuthorsPage: ReturnType<typeof vi.fn<NewReleasesRepository['findLibraryAuthorsPage']>>;
     insertFollowsIfMissing: ReturnType<typeof vi.fn<NewReleasesRepository['insertFollowsIfMissing']>>;
-    saveRetentionDays: ReturnType<typeof vi.fn<NewReleasesRepository['saveRetentionDays']>>;
+    saveUserSettings: ReturnType<typeof vi.fn<NewReleasesRepository['saveUserSettings']>>;
+    findReleaseById: ReturnType<typeof vi.fn<NewReleasesRepository['findReleaseById']>>;
+    findPendingAutoRequests: ReturnType<typeof vi.fn<NewReleasesRepository['findPendingAutoRequests']>>;
+    setRequested: ReturnType<typeof vi.fn<NewReleasesRepository['setRequested']>>;
     findUserSettings: ReturnType<typeof vi.fn<NewReleasesRepository['findUserSettings']>>;
   };
   let lookup: ReturnType<typeof vi.fn<ReleaseSourcesService['lookup']>>;
+  let submit: ReturnType<typeof vi.fn<BookRequestService['submit']>>;
+  let findActingUser: ReturnType<typeof vi.fn<AuthService['findActingUser']>>;
+  let appValues: Map<string, string>;
   let service: NewReleasesService;
 
   beforeEach(() => {
@@ -53,15 +61,23 @@ describe('NewReleasesService', () => {
       recordCheck: vi.fn<NewReleasesRepository['recordCheck']>().mockResolvedValue(undefined),
       findLibraryAuthorsPage: vi.fn<NewReleasesRepository['findLibraryAuthorsPage']>(),
       insertFollowsIfMissing: vi.fn<NewReleasesRepository['insertFollowsIfMissing']>(),
-      saveRetentionDays: vi.fn<NewReleasesRepository['saveRetentionDays']>().mockResolvedValue(undefined),
+      saveUserSettings: vi.fn<NewReleasesRepository['saveUserSettings']>().mockResolvedValue(undefined),
+      findReleaseById: vi.fn<NewReleasesRepository['findReleaseById']>(),
+      findPendingAutoRequests: vi.fn<NewReleasesRepository['findPendingAutoRequests']>().mockResolvedValue([]),
+      setRequested: vi.fn<NewReleasesRepository['setRequested']>().mockResolvedValue(undefined),
       findUserSettings: vi.fn<NewReleasesRepository['findUserSettings']>().mockResolvedValue({ userId: 3, delivery: 'request', retentionDays: 60 }),
     };
     lookup = vi.fn<ReleaseSourcesService['lookup']>();
+    submit = vi.fn<BookRequestService['submit']>().mockResolvedValue({} as never);
+    findActingUser = vi.fn<AuthService['findActingUser']>();
+    appValues = new Map([['new_releases_default_delivery', 'request']]);
     service = new NewReleasesService(
       repository as unknown as NewReleasesRepository,
       { lookup } as unknown as ReleaseSourcesService,
-      {} as AppSettingsService,
+      { getValues: vi.fn<AppSettingsService['getValues']>(() => Promise.resolve(appValues)) } as unknown as AppSettingsService,
       { findAccessibleLibraryIds: vi.fn<LibraryService['findAccessibleLibraryIds']>().mockResolvedValue([1, 2]) } as unknown as LibraryService,
+      { submit } as unknown as BookRequestService,
+      { findActingUser } as unknown as AuthService,
     );
   });
 
@@ -116,8 +132,60 @@ describe('NewReleasesService', () => {
     ]);
   });
 
-  it('saves how long released books stay listed and keeps the delivery choice', async () => {
-    await expect(service.updateUserSettings(user, 60)).resolves.toEqual({ delivery: 'request', retentionDays: 60 });
-    expect(repository.saveRetentionDays).toHaveBeenCalledWith(3, 60);
+  it('saves the settings given and keeps the rest', async () => {
+    await expect(service.updateUserSettings(user, { retentionDays: 60 })).resolves.toEqual({ delivery: 'request', retentionDays: 60 });
+    expect(repository.saveUserSettings).toHaveBeenCalledWith(3, { retentionDays: 60 });
+  });
+
+  const listed = {
+    id: 8,
+    title: 'Next',
+    authors: ['Jane Writer'],
+    seriesName: null,
+    seriesIndex: null,
+    coverUrl: null,
+    isbn13: null,
+    ebookDate: '2027-03-09',
+    audiobookDate: null,
+    sources: [],
+  } as never;
+
+  it('requests a listed book in the formats with a date and marks it requested', async () => {
+    repository.findReleaseById.mockResolvedValue(listed);
+
+    await expect(service.requestRelease(user, 8, ['ebook'])).resolves.toEqual({ requested: ['ebook'] });
+
+    expect(submit).toHaveBeenCalledWith(expect.objectContaining({ mediaKind: 'ebook', title: 'Next', publishedDate: '2027-03-09' }), user);
+    expect(repository.setRequested).toHaveBeenCalledWith(3, 8);
+    await expect(service.requestRelease(user, 8, ['audiobook'])).rejects.toThrow('no confirmed release date');
+  });
+
+  it('requests for people set to have books requested, once, and holds back one that fails', async () => {
+    repository.findPendingAutoRequests.mockResolvedValue([
+      { userId: 3, releaseId: 8 },
+      { userId: 4, releaseId: 8 },
+    ]);
+    repository.findReleaseById.mockResolvedValue(listed);
+    findActingUser.mockImplementation((id) =>
+      Promise.resolve({ id, isSuperuser: false, permissions: ['new_releases_access', 'book_request_access'] } as never),
+    );
+    submit.mockResolvedValueOnce({} as never).mockRejectedValueOnce(new Error('format locked'));
+
+    await expect(service.autoRequest(1_000)).resolves.toEqual({ filed: 1, failed: 1 });
+    expect(repository.findPendingAutoRequests).toHaveBeenCalledWith('request', 100);
+    expect(repository.setRequested).toHaveBeenCalledTimes(1);
+
+    submit.mockClear();
+    await service.autoRequest(2_000);
+    expect(submit).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ id: 4 }));
+  });
+
+  it('never requests for someone without the permission', async () => {
+    repository.findPendingAutoRequests.mockResolvedValue([{ userId: 5, releaseId: 8 }]);
+    findActingUser.mockResolvedValue({ id: 5, isSuperuser: false, permissions: ['new_releases_access'] } as never);
+
+    await service.autoRequest(1_000);
+
+    expect(submit).not.toHaveBeenCalled();
   });
 });

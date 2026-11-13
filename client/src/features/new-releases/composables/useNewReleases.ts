@@ -1,12 +1,20 @@
 import { computed, ref } from 'vue'
-import type { NewReleaseItem, NewReleaseRetentionDays, NewReleasesOverview, ReleaseFollow, ReleaseFollowKind } from '@bookorbit/types'
+import type {
+  NewReleaseItem,
+  NewReleaseRequestFormat,
+  NewReleasesOverview,
+  ReleaseFollow,
+  ReleaseFollowKind,
+  UpdateNewReleasesUserSettingsPayload,
+} from '@bookorbit/types'
 
 import {
   followAllForReleases,
   getNewReleases,
   listReleaseFollows,
   setNewReleaseHidden,
-  setNewReleasesRetention,
+  requestNewRelease,
+  saveNewReleasesSettings,
   unfollowForReleases,
 } from '../api/new-releases'
 
@@ -101,13 +109,24 @@ export function useNewReleases() {
     return added
   }
 
-  /** Shorter keeps fewer released books, so the list is fetched again under the new period. */
-  async function setRetention(retentionDays: NewReleaseRetentionDays): Promise<void> {
-    await setNewReleasesRetention(retentionDays)
+  /** Fetched again afterwards: a shorter period lists fewer books, and the delivery in effect may change. */
+  async function saveSettings(settings: UpdateNewReleasesUserSettingsPayload): Promise<void> {
+    await saveNewReleasesSettings(settings)
     await load()
   }
 
-  return { overview, loading, failed, groups, followTotal, anySource, load, hide, unhide, followAll, setRetention }
+  async function request(item: NewReleaseItem, formats: NewReleaseRequestFormat[]): Promise<NewReleaseRequestFormat[]> {
+    const { requested } = await requestNewRelease(item.id, formats)
+    if (overview.value) {
+      overview.value = {
+        ...overview.value,
+        items: overview.value.items.map((entry) => (entry.id === item.id ? { ...entry, state: 'requested' as const } : entry)),
+      }
+    }
+    return requested
+  }
+
+  return { overview, loading, failed, groups, followTotal, anySource, load, hide, unhide, followAll, saveSettings, request }
 }
 
 /** The Following tab: a searchable, paged list of what this user follows. */

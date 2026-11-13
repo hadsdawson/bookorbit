@@ -5,7 +5,9 @@ import { toast } from 'vue-sonner'
 import { BellRing, BookOpen, CalendarClock, CalendarDays, EyeOff, Headphones, List, Loader2, Search, UserRound, Library, X } from '@lucide/vue'
 import {
   NEW_RELEASE_RETENTION_DAYS,
+  type NewReleaseDelivery,
   type NewReleaseItem,
+  type NewReleaseRequestFormat,
   type NewReleaseRetentionDays,
   type ReleaseFollow,
   type ReleaseFollowKind,
@@ -15,6 +17,7 @@ import { Button } from '@/components/ui/button'
 import { formatDate, formatNumber, formatRelativeFromNow } from '@/i18n/formatters'
 import { errorMessage } from '@/lib/api-json'
 import NewReleasesCalendar from '../components/NewReleasesCalendar.vue'
+import RequestReleaseButton from '../components/RequestReleaseButton.vue'
 import {
   isReleased,
   parseReleaseDate,
@@ -26,13 +29,18 @@ import {
 } from '../composables/useNewReleases'
 
 const { t } = useI18n()
-const { overview, loading, failed, groups, followTotal, anySource, load, hide, unhide, followAll, setRetention } = useNewReleases()
+const { overview, loading, failed, groups, followTotal, anySource, load, hide, unhide, followAll, saveSettings, request } = useNewReleases()
 const follows = useReleaseFollowList()
 
 type Tab = 'upcoming' | 'following'
 const tab = ref<Tab>('upcoming')
 const view = ref<ReleaseView>(readReleaseView())
 const savingRetention = ref(false)
+const savingDelivery = ref(false)
+const requesting = ref<number | null>(null)
+
+const deliveryValue = computed(() => overview.value?.user.delivery ?? 'default')
+const serverDeliveryLabel = computed(() => (overview.value ? t(`newReleases.delivery.${overview.value.server.defaultDelivery}`) : ''))
 const followingAll = ref<ReleaseFollowKind | null>(null)
 const brokenCovers = ref(new Set<number>())
 
@@ -88,12 +96,39 @@ async function handleRetentionChange(event: Event) {
   const value = Number((event.target as HTMLSelectElement).value) as NewReleaseRetentionDays
   savingRetention.value = true
   try {
-    await setRetention(value)
+    await saveSettings({ retentionDays: value })
     toast.success(t('newReleases.retention.saved', { days: value }))
   } catch (error) {
     toast.error(errorMessage(error, 'newReleases.errors.saveSettings'))
   } finally {
     savingRetention.value = false
+  }
+}
+
+async function handleDeliveryChange(event: Event) {
+  const raw = (event.target as HTMLSelectElement).value
+  const delivery = raw === 'default' ? null : (raw as NewReleaseDelivery)
+  savingDelivery.value = true
+  try {
+    await saveSettings({ delivery })
+    toast.success(t('newReleases.delivery.saved'))
+  } catch (error) {
+    toast.error(errorMessage(error, 'newReleases.errors.saveSettings'))
+  } finally {
+    savingDelivery.value = false
+  }
+}
+
+async function handleRequest(item: NewReleaseItem, formats: NewReleaseRequestFormat[]) {
+  if (requesting.value !== null) return
+  requesting.value = item.id
+  try {
+    const requested = await request(item, formats)
+    toast.success(t('newReleases.request.done', { title: item.title, count: requested.length }))
+  } catch (error) {
+    toast.error(errorMessage(error, 'newReleases.errors.request'))
+  } finally {
+    requesting.value = null
   }
 }
 
@@ -247,6 +282,20 @@ onMounted(load)
                 <option v-for="days in NEW_RELEASE_RETENTION_DAYS" :key="days" :value="days">{{ t('newReleases.retention.days', { days }) }}</option>
               </select>
             </label>
+            <label class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              {{ t('newReleases.delivery.label') }}
+              <select
+                class="select-field h-8 w-56"
+                :value="deliveryValue"
+                :disabled="savingDelivery"
+                data-testid="new-releases-delivery"
+                @change="handleDeliveryChange"
+              >
+                <option value="default">{{ t('newReleases.delivery.default', { choice: serverDeliveryLabel }) }}</option>
+                <option value="suggest">{{ t('newReleases.delivery.suggest') }}</option>
+                <option value="request">{{ t('newReleases.delivery.request') }}</option>
+              </select>
+            </label>
           </div>
           <div class="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" :disabled="followingAll !== null" data-testid="follow-all-authors" @click="handleFollowAllAuthors">
@@ -360,15 +409,24 @@ onMounted(load)
                     </p>
                   </div>
 
-                  <button
-                    type="button"
-                    class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                    :title="t('newReleases.item.hide')"
-                    :aria-label="t('newReleases.item.hideNamed', { title: item.title })"
-                    @click="handleHide(item)"
-                  >
-                    <EyeOff :size="15" aria-hidden="true" />
-                  </button>
+                  <div class="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-start">
+                    <RequestReleaseButton
+                      v-if="item.state !== 'requested' && !isReleased(item.releaseDate)"
+                      :item="item"
+                      :busy="requesting === item.id"
+                      @request="handleRequest"
+                    />
+                    <button
+                      type="button"
+                      class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                      :title="t('newReleases.item.hide')"
+                      :aria-label="t('newReleases.item.hideNamed', { title: item.title })"
+                      data-testid="hide-release"
+                      @click="handleHide(item)"
+                    >
+                      <EyeOff :size="15" aria-hidden="true" />
+                    </button>
+                  </div>
                 </li>
               </ul>
             </section>
