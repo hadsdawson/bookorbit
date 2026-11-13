@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { STYLE_IDS, SURFACE_PALETTE_IDS } from '@bookorbit/types'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { COLOR_THEME_IDS, STYLE_IDS, SURFACE_PALETTE_IDS } from '@bookorbit/types'
 import en from '@/locales/en.json'
 import { SURFACE_PALETTES, THEME_STYLES, getAppearanceControls, getThemeStyle, isAppShellPath } from './theme-styles'
 
@@ -41,4 +43,14 @@ describe('isAppShellPath', () => {
       expect(isAppShellPath(path)).toBe(false)
     },
   )
+})
+
+describe('color themes', () => {
+  const css = readFileSync(resolve(process.cwd(), 'src/assets/theme/color-themes.css'), 'utf8')
+
+  it('gives every color theme a block of hues and an English label', () => {
+    const themes = COLOR_THEME_IDS.filter((id) => id !== 'none')
+    expect(themes.filter((id) => !css.includes(`[data-color-theme='${id}'] {`))).toEqual([])
+    expect(COLOR_THEME_IDS.filter((id) => typeof lookup(`settings.appearance.theme.colorTheme.themes.${id}`) !== 'string')).toEqual([])
+  })
 })

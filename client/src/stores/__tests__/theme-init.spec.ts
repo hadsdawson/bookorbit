@@ -104,6 +104,16 @@ describe('theme-init', () => {
     expect(document.documentElement.getAttribute('data-surface')).toBe('sepia')
   })
 
+  it('paints a saved color theme inside the app shell only', () => {
+    localStorage.setItem('colorTheme', JSON.stringify('royal-jewel'))
+
+    runThemeInit(true, '/library/3')
+    expect(document.documentElement.getAttribute('data-color-theme')).toBe('royal-jewel')
+
+    runThemeInit(true, '/login')
+    expect(document.documentElement.getAttribute('data-color-theme')).toBe('none')
+  })
+
   it.each(['/login', '/read/4/9', '/reset-password'])('keeps %s on the BookOrbit style', (path) => {
     localStorage.setItem('style', JSON.stringify('nostalgia'))
 

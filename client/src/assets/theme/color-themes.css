@@ -1,0 +1,457 @@
+/* ── Color themes ────────────────────────────────────────────
+   Fork only. A color theme repaints the whole app shell on top of
+   any style: grounds and surfaces, buttons, links, icons and status
+   pills, which it fills solid in its own hues. Each theme below is
+   only a set of hues and chromas; the shared blocks after them turn
+   those into tokens for light and dark mode. Applied as
+   data-color-theme on <html> ('none' leaves the style alone), or on
+   a picker tile to preview a theme in place.
+────────────────────────────────────────────────────────────── */
+[data-color-theme='velvet-night'] {
+  --ct-surface-h: 290;
+  --ct-surface-c: 0.04;
+  --ct-primary-h: 350;
+  --ct-primary-c: 0.16;
+  --ct-link-h: 350;
+  --ct-link-c: 0.15;
+  --ct-icon-h: 300;
+  --ct-icon-c: 0.13;
+  --ct-wait-h: 60;
+  --ct-wait-c: 0.14;
+  --ct-progress-h: 300;
+  --ct-progress-c: 0.15;
+  --ct-done-h: 165;
+  --ct-done-c: 0.13;
+  --ct-fail-h: 5;
+  --ct-fail-c: 0.18;
+}
+[data-color-theme='neon-city'] {
+  --ct-surface-h: 275;
+  --ct-surface-c: 0.045;
+  --ct-primary-h: 255;
+  --ct-primary-c: 0.14;
+  --ct-link-h: 255;
+  --ct-link-c: 0.13;
+  --ct-icon-h: 320;
+  --ct-icon-c: 0.14;
+  --ct-wait-h: 95;
+  --ct-wait-c: 0.15;
+  --ct-progress-h: 320;
+  --ct-progress-c: 0.17;
+  --ct-done-h: 195;
+  --ct-done-c: 0.13;
+  --ct-fail-h: 20;
+  --ct-fail-c: 0.18;
+}
+[data-color-theme='graphite-citrus'] {
+  --ct-surface-h: 250;
+  --ct-surface-c: 0.005;
+  --ct-primary-h: 125;
+  --ct-primary-c: 0.17;
+  --ct-link-h: 125;
+  --ct-link-c: 0.15;
+  --ct-icon-h: 125;
+  --ct-icon-c: 0.1;
+  --ct-wait-h: 60;
+  --ct-wait-c: 0.16;
+  --ct-progress-h: 100;
+  --ct-progress-c: 0.16;
+  --ct-done-h: 135;
+  --ct-done-c: 0.17;
+  --ct-fail-h: 25;
+  --ct-fail-c: 0.18;
+}
+[data-color-theme='cotton-candy'] {
+  --ct-surface-h: 330;
+  --ct-surface-c: 0.05;
+  --ct-primary-h: 350;
+  --ct-primary-c: 0.16;
+  --ct-link-h: 235;
+  --ct-link-c: 0.13;
+  --ct-icon-h: 300;
+  --ct-icon-c: 0.12;
+  --ct-wait-h: 355;
+  --ct-wait-c: 0.15;
+  --ct-progress-h: 230;
+  --ct-progress-c: 0.13;
+  --ct-done-h: 170;
+  --ct-done-c: 0.12;
+  --ct-fail-h: 15;
+  --ct-fail-c: 0.19;
+}
+[data-color-theme='tropical-punch'] {
+  --ct-surface-h: 190;
+  --ct-surface-c: 0.05;
+  --ct-primary-h: 65;
+  --ct-primary-c: 0.17;
+  --ct-link-h: 340;
+  --ct-link-c: 0.18;
+  --ct-icon-h: 130;
+  --ct-icon-c: 0.17;
+  --ct-wait-h: 65;
+  --ct-wait-c: 0.17;
+  --ct-progress-h: 205;
+  --ct-progress-c: 0.14;
+  --ct-done-h: 135;
+  --ct-done-c: 0.18;
+  --ct-fail-h: 20;
+  --ct-fail-c: 0.19;
+}
+[data-color-theme='synthwave'] {
+  --ct-surface-h: 300;
+  --ct-surface-c: 0.07;
+  --ct-primary-h: 345;
+  --ct-primary-c: 0.2;
+  --ct-link-h: 210;
+  --ct-link-c: 0.15;
+  --ct-icon-h: 50;
+  --ct-icon-c: 0.17;
+  --ct-wait-h: 55;
+  --ct-wait-c: 0.18;
+  --ct-progress-h: 215;
+  --ct-progress-c: 0.15;
+  --ct-done-h: 140;
+  --ct-done-c: 0.19;
+  --ct-fail-h: 25;
+  --ct-fail-c: 0.2;
+}
+[data-color-theme='ocean-sunset'] {
+  --ct-surface-h: 255;
+  --ct-surface-c: 0.06;
+  --ct-primary-h: 30;
+  --ct-primary-c: 0.17;
+  --ct-link-h: 55;
+  --ct-link-c: 0.13;
+  --ct-icon-h: 225;
+  --ct-icon-c: 0.12;
+  --ct-wait-h: 60;
+  --ct-wait-c: 0.15;
+  --ct-progress-h: 230;
+  --ct-progress-c: 0.13;
+  --ct-done-h: 175;
+  --ct-done-c: 0.12;
+  --ct-fail-h: 20;
+  --ct-fail-c: 0.19;
+}
+[data-color-theme='blueberry-lemon'] {
+  --ct-surface-h: 270;
+  --ct-surface-c: 0.06;
+  --ct-primary-h: 100;
+  --ct-primary-c: 0.17;
+  --ct-link-h: 100;
+  --ct-link-c: 0.16;
+  --ct-icon-h: 255;
+  --ct-icon-c: 0.12;
+  --ct-wait-h: 100;
+  --ct-wait-c: 0.17;
+  --ct-progress-h: 280;
+  --ct-progress-c: 0.15;
+  --ct-done-h: 140;
+  --ct-done-c: 0.16;
+  --ct-fail-h: 0;
+  --ct-fail-c: 0.18;
+}
+[data-color-theme='arctic-aurora'] {
+  --ct-surface-h: 220;
+  --ct-surface-c: 0.045;
+  --ct-primary-h: 155;
+  --ct-primary-c: 0.16;
+  --ct-link-h: 300;
+  --ct-link-c: 0.14;
+  --ct-icon-h: 195;
+  --ct-icon-c: 0.12;
+  --ct-wait-h: 95;
+  --ct-wait-c: 0.15;
+  --ct-progress-h: 300;
+  --ct-progress-c: 0.15;
+  --ct-done-h: 155;
+  --ct-done-c: 0.16;
+  --ct-fail-h: 10;
+  --ct-fail-c: 0.17;
+}
+[data-color-theme='peach-fuzz'] {
+  --ct-surface-h: 45;
+  --ct-surface-c: 0.045;
+  --ct-primary-h: 40;
+  --ct-primary-c: 0.14;
+  --ct-link-h: 200;
+  --ct-link-c: 0.11;
+  --ct-icon-h: 40;
+  --ct-icon-c: 0.12;
+  --ct-wait-h: 65;
+  --ct-wait-c: 0.15;
+  --ct-progress-h: 270;
+  --ct-progress-c: 0.13;
+  --ct-done-h: 145;
+  --ct-done-c: 0.12;
+  --ct-fail-h: 355;
+  --ct-fail-c: 0.17;
+}
+[data-color-theme='royal-jewel'] {
+  --ct-surface-h: 265;
+  --ct-surface-c: 0.07;
+  --ct-primary-h: 160;
+  --ct-primary-c: 0.14;
+  --ct-link-h: 10;
+  --ct-link-c: 0.16;
+  --ct-icon-h: 305;
+  --ct-icon-c: 0.14;
+  --ct-wait-h: 75;
+  --ct-wait-c: 0.15;
+  --ct-progress-h: 245;
+  --ct-progress-c: 0.14;
+  --ct-done-h: 160;
+  --ct-done-c: 0.15;
+  --ct-fail-h: 15;
+  --ct-fail-c: 0.19;
+}
+[data-color-theme='bubblegum-pop'] {
+  --ct-surface-h: 310;
+  --ct-surface-c: 0.05;
+  --ct-primary-h: 350;
+  --ct-primary-c: 0.18;
+  --ct-link-h: 190;
+  --ct-link-c: 0.13;
+  --ct-icon-h: 95;
+  --ct-icon-c: 0.15;
+  --ct-wait-h: 95;
+  --ct-wait-c: 0.16;
+  --ct-progress-h: 195;
+  --ct-progress-c: 0.14;
+  --ct-done-h: 145;
+  --ct-done-c: 0.16;
+  --ct-fail-h: 20;
+  --ct-fail-c: 0.19;
+}
+[data-color-theme='noir-red'] {
+  --ct-surface-h: 0;
+  --ct-surface-c: 0;
+  --ct-primary-h: 25;
+  --ct-primary-c: 0.2;
+  --ct-link-h: 25;
+  --ct-link-c: 0.19;
+  --ct-icon-h: 25;
+  --ct-icon-c: 0.17;
+  --ct-wait-h: 70;
+  --ct-wait-c: 0.15;
+  --ct-progress-h: 250;
+  --ct-progress-c: 0.06;
+  --ct-done-h: 150;
+  --ct-done-c: 0.14;
+  --ct-fail-h: 25;
+  --ct-fail-c: 0.21;
+}
+
+/* Picker tiles read the same hues, so a tile shows the theme's real colours in the current mode. */
+[data-color-theme] {
+  --ct-tile-ground: oklch(0.965 calc(var(--ct-surface-c) * 0.6) var(--ct-surface-h));
+  --ct-tile-card: oklch(0.995 calc(var(--ct-surface-c) * 0.3) var(--ct-surface-h));
+  --ct-tile-edge: oklch(0.88 calc(var(--ct-surface-c) * 0.6) var(--ct-surface-h));
+  --ct-tile-primary: oklch(0.5 var(--ct-primary-c) var(--ct-primary-h));
+  --ct-tile-fg: oklch(0.23 var(--ct-surface-c) var(--ct-surface-h));
+  --ct-pill-wait: oklch(0.55 var(--ct-wait-c) var(--ct-wait-h));
+  --ct-pill-progress: oklch(0.55 var(--ct-progress-c) var(--ct-progress-h));
+  --ct-pill-done: oklch(0.55 var(--ct-done-c) var(--ct-done-h));
+  --ct-pill-fail: oklch(0.55 var(--ct-fail-c) var(--ct-fail-h));
+  --ct-pill-ink: oklch(1 0 0);
+}
+.dark[data-color-theme],
+.dark [data-color-theme] {
+  --ct-tile-ground: oklch(0.17 var(--ct-surface-c) var(--ct-surface-h));
+  --ct-tile-card: oklch(0.215 var(--ct-surface-c) var(--ct-surface-h));
+  --ct-tile-edge: oklch(0.31 var(--ct-surface-c) var(--ct-surface-h));
+  --ct-tile-primary: oklch(0.78 var(--ct-primary-c) var(--ct-primary-h));
+  --ct-tile-fg: oklch(0.95 calc(var(--ct-surface-c) * 0.3) var(--ct-surface-h));
+  --ct-pill-wait: oklch(0.76 var(--ct-wait-c) var(--ct-wait-h));
+  --ct-pill-progress: oklch(0.76 var(--ct-progress-c) var(--ct-progress-h));
+  --ct-pill-done: oklch(0.76 var(--ct-done-c) var(--ct-done-h));
+  --ct-pill-fail: oklch(0.72 var(--ct-fail-c) var(--ct-fail-h));
+  --ct-pill-ink: oklch(0.2 calc(var(--ct-surface-c) * 0.5) var(--ct-surface-h));
+}
+
+/* Picker tile: the theme's ground, edge and text, with its button and four pill colours as swatches. */
+.color-theme-tile {
+  background-color: var(--ct-tile-ground);
+  border: 1px solid var(--ct-tile-edge);
+  color: var(--ct-tile-fg);
+}
+.color-theme-tile-primary {
+  background-color: var(--ct-tile-primary);
+}
+.color-theme-tile-wait {
+  background-color: var(--ct-pill-wait);
+}
+.color-theme-tile-progress {
+  background-color: var(--ct-pill-progress);
+}
+.color-theme-tile-done {
+  background-color: var(--ct-pill-done);
+}
+.color-theme-tile-fail {
+  background-color: var(--ct-pill-fail);
+}
+
+/* Light mode. Two attribute selectors, so a theme outranks a style's own `.dark` rules. */
+html[data-color-theme]:not([data-color-theme='none']) {
+  --background: oklch(0.965 calc(var(--ct-surface-c) * 0.6) var(--ct-surface-h));
+  --foreground: oklch(0.23 var(--ct-surface-c) var(--ct-surface-h));
+  --card: oklch(0.995 calc(var(--ct-surface-c) * 0.3) var(--ct-surface-h));
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --secondary: oklch(0.94 calc(var(--ct-surface-c) * 0.6) var(--ct-surface-h));
+  --secondary-foreground: var(--foreground);
+  --muted: var(--secondary);
+  --muted-foreground: oklch(0.47 var(--ct-surface-c) var(--ct-surface-h));
+  --accent: var(--secondary);
+  --accent-foreground: var(--foreground);
+  --border: oklch(0.88 calc(var(--ct-surface-c) * 0.6) var(--ct-surface-h));
+  --input: oklch(0.84 calc(var(--ct-surface-c) * 0.8) var(--ct-surface-h));
+
+  --accent-primary: oklch(0.5 var(--ct-primary-c) var(--ct-primary-h));
+  --primary: var(--accent-primary);
+  --primary-foreground: oklch(1 0 0);
+  --ring: var(--primary);
+  --link: oklch(0.48 var(--ct-link-c) var(--ct-link-h));
+  --icon: oklch(0.5 var(--ct-icon-c) var(--ct-icon-h));
+
+  --warning: oklch(0.5 var(--ct-wait-c) var(--ct-wait-h));
+  --info: oklch(0.5 var(--ct-progress-c) var(--ct-progress-h));
+  --success: oklch(0.48 var(--ct-done-c) var(--ct-done-h));
+  --destructive: oklch(0.52 var(--ct-fail-c) var(--ct-fail-h));
+  --pill-warning: var(--warning);
+  --pill-pending: var(--warning);
+  --pill-info: var(--info);
+  --pill-success: var(--success);
+
+  --surface-1: var(--card);
+  --surface-2: oklch(0.975 calc(var(--ct-surface-c) * 0.5) var(--ct-surface-h));
+  --surface-3: var(--muted);
+  --surface-4: oklch(0.91 calc(var(--ct-surface-c) * 0.6) var(--ct-surface-h));
+  --volume-unread: oklch(0.86 calc(var(--ct-surface-c) * 0.8) var(--ct-surface-h));
+  --dot-color: oklch(0.83 calc(var(--ct-surface-c) * 0.8) var(--ct-surface-h));
+  --scrollbar-thumb: oklch(0.8 calc(var(--ct-surface-c) * 0.8) var(--ct-surface-h));
+  --scrollbar-thumb-hover: oklch(0.7 calc(var(--ct-surface-c) * 0.8) var(--ct-surface-h));
+
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-accent: var(--muted);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-ring: var(--ring);
+  --shell-border: var(--border);
+
+  /* Filled chips for formats too, in their own hues. */
+  --format-chip-fill: 100%;
+  --format-chip-border: 100%;
+  --format-chip-fill-l: 0.5;
+  --format-chip-ink: oklch(1 0 0);
+}
+
+html[data-color-theme]:not([data-color-theme='none']).dark {
+  --background: oklch(calc(0.17 + var(--bg-lift)) var(--ct-surface-c) var(--ct-surface-h));
+  --foreground: oklch(0.95 calc(var(--ct-surface-c) * 0.3) var(--ct-surface-h));
+  --card: oklch(calc(0.215 + var(--bg-lift)) var(--ct-surface-c) var(--ct-surface-h));
+  --secondary: oklch(calc(0.255 + var(--bg-lift)) var(--ct-surface-c) var(--ct-surface-h));
+  --muted-foreground: oklch(0.74 calc(var(--ct-surface-c) * 0.5) var(--ct-surface-h));
+  --border: oklch(calc(0.31 + var(--bg-lift)) var(--ct-surface-c) var(--ct-surface-h));
+  --input: oklch(calc(0.36 + var(--bg-lift)) calc(var(--ct-surface-c) * 1.2) var(--ct-surface-h));
+
+  --accent-primary: oklch(0.78 var(--ct-primary-c) var(--ct-primary-h));
+  --primary-foreground: oklch(0.18 var(--ct-surface-c) var(--ct-surface-h));
+  --link: oklch(0.8 var(--ct-link-c) var(--ct-link-h));
+  --icon: oklch(0.74 var(--ct-icon-c) var(--ct-icon-h));
+
+  --warning: oklch(0.8 var(--ct-wait-c) var(--ct-wait-h));
+  --info: oklch(0.78 var(--ct-progress-c) var(--ct-progress-h));
+  --success: oklch(0.78 var(--ct-done-c) var(--ct-done-h));
+  --destructive: oklch(0.6 var(--ct-fail-c) var(--ct-fail-h));
+  /* Text on a solid tone is dark, since the tones are light in this mode. */
+  --warning-foreground: oklch(0.2 calc(var(--ct-surface-c) * 0.5) var(--ct-surface-h));
+  --info-foreground: var(--warning-foreground);
+  --success-foreground: var(--warning-foreground);
+
+  --surface-2: oklch(calc(0.235 + var(--bg-lift)) var(--ct-surface-c) var(--ct-surface-h));
+  --surface-4: oklch(calc(0.29 + var(--bg-lift)) var(--ct-surface-c) var(--ct-surface-h));
+  --volume-unread: oklch(calc(0.33 + var(--bg-lift)) var(--ct-surface-c) var(--ct-surface-h));
+  --dot-color: oklch(calc(0.28 + var(--bg-lift)) var(--ct-surface-c) var(--ct-surface-h));
+  --scrollbar-thumb: oklch(0.38 var(--ct-surface-c) var(--ct-surface-h));
+  --scrollbar-thumb-hover: oklch(0.48 var(--ct-surface-c) var(--ct-surface-h));
+}
+
+/* Links: text links wear the theme's link colour, which may differ from its buttons. */
+html[data-color-theme]:not([data-color-theme='none']) :is(a, button).text-primary[class*='underline'] {
+  color: var(--link);
+}
+
+/* Icons: the quiet, decorative ones (sidebar rows, muted icons) take the theme's icon colour. */
+html[data-color-theme]:not([data-color-theme='none']) [data-sidebar='menu-button'] > svg,
+html[data-color-theme]:not([data-color-theme='none']) svg.lucide.text-muted-foreground,
+html[data-color-theme]:not([data-color-theme='none']) .text-muted-foreground > svg.lucide {
+  color: var(--icon);
+}
+
+/* Status pills: every tinted round pill is filled solid in the theme's hue for its tone. */
+html[data-color-theme]:not([data-color-theme='none']) .rounded-full[class*='bg-warning/'] {
+  border-color: var(--ct-pill-wait);
+  background-color: var(--ct-pill-wait);
+  color: var(--ct-pill-ink);
+}
+
+html[data-color-theme]:not([data-color-theme='none']) .rounded-full[class*='bg-info/'] {
+  border-color: var(--ct-pill-progress);
+  background-color: var(--ct-pill-progress);
+  color: var(--ct-pill-ink);
+}
+
+html[data-color-theme]:not([data-color-theme='none']) .rounded-full[class*='bg-success/'] {
+  border-color: var(--ct-pill-done);
+  background-color: var(--ct-pill-done);
+  color: var(--ct-pill-ink);
+}
+
+html[data-color-theme]:not([data-color-theme='none']) .rounded-full[class*='bg-destructive/'] {
+  border-color: var(--ct-pill-fail);
+  background-color: var(--ct-pill-fail);
+  color: var(--ct-pill-ink);
+}
+
+html[data-color-theme]:not([data-color-theme='none']) .rounded-full[class*='bg-[var(--pill-warning)]/'] {
+  border-color: var(--ct-pill-wait);
+  background-color: var(--ct-pill-wait);
+  color: var(--ct-pill-ink);
+}
+
+html[data-color-theme]:not([data-color-theme='none']) .rounded-full[class*='bg-[var(--pill-pending)]/'] {
+  border-color: var(--ct-pill-wait);
+  background-color: var(--ct-pill-wait);
+  color: var(--ct-pill-ink);
+}
+
+html[data-color-theme]:not([data-color-theme='none']) .rounded-full[class*='bg-[var(--pill-info)]/'] {
+  border-color: var(--ct-pill-progress);
+  background-color: var(--ct-pill-progress);
+  color: var(--ct-pill-ink);
+}
+
+html[data-color-theme]:not([data-color-theme='none']) .rounded-full[class*='bg-[var(--pill-success)]/'] {
+  border-color: var(--ct-pill-done);
+  background-color: var(--ct-pill-done);
+  color: var(--ct-pill-ink);
+}
+
+html[data-color-theme]:not([data-color-theme='none']) .rounded-full[class*='bg-primary/'] {
+  border-color: var(--primary);
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+/* Text inside a filled pill that names its own tone would vanish into the fill. */
+html[data-color-theme]:not([data-color-theme='none']) .rounded-full[class*='bg-warning/'] [class*='text-warning'],
+html[data-color-theme]:not([data-color-theme='none']) .rounded-full[class*='bg-info/'] [class*='text-info'],
+html[data-color-theme]:not([data-color-theme='none']) .rounded-full[class*='bg-success/'] [class*='text-success'],
+html[data-color-theme]:not([data-color-theme='none']) .rounded-full[class*='bg-destructive/'] [class*='text-destructive'] {
+  color: inherit;
+}

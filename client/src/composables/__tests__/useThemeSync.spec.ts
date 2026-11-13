@@ -17,6 +17,7 @@ function createThemeStore() {
     style: 'bookorbit' as NonNullable<ThemePreferences['style']>,
     surfacePalette: 'ash' as NonNullable<ThemePreferences['surfacePalette']>,
     glowReach: 100,
+    colorTheme: 'none' as NonNullable<ThemePreferences['colorTheme']>,
     setTheme(nextTheme: ThemePreferences['theme']) {
       this.theme = nextTheme
     },
@@ -43,6 +44,9 @@ function createThemeStore() {
     },
     setGlowReach(reach: number) {
       this.glowReach = reach
+    },
+    setColorTheme(next: NonNullable<ThemePreferences['colorTheme']>) {
+      this.colorTheme = next
     },
   })
 }
@@ -296,6 +300,7 @@ describe('useThemeSync', () => {
             style: 'bookorbit',
             surfacePalette: 'ash',
             glowReach: 100,
+            colorTheme: 'none',
           },
         }),
       }),
@@ -329,6 +334,7 @@ describe('useThemeSync', () => {
           brightness: 35,
           style: 'nostalgia',
           surfacePalette: 'olive',
+          colorTheme: 'arctic-aurora',
         },
       }),
     )
@@ -338,6 +344,7 @@ describe('useThemeSync', () => {
 
     expect(themeStore.style).toBe('nostalgia')
     expect(themeStore.surfacePalette).toBe('olive')
+    expect(themeStore.colorTheme).toBe('arctic-aurora')
   })
 
   it('loadFromServer applies a synchronized glow reach and ignores one out of range', async () => {

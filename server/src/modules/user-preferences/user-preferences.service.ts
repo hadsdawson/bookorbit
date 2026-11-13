@@ -34,6 +34,7 @@ import {
   SURFACE_OPACITY_MAX,
   SURFACE_OPACITY_MIN,
   SURFACE_PALETTE_IDS,
+  COLOR_THEME_IDS,
   TABLE_DENSITIES,
   THEME_IDS,
   type AnnotationColorNamePreferences,
@@ -63,6 +64,7 @@ const THEME_PREFERENCES_SCHEMA = z
     style: z.enum(STYLE_IDS).optional(),
     surfacePalette: z.enum(SURFACE_PALETTE_IDS).optional(),
     glowReach: z.number().int().min(GLOW_REACH_MIN).max(GLOW_REACH_MAX).optional(),
+    colorTheme: z.enum(COLOR_THEME_IDS).optional(),
   })
   .strict();
 

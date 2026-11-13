@@ -1,6 +1,7 @@
 import {
   ACCENT_IDS,
   BACKGROUND_IDS,
+  COLOR_THEME_IDS,
   GLOW_REACH_MAX,
   GLOW_REACH_MIN,
   RADIUS_IDS,
@@ -36,6 +37,7 @@ function getCurrentPrefs(): ThemePreferences {
     style: store.style,
     surfacePalette: store.surfacePalette,
     glowReach: store.glowReach,
+    colorTheme: store.colorTheme,
   }
 }
 
@@ -71,6 +73,10 @@ function sanitizeServerPrefs(raw: unknown): Partial<ThemePreferences> {
   }
   if (typeof obj.glowReach === 'number' && Number.isInteger(obj.glowReach) && obj.glowReach >= GLOW_REACH_MIN && obj.glowReach <= GLOW_REACH_MAX) {
     out.glowReach = obj.glowReach
+  }
+
+  if (COLOR_THEME_IDS.includes(obj.colorTheme as NonNullable<ThemePreferences['colorTheme']>)) {
+    out.colorTheme = obj.colorTheme as ThemePreferences['colorTheme']
   }
 
   return out
@@ -119,6 +125,7 @@ export async function loadFromServer(): Promise<void> {
       if (prefs.style !== undefined) store.setStyle(prefs.style)
       if (prefs.surfacePalette !== undefined) store.setSurfacePalette(prefs.surfacePalette)
       if (prefs.glowReach !== undefined) store.setGlowReach(prefs.glowReach)
+      if (prefs.colorTheme !== undefined) store.setColorTheme(prefs.colorTheme)
     } finally {
       isApplyingServerPrefs = false
     }
@@ -180,6 +187,7 @@ export function initThemeSync(): void {
         store.style,
         store.surfacePalette,
         store.glowReach,
+        store.colorTheme,
       ] as const,
     () => {
       if (isApplyingServerPrefs || !isSyncEnabled()) return

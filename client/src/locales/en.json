@@ -157,6 +157,26 @@
             "plum": "Plum"
           }
         },
+        "colorTheme": {
+          "label": "Color theme",
+          "hint": "Repaints backgrounds, buttons, links, icons and status pills, which are filled in the theme's colors. While a theme is on, it replaces the accent color and surface.",
+          "themes": {
+            "none": "Off",
+            "velvet-night": "Velvet Night",
+            "neon-city": "Neon City",
+            "graphite-citrus": "Graphite & Citrus",
+            "cotton-candy": "Cotton Candy",
+            "tropical-punch": "Tropical Punch",
+            "synthwave": "Synthwave",
+            "ocean-sunset": "Ocean Sunset",
+            "blueberry-lemon": "Blueberry Lemon",
+            "arctic-aurora": "Arctic Aurora",
+            "peach-fuzz": "Peach Fuzz",
+            "royal-jewel": "Royal Jewel",
+            "bubblegum-pop": "Bubblegum Pop",
+            "noir-red": "Noir Red"
+          }
+        },
         "topGlow": {
           "label": "Top glow",
           "hint": "How far the accent glow reaches down the page. Slide all the way left to turn it off.",
@@ -10753,6 +10773,7 @@
       "surfacePalette": "Surface",
       "topGlow": "Top glow",
       "theme": "Theme",
+      "colorTheme": "Color theme",
       "accent": "Accent",
       "radius": "Radius",
       "background": "Background",
