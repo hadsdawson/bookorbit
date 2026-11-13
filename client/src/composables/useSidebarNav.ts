@@ -1,7 +1,7 @@
 import { computed, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, type RouteLocationNormalizedLoaded, type RouteLocationRaw } from 'vue-router'
-import { BarChart3, BookPlus, Highlighter, History, LayoutDashboard, Library, PackageOpen, Trophy, Users, Wrench } from '@lucide/vue'
+import { BarChart3, BookPlus, Building2, Highlighter, History, LayoutDashboard, Library, PackageOpen, Trophy, Users, Wrench } from '@lucide/vue'
 import { Permission, type BrowseCounts, type SidebarSectionId } from '@bookorbit/types'
 import { useAuth } from '@/features/auth/composables/useAuth'
 import { usePermissions } from '@/features/auth/composables/usePermissions'
@@ -182,6 +182,17 @@ export const SIDEBAR_NAV_REGISTRY: readonly SidebarNavEntry[] = [
     to: { name: 'series' },
     isActive: (route) => route.name === 'series' || route.name === 'series-detail',
     badge: browseBadge('series'),
+  },
+  // Fork: listing, renaming and merging publishers goes through the Entity Manager's endpoints,
+  // which need the metadata permission, so the row is only offered to people who hold it.
+  {
+    id: 'publishers',
+    labelKey: 'components.sidebar.publishers',
+    icon: Building2,
+    zone: 'browse',
+    to: { name: 'publishers' },
+    isActive: (route) => route.name === 'publishers' || route.name === 'publisher-detail',
+    permission: 'library_edit_metadata',
   },
   {
     id: 'annotations',

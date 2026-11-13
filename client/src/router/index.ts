@@ -666,6 +666,18 @@ export const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: '/publishers',
+        name: 'publishers',
+        component: () => import('@/features/publisher/views/PublishersView.vue'),
+        meta: { titleRow: true, title: () => t('titles.publishers') },
+      },
+      {
+        path: '/publishers/:name',
+        name: 'publisher-detail',
+        component: () => import('@/features/publisher/views/PublisherDetailView.vue'),
+        meta: { title: (to) => (typeof to.params.name === 'string' ? to.params.name : t('titles.publishers')) },
+      },
+      {
         path: '/series',
         name: 'series',
         component: () => import('@/features/series/views/SeriesView.vue'),
