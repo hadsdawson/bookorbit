@@ -16,6 +16,7 @@ import {
   runPgTool,
   type BackupManifest,
 } from './backup-archive';
+import { formatBackupProgress } from './backup-progress';
 
 export const RESTORE_MARKER = '.restore-pending.json';
 export const RESTORE_RESULT = '.restore-result.json';
@@ -124,6 +125,7 @@ export async function runPendingRestore(context: RestoreContext): Promise<Restor
       kind: 'pre-restore',
       appVersion: context.appVersion,
       migrationHashes: context.ledgerHashes,
+      onProgress: (progress) => context.log(formatBackupProgress('backup.restore_safety', progress)),
     });
     safetyBackup = safety.name;
 

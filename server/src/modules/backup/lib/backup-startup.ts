@@ -5,6 +5,7 @@ import type { Pool } from 'pg';
 import { sanitizeLogValue } from '../../../common/utils/log-sanitize.utils';
 import { createBackup, listBackups, resolveBackupDir } from './backup-archive';
 import { BACKUP_SETTINGS_KEY, parseBackupSettings, pruneBackups } from './backup-policy';
+import { formatBackupProgress } from './backup-progress';
 import { runPendingRestore } from './backup-restore';
 
 /**
@@ -47,9 +48,19 @@ export async function runBackupStartup(
   if (!settings.beforeUpdate) return;
 
   const startedAt = Date.now();
-  log(`[backup.pre_update] [start] pendingMigrations=${pending} - backing up before the update changes the database`);
+  log(
+    `[backup.pre_update] [start] pendingMigrations=${pending} - backing up before the update changes the database; the app opens once this finishes, so do not restart it`,
+  );
   try {
-    const backup = await createBackup({ databaseUrl, appDataPath, backupDir, kind: 'pre-update', appVersion, migrationHashes: ledgerHashes });
+    const backup = await createBackup({
+      databaseUrl,
+      appDataPath,
+      backupDir,
+      kind: 'pre-update',
+      appVersion,
+      migrationHashes: ledgerHashes,
+      onProgress: (progress) => log(formatBackupProgress('backup.pre_update', progress)),
+    });
     await pruneBackups(backupDir, await listBackups(backupDir), settings.keep);
     log(`[backup.pre_update] [end] durationMs=${Date.now() - startedAt} backup=${backup.name} size=${backup.size} - backed up before the update`);
   } catch (error) {

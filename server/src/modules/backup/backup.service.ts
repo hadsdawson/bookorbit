@@ -14,6 +14,7 @@ import { AppSettingsService } from '../app-settings/app-settings.service';
 import { BackupRepository } from './backup.repository';
 import { backupFileName, createBackup, isBackupFileName, listBackups, PRIVATE_FILE_MODE, readManifest, resolveBackupDir } from './lib/backup-archive';
 import { shippedMigrationHashes } from './lib/backup-migrations';
+import { formatBackupProgress } from './lib/backup-progress';
 import {
   BACKUP_FAILED_SLOT_KEY,
   BACKUP_LAST_ERROR_KEY,
@@ -105,6 +106,7 @@ export class BackupService {
         kind,
         appVersion: this.app.version,
         migrationHashes: await this.repo.migrationLedgerHashes(),
+        onProgress: (progress) => this.logger.log(formatBackupProgress('backup.create', progress)),
       });
       const settings = await this.getSettings();
       const removed = await pruneBackups(this.backupDir, await listBackups(this.backupDir), settings.keep);
