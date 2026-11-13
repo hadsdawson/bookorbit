@@ -1,7 +1,11 @@
 import type { BookMergedEvent, BookMissingEvent, BookTransferredEvent, CoverRefreshedEvent, ScanProgressEvent } from '@bookorbit/types';
 import { LibraryScopeService } from '../../common/library-scope/library-scope.service';
 
-import { ACHIEVEMENT_EVENT_BOOK_PROGRESS_CHANGED, AchievementEventsService } from '../achievement/achievement-events.service';
+import {
+  ACHIEVEMENT_EVENT_BOOK_PROGRESS_CHANGED,
+  AchievementEventsService,
+  BOOK_EVENT_METADATA_CHANGED,
+} from '../achievement/achievement-events.service';
 import { ScanGateway } from './scan.gateway';
 import { AuthenticatorService } from '../auth/authenticator.service';
 
@@ -186,6 +190,24 @@ describe('book progress events', () => {
       source: 'koreader',
     });
 
+    expect(to).not.toHaveBeenCalled();
+  });
+
+  it('tells the person who saved a metadata change which books changed, and nobody else', () => {
+    const { gateway, achievementEvents } = makeGateway();
+    const { server, to, emit } = mockServer();
+    gateway['server'] = server as any;
+    gateway.onModuleInit();
+
+    achievementEvents.emit(BOOK_EVENT_METADATA_CHANGED, { userId: 42, bookIds: [7, 8] });
+
+    expect(to).toHaveBeenCalledTimes(1);
+    expect(to).toHaveBeenCalledWith('user:42');
+    expect(emit).toHaveBeenCalledWith('book:metadata-changed', { bookIds: [7, 8] });
+
+    gateway.onModuleDestroy();
+    to.mockClear();
+    achievementEvents.emit(BOOK_EVENT_METADATA_CHANGED, { userId: 42, bookIds: [7] });
     expect(to).not.toHaveBeenCalled();
   });
 });

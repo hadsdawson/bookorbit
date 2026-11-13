@@ -149,16 +149,14 @@ const leadMetaItems = computed(() => {
 // opt in, so it never fires here.
 type BookActionType = 'quick-view' | 'add-to-collection' | 'move-to-library' | 'delete'
 
+// Fork: one "Books" list is the default, whatever the format. Grouping by media stays available
+// from the toggle and is remembered once chosen.
 function loadGroupByMediaPreference(): boolean {
   try {
-    const stored = localStorage.getItem(GROUP_BY_MEDIA_STORAGE_KEY)
-    if (stored === 'true') return true
-    if (stored === 'false') return false
+    return localStorage.getItem(GROUP_BY_MEDIA_STORAGE_KEY) === 'true'
   } catch {
-    return true
+    return false
   }
-
-  return true
 }
 
 function saveGroupByMediaPreference(value: boolean) {

@@ -63,6 +63,11 @@ export interface BookTransferredEvent {
   bookIds: number[];
 }
 
+/** Sent to the person who saved the change, so their open listings can re-run their filters. */
+export interface BookMetadataChangedEvent {
+  bookIds: number[];
+}
+
 export interface BookProgressChangedEvent {
   bookId: number;
   progress: number;
