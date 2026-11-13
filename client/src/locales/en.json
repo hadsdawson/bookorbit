@@ -10665,6 +10665,7 @@
       "button": "Columns",
       "reset": "Reset columns",
       "resize": "Resize the {column} column",
+      "cover": "Cover",
       "title": "Title",
       "mediaKind": "Format",
       "released": "Released",
@@ -10672,7 +10673,10 @@
       "age": "Age",
       "state": "State",
       "tracking": "Tracking",
-      "outcome": "Outcome"
+      "outcome": "Outcome",
+      "actions": "Actions",
+      "move": "Move the {column} column",
+      "moveHint": "Drag to move this column, or use the arrow keys"
     }
   },
   "collection": {

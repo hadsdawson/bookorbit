@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { LOCKED_COLUMNS, REQUEST_TABLE_COLUMNS, useRequestTableColumns, type RequestTableColumn } from '../composables/useRequestTableColumns'
+import { LOCKED_COLUMNS, useRequestTableColumns, type RequestTableColumn } from '../composables/useRequestTableColumns'
 
 const { t } = useI18n()
 const columns = useRequestTableColumns()
@@ -43,7 +43,7 @@ function resetColumns() {
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end" class="w-56">
       <DropdownMenuCheckboxItem
-        v-for="column in REQUEST_TABLE_COLUMNS"
+        v-for="column in columns.orderedColumns.value"
         :key="column"
         :model-value="columns.isVisible(column)"
         :disabled="isLocked(column)"
