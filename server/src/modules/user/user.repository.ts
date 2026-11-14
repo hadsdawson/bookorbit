@@ -18,7 +18,6 @@ import { RequestUser } from '../../common/types/request-user';
 import { DB } from '../../db';
 import * as schema from '../../db/schema';
 import { AuthenticationPolicyService } from '../../common/services/authentication-policy.service';
-import { splitAgeRatings } from './content-filter.repository';
 
 type Db = NodePgDatabase<typeof schema>;
 type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
@@ -175,7 +174,7 @@ export class UserRepository {
     }
 
     if (userIds.length > 0) {
-      const [tagFilterUsers, genreFilterUsers, ageFilterUsers, libraryAccessCounts] = await Promise.all([
+      const [tagFilterUsers, genreFilterUsers, libraryAccessCounts] = await Promise.all([
         this.db
           .select({ userId: schema.userContentFilterTags.userId })
           .from(schema.userContentFilterTags)
@@ -185,10 +184,6 @@ export class UserRepository {
           .from(schema.userContentFilterGenres)
           .where(inArray(schema.userContentFilterGenres.userId, userIds)),
         this.db
-          .select({ userId: schema.userContentFilterAgeRatings.userId })
-          .from(schema.userContentFilterAgeRatings)
-          .where(inArray(schema.userContentFilterAgeRatings.userId, userIds)),
-        this.db
           .select({ userId: schema.userLibraryAccess.userId, granted: count() })
           .from(schema.userLibraryAccess)
           .where(inArray(schema.userLibraryAccess.userId, userIds))
@@ -197,7 +192,6 @@ export class UserRepository {
       const usersWithFilters = new Set<number>();
       for (const r of tagFilterUsers) usersWithFilters.add(r.userId);
       for (const r of genreFilterUsers) usersWithFilters.add(r.userId);
-      for (const r of ageFilterUsers) usersWithFilters.add(r.userId);
       for (const [id, user] of usersMap) {
         if (usersWithFilters.has(id)) user.hasContentFilters = true;
       }
@@ -318,7 +312,7 @@ export class UserRepository {
   }
 
   async findByIdWithPermissions(id: number): Promise<RequestUser | null> {
-    const [rows, tagFilterRows, genreFilterRows, ageFilterRows] = await Promise.all([
+    const [rows, tagFilterRows, genreFilterRows] = await Promise.all([
       this.db
         .select({
           id: schema.users.id,
@@ -348,10 +342,6 @@ export class UserRepository {
         .select({ filterType: schema.userContentFilterGenres.filterType, genreId: schema.userContentFilterGenres.genreId })
         .from(schema.userContentFilterGenres)
         .where(eq(schema.userContentFilterGenres.userId, id)),
-      this.db
-        .select({ filterType: schema.userContentFilterAgeRatings.filterType, ageRating: schema.userContentFilterAgeRatings.ageRating })
-        .from(schema.userContentFilterAgeRatings)
-        .where(eq(schema.userContentFilterAgeRatings.userId, id)),
     ]);
 
     if (rows.length === 0) return null;
@@ -385,7 +375,6 @@ export class UserRepository {
         excludeTagIds: tagFilterRows.filter((r) => r.filterType === 'exclude').map((r) => r.tagId),
         includeGenreIds: genreFilterRows.filter((r) => r.filterType === 'include').map((r) => r.genreId),
         excludeGenreIds: genreFilterRows.filter((r) => r.filterType === 'exclude').map((r) => r.genreId),
-        ...splitAgeRatings(ageFilterRows),
         ...(first.seeOwnRequestedBooks ? { exemptRequestsFromUserId: first.id } : {}),
       },
     };

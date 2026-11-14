@@ -14,8 +14,7 @@ import type {
   TemporalJumpBucketPrecision,
   TemporalJumpBucketUnit,
 } from '@bookorbit/types';
-import type { AgeRating, BookCardLinkInfo, UnscopedBookRecommendation } from '@bookorbit/types';
-import { isAgeRating, NOT_RATED } from '@bookorbit/types';
+import type { BookCardLinkInfo, UnscopedBookRecommendation } from '@bookorbit/types';
 import { READ_ALONG_FORMAT_PRIORITY, getBookMediaKind, isAudioFormat, isComicFormat, normalizeCoverAspectRatio } from '@bookorbit/types';
 import { buildContentFilterClauses } from '../../common/utils/content-filter-sql.utils';
 import { rankFileRowsByBook } from '../../common/utils/primary-file-selection.utils';
@@ -33,8 +32,6 @@ import { LINK_FOLDED_BY_PREFERENCE_SQL, LINK_FOLDED_BY_SORT_SQL, LINK_FOLDED_COU
 import { preserveOutgoingChapters } from '../../db/preserve-audiobook-revision';
 import { DB } from '../../db';
 import * as schema from '../../db/schema';
-import { effectiveAgeRatingSql } from '../../common/utils/content-filter-sql.utils';
-import { setBookAgeRating } from '../../common/utils/age-rating-write.utils';
 import {
   authors,
   bookAuthors,
@@ -2556,17 +2553,6 @@ export class BookRepository {
       result.set(row.bookId, existing);
     }
     return result;
-  }
-
-  async setAgeRating(bookId: number, ageRating: AgeRating | null, executor: MetadataUpdateExecutor = this.db): Promise<number[]> {
-    return setBookAgeRating(executor, bookId, ageRating);
-  }
-
-  /** Fork: the rating readers are filtered by, as `effectiveAgeRatingSql` works it out, or null when unrated. */
-  async findEffectiveAgeRating(bookId: number): Promise<AgeRating | null> {
-    const result = await this.db.execute<{ age_rating: number | string | null }>(sql`SELECT ${effectiveAgeRatingSql(sql`${bookId}`)} AS age_rating`);
-    const value = Number(result.rows[0]?.age_rating ?? NOT_RATED);
-    return isAgeRating(value) ? value : null;
   }
 
   async updateMetadataFields(

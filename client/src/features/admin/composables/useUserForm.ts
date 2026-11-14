@@ -1,12 +1,5 @@
 import { computed, ref, watch, type Ref } from 'vue'
-import {
-  PERMISSION_REQUIRES,
-  type AccessLevel,
-  type AgeRatingFilterValue,
-  type AuthUser,
-  type Permission,
-  type UserLibraryGrant,
-} from '@bookorbit/types'
+import { PERMISSION_REQUIRES, type AccessLevel, type AuthUser, type Permission, type UserLibraryGrant } from '@bookorbit/types'
 import { api } from '@/lib/api'
 import { grantingPermissions, isRestrictionPermission, presetPermissions, type PermissionPreset } from '../lib/permission-presets'
 
@@ -61,8 +54,6 @@ export function useUserForm(user: Ref<UserFormTarget | null>, defaultLibraryIds:
   const excludeTagItems = ref<NamedItem[]>([])
   const includeGenreItems = ref<NamedItem[]>([])
   const excludeGenreItems = ref<NamedItem[]>([])
-  const includeAgeRatings = ref<AgeRatingFilterValue[]>([])
-  const excludeAgeRatings = ref<AgeRatingFilterValue[]>([])
   const contentFiltersEnabled = ref(false)
   const seeOwnRequestedBooks = ref(false)
 
@@ -82,9 +73,7 @@ export function useUserForm(user: Ref<UserFormTarget | null>, defaultLibraryIds:
       includeTagItems.value.length > 0 ||
       excludeTagItems.value.length > 0 ||
       includeGenreItems.value.length > 0 ||
-      excludeGenreItems.value.length > 0 ||
-      includeAgeRatings.value.length > 0 ||
-      excludeAgeRatings.value.length > 0,
+      excludeGenreItems.value.length > 0,
   )
 
   /** Selected libraries where the account's role lets Edit metadata take effect. */
@@ -129,8 +118,7 @@ export function useUserForm(user: Ref<UserFormTarget | null>, defaultLibraryIds:
           .join('.'),
       )
       .join('|')
-    const ages = [includeAgeRatings, excludeAgeRatings].map((values) => [...values.value].sort((a, b) => a - b).join('.')).join('|')
-    return `${lists}|ages:${ages}|exempt:${seeOwnRequestedBooks.value}`
+    return `${lists}|exempt:${seeOwnRequestedBooks.value}`
   }
 
   /** Field-level count, so the footer can say how much a Cancel would throw away. */
@@ -190,8 +178,6 @@ export function useUserForm(user: Ref<UserFormTarget | null>, defaultLibraryIds:
     excludeTagItems.value = []
     includeGenreItems.value = []
     excludeGenreItems.value = []
-    includeAgeRatings.value = []
-    excludeAgeRatings.value = []
     seeOwnRequestedBooks.value = false
   }
 
@@ -209,8 +195,6 @@ export function useUserForm(user: Ref<UserFormTarget | null>, defaultLibraryIds:
     excludeTagItems.value = []
     includeGenreItems.value = []
     excludeGenreItems.value = []
-    includeAgeRatings.value = []
-    excludeAgeRatings.value = []
     contentFiltersEnabled.value = false
     seeOwnRequestedBooks.value = false
     error.value = null
@@ -244,8 +228,6 @@ export function useUserForm(user: Ref<UserFormTarget | null>, defaultLibraryIds:
       excludeTagItems.value = filters.excludeTags ?? []
       includeGenreItems.value = filters.includeGenres ?? []
       excludeGenreItems.value = filters.excludeGenres ?? []
-      includeAgeRatings.value = filters.includeAgeRatings ?? []
-      excludeAgeRatings.value = filters.excludeAgeRatings ?? []
       seeOwnRequestedBooks.value = filters.seeOwnRequestedBooks ?? false
       contentFiltersEnabled.value = hasContentFilters.value
     }
@@ -305,8 +287,6 @@ export function useUserForm(user: Ref<UserFormTarget | null>, defaultLibraryIds:
           excludeTagIds: excludeTagItems.value.map((item) => item.id),
           includeGenreIds: includeGenreItems.value.map((item) => item.id),
           excludeGenreIds: excludeGenreItems.value.map((item) => item.id),
-          includeAgeRatings: includeAgeRatings.value,
-          excludeAgeRatings: excludeAgeRatings.value,
           seeOwnRequestedBooks: seeOwnRequestedBooks.value,
         }),
       })
@@ -387,8 +367,6 @@ export function useUserForm(user: Ref<UserFormTarget | null>, defaultLibraryIds:
     excludeTagItems,
     includeGenreItems,
     excludeGenreItems,
-    includeAgeRatings,
-    excludeAgeRatings,
     contentFiltersEnabled,
     seeOwnRequestedBooks,
     loading,

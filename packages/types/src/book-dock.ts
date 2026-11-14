@@ -53,8 +53,6 @@ export interface BookDockMetadata {
   otherFormatCoverUrl?: string | null;
   durationSeconds?: number | null;
   abridged?: boolean | null;
-  /** Fork: applied to the book, and to every book in its series, when it is filed. */
-  ageRating?: import("./age-rating").AgeRating | null;
   chapters?: AudiobookChapter[] | null;
   communityRatings?: Array<{ provider: MetadataProviderKey; rating: number; ratingCount?: number | null }> | null;
   googleBooksId?: string | null;

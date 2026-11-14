@@ -35,7 +35,6 @@ import ChipInput from '@/components/ui/ChipInput.vue'
 import IdentifierInput from '@/components/ui/IdentifierInput.vue'
 import CoverEditorPanel from './CoverEditorPanel.vue'
 import MetadataSearchDrawer from './MetadataSearchDrawer.vue'
-import AgeRatingSelect from '@/features/book/components/AgeRatingSelect.vue'
 import MetadataFieldLabel from './MetadataFieldLabel.vue'
 import RichDescriptionEditor from './RichDescriptionEditor.vue'
 import SeriesMembershipEditor from './SeriesMembershipEditor.vue'
@@ -303,9 +302,6 @@ async function restoreReminderFocus() {
 }
 const metadataScore = computed(() => props.book.metadataScore)
 const metadataScoreColour = computed(() => (metadataScore.value == null ? null : metadataScoreColor(metadataScore.value)))
-
-// Fork: a rating saved on a book in a series is saved for the whole series.
-const ageRatingSeriesNames = computed(() => [...new Set(form.seriesMemberships.map((membership) => membership.seriesName.trim()).filter(Boolean))])
 
 function controlClass(isEmpty: boolean, mono = false): string {
   const base = mono ? FIELD_CONTROL_MONO_CLASS : FIELD_CONTROL_CLASS
@@ -1284,16 +1280,6 @@ function handleCoverChanged(medium: CoverMedium | null) {
                     :class="controlClass(!form.language)"
                   />
                 </MetadataFieldLabel>
-
-                <div class="col-span-2 space-y-1">
-                  <label for="metadata-age-rating" class="text-[10px] font-bold tracking-[0.1em] text-muted-foreground uppercase">
-                    {{ t('ageRating.label') }}
-                  </label>
-                  <AgeRatingSelect id="metadata-age-rating" v-model="form.ageRating" :select-class="controlClass(form.ageRating === null)" />
-                  <p v-if="ageRatingSeriesNames.length > 0" class="text-xs text-muted-foreground" data-testid="age-rating-series-hint">
-                    {{ t('ageRating.appliesToSeries', { series: ageRatingSeriesNames.join(', '), count: ageRatingSeriesNames.length }) }}
-                  </p>
-                </div>
 
                 <MetadataFieldLabel
                   class="col-span-2"
