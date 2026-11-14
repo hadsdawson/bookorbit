@@ -75,7 +75,15 @@ function openSheet() {
           </Button>
         </PopoverTrigger>
       </TooltipTrigger>
-      <PopoverContent class="w-80 p-4" side="right" align="end" :side-offset="12" :reference="anchor ?? undefined">
+      <PopoverContent
+        class="max-h-[calc(var(--reka-popover-content-available-height)_-_1rem)] w-80 overflow-y-auto overscroll-contain p-4"
+        side="right"
+        align="end"
+        :side-offset="12"
+        :collision-padding="8"
+        :reference="anchor ?? undefined"
+        data-testid="appearance-popover"
+      >
         <div class="space-y-4">
           <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground">{{ t('components.appHeader.appearance') }}</p>
           <div class="space-y-2">
