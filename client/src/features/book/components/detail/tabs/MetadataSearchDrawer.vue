@@ -12,7 +12,7 @@ import { useCoverVersions } from '../../../composables/useCoverVersions'
 import type { MetadataDiffApply } from '../../../composables/useMetadataDiff'
 import type { SecondCoverInput } from '../../../composables/useSecondCoverRow'
 import { COVER_ASPECT_RATIO_KEY, DEFAULT_COVER_ASPECT_RATIO } from '../../../lib/cover-aspect-ratio'
-import { coverFieldMedium, coverTileState, otherMedium } from '../../../lib/cover-slots'
+import { coverTileState, otherMedium } from '../../../lib/cover-slots'
 import MetadataMatchWorkspace from '../../metadata-match/MetadataMatchWorkspace.vue'
 import MetadataMatchShortcuts from '../../metadata-match/MetadataMatchShortcuts.vue'
 import type { MetadataQuery } from '../../metadata-match/MetadataMatchQuery.vue'
@@ -30,16 +30,10 @@ const { coverUrl } = useCoverVersions()
 const libraryAspectRatio = inject(COVER_ASPECT_RATIO_KEY, ref(DEFAULT_COVER_ASPECT_RATIO))
 const isAudiobookSearch = computed(() => getBookMediaProfile(props.book.files).primaryMediaKind === 'audiobook')
 
-/** The slot the main results fill: the medium the book is searched as, if the book has it. */
-const mainCoverMedium = computed<CoverMedium>(() => {
-  const searched: CoverMedium = isAudiobookSearch.value ? 'audio' : 'ebook'
-  return props.book.coverMedia.includes(searched) ? searched : (coverFieldMedium(props.book) ?? searched)
-})
-/** A book with both media also gets the other medium's cover row, from a search run as that medium. */
-const secondCoverMedium = computed<CoverMedium | null>(() => {
-  const other = otherMedium(mainCoverMedium.value)
-  return props.book.coverMedia.includes(other) ? other : null
-})
+/** The slot the main results fill: the medium the book is searched as. */
+const mainCoverMedium = computed<CoverMedium>(() => (isAudiobookSearch.value ? 'audio' : 'ebook'))
+/** Fork. Every book also gets the other medium's cover row, from a search run as that medium, whichever files it has. */
+const secondCoverMedium = computed<CoverMedium | null>(() => otherMedium(mainCoverMedium.value))
 
 /** An empty slot has no current cover, rather than the other slot's image the server would fall back to. */
 function slotCoverUrl(medium: CoverMedium): string {

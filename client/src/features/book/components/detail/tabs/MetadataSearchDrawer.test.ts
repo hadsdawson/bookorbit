@@ -233,12 +233,12 @@ describe('MetadataSearchDrawer', () => {
     expect(metadataSearchMocks.secondSearch).toHaveBeenCalledWith(expect.objectContaining({ mediaKind: 'ebook', providers: ['amazon', 'itunes'] }))
   })
 
-  it('makes no second search for a book with one medium', async () => {
+  it('offers an audiobook cover row for a book with only an ebook', async () => {
     const wrapper = mountDrawer([makeFile('epub', 'primary')])
 
     await wrapper.find('[data-testid="search"]').trigger('click')
 
-    expect(metadataSearchMocks.secondSearch).not.toHaveBeenCalled()
-    expect(wrapper.getComponent(WorkspaceStub).props('secondCover')).toBeNull()
+    expect(metadataSearchMocks.secondSearch).toHaveBeenCalled()
+    expect(wrapper.getComponent(WorkspaceStub).props('secondCover')).toMatchObject({ medium: 'audio' })
   })
 })

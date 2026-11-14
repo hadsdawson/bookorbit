@@ -130,38 +130,37 @@ describe('CoverEditorPanel', () => {
   })
 
   describe('one medium', () => {
-    it('sizes its layout from its own column instead of the viewport', () => {
-      const wrapper = mountPanel()
-      const container = wrapper.get('.\\@container\\/cover-editor')
-      const layout = container.get(':scope > div')
-
-      expect(layout.classes()).toContain('@min-[21rem]/cover-editor:flex-row')
-      expect(layout.classes()).not.toContain('lg:flex-col')
-      expect(layout.get(':scope > div').classes()).toContain('@min-[21rem]/cover-editor:w-36')
-    })
-
-    it('shows a single cover with no tile choice', () => {
+    it('still offers both tiles, with the missing format shown as the placeholder', () => {
       const wrapper = mountPanel({ book: makeBook({ coverSource: 'extracted', covers: { ebook: slot(), audio: null } }) })
 
-      expect(wrapper.find('[role="radiogroup"]').exists()).toBe(false)
-      expect(wrapper.get('img').attributes('src')).toContain('medium=ebook')
+      expect(wrapper.find('[role="radiogroup"]').exists()).toBe(true)
+      expect(radios(wrapper)).toHaveLength(2)
+      expect(wrapper.get('[role="radio"] img').attributes('src')).toContain('medium=ebook')
+      expect(wrapper.findAll('[role="radio"] [data-test="placeholder"]')).toHaveLength(1)
     })
 
-    it('uses the audio lock key for a book that only has an audiobook', async () => {
+    it('offers no cover from file on the tile of a format the book has no files of', async () => {
+      const wrapper = mountPanel()
+      expect(wrapper.text()).toContain('book.detail.coverEditor.regenerateCover')
+
+      await radios(wrapper)[1]!.trigger('click')
+
+      expect(wrapper.text()).not.toContain('book.detail.coverEditor.regenerateCover')
+      expect(wrapper.get('input[type="file"]').attributes('disabled')).toBeUndefined()
+    })
+
+    it('uses the audio lock key for the audiobook tile of a book that only has an audiobook', async () => {
       const wrapper = mountPanel({ book: makeBook({ coverMedia: ['audio'] }), lockedFields: ['audioCover'] })
 
-      const lock = wrapper.get('[aria-label="book.detail.coverEditor.unlockCover"]')
-      await lock.trigger('click')
+      await wrapper.get('[aria-label="book.detail.coverEditor.unlockAudioCover"]').trigger('click')
 
       expect(wrapper.emitted('toggleLock')).toEqual([['audioCover']])
-      expect(wrapper.get('input[type="file"]').attributes('disabled')).toBeDefined()
     })
 
-    it('shows a legacy cover that no slot holds yet', () => {
+    it('shows a legacy cover that no slot holds yet on the tile of the format the book has', () => {
       const wrapper = mountPanel({ book: makeBook({ coverSource: 'custom', coverVersion: 'legacy:1' }) })
 
-      expect(wrapper.find('[data-test="placeholder"]').exists()).toBe(false)
-      expect(wrapper.get('img').attributes('src')).toContain('t=legacy:1')
+      expect(wrapper.get('[role="radio"] img').attributes('src')).toContain('t=legacy:1')
       expect(wrapper.text()).toContain('book.detail.coverEditor.revertToOriginal')
     })
 

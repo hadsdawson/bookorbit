@@ -38,12 +38,11 @@ export function faceMedium(book: Pick<SlotBook, 'covers'>, aspectRatio: CoverAsp
 }
 
 /**
- * The media the editor shows one tile each for. A book with no content files still gets one tile,
- * with no medium, so its writes fall through to the server's own routing.
+ * Fork. Every book gets an ebook and an audiobook tile, whichever files it has: a chosen cover is kept for a format
+ * with no files, and an empty tile shows the placeholder style.
  */
-export function editorTiles(book: Pick<SlotBook, 'coverMedia'>): (CoverMedium | null)[] {
-  const tiles = (['ebook', 'audio'] as const).filter((medium) => book.coverMedia.includes(medium))
-  return tiles.length > 0 ? tiles : [null]
+export function editorTiles(_book?: Pick<SlotBook, 'coverMedia'>): CoverMedium[] {
+  return ['ebook', 'audio']
 }
 
 /** The slot a metadata result's `cover` field fills: the ebook slot, unless the book has no ebook. */
@@ -72,8 +71,8 @@ export function coverTileState(book: SlotBook, medium: CoverMedium | null, aspec
   const slot = medium ? book.covers[medium] : null
   if (slot) return { hasImage: true, source: slot.source, version: slot.updatedAt }
   if (!isLegacyCover(book)) return { hasImage: false, source: null, version: book.coverVersion }
-  const tiles = editorTiles(book)
-  const legacyTile = tiles.length === 1 ? tiles[0] : faceMedium(book, aspectRatio)
-  if (medium !== legacyTile) return { hasImage: false, source: null, version: book.coverVersion }
+  // The book's only medium holds a legacy cover; with both or neither, the face the server serves does.
+  const legacyTile = book.coverMedia.length === 1 ? book.coverMedia[0] : faceMedium(book, aspectRatio)
+  if (medium !== null && medium !== legacyTile) return { hasImage: false, source: null, version: book.coverVersion }
   return { hasImage: true, source: book.coverSource, version: book.coverVersion }
 }

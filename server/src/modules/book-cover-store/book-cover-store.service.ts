@@ -32,6 +32,7 @@ import { classifyCoverShape } from './cover-shape';
 import {
   BookCoverStoreRepository,
   getCoverMediaFromDatabaseFiles,
+  isServedSlot,
   type BookCoverContext,
   type BookCoverFaceRow,
   type BookCoverOrigin,
@@ -84,11 +85,7 @@ export class BookCoverStore {
     const existing = await this.repository.findContext(bookId);
     if (!existing) return null;
     const context = await this.convertOnRead(existing);
-    const activeSlots = new Map(
-      context.slots
-        .filter((slot) => slot.dormantSince === null && this.mediumIsActive(slot.medium as CoverMedium, context.media))
-        .map((slot) => [slot.medium as CoverMedium, slot]),
-    );
+    const activeSlots = new Map(context.slots.filter((slot) => isServedSlot(slot, context.media)).map((slot) => [slot.medium as CoverMedium, slot]));
     const order = this.resolutionOrder(context, options.medium, options.strict === true);
 
     for (const medium of order) {
@@ -327,7 +324,11 @@ export class BookCoverStore {
         target.media,
         {
           kind: 'upsert',
-          row: { ...this.rowValues(slot), updatedAt: now, dormantSince: this.mediumIsActive(medium, target.media) ? null : now },
+          row: {
+            ...this.rowValues(slot),
+            updatedAt: now,
+            dormantSince: slot.source === 'custom' || this.mediumIsActive(medium, target.media) ? null : now,
+          },
         },
         { bumpBook: true, servedBytesChanged: true, updatedAt: now },
       );
@@ -401,7 +402,7 @@ export class BookCoverStore {
 
   async hasActiveSlot(bookId: number, medium: CoverMedium): Promise<boolean> {
     const context = await this.convertedContext(bookId);
-    return context.slots.some((slot) => slot.medium === medium && slot.dormantSince === null) && this.mediumIsActive(medium, context.media);
+    return context.slots.some((slot) => slot.medium === medium && isServedSlot(slot, context.media));
   }
 
   /** What a metadata fetch needs to know about a book's covers: its media, which slots are filled, and which are locked. */
@@ -409,8 +410,7 @@ export class BookCoverStore {
     const existing = await this.repository.findContext(bookId);
     if (!existing) return null;
     const context = await this.ensureConverted(existing);
-    const active = (medium: CoverMedium) =>
-      this.mediumIsActive(medium, context.media) && context.slots.some((slot) => slot.medium === medium && slot.dormantSince === null);
+    const active = (medium: CoverMedium) => context.slots.some((slot) => slot.medium === medium && isServedSlot(slot, context.media));
     return {
       media: context.media,
       filled: { ebook: active('ebook'), audio: active('audio') },
@@ -476,8 +476,8 @@ export class BookCoverStore {
 
   slotDtos(context: Pick<BookCoverContext, 'media' | 'slots'>): Record<CoverMedium, BookCoverSlot | null> {
     return {
-      ebook: this.toSlotDto(context.slots.find((slot) => slot.medium === 'ebook' && slot.dormantSince === null && context.media.hasEbook)),
-      audio: this.toSlotDto(context.slots.find((slot) => slot.medium === 'audio' && slot.dormantSince === null && context.media.hasAudio)),
+      ebook: this.toSlotDto(context.slots.find((slot) => slot.medium === 'ebook' && isServedSlot(slot, context.media))),
+      audio: this.toSlotDto(context.slots.find((slot) => slot.medium === 'audio' && isServedSlot(slot, context.media))),
     };
   }
 
@@ -709,13 +709,14 @@ export class BookCoverStore {
       const coverBytes = await readFile(join(dir, cover));
       const dimensions = await this.measure(coverBytes);
       const { mtime } = await stat(join(dir, cover));
+      const source = isCustomBookCoverFileName(cover) || context.coverSource === 'custom' ? 'custom' : 'extracted';
       await this.repository.importSlotWithoutStamp(context.bookId, medium, {
-        source: isCustomBookCoverFileName(cover) || context.coverSource === 'custom' ? 'custom' : 'extracted',
+        source,
         origin: 'legacy',
         width: dimensions.width,
         height: dimensions.height,
         updatedAt: context.coverUpdatedAt ?? mtime,
-        dormantSince: this.mediumIsActive(medium, context.media) ? null : new Date(),
+        dormantSince: source === 'custom' || this.mediumIsActive(medium, context.media) ? null : new Date(),
       });
       restored = true;
     }
@@ -763,8 +764,7 @@ export class BookCoverStore {
   /** The preferred slot when it holds art, else the other one; with no art at all, a medium the book has. */
   private servedFace(preferred: CoverMedium, slots: readonly BookCoverSlotRow[], media: CoverMedia): CoverMedium {
     const alternate: CoverMedium = preferred === 'ebook' ? 'audio' : 'ebook';
-    const filled = (medium: CoverMedium) =>
-      this.mediumIsActive(medium, media) && slots.some((slot) => slot.medium === medium && slot.dormantSince === null);
+    const filled = (medium: CoverMedium) => slots.some((slot) => slot.medium === medium && isServedSlot(slot, media));
     if (filled(preferred)) return preferred;
     if (filled(alternate)) return alternate;
     if (this.mediumIsActive(preferred, media)) return preferred;

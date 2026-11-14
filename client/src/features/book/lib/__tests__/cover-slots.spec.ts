@@ -33,10 +33,10 @@ describe('cover slots', () => {
     expect(faceMedium(book(), '1/1')).toBe('audio')
   })
 
-  it('gives one tile per medium, and one unnamed tile for a book with no content files', () => {
+  it('always gives an ebook and an audiobook tile, whichever files the book has', () => {
     expect(editorTiles(book({ coverMedia: ['audio', 'ebook'] }))).toEqual(['ebook', 'audio'])
-    expect(editorTiles(book({ coverMedia: ['audio'] }))).toEqual(['audio'])
-    expect(editorTiles(book({ coverMedia: [] }))).toEqual([null])
+    expect(editorTiles(book({ coverMedia: ['audio'] }))).toEqual(['ebook', 'audio'])
+    expect(editorTiles(book({ coverMedia: [] }))).toEqual(['ebook', 'audio'])
   })
 
   it('sends a metadata cover to the ebook slot unless the book has no ebook', () => {
@@ -61,7 +61,7 @@ describe('cover slots', () => {
     expect(state).toEqual({ hasImage: false, source: null, version: 'v' })
   })
 
-  it('puts a legacy cover on the face tile of a two-slot book, and on the only tile otherwise', () => {
+  it("puts a legacy cover on the face tile of a two-format book, and on a one-format book's own tile", () => {
     const legacy = book({ coverSource: 'custom', coverVersion: 'legacy:1' })
     expect(coverTileState(legacy, 'ebook', '2/3').hasImage).toBe(true)
     expect(coverTileState(legacy, 'audio', '2/3').hasImage).toBe(false)
@@ -69,6 +69,7 @@ describe('cover slots', () => {
 
     const audioOnly = book({ coverMedia: ['audio'], coverSource: 'extracted', coverVersion: 'legacy:1' })
     expect(coverTileState(audioOnly, 'audio', '2/3').hasImage).toBe(true)
+    expect(coverTileState(audioOnly, 'ebook', '2/3').hasImage).toBe(false)
 
     const noFiles = book({ coverMedia: [], coverSource: 'extracted' })
     expect(coverTileState(noFiles, null, '2/3').hasImage).toBe(true)

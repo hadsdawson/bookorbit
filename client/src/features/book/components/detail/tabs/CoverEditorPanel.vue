@@ -109,6 +109,11 @@ function viewLargerLabel(medium: CoverMedium | null): string {
 
 const selectedTile = computed(() => tiles.value.find((tile) => tile.key === selectedKey.value) ?? tiles.value[0]!)
 const activeEditor = computed(() => editors[selectedTile.value.key])
+/** A cover can only be pulled from a file the book has: a tile for a missing format offers upload, URL and search. */
+const selectedTileHasFiles = computed(() => {
+  const medium = selectedTile.value.medium
+  return medium === null || props.book.coverMedia.includes(medium)
+})
 const activeUi = computed(() => tileUi[selectedTile.value.key])
 const controlsDisabled = computed(() => Boolean(props.disabled || selectedTile.value.locked))
 const hasActivePending = computed(() => Boolean(activeEditor.value.pendingFile || activeEditor.value.pendingUrl))
@@ -260,11 +265,11 @@ async function confirmPending(media: readonly (CoverMedium | null)[] = pendingMe
 }
 
 /**
- * Stages a fetched cover on a tile. A medium the book has picks its tile; otherwise the cover goes to
- * the ebook slot, or the only slot a book without an ebook has.
+ * Stages a fetched cover on a tile. A named medium picks its tile, whether or not the book has files of it; otherwise
+ * the cover goes to the ebook slot, or the audiobook slot of a book with only audio.
  */
 function setPendingUrl(url: string, medium?: CoverMedium) {
-  const key = tileKey(medium && props.book.coverMedia.includes(medium) ? medium : coverFieldMedium(props.book))
+  const key = tileKey(medium ?? coverFieldMedium(props.book))
   const tile = tiles.value.find((candidate) => candidate.key === key)
   if (props.disabled || !tile || tile.locked) return
   selectedKey.value = key
@@ -492,7 +497,7 @@ onUnmounted(() => clearTimeout(debounceTimer))
             {{ t('book.detail.coverEditor.revertToOriginal') }}
           </button>
           <button
-            v-if="hasPermission('library_edit_metadata')"
+            v-if="hasPermission('library_edit_metadata') && selectedTileHasFiles"
             type="button"
             class="flex items-center justify-center gap-1.5 w-full h-8 rounded-lg border border-input bg-background text-xs text-muted-foreground hover:text-foreground focus-visible:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
             :disabled="activeEditor.regenerating || controlsDisabled"

@@ -154,6 +154,9 @@ export class CoverSlotReconciler implements OnModuleDestroy {
       const medium = slot.medium as CoverMedium;
       if (this.isPresent(context, medium)) {
         if (slot.dormantSince !== null) changed = (await this.store.reactivate(context.bookId, medium, options)) || changed;
+      } else if (slot.source === 'custom' && slot.dormantSince === null) {
+        // Fork: a cover someone chose stays for a format the book has no files of.
+        continue;
       } else if (slot.dormantSince === null) {
         changed = (await this.store.markDormant(context.bookId, medium, options)) || changed;
       } else {
