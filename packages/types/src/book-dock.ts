@@ -51,6 +51,8 @@ export interface BookDockMetadata {
   coverUrl?: string | null;
   /** The other format's cover from a lookup: square art for an ebook file, a book cover for an audiobook. */
   otherFormatCoverUrl?: string | null;
+  /** Fork: true when a person picked `otherFormatCoverUrl`, so it is used as chosen art rather than only filling an empty slot. */
+  otherFormatCoverPicked?: boolean;
   durationSeconds?: number | null;
   abridged?: boolean | null;
   chapters?: AudiobookChapter[] | null;

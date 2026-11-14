@@ -46,6 +46,7 @@ vi.mock('@/features/library/composables/useLibraries', () => ({
 vi.mock('@/features/book/composables/useMetadataSearch', () => ({
   useMetadataSearch: () => ({
     filteredResults: ref(mocks.filteredResults),
+    results: ref([]),
     providerCounts: reactive({}),
     interruptedProviders: ref([]),
     retryingProviders: ref([]),
@@ -71,6 +72,7 @@ const WorkspaceStub = defineComponent({
     searchDefaults: { type: Object, required: true },
     coverMedium: { type: String, default: undefined },
     coverPriority: { type: Array, default: undefined },
+    secondCover: { type: Object, default: null },
     fixedCandidate: { type: Object, default: null },
   },
   emits: ['search', 'apply', 'cancel'],
@@ -344,7 +346,9 @@ describe('BookDockFileSheet', () => {
 
     wrapper.getComponent(WorkspaceStub).vm.$emit('search', { title: 'Dune', author: '', isbn: '' })
     await flushPromises()
-    expect(mocks.search).toHaveBeenLastCalledWith({ title: 'Dune', author: '', isbn: '', mediaKind: 'ebook', mediaKinds: ['ebook', 'audiobook'] })
+    expect(mocks.search).toHaveBeenCalledWith({ title: 'Dune', author: '', isbn: '', mediaKind: 'ebook', mediaKinds: ['ebook', 'audiobook'] })
+    // A second search, as an audiobook, fills the audiobook cover row.
+    expect(mocks.search).toHaveBeenLastCalledWith({ title: 'Dune', author: '', mediaKind: 'audiobook', providers: ['audible'] })
   })
 
   it('searches a comic as a comic only', async () => {
@@ -367,7 +371,7 @@ describe('BookDockFileSheet', () => {
 
     const workspace = wrapper.getComponent(WorkspaceStub)
     workspace.vm.$emit('search', { title: 'Dune', author: 'Frank Herbert', isbn: '' })
-    expect(mocks.search).toHaveBeenLastCalledWith({
+    expect(mocks.search).toHaveBeenCalledWith({
       title: 'Dune',
       author: 'Frank Herbert',
       isbn: '',
@@ -381,6 +385,31 @@ describe('BookDockFileSheet', () => {
     await wrapper.vm.$nextTick()
 
     expect(mocks.saveMetadata).toHaveBeenCalledWith(1, expect.objectContaining({ coverUrl: 'https://covers.example/dune-audio.jpg' }))
+  })
+
+  it('stages an ebook cover picked for an audiobook as the other format cover', async () => {
+    const wrapper = mountSheet(makeFile({ fileName: 'Dune.m4b', format: 'm4b' }))
+    const searchButton = wrapper.findAll('button').find((button) => button.text().trim() === 'Search')
+    await searchButton!.trigger('click')
+
+    const workspace = wrapper.getComponent(WorkspaceStub)
+    expect(workspace.props('secondCover')).toMatchObject({ medium: 'ebook' })
+    workspace.vm.$emit('apply', {
+      formPatch: {},
+      audioCoverUrl: 'https://covers.example/dune-audio.jpg',
+      coverUrl: 'https://covers.example/dune-ebook.jpg',
+    })
+    await flushPromises()
+
+    expect(mocks.saveMetadata).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        coverUrl: 'https://covers.example/dune-audio.jpg',
+        otherFormatCoverUrl: 'https://covers.example/dune-ebook.jpg',
+        otherFormatCoverPicked: true,
+      }),
+    )
+    expect(wrapper.find('[data-testid="book-dock-other-cover"]').exists()).toBe(true)
   })
 
   it('requests confirmation before discarding the file', async () => {
