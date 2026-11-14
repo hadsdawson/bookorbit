@@ -31,6 +31,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { api } from '@/lib/api'
 import { registerProviderAppearance } from '@/lib/provider-appearance'
 import { metadataScoreColor } from '@/lib/metadata-score-color'
+import MetadataScoreBreakdown from '@/features/metadata-score/components/MetadataScoreBreakdown.vue'
+import { useMetadataScoreWeights } from '@/features/metadata-score/composables/useMetadataScoreWeights'
 import ChipInput from '@/components/ui/ChipInput.vue'
 import IdentifierInput from '@/components/ui/IdentifierInput.vue'
 import CoverEditorPanel from './CoverEditorPanel.vue'
@@ -302,6 +304,13 @@ async function restoreReminderFocus() {
 }
 const metadataScore = computed(() => props.book.metadataScore)
 const metadataScoreColour = computed(() => (metadataScore.value == null ? null : metadataScoreColor(metadataScore.value)))
+const scoreBreakdownOpen = ref(false)
+const { weights: scoreWeights, fetchWeights: fetchScoreWeights } = useMetadataScoreWeights()
+
+function handleScoreBreakdownOpen(open: boolean) {
+  scoreBreakdownOpen.value = open
+  if (open) void fetchScoreWeights()
+}
 
 function controlClass(isEmpty: boolean, mono = false): string {
   const base = mono ? FIELD_CONTROL_MONO_CLASS : FIELD_CONTROL_CLASS
@@ -921,17 +930,29 @@ function handleCoverChanged(medium: CoverMedium | null) {
         class="sticky top-0 z-30 -mx-4 flex flex-none items-center gap-2 bg-card/95 px-4 py-0.5 backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:mx-0 sm:px-0"
       >
         <div class="no-scrollbar flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
-          <div
-            v-if="metadataScore !== null"
-            class="flex h-9 flex-none items-center gap-2 rounded-lg border border-border bg-card px-2.5 sm:h-8"
-            :title="t('book.detail.editMetadata.scoreTooltip', { score: metadataScore })"
-          >
-            <span class="text-[10px] font-bold tracking-[0.11em] text-muted-foreground uppercase">{{ t('book.detail.editMetadata.score') }}</span>
-            <span class="text-sm font-bold tabular-nums" :style="{ color: metadataScoreColour ?? undefined }">{{ metadataScore }}</span>
-            <span class="h-1 w-12 overflow-hidden rounded-full bg-muted" aria-hidden="true">
-              <span class="block h-full rounded-full" :style="{ width: `${metadataScore}%`, backgroundColor: metadataScoreColour ?? undefined }" />
-            </span>
-          </div>
+          <Popover v-if="metadataScore !== null" :open="scoreBreakdownOpen" @update:open="handleScoreBreakdownOpen">
+            <PopoverTrigger as-child>
+              <button
+                type="button"
+                class="flex h-9 flex-none items-center gap-2 rounded-lg border border-border bg-card px-2.5 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-8"
+                :title="t('book.detail.editMetadata.scoreTooltip', { score: metadataScore })"
+                data-testid="edit-metadata-score"
+              >
+                <span class="text-[10px] font-bold tracking-[0.11em] text-muted-foreground uppercase">{{ t('book.detail.editMetadata.score') }}</span>
+                <span class="text-sm font-bold tabular-nums" :style="{ color: metadataScoreColour ?? undefined }">{{ metadataScore }}</span>
+                <span class="h-1 w-12 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+                  <span
+                    class="block h-full rounded-full"
+                    :style="{ width: `${metadataScore}%`, backgroundColor: metadataScoreColour ?? undefined }"
+                  />
+                </span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent class="w-72 p-4" align="start">
+              <p class="mb-3 text-sm font-semibold">{{ t('book.detail.details.metadataScore') }}</p>
+              <MetadataScoreBreakdown :book="book" :weights="scoreWeights" in-editor />
+            </PopoverContent>
+          </Popover>
 
           <Popover v-if="emptyFields.length > 0" v-model:open="missingFieldsOpen">
             <PopoverTrigger as-child>

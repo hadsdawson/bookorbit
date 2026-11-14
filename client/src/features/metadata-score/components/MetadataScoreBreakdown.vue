@@ -18,6 +18,8 @@ import { scoreFieldLabelKey } from '@/features/settings/metadata-score/lib/score
 const props = defineProps<{
   book: BookDetail
   weights: MetadataScoreWeights
+  /** Already on the Edit Metadata page: the missing count is shown as text instead of a link there. */
+  inEditor?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -143,7 +145,8 @@ const missingCount = computed(() => groups.value.flatMap((g) => g.fields).filter
       </div>
     </div>
     <div v-if="missingCount > 0" class="pt-1 border-t border-border/50">
-      <button type="button" class="text-xs text-primary hover:underline" @click="handleEditMetadata">
+      <p v-if="inEditor" class="text-xs text-muted-foreground">{{ t('metadataScore.missingFields', { count: missingCount }) }}</p>
+      <button v-else type="button" class="text-xs text-primary hover:underline" @click="handleEditMetadata">
         {{ t('metadataScore.missingFields', { count: missingCount }) }}
       </button>
     </div>
