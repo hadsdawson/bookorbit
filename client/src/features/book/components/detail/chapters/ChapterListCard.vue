@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useUiTextScale } from '@/lib/ui-text-scale'
 import { computed, reactive, ref, watch } from 'vue'
 import { useElementSize } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
@@ -53,7 +54,9 @@ const scroller = ref<HTMLElement | null>(null)
 const { width: scrollerWidth } = useElementSize(scroller)
 /** Too narrow for start, title and actions on one line: the title gets a line of its own. */
 const compact = computed(() => scrollerWidth.value > 0 && scrollerWidth.value < 560)
-const rowHeight = computed(() => (props.editing ? (compact.value ? 84 : 46) : 40))
+const textScale = useUiTextScale()
+// Fork: rows hold text, so they are taller at a larger interface text size.
+const rowHeight = computed(() => Math.round((props.editing ? (compact.value ? 84 : 46) : 40) * textScale.value))
 
 const virtualizer = useVirtualizer(
   computed(() => ({

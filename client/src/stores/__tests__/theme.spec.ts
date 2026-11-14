@@ -268,6 +268,42 @@ describe('useThemeStore', () => {
       expect(localStorage.getItem('colorTheme')).toBe('"cotton-candy"')
     })
 
+    it('paints box, font and text size choices and keeps the default size untouched', async () => {
+      window.history.replaceState(null, '', '/')
+      setActivePinia(createPinia())
+      const store = useThemeStore()
+      const root = document.documentElement
+
+      expect(root.getAttribute('data-text-size')).toBe('default')
+
+      store.setBoxDepth('strong')
+      store.setBoxOutline('bold')
+      store.setInterfaceFont('atkinson')
+      store.setInterfaceTextSize('larger')
+      expect(root.getAttribute('data-box-depth')).toBe('strong')
+      expect(root.getAttribute('data-box-outline')).toBe('bold')
+      expect(root.getAttribute('data-ui-font')).toBe('atkinson')
+      expect(root.getAttribute('data-text-size')).toBe('larger')
+      expect(store.appliedInterfaceTextScale).toBe(1.2)
+      await nextTick()
+      expect(localStorage.getItem('interfaceTextSize')).toBe('"larger"')
+
+      store.setInterfaceTextSize('default')
+      expect(root.getAttribute('data-text-size')).toBe('default')
+    })
+
+    it('keeps readers and sign-in pages at the default text size and font', () => {
+      localStorage.setItem('interfaceTextSize', '"larger"')
+      localStorage.setItem('interfaceFont', '"nunito"')
+      window.history.replaceState(null, '', '/login')
+      setActivePinia(createPinia())
+      const store = useThemeStore()
+
+      expect(store.interfaceTextSize).toBe('larger')
+      expect(document.documentElement.getAttribute('data-text-size')).toBe('default')
+      expect(document.documentElement.getAttribute('data-ui-font')).toBe('default')
+    })
+
     it('leaves standalone pages without a color theme', () => {
       localStorage.setItem('colorTheme', '"synthwave"')
       window.history.replaceState(null, '', '/login')

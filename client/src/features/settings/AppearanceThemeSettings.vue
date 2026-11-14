@@ -9,10 +9,12 @@ import { ACCENT_ROWS, BACKGROUND_OPTIONS, RADIUS_OPTIONS, useThemeStore } from '
 import SurfacePalettePicker from '@/components/SurfacePalettePicker.vue'
 import ColorThemePicker from '@/components/ColorThemePicker.vue'
 import GlowReachPicker from '@/components/GlowReachPicker.vue'
+import InterfaceTweakPicker, { type InterfaceTweakKind } from '@/components/InterfaceTweakPicker.vue'
 import AppearancePreferenceStorage from './AppearancePreferenceStorage.vue'
 
 const { t } = useI18n()
 const themeStore = useThemeStore()
+const INTERFACE_TWEAKS: InterfaceTweakKind[] = ['boxDepth', 'boxOutline', 'interfaceFont', 'interfaceTextSize']
 /** A color theme brings its own surfaces and accent, so their pickers step aside while one is on. */
 const colorThemeOn = computed(() => themeStore.colorTheme !== 'none')
 const showSurfacePalette = computed(() => themeStore.appearanceControls.surfacePalette && !colorThemeOn.value)
@@ -254,6 +256,21 @@ function handleBrightnessInput(event: Event) {
             class="w-full accent-primary cursor-pointer"
             @input="handleBrightnessInput"
           />
+        </div>
+      </div>
+    </div>
+
+    <div data-testid="interface-tweaks">
+      <p class="settings-group-label">
+        {{ t('settings.appearance.interface.title') }}
+      </p>
+      <div class="settings-card">
+        <div v-for="kind in INTERFACE_TWEAKS" :key="kind" class="settings-row">
+          <div>
+            <p class="settings-label">{{ t(`settings.appearance.interface.${kind}.label`) }}</p>
+            <p class="settings-hint settings-prose">{{ t(`settings.appearance.interface.${kind}.hint`) }}</p>
+          </div>
+          <InterfaceTweakPicker :kind="kind" class="self-start md:max-w-96" />
         </div>
       </div>
     </div>

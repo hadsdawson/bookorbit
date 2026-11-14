@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiTextScale } from '@/lib/ui-text-scale'
 import type { HTMLAttributes } from 'vue'
 import { onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -17,6 +18,7 @@ const DRAG_THRESHOLD_PX = 3
 const activePointerId = ref<number | null>(null)
 const dragStartX = ref(0)
 const dragStartWidth = ref(0)
+const dragScale = ref(1)
 const dragSide = ref<'left' | 'right'>('left')
 const isResizeGesture = ref(false)
 const didDrag = ref(false)
@@ -36,7 +38,10 @@ function onPointerMove(event: PointerEvent) {
     didDrag.value = true
   }
 
-  const nextWidth = dragSide.value === 'left' ? dragStartWidth.value + deltaX : dragStartWidth.value - deltaX
+  // Fork: the drawn width is the stored width times the interface text scale, so the pointer's travel
+  // is divided by it to keep the edge under the pointer.
+  const travel = deltaX / dragScale.value
+  const nextWidth = dragSide.value === 'left' ? dragStartWidth.value + travel : dragStartWidth.value - travel
   setWidth(nextWidth)
 }
 
@@ -70,6 +75,7 @@ function onPointerDown(event: PointerEvent) {
   activePointerId.value = event.pointerId
   dragStartX.value = event.clientX
   dragStartWidth.value = widthPx.value
+  dragScale.value = uiTextScale()
   dragSide.value = resolveSide(event.currentTarget)
   isResizeGesture.value = state.value === 'expanded'
   didDrag.value = false

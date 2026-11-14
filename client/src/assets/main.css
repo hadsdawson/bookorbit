@@ -1,6 +1,10 @@
 @import '@fontsource-variable/inter';
 @import '@fontsource-variable/fraunces';
 @import '@fontsource-variable/fraunces/wght-italic.css';
+@import '@fontsource-variable/atkinson-hyperlegible-next';
+@import '@fontsource-variable/lexend';
+@import '@fontsource-variable/nunito';
+@import '@fontsource-variable/source-serif-4';
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
@@ -10,6 +14,7 @@
 @import './theme/surfaces.css';
 @import './theme/styles/nostalgia.css';
 @import './theme/color-themes.css';
+@import './theme/interface-tweaks.css';
 @import './theme/bridge.css';
 @import './theme/cover-effects.css';
 

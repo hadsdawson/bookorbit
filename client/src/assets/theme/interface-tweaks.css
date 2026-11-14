@@ -1,0 +1,159 @@
+/* ── Interface tweaks ────────────────────────────────────────
+   Fork only. General appearance choices that sit on top of any
+   style or color theme: how far boxes lift off the page, how
+   strongly they are outlined, the interface font and text size.
+   Each defaults to "leave the style alone", and like a color
+   theme they only dress the app shell (the store sets them to
+   their defaults on sign-in pages and in the readers).
+
+   A "box" is a card or panel: a bordered, rounded surface in the
+   card, popover or shell colour. Only the outermost box is changed,
+   so rows and toggles inside a card stay quiet. Buttons, inputs,
+   menu rows and pills are left out, so they keep their own look.
+────────────────────────────────────────────────────────────── */
+
+/* ── Depth ── */
+html[data-box-depth='subtle'] {
+  --ui-box-shadow: 0 2px 4px -1px oklch(0 0 0 / 0.1), 0 6px 16px -4px oklch(0 0 0 / 0.14);
+  --shell-shadow: var(--ui-box-shadow);
+}
+html[data-box-depth='strong'] {
+  --ui-box-shadow: 0 4px 8px -2px oklch(0 0 0 / 0.14), 0 14px 32px -8px oklch(0 0 0 / 0.26);
+  --shell-shadow: var(--ui-box-shadow);
+}
+html.dark[data-box-depth='subtle'] {
+  --ui-box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.04), 0 2px 4px -1px oklch(0 0 0 / 0.45), 0 8px 18px -4px oklch(0 0 0 / 0.5);
+}
+html.dark[data-box-depth='strong'] {
+  --ui-box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.07), 0 4px 10px -2px oklch(0 0 0 / 0.55), 0 16px 36px -8px oklch(0 0 0 / 0.65);
+}
+
+/* Only the outermost box casts a shadow, so rows inside a card do not each float. Dialogs and menus that
+   already cast a large shadow keep it. */
+html:is([data-box-depth='subtle'], [data-box-depth='strong'])
+  :is([class*='bg-card'], [class*='bg-popover'], [class*='bg-(--shell-surface)']).border:is(
+    .rounded-lg,
+    .rounded-xl,
+    .rounded-2xl,
+    .rounded-3xl,
+    [class*='rounded-(--']
+  ):not(
+    button,
+    a,
+    input,
+    textarea,
+    select,
+    [role='button'],
+    [role='menuitem'],
+    [role='option'],
+    [class*='shadow-lg'],
+    [class*='shadow-xl'],
+    [class*='shadow-2xl'],
+    :is([class*='bg-card'], [class*='bg-popover']).border *
+  ) {
+  box-shadow: var(--ui-box-shadow);
+}
+
+/* ── Outlines ── */
+html[data-box-outline='medium'] {
+  --ui-box-border: color-mix(in oklch, var(--border) 65%, var(--foreground));
+  --ui-box-border-width: 1px;
+}
+html[data-box-outline='bold'] {
+  --ui-box-border: color-mix(in oklch, var(--border) 45%, var(--foreground));
+  --ui-box-border-width: 2px;
+}
+
+html:is([data-box-outline='medium'], [data-box-outline='bold'])
+  :is([class*='bg-card'], [class*='bg-popover'], [class*='bg-(--shell-surface)']).border:is(
+    .rounded-lg,
+    .rounded-xl,
+    .rounded-2xl,
+    .rounded-3xl,
+    [class*='rounded-(--']
+  ):not(
+    button,
+    a,
+    input,
+    textarea,
+    select,
+    [role='button'],
+    [role='menuitem'],
+    [role='option'],
+    :is([class*='bg-card'], [class*='bg-popover']).border *
+  ) {
+  border-width: var(--ui-box-border-width);
+}
+
+/* A box that already wears a coloured border (a dashboard widget's accent edge) keeps its colour. */
+html:is([data-box-outline='medium'], [data-box-outline='bold'])
+  :is([class*='bg-card'], [class*='bg-popover'], [class*='bg-(--shell-surface)']).border:is(
+    .rounded-lg,
+    .rounded-xl,
+    .rounded-2xl,
+    .rounded-3xl,
+    [class*='rounded-(--']
+  ):not(
+    button,
+    a,
+    input,
+    textarea,
+    select,
+    [role='button'],
+    [role='menuitem'],
+    [role='option'],
+    [class*='border-primary'],
+    [class*='border-destructive'],
+    [class*='border-warning'],
+    [class*='border-success'],
+    [class*='border-info'],
+    [class*='border-amber'],
+    [class*='border-red'],
+    [class*='border-emerald'],
+    :is([class*='bg-card'], [class*='bg-popover']).border *
+  ) {
+  border-color: var(--ui-box-border);
+}
+
+/* The sidebar panel. */
+html:is([data-box-outline='medium'], [data-box-outline='bold']) [data-sidebar='sidebar'] {
+  --shell-border: var(--ui-box-border);
+}
+
+/* ── Interface font ──
+   Same specificity as a style's own font and imported after the styles, so the choice wins. */
+html[data-ui-font='system'] {
+  --app-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+}
+html[data-ui-font='atkinson'] {
+  --app-font-sans: 'Atkinson Hyperlegible Next Variable', ui-sans-serif, system-ui, sans-serif;
+}
+html[data-ui-font='lexend'] {
+  --app-font-sans: 'Lexend Variable', ui-sans-serif, system-ui, sans-serif;
+}
+html[data-ui-font='nunito'] {
+  --app-font-sans: 'Nunito Variable', ui-sans-serif, system-ui, sans-serif;
+}
+html[data-ui-font='source-serif'] {
+  --app-font-sans: 'Source Serif 4 Variable', ui-serif, Georgia, serif;
+}
+
+/* ── Text size ──
+   The root font size scales rem-sized text and spacing; --ui-text-scale scales the text set in pixels
+   (a build step multiplies every pixel font-size by it). On a phone-sized screen "larger" steps down to
+   "large": the screen is already narrow, and phones have their own text size setting. Keep in step with
+   NARROW_SCREEN_QUERY and INTERFACE_TEXT_SCALES. */
+html[data-text-size='large'] {
+  font-size: 110%;
+  --ui-text-scale: 1.1;
+}
+html[data-text-size='larger'] {
+  font-size: 120%;
+  --ui-text-scale: 1.2;
+}
+@media (max-width: 639px) {
+  html[data-text-size='larger'] {
+    font-size: 110%;
+    --ui-text-scale: 1.1;
+  }
+}

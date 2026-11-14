@@ -34,7 +34,11 @@ import {
   SURFACE_OPACITY_MAX,
   SURFACE_OPACITY_MIN,
   SURFACE_PALETTE_IDS,
+  BOX_DEPTH_IDS,
+  BOX_OUTLINE_IDS,
   COLOR_THEME_IDS,
+  INTERFACE_FONT_IDS,
+  INTERFACE_TEXT_SIZE_IDS,
   TABLE_DENSITIES,
   THEME_IDS,
   type AnnotationColorNamePreferences,
@@ -65,6 +69,10 @@ const THEME_PREFERENCES_SCHEMA = z
     surfacePalette: z.enum(SURFACE_PALETTE_IDS).optional(),
     glowReach: z.number().int().min(GLOW_REACH_MIN).max(GLOW_REACH_MAX).optional(),
     colorTheme: z.enum(COLOR_THEME_IDS).optional(),
+    boxDepth: z.enum(BOX_DEPTH_IDS).optional(),
+    boxOutline: z.enum(BOX_OUTLINE_IDS).optional(),
+    interfaceFont: z.enum(INTERFACE_FONT_IDS).optional(),
+    interfaceTextSize: z.enum(INTERFACE_TEXT_SIZE_IDS).optional(),
   })
   .strict();
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useUiTextScale } from '@/lib/ui-text-scale'
 import { computed, ref, watch } from 'vue'
 import type { ReadingHistoryItem, ReadingHistoryMarks } from '@bookorbit/types'
 import HistoryMonthHeader from './HistoryMonthHeader.vue'
@@ -27,12 +28,14 @@ const HEADER_HEIGHT = 34
 const ROW_HEIGHT = 92
 
 const listEl = ref<HTMLElement | null>(null)
+const textScale = useUiTextScale()
 const count = computed(() => props.rows.length)
 
 const { items, totalSize, scrollMargin, listScrollTop, measureElement, scrollToIndex } = useShellVirtualizer({
   listEl,
   count,
-  estimateSize: (index) => (props.rows[index]?.kind === 'month' ? HEADER_HEIGHT : ROW_HEIGHT),
+  // Fork: a first guess only (rows are measured), scaled with the interface text size so it starts close.
+  estimateSize: (index) => Math.round((props.rows[index]?.kind === 'month' ? HEADER_HEIGHT : ROW_HEIGHT) * textScale.value),
   getItemKey: (index) => props.rows[index]?.key ?? String(index),
   overscan: 8,
   // Jumps land below the pinned month header rather than under it.

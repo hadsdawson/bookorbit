@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { scaledPx } from '@/lib/ui-text-scale'
 import type { HTMLAttributes, Ref } from 'vue'
 import { useEventListener, useMediaQuery, useVModel } from '@vueuse/core'
 import { TooltipProvider } from 'reka-ui'
@@ -59,7 +60,8 @@ useEventListener('keydown', (event: KeyboardEvent) => {
 // This makes it easier to style the sidebar with Tailwind classes.
 const state = computed(() => (open.value ? 'expanded' : 'collapsed'))
 const { widthPx, setWidth, minWidthPx, maxWidthPx } = useSidebarWidth()
-const desktopSidebarWidth = computed(() => `${widthPx.value}px`)
+// Fork: grows with the interface text size, so labels that fit at the default size still fit.
+const desktopSidebarWidth = computed(() => scaledPx(widthPx.value))
 
 provideSidebarContext({
   state,

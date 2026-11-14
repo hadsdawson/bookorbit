@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { scaledPx } from '@/lib/ui-text-scale'
 import { useI18n } from 'vue-i18n'
 import { ArrowDown, ArrowUp, ArrowUpDown, GripVertical, Loader2 } from '@lucide/vue'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -57,7 +58,7 @@ function isSortableColumn(col: ColumnDef): boolean {
         v-if="selectionMode"
         role="columnheader"
         class="relative select-none border-b border-border px-2 py-2 text-center"
-        :style="{ width: '36px', minWidth: '36px', position: 'sticky', left: '0px', zIndex: 20, background: 'var(--muted)' }"
+        :style="{ width: scaledPx(36), minWidth: scaledPx(36), position: 'sticky', left: '0px', zIndex: 20, background: 'var(--muted)' }"
       >
         <input
           type="checkbox"
@@ -90,12 +91,12 @@ function isSortableColumn(col: ColumnDef): boolean {
           col.sortField && getSortDir(col.sortField) !== null && isSortableColumn(col) ? 'bg-primary/5' : '',
         ]"
         :style="{
-          width: `${col.defaultWidth}px`,
-          minWidth: `${col.minWidth}px`,
+          width: scaledPx(col.defaultWidth),
+          minWidth: scaledPx(col.minWidth),
           ...(col.pinned === 'left' || col.id === 'lockRow'
             ? {
                 position: 'sticky',
-                left: `${(selectionMode ? 36 : 0) + (pinnedLeftOffsets.get(col.id) ?? 0)}px`,
+                left: scaledPx((selectionMode ? 36 : 0) + (pinnedLeftOffsets.get(col.id) ?? 0)),
                 zIndex: 20,
                 background: 'var(--muted)',
               }

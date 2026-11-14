@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import AccentPicker from '@/components/AccentPicker.vue'
+import InterfaceTweakPicker, { type InterfaceTweakKind } from '@/components/InterfaceTweakPicker.vue'
 import ColorThemePicker from '@/components/ColorThemePicker.vue'
 import BackgroundPicker from '@/components/BackgroundPicker.vue'
 import GlowReachPicker from '@/components/GlowReachPicker.vue'
@@ -29,6 +30,7 @@ defineProps<{
 
 const { t } = useI18n()
 const themeStore = useThemeStore()
+const INTERFACE_TWEAKS: InterfaceTweakKind[] = ['boxDepth', 'boxOutline', 'interfaceFont', 'interfaceTextSize']
 /** A color theme brings its own accent and surfaces, so those pickers step aside while one is on. */
 const colorThemeOn = computed(() => themeStore.colorTheme !== 'none')
 const showSurfacePalette = computed(() => themeStore.appearanceControls.surfacePalette && !colorThemeOn.value)
@@ -123,6 +125,10 @@ function openSheet() {
             </div>
             <RadiusPicker block />
           </div>
+          <div v-for="kind in INTERFACE_TWEAKS" :key="kind" class="space-y-2" :data-testid="`panel-tweak-${kind}`">
+            <span class="text-[13px] text-muted-foreground">{{ t(`components.appHeader.${kind}`) }}</span>
+            <InterfaceTweakPicker :kind="kind" />
+          </div>
           <!-- The sliders share one block below the choices, one row each: label, track, value. -->
           <div class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-3 border-t border-border pt-4">
             <span class="text-[13px] whitespace-nowrap text-muted-foreground">{{ t('components.appHeader.topGlow') }}</span>
@@ -192,6 +198,13 @@ function openSheet() {
             <span class="truncate text-[13px] text-muted-foreground">{{ radiusLabel }}</span>
           </div>
           <RadiusPicker touch />
+        </section>
+
+        <section class="space-y-3 rounded-lg border border-border bg-card p-3" data-testid="sheet-interface-tweaks">
+          <div v-for="(kind, index) in INTERFACE_TWEAKS" :key="kind" class="space-y-2" :class="index > 0 ? 'border-t border-border pt-3' : ''">
+            <h3 class="text-sm font-medium text-foreground">{{ t(`components.appHeader.${kind}`) }}</h3>
+            <InterfaceTweakPicker :kind="kind" />
+          </div>
         </section>
 
         <section class="space-y-3 rounded-lg border border-border bg-card p-3">
