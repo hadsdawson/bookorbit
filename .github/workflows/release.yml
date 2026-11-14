@@ -78,8 +78,9 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: pnpm exec commitlint --config commitlint.config.cjs --from "$PR_BASE_SHA" --to "$PR_HEAD_SHA" --verbose
 
+      # Fork: hadsdawson/bookorbit files no issues, so this upstream rule is off here. Keep this line when syncing.
       - name: Validate referenced issues exist
-        if: github.event.pull_request.user.login != 'dependabot[bot]' && steps.crowdin.outputs.is_crowdin != 'true'
+        if: github.repository != 'hadsdawson/bookorbit' && github.event.pull_request.user.login != 'dependabot[bot]' && steps.crowdin.outputs.is_crowdin != 'true'
         shell: bash
         env:
           GH_REPO: ${{ github.repository }}
