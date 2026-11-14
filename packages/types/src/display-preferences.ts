@@ -44,6 +44,10 @@ export type CardInfoMode = (typeof CARD_INFO_MODES)[number];
 export const BOOK_THUMBNAIL_CLICK_ACTION = ["reader", "details"] as const;
 export type BookThumbnailClickAction = (typeof BOOK_THUMBNAIL_CLICK_ACTION)[number];
 
+/** Fork. Where a book's "Book Details" button goes: its details page, or straight to Edit Metadata. */
+export const BOOK_DETAILS_BUTTON_ACTIONS = ["details", "edit-metadata"] as const;
+export type BookDetailsButtonAction = (typeof BOOK_DETAILS_BUTTON_ACTIONS)[number];
+
 /** The artwork drawn for a book that has no cover. */
 export const PLACEHOLDER_COVER_STYLES = [
   "bauhaus",
@@ -87,5 +91,7 @@ export interface DisplayPreferences {
   gridCardSecondaryLabel: GridCardLabelField;
   cardInfoMode: CardInfoMode;
   thumbnailClickAction: BookThumbnailClickAction;
+  /** Fork. Optional so a row stored before it existed still parses; absent means "details". */
+  bookDetailsButtonAction?: BookDetailsButtonAction;
   placeholderCoverStyle: PlaceholderCoverStyle;
 }

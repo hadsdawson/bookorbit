@@ -44,6 +44,17 @@ export function getFormatColor(format: string | null | undefined): string {
 }
 
 /**
+ * Fork. The solid fill for a badge laid over a cover: the fixed hex, unless a color theme sets a
+ * `--format-fill-*` token to repaint it in the theme's own hues. A CSS value, so it goes in a style, never a
+ * canvas or an SVG presentation attribute.
+ */
+export function formatFillColor(format: string | null | undefined): string {
+  const key = format ? paletteKey(format) : null
+  const token = key && key in FORMAT_COLORS ? key : 'default'
+  return `var(--format-fill-${token}, ${getFormatColor(format)})`
+}
+
+/**
  * The same palette as a per-theme token.
  *
  * One hex for both themes cannot be a text colour: `#eab308` is about 1.9:1 on white, and the
@@ -64,7 +75,7 @@ export type FormatChipVariant = 'soft' | 'solid'
  */
 export function formatChipStyle(format: string | null | undefined, variant: FormatChipVariant = 'soft'): Record<string, string> {
   if (variant === 'solid') {
-    const fill = getFormatColor(format)
+    const fill = formatFillColor(format)
     return { borderColor: fill, backgroundColor: fill }
   }
   // The mixes, the fill lightness and the ink are style tokens, so a style can make the chip solid without a

@@ -7,8 +7,12 @@
 
    Same specificity as the accent classes and imported after them,
    so where both set a token (--sidebar) the style wins.
+
+   Fork: the Solid and Ombre styles are this layout painted by a
+   color theme, so they share these rules; the theme's own tokens
+   (theme/color-themes.css) outrank them.
 ────────────────────────────────────────────────────────────── */
-html[data-style='nostalgia'] {
+html:is([data-style='nostalgia'], [data-style='solid'], [data-style='ombre']) {
   --app-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
   --app-font-serif: var(--app-font-sans);
 
@@ -77,7 +81,7 @@ html[data-style='nostalgia'] {
 
 /* The classic ash ladder, shifted by the palette's --surface-l. Ground, card and edge come from surfaces.css. The style pins surface brightness to 0, so
    --bg-lift adds nothing here. Light mode takes 40% of the shift: enough to tell greys apart, not to dim a page. */
-html[data-style='nostalgia'].dark {
+html:is([data-style='nostalgia'], [data-style='solid'], [data-style='ombre']).dark {
   /* Accents at their classic 400-shade brightness: the darker ones (greens, lime) lift, the rest already sit there. */
   --primary: oklch(from var(--accent-primary) max(l, 0.78) c h);
 

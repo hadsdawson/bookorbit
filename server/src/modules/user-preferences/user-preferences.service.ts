@@ -10,6 +10,7 @@ import {
   BOOK_SHADOW_STRENGTHS,
   BOOK_SPINE_OVERLAYS,
   BOOK_THUMBNAIL_CLICK_ACTION,
+  BOOK_DETAILS_BUTTON_ACTIONS,
   BOOK_VIEW_MODES,
   CARD_INFO_MODES,
   CARD_OVERLAY_KEYS,
@@ -105,6 +106,7 @@ const DISPLAY_PREFERENCES_SCHEMA = z
     gridCardSecondaryLabel: z.enum(GRID_CARD_LABEL_FIELDS).default('hidden'),
     cardInfoMode: z.enum(CARD_INFO_MODES).default('hover-overlay'),
     thumbnailClickAction: z.enum(BOOK_THUMBNAIL_CLICK_ACTION).default('reader'),
+    bookDetailsButtonAction: z.enum(BOOK_DETAILS_BUTTON_ACTIONS).default('details'),
     placeholderCoverStyle: z.enum(PLACEHOLDER_COVER_STYLES).default('bauhaus'),
   })
   .strict()

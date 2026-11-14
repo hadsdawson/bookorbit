@@ -38,6 +38,7 @@ import {
   THEME_IDS,
   type ResolvedTheme,
   type Theme,
+  reconcileStyleAndColorTheme,
 } from '@bookorbit/types'
 import { readCssColor, toLegacyColor } from '@/lib/css-color'
 import { DEFAULT_ACCENT } from '@/lib/theme-accent-meta'
@@ -153,10 +154,17 @@ export const useThemeStore = defineStore('theme', () => {
   const background = ref<Background>(storedChoice('background', BACKGROUND_IDS, 'vinyl', 'dots'))
   const brightness = ref<number>(storage.get<number>('brightness', DEFAULT_SURFACE_BRIGHTNESS))
   const surfaceOpacity = ref<number>(clampSurfaceOpacity(storage.get<number>('surfaceOpacity', SURFACE_OPACITY_DEFAULT)))
-  const style = ref<Style>(storedChoice('style', STYLE_IDS, DEFAULT_STYLE))
+  // Fork. Color themes live under the Solid and Ombre styles: a theme saved beside BookOrbit or Nostalgia moves
+  // its style to the theme's group, so the look carries over.
+  const initialLook = reconcileStyleAndColorTheme(
+    storedChoice('style', STYLE_IDS, DEFAULT_STYLE),
+    storedChoice('colorTheme', COLOR_THEME_IDS, DEFAULT_COLOR_THEME),
+    'colorTheme',
+  )
+  const style = ref<Style>(initialLook.style)
   const surfacePalette = ref<SurfacePalette>(storedChoice('surfacePalette', SURFACE_PALETTE_IDS, DEFAULT_SURFACE_PALETTE))
   const glowReach = ref<number>(clampGlowReach(storage.get<unknown>('glowReach', GLOW_REACH_DEFAULT)))
-  const colorTheme = ref<ColorTheme>(storedChoice('colorTheme', COLOR_THEME_IDS, DEFAULT_COLOR_THEME))
+  const colorTheme = ref<ColorTheme>(initialLook.colorTheme)
   const boxDepth = ref<BoxDepth>(storedChoice('boxDepth', BOX_DEPTH_IDS, DEFAULT_BOX_DEPTH))
   const boxOutline = ref<BoxOutline>(storedChoice('boxOutline', BOX_OUTLINE_IDS, DEFAULT_BOX_OUTLINE))
   const interfaceFont = ref<InterfaceFont>(storedChoice('interfaceFont', INTERFACE_FONT_IDS, DEFAULT_INTERFACE_FONT))
@@ -251,16 +259,23 @@ export const useThemeStore = defineStore('theme', () => {
     surfaceOpacity.value = clampSurfaceOpacity(value)
   }
 
+  function applyLook(look: { style: Style; colorTheme: ColorTheme }) {
+    style.value = look.style
+    colorTheme.value = look.colorTheme
+  }
+
+  /** Solid and Ombre bring one of their own themes along (the last one picked, if it belongs); the others clear it. */
   function setStyle(nextStyle: Style) {
-    style.value = nextStyle
+    applyLook(reconcileStyleAndColorTheme(nextStyle, colorTheme.value, 'style'))
   }
 
   function setSurfacePalette(palette: SurfacePalette) {
     surfacePalette.value = palette
   }
 
+  /** A theme moves the style to its own group (Solid or Ombre). */
   function setColorTheme(next: ColorTheme) {
-    colorTheme.value = next
+    applyLook(reconcileStyleAndColorTheme(style.value, next, 'colorTheme'))
   }
 
   function setBoxDepth(value: BoxDepth) {

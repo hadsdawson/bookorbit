@@ -7,7 +7,7 @@ import { formatList } from '@/i18n/formatters'
 import { useLibraries } from '@/features/library/composables/useLibraries'
 import BookFormatChip from './BookFormatChip.vue'
 import { formatKeyName } from '../lib/book-formats'
-import { getFormatColor } from '../lib/format-colors'
+import { formatFillColor } from '../lib/format-colors'
 import { cardFormatBadges } from '../lib/book-link'
 
 const MAX_DOTS = 5
@@ -43,8 +43,8 @@ const isPillStyle = computed(() => PILL_STYLES.includes(effectiveStyle.value))
 const indicators = computed(() => {
   const others = badges.value.slice(1)
   const shown = others.length > MAX_INDICATORS ? others.slice(0, MAX_INDICATORS - 1) : others
-  const marks = shown.map((badge) => ({ key: badge.key, color: getFormatColor(badge.key), linked: badge.linked }))
-  if (others.length > MAX_INDICATORS) marks.push({ key: 'more', color: getFormatColor(null), linked: false })
+  const marks = shown.map((badge) => ({ key: badge.key, color: formatFillColor(badge.key), linked: badge.linked }))
+  if (others.length > MAX_INDICATORS) marks.push({ key: 'more', color: formatFillColor(null), linked: false })
   return marks
 })
 
@@ -64,8 +64,8 @@ const sealArcs = computed(() => {
     dasharray: `${dash.toFixed(2)} ${(circumference - dash).toFixed(2)}`,
     dashoffset: (-index * segment).toFixed(2),
   })
-  const drawn = arcs.map((badge, index) => toArc(badge.key, getFormatColor(badge.key), badge.linked, index))
-  if (all.length > MAX_ARCS) drawn.push(toArc('more', getFormatColor(null), false, arcs.length))
+  const drawn = arcs.map((badge, index) => toArc(badge.key, formatFillColor(badge.key), badge.linked, index))
+  if (all.length > MAX_ARCS) drawn.push(toArc('more', formatFillColor(null), false, arcs.length))
   return drawn
 })
 
@@ -145,7 +145,7 @@ const summary = computed(() => {
             cx="20"
             cy="20"
             :r="SEAL_RADIUS"
-            :stroke="arc.color"
+            :style="{ stroke: arc.color }"
             :stroke-width="arc.linked ? 2 : 4"
             :stroke-dasharray="arc.dasharray"
             :stroke-dashoffset="arc.dashoffset"
@@ -166,7 +166,7 @@ const summary = computed(() => {
           :key="badge.key"
           class="size-1.5 shrink-0 rounded-full"
           :class="badge.linked ? 'border-[1.5px]' : ''"
-          :style="badge.linked ? { borderColor: getFormatColor(badge.key) } : { backgroundColor: getFormatColor(badge.key) }"
+          :style="badge.linked ? { borderColor: formatFillColor(badge.key) } : { backgroundColor: formatFillColor(badge.key) }"
           :data-linked="badge.linked ? 'true' : undefined"
           data-testid="card-format-dot"
         />

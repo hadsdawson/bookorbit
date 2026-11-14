@@ -66,6 +66,7 @@ const mockGridCardPrimaryLabel = ref('hidden')
 const mockGridCardSecondaryLabel = ref('hidden')
 const mockCardInfoMode = ref('hover-overlay')
 const mockThumbnailClickAction = ref('reader')
+const mockBookDetailsButtonAction = ref('details')
 vi.mock('@/composables/useDisplaySettings', () => ({
   useDisplaySettings: () => ({
     cardOverlays: mockCardOverlays,
@@ -77,6 +78,7 @@ vi.mock('@/composables/useDisplaySettings', () => ({
     gridCardSecondaryLabel: mockGridCardSecondaryLabel,
     cardInfoMode: mockCardInfoMode,
     thumbnailClickAction: mockThumbnailClickAction,
+    bookDetailsButtonAction: mockBookDetailsButtonAction,
   }),
 }))
 
@@ -253,6 +255,7 @@ describe('BookCoverCard', () => {
     mockGridCardSecondaryLabel.value = 'hidden'
     mockCardInfoMode.value = 'hover-overlay'
     mockThumbnailClickAction.value = 'reader'
+    mockBookDetailsButtonAction.value = 'details'
     mockFetchAuthors.mockResolvedValue({
       items: [{ id: 7, name: 'Frank Herbert', sortName: null, bookCount: 1, lastAddedAt: '2024-01-01T00:00:00Z' }],
       total: 1,
@@ -419,6 +422,47 @@ describe('BookCoverCard', () => {
 
       expect(mockRouterPush).toHaveBeenCalledWith(expect.objectContaining({ name: 'reader', params: { bookId: 44, fileId: 12 } }))
       expect(mockRouterPush).not.toHaveBeenCalledWith({ name: 'book-detail', params: { bookId: 44 } })
+    })
+  })
+
+  describe('Book Details button destination', () => {
+    it('opens the details page from the Book Details button by default', async () => {
+      setTouchMode(false)
+      mockThumbnailClickAction.value = 'details'
+      const book = makeBook({ id: 45, files: [makeFile({ id: 13, format: 'epub', role: 'primary' })] })
+      const wrapper = mountCard({ book })
+
+      const button = wrapper.find('[data-testid="grid-card-primary-action"]')
+      expect(button.attributes('aria-label')).toBe('Book Details')
+      await button.trigger('click')
+
+      expect(mockRouterPush).toHaveBeenCalledWith({ name: 'book-detail', params: { bookId: 45 } })
+    })
+
+    it('opens Edit Metadata from the Book Details button when that is the chosen destination', async () => {
+      setTouchMode(false)
+      mockThumbnailClickAction.value = 'details'
+      mockBookDetailsButtonAction.value = 'edit-metadata'
+      const book = makeBook({ id: 46, files: [makeFile({ id: 14, format: 'epub', role: 'primary' })] })
+      const wrapper = mountCard({ book })
+
+      const button = wrapper.find('[data-testid="grid-card-primary-action"]')
+      expect(button.attributes('aria-label')).toBe('Edit Metadata')
+      await button.trigger('click')
+
+      expect(mockRouterPush).toHaveBeenCalledWith({ name: 'book-detail', params: { bookId: 46 }, query: { tab: 'edit' } })
+    })
+
+    it('keeps the card click on the details page when the button edits metadata', async () => {
+      setTouchMode(false)
+      mockThumbnailClickAction.value = 'details'
+      mockBookDetailsButtonAction.value = 'edit-metadata'
+      const book = makeBook({ id: 47, files: [makeFile({ id: 15, format: 'epub', role: 'primary' })] })
+      const wrapper = mountCard({ book })
+
+      await wrapper.find('.group').trigger('click')
+
+      expect(mockRouterPush).toHaveBeenCalledWith({ name: 'book-detail', params: { bookId: 47 } })
     })
   })
 

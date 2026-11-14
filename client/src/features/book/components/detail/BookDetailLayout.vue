@@ -18,7 +18,9 @@ const tintVars = computed(() => coverTintVars(props.coverTint))
 </script>
 
 <template>
+  <!-- A page frame, so box depth and outlines reach the cards inside it as well as the frame (interface-tweaks.css). -->
   <div
+    data-box-frame
     :class="[
       'flex flex-col h-full overflow-hidden rounded-lg border border-border/70 bg-card/60 shadow-sm',
       coverTint ? 'book-detail-cover-tint' : '',

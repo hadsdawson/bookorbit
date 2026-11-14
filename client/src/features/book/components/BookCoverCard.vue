@@ -148,8 +148,18 @@ async function handleRefreshMetadata() {
 const { hasPermission } = usePermissions()
 const { hasLibraryPermission } = useLibraryPermissions()
 const canEditMetadata = computed(() => hasLibraryPermission('library_edit_metadata', props.book?.libraryId, 'editor'))
-const { cardOverlays, formatBadgeStyle, bookCoverDisplayMode, gridCardPrimaryLabel, gridCardSecondaryLabel, cardInfoMode, thumbnailClickAction } =
-  useDisplaySettings()
+const {
+  cardOverlays,
+  formatBadgeStyle,
+  bookCoverDisplayMode,
+  gridCardPrimaryLabel,
+  gridCardSecondaryLabel,
+  cardInfoMode,
+  thumbnailClickAction,
+  bookDetailsButtonAction,
+} = useDisplaySettings()
+/** Fork. The Book Details button can go straight to Edit Metadata instead, for someone allowed to edit. */
+const detailsButtonEditsMetadata = computed(() => bookDetailsButtonAction.value === 'edit-metadata' && canEditMetadata.value)
 const injectedCoverAspectRatio = inject(COVER_ASPECT_RATIO_KEY, ref(DEFAULT_COVER_ASPECT_RATIO))
 const effectiveCoverAspectRatio = computed<CoverAspectRatio>(
   () => props.coverAspectRatio ?? mediaView.value?.coverAspectRatio ?? props.book.coverAspectRatio ?? injectedCoverAspectRatio.value,
@@ -238,6 +248,16 @@ function openBookDetails() {
   void router.push({ name: 'book-detail', params: { bookId: props.book.id } })
 }
 
+function openEditMetadata() {
+  void router.push({ name: 'book-detail', params: { bookId: props.book.id }, query: { tab: 'edit' } })
+}
+
+/** The Book Details button: the details page, or Edit Metadata when that is the chosen destination. */
+function openDetailsButtonTarget() {
+  if (detailsButtonEditsMetadata.value) openEditMetadata()
+  else openBookDetails()
+}
+
 function openSeriesDetails() {
   if (props.book.seriesId == null) return
   void router.push({ name: 'series-detail', params: { seriesId: props.book.seriesId }, query: { from: route.fullPath } })
@@ -294,7 +314,7 @@ function handleSecondaryLabelClick(event: MouseEvent) {
 const isPrimaryClickAvailable = computed(() => thumbnailClickAction.value === 'details' || (primaryFile.value != null && !isMissing.value))
 const showPrimaryOverlayAction = computed(() => thumbnailClickAction.value === 'details' || (primaryFile.value != null && !isMissing.value))
 const primaryOverlayActionIcon = computed(() => {
-  if (thumbnailClickAction.value === 'details') return BookText
+  if (thumbnailClickAction.value === 'details') return detailsButtonEditsMetadata.value ? Pencil : BookText
   return isAudiobook.value ? Play : BookOpen
 })
 const primaryOverlayActionIconClass = computed(() => (thumbnailClickAction.value !== 'details' && isAudiobook.value ? 'ml-[2cqi]' : ''))
@@ -305,11 +325,14 @@ const readActionLabel = computed(() => {
   }
   return hasProgress.value ? t('book.actions.continueReading') : t('book.actions.startReading')
 })
-const primaryOverlayActionLabel = computed(() => (thumbnailClickAction.value === 'details' ? t('book.actions.bookDetails') : readActionLabel.value))
+const primaryOverlayActionLabel = computed(() => {
+  if (thumbnailClickAction.value !== 'details') return readActionLabel.value
+  return detailsButtonEditsMetadata.value ? t('book.actions.editMetadata') : t('book.actions.bookDetails')
+})
 
 function handlePrimaryOverlayAction() {
   if (thumbnailClickAction.value === 'details') {
-    openBookDetails()
+    openDetailsButtonTarget()
     return
   }
 

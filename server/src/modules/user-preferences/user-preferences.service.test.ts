@@ -95,6 +95,7 @@ const validDisplayPreferences: DisplayPreferences = {
   gridCardSecondaryLabel: 'hidden',
   cardInfoMode: 'hover-overlay',
   thumbnailClickAction: 'reader',
+  bookDetailsButtonAction: 'details',
   placeholderCoverStyle: 'bauhaus',
 };
 
@@ -536,6 +537,16 @@ describe('UserPreferencesService', () => {
     await expect(
       service.upsertDisplayPreferences(11, { ...validDisplayPreferences, placeholderCoverStyle: 'lattice' } as unknown as Record<string, unknown>),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  it('upsertDisplayPreferences defaults bookDetailsButtonAction to details and accepts edit-metadata', async () => {
+    const { bookDetailsButtonAction, ...withoutAction } = validDisplayPreferences;
+    void bookDetailsButtonAction;
+    await service.upsertDisplayPreferences(11, withoutAction as unknown as Record<string, unknown>);
+    expect(repo.upsert).toHaveBeenCalledWith(11, 'display', expect.objectContaining({ bookDetailsButtonAction: 'details' }));
+
+    await service.upsertDisplayPreferences(11, { ...validDisplayPreferences, bookDetailsButtonAction: 'edit-metadata' } as unknown as Record<string, unknown>);
+    expect(repo.upsert).toHaveBeenLastCalledWith(11, 'display', expect.objectContaining({ bookDetailsButtonAction: 'edit-metadata' }));
   });
 
   it('upsertDisplayPreferences rejects invalid thumbnailClickAction values', async () => {

@@ -29,6 +29,11 @@
   var style = readStoredValue('style', 'nostalgia')
   var surfacePalette = readStoredValue('surfacePalette', 'steel')
   var colorTheme = readStoredValue('colorTheme', 'none')
+  // Fork. Mirrors reconcileStyleAndColorTheme(..., 'colorTheme'): a theme belongs to the Solid or Ombre style.
+  var themeStyle = colorTheme === 'none' ? null : colorTheme.indexOf('ombre-') === 0 ? 'ombre' : 'solid'
+  if (themeStyle) style = themeStyle
+  else if (style === 'solid') colorTheme = 'velvet-night'
+  else if (style === 'ombre') colorTheme = 'ombre-sunset-strip'
   var rawReach = localStorage.getItem('glowReach')
   var storedReach = rawReach === null ? 50 : Number(rawReach)
   var glowReach = isFinite(storedReach) ? Math.min(200, Math.max(0, storedReach)) : 50

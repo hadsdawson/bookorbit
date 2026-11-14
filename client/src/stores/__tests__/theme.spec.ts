@@ -268,6 +268,46 @@ describe('useThemeStore', () => {
       expect(localStorage.getItem('colorTheme')).toBe('"cotton-candy"')
     })
 
+    it('moves to the Solid or Ombre style when one of its themes is picked', () => {
+      window.history.replaceState(null, '', '/')
+      setActivePinia(createPinia())
+      const store = useThemeStore()
+
+      store.setColorTheme('cotton-candy')
+      expect(store.style).toBe('solid')
+      expect(document.documentElement.getAttribute('data-style')).toBe('solid')
+
+      store.setColorTheme('ombre-unicorn')
+      expect(store.style).toBe('ombre')
+      expect(document.documentElement.getAttribute('data-color-theme')).toBe('ombre-unicorn')
+    })
+
+    it('brings a theme along with Solid and Ombre and clears it for BookOrbit and Nostalgia', () => {
+      window.history.replaceState(null, '', '/')
+      setActivePinia(createPinia())
+      const store = useThemeStore()
+
+      store.setStyle('solid')
+      expect(store.colorTheme).toBe('velvet-night')
+      store.setColorTheme('noir-red')
+      store.setStyle('ombre')
+      expect(store.colorTheme).toBe('ombre-sunset-strip')
+      store.setStyle('nostalgia')
+      expect(store.colorTheme).toBe('none')
+      expect(document.documentElement.getAttribute('data-color-theme')).toBe('none')
+    })
+
+    it('moves a theme saved beside Nostalgia to its own style on load', () => {
+      window.history.replaceState(null, '', '/')
+      localStorage.setItem('style', '"nostalgia"')
+      localStorage.setItem('colorTheme', '"ombre-dragonfruit"')
+      setActivePinia(createPinia())
+      const store = useThemeStore()
+
+      expect(store.style).toBe('ombre')
+      expect(store.colorTheme).toBe('ombre-dragonfruit')
+    })
+
     it('paints box, font and text size choices and keeps the default size untouched', async () => {
       window.history.replaceState(null, '', '/')
       setActivePinia(createPinia())
@@ -399,7 +439,14 @@ describe('useThemeStore', () => {
       expect(root.style.getPropertyValue('--shell-surface-opacity')).toBe('100%')
       expect(store.brightness).toBe(80)
       expect(store.surfaceOpacity).toBe(85)
-      expect(store.appearanceControls).toEqual({ surfacePalette: true, background: false, surfaceOpacity: false, brightness: false })
+      expect(store.appearanceControls).toEqual({
+        surfacePalette: true,
+        colorThemes: null,
+        accent: true,
+        background: false,
+        surfaceOpacity: false,
+        brightness: false,
+      })
 
       const pinnedKey = store.appearanceKey
       store.setBrightness(20)

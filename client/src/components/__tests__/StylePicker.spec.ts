@@ -24,8 +24,8 @@ describe('StylePicker', () => {
     const wrapper = mount(StylePicker)
     const buttons = wrapper.findAll('button')
 
-    expect(buttons.map((button) => button.text())).toEqual(['BookOrbit', 'Nostalgia'])
-    expect(buttons.map((button) => button.attributes('aria-pressed'))).toEqual(['true', 'false'])
+    expect(buttons.map((button) => button.text())).toEqual(['BookOrbit', 'Nostalgia', 'Solid', 'Ombre'])
+    expect(buttons.map((button) => button.attributes('aria-pressed'))).toEqual(['true', 'false', 'false', 'false'])
   })
 
   it('selects a style', async () => {
