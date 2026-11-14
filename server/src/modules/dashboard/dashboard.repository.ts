@@ -18,8 +18,10 @@ export interface ScrollerSelectionOptions {
 }
 type RandomCandidateRow = { sampleIndex: number; id: number };
 const AUDIO_FORMATS = BOOK_FORMATS.filter(isAudioFormat);
+// Fork: want_to_read too, so a book opened once and set back to Want to read leaves Continue Reading.
 const CONTINUE_SCROLLER_EXCLUDED_READ_STATUSES = [
   'unread',
+  'want_to_read',
   'read',
   'skimmed',
   'abandoned',
