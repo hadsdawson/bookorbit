@@ -51,6 +51,8 @@ export function formatSeriesIndex(value: SeriesIndex | null): string | null {
   const parsed = parseSeriesIndex(value);
   if (parsed == null) return null;
   const [whole, fraction] = parsed.split(".");
-  const padded = whole.padStart(2, "0");
+  // Fork: a whole part that already starts with a zero ("0.5", "05") is not padded again, so book 0.5 is
+  // "0.5" rather than "00.5".
+  const padded = whole.startsWith("0") ? whole : whole.padStart(2, "0");
   return fraction === undefined ? padded : `${padded}.${fraction}`;
 }

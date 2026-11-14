@@ -9,7 +9,7 @@ describe('formatSeriesIndex', () => {
   });
 
   it('formats whole numbers with zero-padding', () => {
-    expect(formatSeriesIndex('0')).toBe('00');
+    expect(formatSeriesIndex('0')).toBe('0');
     expect(formatSeriesIndex('1')).toBe('01');
     expect(formatSeriesIndex('5')).toBe('05');
     expect(formatSeriesIndex('12')).toBe('12');
@@ -24,6 +24,13 @@ describe('formatSeriesIndex', () => {
     expect(formatSeriesIndex('5.09')).toBe('05.09');
     expect(formatSeriesIndex('5.10')).toBe('05.10');
     expect(formatSeriesIndex('5.11')).toBe('05.11');
+  });
+
+  it('does not pad a whole part that already starts with a zero', () => {
+    expect(formatSeriesIndex('0.5')).toBe('0.5');
+    expect(formatSeriesIndex('0.25')).toBe('0.25');
+    expect(formatSeriesIndex('05')).toBe('05');
+    expect(formatSeriesIndex('05.5')).toBe('05.5');
   });
 
   it('formats legacy numeric values and rejects malformed runtime values', () => {
