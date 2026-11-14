@@ -187,6 +187,22 @@ describe('EditMetadataTab cover tiles', () => {
     wrapper.unmount()
   })
 
+  it('opens the score breakdown from the score, as on the details page', async () => {
+    const wrapper = mountTab(makeBook({ metadataScore: 98, title: 'Dune' }))
+    document.body.append(wrapper.element)
+    await flushPromises()
+
+    const score = wrapper.get('[data-testid="edit-metadata-score"]')
+    await score.trigger('click')
+    await flushPromises()
+
+    expect(score.attributes('aria-expanded')).toBe('true')
+    const popover = document.querySelector('[data-slot="popover-content"]')!
+    expect(popover.textContent).toContain('book.detail.details.metadataScore')
+    expect(vi.mocked(api).mock.calls.some(([url]) => String(url).includes('metadata-score'))).toBe(true)
+    wrapper.unmount()
+  })
+
   it('enables Save when the only change is an unsaved cover', async () => {
     const wrapper = mountTab(makeBook())
     await flushPromises()
