@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { isPositiveSeriesIndex, type MetadataScoreField, type MetadataScoreWeights } from '@bookorbit/types';
+import { hasRealAudiobookChapters, isPositiveSeriesIndex, type MetadataScoreField, type MetadataScoreWeights } from '@bookorbit/types';
 
 export type ScoreData = {
   title: string | null;
@@ -26,10 +26,20 @@ export type ScoreData = {
   authorCount: number;
   genreCount: number;
   tagCount: number;
+  /** Fork. The stored audiobook chapter list's length, and how many of its titles are bare track numbers. */
+  chapterCount: number;
+  numberedChapterCount: number;
+  /** Fork. Whether the book has an M4B file; audiobook chapters are only scored when it does. */
+  hasM4b: boolean;
 };
 
-type ScoreRuleKind = 'string' | 'positive-number' | 'count' | 'series-index';
-type ScoreRule = { kind: ScoreRuleKind; value: (data: ScoreData) => string | number | null };
+type ScoreRuleKind = 'string' | 'positive-number' | 'count' | 'series-index' | 'flag';
+type ScoreRule = {
+  kind: ScoreRuleKind;
+  value: (data: ScoreData) => string | number | boolean | null;
+  /** Fork. A field that does not apply to a book is left out of its score, denominator included. */
+  applies?: (data: ScoreData) => boolean;
+};
 
 const SCORE_RULES: Record<MetadataScoreField, ScoreRule> = {
   title: { kind: 'string', value: (data) => data.title },
@@ -56,6 +66,11 @@ const SCORE_RULES: Record<MetadataScoreField, ScoreRule> = {
   itunesId: { kind: 'string', value: (data) => data.itunesId },
   koboId: { kind: 'string', value: (data) => data.koboId },
   aladinId: { kind: 'string', value: (data) => data.aladinId },
+  audiobookChapters: {
+    kind: 'flag',
+    value: (data) => hasRealAudiobookChapters(data.chapterCount, data.numberedChapterCount),
+    applies: (data) => data.hasM4b,
+  },
 };
 
 @Injectable()
@@ -67,9 +82,11 @@ export class MetadataScoreScorer {
     for (const [field, rawWeight] of Object.entries(weights) as [MetadataScoreField, number][]) {
       const weight = Number(rawWeight);
       if (!Number.isFinite(weight) || weight <= 0) continue;
+      const rule = SCORE_RULES[field];
+      if (!rule || (rule.applies && !rule.applies(data))) continue;
       total += weight;
 
-      if (this.hasValue(SCORE_RULES[field], data)) {
+      if (this.hasValue(rule, data)) {
         earned += weight;
       }
     }
@@ -89,6 +106,8 @@ export class MetadataScoreScorer {
         return typeof raw === 'number' && raw > 0;
       case 'series-index':
         return typeof raw === 'string' && isPositiveSeriesIndex(raw);
+      case 'flag':
+        return raw === true;
     }
   }
 }

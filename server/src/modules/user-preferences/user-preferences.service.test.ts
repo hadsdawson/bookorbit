@@ -545,7 +545,10 @@ describe('UserPreferencesService', () => {
     await service.upsertDisplayPreferences(11, withoutAction as unknown as Record<string, unknown>);
     expect(repo.upsert).toHaveBeenCalledWith(11, 'display', expect.objectContaining({ bookDetailsButtonAction: 'details' }));
 
-    await service.upsertDisplayPreferences(11, { ...validDisplayPreferences, bookDetailsButtonAction: 'edit-metadata' } as unknown as Record<string, unknown>);
+    await service.upsertDisplayPreferences(11, { ...validDisplayPreferences, bookDetailsButtonAction: 'edit-metadata' } as unknown as Record<
+      string,
+      unknown
+    >);
     expect(repo.upsert).toHaveBeenLastCalledWith(11, 'display', expect.objectContaining({ bookDetailsButtonAction: 'edit-metadata' }));
   });
 

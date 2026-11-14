@@ -503,6 +503,14 @@ export class ScannerService implements OnApplicationBootstrap {
     });
   }
 
+  /**
+   * Fork. Shows books created outside a scan (filed from the Book Dock) in open library views, the same way a scan
+   * shows the books it finds, so the library does not need a refresh.
+   */
+  announceBooksAdded(libraryId: number, bookIds: readonly number[]): void {
+    for (const bookId of bookIds) this.bufferBookForEmit(libraryId, bookId);
+  }
+
   private bufferBookForEmit(libraryId: number, bookId: number): void {
     let ids = this.bookEmitBuffer.get(libraryId);
     if (!ids) {

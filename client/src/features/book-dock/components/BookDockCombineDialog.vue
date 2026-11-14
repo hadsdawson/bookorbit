@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Combine, Loader2, X } from '@lucide/vue'
+import { Combine, ExternalLink, Loader2, X } from '@lucide/vue'
+import { useRouter } from 'vue-router'
 import { DEFAULT_FORMAT_PRIORITY, pickByFormatPriority, type BookDockCombineResult, type BookDockFile } from '@bookorbit/types'
 import { api } from '@/lib/api'
 import { useBookDestination } from '@/features/library/composables/useBookDestination'
@@ -98,6 +99,13 @@ function handleClose() {
   if (result.value) emit('combined')
   else emit('close')
 }
+
+const router = useRouter()
+
+function goToBook(bookId: number) {
+  void router.push({ name: 'book-detail', params: { bookId } })
+  handleClose()
+}
 </script>
 
 <template>
@@ -181,13 +189,25 @@ function handleClose() {
 
         <div v-else class="px-5 py-4 space-y-4">
           <div class="rounded-lg p-3" :class="result.failed === 0 ? 'bg-emerald-500/10' : 'bg-amber-500/10'">
-            <p class="text-sm font-medium">
-              {{
-                result.failed === 0
-                  ? t('bookDock.combine.done', { count: result.succeeded })
-                  : t('bookDock.combine.partial', { done: result.succeeded, total: result.total })
-              }}
-            </p>
+            <div class="flex items-center gap-2">
+              <p class="min-w-0 flex-1 text-sm font-medium">
+                {{
+                  result.failed === 0
+                    ? t('bookDock.combine.done', { count: result.succeeded })
+                    : t('bookDock.combine.partial', { done: result.succeeded, total: result.total })
+                }}
+              </p>
+              <!-- Fork. Opens the book the files were filed into, like the View link after filing books away. -->
+              <button
+                v-if="result.bookId"
+                type="button"
+                class="flex shrink-0 items-center gap-1 text-xs text-primary hover:underline"
+                data-testid="book-dock-combine-view"
+                @click="goToBook(result.bookId)"
+              >
+                {{ t('bookDock.finalizeDialog.view') }} <ExternalLink class="size-3" aria-hidden="true" />
+              </button>
+            </div>
             <ul v-if="result.failed > 0" class="mt-1 space-y-0.5 text-xs text-muted-foreground">
               <li v-for="item in failures" :key="item.fileId">{{ item.fileName }}: {{ item.message }}</li>
             </ul>

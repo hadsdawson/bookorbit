@@ -1589,7 +1589,8 @@
           "count": "Counts when at least one is set",
           "cover": "Counts when a cover image is stored",
           "providerId": "Counts when the ID is stored",
-          "seriesIndex": "Counts when above zero, so volume 0 never counts"
+          "seriesIndex": "Counts when above zero, so volume 0 never counts",
+          "audiobookChapters": "Counts only for books with an M4B file, when they have real chapters rather than none or bare track numbers"
         },
         "rail": {
           "title": "Where your books land",
@@ -1928,7 +1929,8 @@
         "openLibraryId": "Open Library ID",
         "itunesId": "iTunes ID",
         "koboId": "Kobo ID",
-        "aladinId": "Aladin ID"
+        "aladinId": "Aladin ID",
+        "audiobookChapters": "Audiobook Chapters"
       },
       "mergeStrategy": {
         "fillMissing": {
@@ -9638,10 +9640,7 @@
       "genres": "Genres",
       "genresCommaSeparated": "Genres (comma-separated)",
       "description": "Description",
-      "tagsCommaSeparated": "Tags (comma-separated)",
-      "tagsFromGenres": "Add from genres:",
-      "addTag": "Add {tag} as a tag",
-      "addAllGenres": "Add all",
+      "tags": "Tags",
       "genresRestricted": "Only genres from the allowed list in settings can be added."
     },
     "upload": {

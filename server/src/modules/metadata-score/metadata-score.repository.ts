@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { asc, count, eq, gt, inArray } from 'drizzle-orm';
+import { asc, count, eq, gt, inArray, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { DB } from '../../db';
@@ -31,6 +31,10 @@ const METADATA_SCORE_BASE_SELECT = {
   itunesId: bookMetadata.itunesId,
   koboId: bookMetadata.koboId,
   aladinId: bookMetadata.aladinId,
+  // Fork: audiobook chapters, scored only for a book with an M4B file.
+  chapterCount: sql<number>`coalesce(${bookMetadata.chapterCount}, 0)`.mapWith(Number),
+  numberedChapterCount: sql<number>`coalesce(${bookMetadata.numberedChapterCount}, 0)`.mapWith(Number),
+  hasM4b: sql<boolean>`exists (select 1 from book_files f where f.book_id = ${bookMetadata.bookId} and lower(f.format) = 'm4b')`.mapWith(Boolean),
 } as const;
 
 export type ScorePage = {

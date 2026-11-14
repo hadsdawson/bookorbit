@@ -153,6 +153,9 @@ function actionForbidden(errorCode: BookRequestActionErrorCode, message: string,
 }
 
 /** What one medium of a submission decides for itself; the work is shared. */
+/** Fork. The work fields one half of a pair may set for itself. */
+export type PairHalfWork = Partial<Pick<CreateBookRequestPairDto, 'isbn13' | 'publishedDate' | 'publishedYear' | 'providerKey' | 'providerId'>>;
+
 interface SubmitHalf {
   mediaKind: BookRequestMediaKind;
   targetLibraryId: number | null;
@@ -357,7 +360,12 @@ export class BookRequestService {
    * adds is the link between the halves, one announcement for the approvers rather than two, and
    * the book the second half should join when the first is already on the shelf.
    */
-  async submitPair(dto: CreateBookRequestPairDto, actor: RequestUser): Promise<BookRequestPairSubmitResult> {
+  async submitPair(
+    dto: CreateBookRequestPairDto,
+    actor: RequestUser,
+    /** Fork. Work details that differ by medium (each format's own date, ISBN or provider), for callers inside the server. */
+    halfWork: Partial<Record<BookRequestMediaKind, PairHalfWork>> = {},
+  ): Promise<BookRequestPairSubmitResult> {
     await this.assertFormatAllowed('pair');
     const subject = await this.attribution.resolveSubject(actor, dto.userId);
     const selfServe = this.resolveSelfServe(dto, subject);
@@ -378,7 +386,7 @@ export class BookRequestService {
       // Sequential on purpose: the second half's ownership probe is the same query as the first's,
       // and a refusal on the ebook should not have spent the audiobook's lookups.
       const plans: SubmitPlan[] = [];
-      for (const half of halves) plans.push(await this.planSubmission(dto, half, subject, actor, selfServe));
+      for (const half of halves) plans.push(await this.planSubmission({ ...dto, ...halfWork[half.mediaKind] }, half, subject, actor, selfServe));
       await this.pointAtOwnedCompanion(plans);
 
       const creates = plans.filter((plan): plan is CreatePlan => plan.kind === 'create');

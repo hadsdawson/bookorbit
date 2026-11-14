@@ -30,7 +30,7 @@ import { BookRequestService } from '../book-request/book-request.service';
 import { LibraryService } from '../library/library.service';
 import { NewReleasesRepository, type FollowInput, type ReleaseFollowRow } from './new-releases.repository';
 import { mergeReleases, nameKey, type SourceRelease } from './release-merge';
-import { formatDate, formatsToRequest, requestFor } from './release-request';
+import { formatDate, formatsToRequest, pairRequestFor, requestFor } from './release-request';
 import { ReleaseSourcesService, type ReleaseTarget } from './release-sources.service';
 
 const EVENT = 'new_releases.check';
@@ -314,6 +314,21 @@ export class NewReleasesService implements OnApplicationBootstrap {
     release: NonNullable<Awaited<ReturnType<NewReleasesRepository['findReleaseById']>>>,
     formats: NewReleaseRequestFormat[],
   ): Promise<NewReleaseRequestFormat[]> {
+    // Fork. Both formats go in as one paired request, as the request form files "both", so the two halves
+    // show as one request and the second lands beside the first. If the pair is refused, each format is
+    // tried on its own below, so a refusal of one still files the other.
+    if (formats.includes('ebook') && formats.includes('audiobook')) {
+      try {
+        const pair = pairRequestFor(release);
+        await this.bookRequests.submitPair(pair.work, user, pair.halves);
+        await this.repository.setRequested(user.id, release.id);
+        return ['ebook', 'audiobook'];
+      } catch (error) {
+        this.logger.warn(
+          `[new_releases.request] [fail] userId=${user.id} releaseId=${release.id} format=pair errorClass=${error instanceof Error ? error.name : 'UnknownError'} error="${sanitizeLogValue(error instanceof Error ? error.message : String(error))}" - could not file a paired request, filing each format`,
+        );
+      }
+    }
     const requested: NewReleaseRequestFormat[] = [];
     for (const format of formats) {
       // One at a time rather than as a pair, so a refusal of one format still files the other.

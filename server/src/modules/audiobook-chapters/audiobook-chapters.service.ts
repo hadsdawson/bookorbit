@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import type { AudiobookChapter } from '@bookorbit/types';
 
 import {
@@ -14,6 +14,7 @@ import {
 } from '../../common/utils/audiobook-chapters.utils';
 import { FileLockService, bookOperationLockKey } from '../../common/services/file-lock.service';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
+import { MetadataScoreService } from '../metadata-score/metadata-score.service';
 import { AudiobookChaptersRepository, type ChapterMutationOptions } from './audiobook-chapters.repository';
 
 type TrackRow = Omit<Awaited<ReturnType<AudiobookChaptersRepository['findTrackRows']>>[number], 'fileHash' | 'chapterWriteProvenance'>;
@@ -25,7 +26,18 @@ export class AudiobookChaptersService {
   constructor(
     private readonly repo: AudiobookChaptersRepository,
     private readonly locks: FileLockService,
+    @Optional() private readonly scores?: MetadataScoreService,
   ) {}
+
+  /** Fork. A book's confidence score can count its audiobook chapters, so it is worked out again when they change. */
+  private rescore(bookId: number): void {
+    if (!this.scores) return;
+    this.scores.calculateAndSave(bookId).catch((error: unknown) => {
+      this.logger.warn(
+        `[audiobook_chapters.rescore] [fail] bookId=${bookId} errorClass=${error instanceof Error ? error.name : 'UnknownError'} error="${sanitizeLogValue(error instanceof Error ? error.message : String(error))}" - could not refresh the confidence score`,
+      );
+    });
+  }
 
   /**
    * The manifest revision clients are handed for this book right now, and the positions key it
@@ -114,6 +126,7 @@ export class AudiobookChaptersService {
         [],
         { requireUnlocked: true },
       );
+      this.rescore(bookId);
       return true;
     });
   }
@@ -149,6 +162,7 @@ export class AudiobookChaptersService {
 
     await this.recordCurrentRevision(bookId);
     await this.repo.writeChaptersWithVersions(bookId, { chapters: next, ...chapterProvenance(next, source, userId) }, versions, options);
+    this.rescore(bookId);
   }
 
   /** The editor's "revert to automatic": whatever the files carry now, or nothing for the per-track list. */
@@ -165,6 +179,7 @@ export class AudiobookChaptersService {
 
       await this.recordCurrentRevision(bookId);
       await this.repo.writeChaptersWithVersions(bookId, { chapters: next, ...chapterProvenance(next, 'embedded') }, versions, options);
+      this.rescore(bookId);
     });
   }
 }

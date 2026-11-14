@@ -3,6 +3,7 @@ import { defineComponent, reactive, ref } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BookDockFile, Library, MetadataCandidate } from '@bookorbit/types'
 import { i18n } from '@/i18n'
+import ChipInput from '@/components/ui/ChipInput.vue'
 import BookDockFileSheet from '../BookDockFileSheet.vue'
 
 type LibraryOption = Pick<Library, 'id' | 'name'> & {
@@ -210,28 +211,20 @@ describe('BookDockFileSheet', () => {
     }
   })
 
-  it('offers genres as tags, adds one or all of them, and autosaves the tags', async () => {
+  it('keeps tags apart from genres and autosaves a typed tag', async () => {
     vi.useFakeTimers()
     try {
-      const wrapper = mountSheet(makeFile({ embeddedMetadata: { genres: ['Fantasy', 'Romance', 'Fae'], tags: ['Owned'] } }))
-      const tagsInput = () =>
-        wrapper
-          .findAll('label')
-          .find((item) => item.text().includes('Tags'))!
-          .get<HTMLInputElement>('input')
-      const chip = (name: string) => wrapper.findAll('button').find((button) => button.text().trim() === name)
+      const wrapper = mountSheet(makeFile({ embeddedMetadata: { genres: ['Fantasy', 'Romance'], tags: ['Owned'] } }))
+      const tags = wrapper.findAllComponents(ChipInput).find((input) => input.props('inputId') === 'book-dock-tags')!
 
-      expect(tagsInput().element.value).toBe('Owned')
-      await chip('Romance')!.trigger('click')
-      expect(tagsInput().element.value).toBe('Owned, Romance')
-      expect(chip('Romance')).toBeUndefined()
+      expect(tags.props('modelValue')).toEqual(['Owned'])
+      expect(tags.props('normalize')).toBeUndefined()
+      expect(wrapper.text()).not.toContain('Add from genres')
 
-      await chip('Add all')!.trigger('click')
-      expect(tagsInput().element.value).toBe('Owned, Romance, Fantasy, Fae')
-      expect(chip('Add all')).toBeUndefined()
+      tags.vm.$emit('update:modelValue', ['Owned', 'Book Club'])
 
       await vi.advanceTimersByTimeAsync(1000)
-      expect(mocks.saveMetadata).toHaveBeenLastCalledWith(1, expect.objectContaining({ tags: ['Owned', 'Romance', 'Fantasy', 'Fae'] }))
+      expect(mocks.saveMetadata).toHaveBeenLastCalledWith(1, expect.objectContaining({ tags: ['Owned', 'Book Club'] }))
     } finally {
       vi.useRealTimers()
     }

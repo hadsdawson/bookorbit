@@ -10,6 +10,8 @@ const libraryList = ref([
 ])
 
 vi.mock('@/lib/api', () => ({ api: (...args: unknown[]) => apiMock(...args) }))
+const routerPush = vi.fn<(to: unknown) => Promise<void>>().mockResolvedValue(undefined)
+vi.mock('vue-router', () => ({ useRouter: () => ({ push: routerPush }) }))
 vi.mock('@/features/library/composables/useBookDestination', () => ({
   useBookDestination: () => ({
     libraries: libraryList,
@@ -65,6 +67,17 @@ describe('BookDockCombineDialog', () => {
     expect(apiMock).toHaveBeenCalledWith('/api/v1/book-dock/combine', expect.objectContaining({ method: 'POST' }))
     expect(sentBody()).toEqual({ fileIds: [1, 2], primaryFileId: 2, defaultLibraryId: 1, defaultFolderId: 2 })
     expect(wrapper.text()).toContain('All 2 files filed as one book')
+  })
+
+  it('links to the merged book once the files are filed', async () => {
+    const wrapper = mountDialog([file(1, 'Book A.m4b'), file(2, 'Book A.epub')])
+    await combineButton(wrapper).trigger('click')
+    await flushPromises()
+
+    await wrapper.get('[data-testid="book-dock-combine-view"]').trigger('click')
+
+    expect(routerPush).toHaveBeenCalledWith({ name: 'book-detail', params: { bookId: 9 } })
+    expect(wrapper.emitted('combined')).toHaveLength(1)
   })
 
   it('sends the primary file the person picked', async () => {
