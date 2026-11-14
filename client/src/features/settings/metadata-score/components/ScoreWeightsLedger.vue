@@ -125,6 +125,7 @@ function clearQuery() {
             :saved-weight="saved[field]"
             :max-share="maxShare"
             :disabled="disabled"
+            compact
             class="md:px-6"
             @adjust="onAdjust"
             @set="onSet"
