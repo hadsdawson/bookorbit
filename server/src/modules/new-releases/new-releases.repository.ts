@@ -276,7 +276,22 @@ export class NewReleasesRepository {
       ownedBookId,
       lastSeenAt: new Date(),
     };
-    await this.db.insert(schema.upcomingReleases).values(values).onConflictDoUpdate({ target: schema.upcomingReleases.workKey, set: values });
+    // Only dates still to come are confirmed, so a format that has come out returns no date. Its earlier date is kept,
+    // so a released ebook keeps showing its date beside an audiobook still to come, and the book stays listed for
+    // the days after release.
+    const t = schema.upcomingReleases;
+    await this.db
+      .insert(t)
+      .values(values)
+      .onConflictDoUpdate({
+        target: t.workKey,
+        set: {
+          ...values,
+          ebookDate: sql`coalesce(excluded.ebook_date, ${t.ebookDate})`,
+          audiobookDate: sql`coalesce(excluded.audiobook_date, ${t.audiobookDate})`,
+          releaseDate: sql`coalesce(excluded.release_date, least(coalesce(excluded.ebook_date, ${t.ebookDate}), coalesce(excluded.audiobook_date, ${t.audiobookDate})))`,
+        },
+      });
   }
 
   /**

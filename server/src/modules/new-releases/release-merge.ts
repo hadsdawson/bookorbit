@@ -6,6 +6,15 @@ export type ReleaseMediaKind = 'ebook' | 'audiobook';
 /** Earlier sources win where two disagree on anything but the date. */
 export const SOURCE_PRIORITY: readonly ReleaseSourceKey[] = ['hardcover', 'audible', 'google'];
 
+/**
+ * Whose date wins for each format when sources disagree. Hardcover dates each ebook edition, while Google often gives
+ * the print date; Audible is the audiobook's own store.
+ */
+export const DATE_PRIORITY: Record<ReleaseMediaKind, readonly ReleaseSourceKey[]> = {
+  ebook: ['hardcover', 'google', 'audible'],
+  audiobook: ['audible', 'hardcover', 'google'],
+};
+
 /** One book as one source reported it. `date` is whatever the source gave, checked later. */
 export interface SourceRelease {
   source: ReleaseSourceKey;
@@ -86,10 +95,14 @@ function isParkingDate(isoDate: string): boolean {
  * The confirmed date for one format, or null.
  *
  * Only dates after `today` and within `MAX_YEARS_AHEAD` years count. A date two sources agree on is
- * confirmed. Otherwise the highest-priority source's date stands alone, unless another source gave
- * a different date or it is a 1 January or 31 December date: those wait for a second source.
+ * confirmed. Otherwise the date from the source that leads for this format (`priority`) stands, skipping
+ * 1 January and 31 December dates, which wait for a second source because unknown dates get parked there.
  */
-export function confirmedDate(reports: readonly SourceRelease[], today: string): string | null {
+export function confirmedDate(
+  reports: readonly SourceRelease[],
+  today: string,
+  priority: readonly ReleaseSourceKey[] = SOURCE_PRIORITY,
+): string | null {
   const latest = addYears(today, MAX_YEARS_AHEAD);
   const dated = reports
     .map((report) => ({ report, date: fullDate(report.date) }))
@@ -102,9 +115,12 @@ export function confirmedDate(reports: readonly SourceRelease[], today: string):
 
   const agreed = distinct.find((date) => [...bySource.values()].filter((other) => other === date).length >= 2);
   if (agreed) return agreed;
-  if (distinct.length > 1) return null;
-  const only = distinct[0]!;
-  return isParkingDate(only) ? null : only;
+  const rank = (source: ReleaseSourceKey) => {
+    const index = priority.indexOf(source);
+    return index === -1 ? priority.length : index;
+  };
+  const leading = [...bySource.entries()].sort(([a], [b]) => rank(a) - rank(b)).find(([, date]) => !isParkingDate(date));
+  return leading?.[1] ?? null;
 }
 
 function bySourcePriority(a: SourceRelease, b: SourceRelease): number {
@@ -127,10 +143,12 @@ export function mergeReleases(reports: readonly SourceRelease[], today: string):
     const ebookDate = confirmedDate(
       ordered.filter((report) => report.mediaKind === 'ebook'),
       today,
+      DATE_PRIORITY.ebook,
     );
     const audiobookDate = confirmedDate(
       ordered.filter((report) => report.mediaKind === 'audiobook'),
       today,
+      DATE_PRIORITY.audiobook,
     );
     const dates = [ebookDate, audiobookDate].filter((date): date is string => date !== null).sort();
     const seriesName = ordered.find((report) => report.seriesName)?.seriesName ?? null;
