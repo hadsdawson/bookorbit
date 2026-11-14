@@ -174,7 +174,31 @@
             "peach-fuzz": "Peach Fuzz",
             "royal-jewel": "Royal Jewel",
             "bubblegum-pop": "Bubblegum Pop",
-            "noir-red": "Noir Red"
+            "noir-red": "Noir Red",
+            "ombre-sunset-strip": "Sunset Strip",
+            "ombre-miami-vice": "Miami Vice",
+            "ombre-tropical-sorbet": "Tropical Sorbet",
+            "ombre-galaxy-grape": "Galaxy Grape",
+            "ombre-midnight-blaze": "Midnight Blaze",
+            "ombre-mermaid-lagoon": "Mermaid Lagoon",
+            "ombre-electric-lime": "Electric Lime",
+            "ombre-peach-melba": "Peach Melba",
+            "ombre-northern-lights": "Northern Lights",
+            "ombre-dragonfruit": "Dragonfruit",
+            "ombre-blue-raspberry": "Blue Raspberry",
+            "ombre-mango-tango": "Mango Tango",
+            "ombre-unicorn": "Unicorn",
+            "ombre-neon-tokyo": "Neon Tokyo",
+            "ombre-citrus-splash": "Citrus Splash",
+            "ombre-flamingo-bay": "Flamingo Bay",
+            "ombre-cosmic-candy": "Cosmic Candy",
+            "ombre-kiwi-berry": "Kiwi Berry",
+            "ombre-solar-flare": "Solar Flare",
+            "ombre-ocean-ombre": "Ocean Ombre"
+          },
+          "groups": {
+            "solid": "Solid",
+            "ombre": "Ombre"
           }
         },
         "topGlow": {

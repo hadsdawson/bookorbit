@@ -242,6 +242,452 @@
   --ct-fail-c: 0.21;
 }
 
+/* Ombre themes: the same hues and chromas as above, plus three ground hues the background fades
+   across and a second button hue. Shared rules for them are at the end. */
+[data-color-theme='ombre-sunset-strip'] {
+  --ct-surface-h: 350;
+  --ct-surface-c: 0.05;
+  --ct-primary-h: 30;
+  --ct-primary-c: 0.18;
+  --ct-primary-2-h: 350;
+  --ct-link-h: 250;
+  --ct-link-c: 0.17;
+  --ct-icon-h: 55;
+  --ct-icon-c: 0.17;
+  --ct-wait-h: 60;
+  --ct-wait-c: 0.17;
+  --ct-progress-h: 300;
+  --ct-progress-c: 0.17;
+  --ct-done-h: 160;
+  --ct-done-c: 0.16;
+  --ct-fail-h: 25;
+  --ct-fail-c: 0.2;
+  --ct-ombre-1-h: 20;
+  --ct-ombre-2-h: 350;
+  --ct-ombre-3-h: 300;
+}
+[data-color-theme='ombre-miami-vice'] {
+  --ct-surface-h: 280;
+  --ct-surface-c: 0.05;
+  --ct-primary-h: 345;
+  --ct-primary-c: 0.18;
+  --ct-primary-2-h: 200;
+  --ct-link-h: 195;
+  --ct-link-c: 0.17;
+  --ct-icon-h: 330;
+  --ct-icon-c: 0.17;
+  --ct-wait-h: 345;
+  --ct-wait-c: 0.17;
+  --ct-progress-h: 260;
+  --ct-progress-c: 0.17;
+  --ct-done-h: 175;
+  --ct-done-c: 0.16;
+  --ct-fail-h: 20;
+  --ct-fail-c: 0.2;
+  --ct-ombre-1-h: 340;
+  --ct-ombre-2-h: 280;
+  --ct-ombre-3-h: 195;
+}
+[data-color-theme='ombre-tropical-sorbet'] {
+  --ct-surface-h: 90;
+  --ct-surface-c: 0.05;
+  --ct-primary-h: 140;
+  --ct-primary-c: 0.18;
+  --ct-primary-2-h: 40;
+  --ct-link-h: 330;
+  --ct-link-c: 0.17;
+  --ct-icon-h: 90;
+  --ct-icon-c: 0.17;
+  --ct-wait-h: 80;
+  --ct-wait-c: 0.17;
+  --ct-progress-h: 350;
+  --ct-progress-c: 0.17;
+  --ct-done-h: 150;
+  --ct-done-c: 0.16;
+  --ct-fail-h: 25;
+  --ct-fail-c: 0.2;
+  --ct-ombre-1-h: 150;
+  --ct-ombre-2-h: 90;
+  --ct-ombre-3-h: 30;
+}
+[data-color-theme='ombre-galaxy-grape'] {
+  --ct-surface-h: 270;
+  --ct-surface-c: 0.05;
+  --ct-primary-h: 310;
+  --ct-primary-c: 0.18;
+  --ct-primary-2-h: 250;
+  --ct-link-h: 200;
+  --ct-link-c: 0.17;
+  --ct-icon-h: 320;
+  --ct-icon-c: 0.17;
+  --ct-wait-h: 330;
+  --ct-wait-c: 0.17;
+  --ct-progress-h: 240;
+  --ct-progress-c: 0.17;
+  --ct-done-h: 170;
+  --ct-done-c: 0.16;
+  --ct-fail-h: 15;
+  --ct-fail-c: 0.2;
+  --ct-ombre-1-h: 300;
+  --ct-ombre-2-h: 270;
+  --ct-ombre-3-h: 220;
+}
+[data-color-theme='ombre-midnight-blaze'] {
+  --ct-surface-h: 300;
+  --ct-surface-c: 0.03;
+  --ct-primary-h: 350;
+  --ct-primary-c: 0.18;
+  --ct-primary-2-h: 45;
+  --ct-link-h: 45;
+  --ct-link-c: 0.17;
+  --ct-icon-h: 330;
+  --ct-icon-c: 0.17;
+  --ct-wait-h: 60;
+  --ct-wait-c: 0.17;
+  --ct-progress-h: 300;
+  --ct-progress-c: 0.17;
+  --ct-done-h: 160;
+  --ct-done-c: 0.16;
+  --ct-fail-h: 20;
+  --ct-fail-c: 0.2;
+  --ct-ombre-1-h: 350;
+  --ct-ombre-2-h: 300;
+  --ct-ombre-3-h: 45;
+  /* Near black, with the three hues only as a glow. */
+  --ct-ombre-dark-l: 0.17;
+  --ct-ombre-dark-c: 0.09;
+}
+[data-color-theme='ombre-mermaid-lagoon'] {
+  --ct-surface-h: 165;
+  --ct-surface-c: 0.05;
+  --ct-primary-h: 185;
+  --ct-primary-c: 0.18;
+  --ct-primary-2-h: 290;
+  --ct-link-h: 320;
+  --ct-link-c: 0.17;
+  --ct-icon-h: 170;
+  --ct-icon-c: 0.17;
+  --ct-wait-h: 300;
+  --ct-wait-c: 0.17;
+  --ct-progress-h: 200;
+  --ct-progress-c: 0.17;
+  --ct-done-h: 160;
+  --ct-done-c: 0.16;
+  --ct-fail-h: 15;
+  --ct-fail-c: 0.2;
+  --ct-ombre-1-h: 195;
+  --ct-ombre-2-h: 165;
+  --ct-ombre-3-h: 280;
+}
+[data-color-theme='ombre-electric-lime'] {
+  --ct-surface-h: 170;
+  --ct-surface-c: 0.05;
+  --ct-primary-h: 125;
+  --ct-primary-c: 0.18;
+  --ct-primary-2-h: 200;
+  --ct-link-h: 300;
+  --ct-link-c: 0.17;
+  --ct-icon-h: 110;
+  --ct-icon-c: 0.17;
+  --ct-wait-h: 95;
+  --ct-wait-c: 0.17;
+  --ct-progress-h: 220;
+  --ct-progress-c: 0.17;
+  --ct-done-h: 145;
+  --ct-done-c: 0.16;
+  --ct-fail-h: 25;
+  --ct-fail-c: 0.2;
+  --ct-ombre-1-h: 130;
+  --ct-ombre-2-h: 170;
+  --ct-ombre-3-h: 220;
+}
+[data-color-theme='ombre-peach-melba'] {
+  --ct-surface-h: 15;
+  --ct-surface-c: 0.05;
+  --ct-primary-h: 35;
+  --ct-primary-c: 0.18;
+  --ct-primary-2-h: 350;
+  --ct-link-h: 280;
+  --ct-link-c: 0.17;
+  --ct-icon-h: 60;
+  --ct-icon-c: 0.17;
+  --ct-wait-h: 75;
+  --ct-wait-c: 0.17;
+  --ct-progress-h: 320;
+  --ct-progress-c: 0.17;
+  --ct-done-h: 165;
+  --ct-done-c: 0.16;
+  --ct-fail-h: 20;
+  --ct-fail-c: 0.2;
+  --ct-ombre-1-h: 45;
+  --ct-ombre-2-h: 15;
+  --ct-ombre-3-h: 340;
+}
+[data-color-theme='ombre-northern-lights'] {
+  --ct-surface-h: 230;
+  --ct-surface-c: 0.05;
+  --ct-primary-h: 150;
+  --ct-primary-c: 0.18;
+  --ct-primary-2-h: 300;
+  --ct-link-h: 190;
+  --ct-link-c: 0.17;
+  --ct-icon-h: 150;
+  --ct-icon-c: 0.17;
+  --ct-wait-h: 85;
+  --ct-wait-c: 0.17;
+  --ct-progress-h: 240;
+  --ct-progress-c: 0.17;
+  --ct-done-h: 150;
+  --ct-done-c: 0.16;
+  --ct-fail-h: 20;
+  --ct-fail-c: 0.2;
+  --ct-ombre-1-h: 160;
+  --ct-ombre-2-h: 230;
+  --ct-ombre-3-h: 300;
+}
+[data-color-theme='ombre-dragonfruit'] {
+  --ct-surface-h: 320;
+  --ct-surface-c: 0.05;
+  --ct-primary-h: 345;
+  --ct-primary-c: 0.18;
+  --ct-primary-2-h: 145;
+  --ct-link-h: 180;
+  --ct-link-c: 0.17;
+  --ct-icon-h: 350;
+  --ct-icon-c: 0.17;
+  --ct-wait-h: 25;
+  --ct-wait-c: 0.17;
+  --ct-progress-h: 300;
+  --ct-progress-c: 0.17;
+  --ct-done-h: 145;
+  --ct-done-c: 0.16;
+  --ct-fail-h: 15;
+  --ct-fail-c: 0.2;
+  --ct-ombre-1-h: 350;
+  --ct-ombre-2-h: 320;
+  --ct-ombre-3-h: 140;
+}
+[data-color-theme='ombre-blue-raspberry'] {
+  --ct-surface-h: 210;
+  --ct-surface-c: 0.05;
+  --ct-primary-h: 245;
+  --ct-primary-c: 0.18;
+  --ct-primary-2-h: 335;
+  --ct-link-h: 190;
+  --ct-link-c: 0.17;
+  --ct-icon-h: 230;
+  --ct-icon-c: 0.17;
+  --ct-wait-h: 330;
+  --ct-wait-c: 0.17;
+  --ct-progress-h: 200;
+  --ct-progress-c: 0.17;
+  --ct-done-h: 160;
+  --ct-done-c: 0.16;
+  --ct-fail-h: 20;
+  --ct-fail-c: 0.2;
+  --ct-ombre-1-h: 240;
+  --ct-ombre-2-h: 210;
+  --ct-ombre-3-h: 330;
+}
+[data-color-theme='ombre-mango-tango'] {
+  --ct-surface-h: 40;
+  --ct-surface-c: 0.05;
+  --ct-primary-h: 75;
+  --ct-primary-c: 0.18;
+  --ct-primary-2-h: 20;
+  --ct-link-h: 300;
+  --ct-link-c: 0.17;
+  --ct-icon-h: 65;
+  --ct-icon-c: 0.17;
+  --ct-wait-h: 90;
+  --ct-wait-c: 0.17;
+  --ct-progress-h: 280;
+  --ct-progress-c: 0.17;
+  --ct-done-h: 155;
+  --ct-done-c: 0.16;
+  --ct-fail-h: 25;
+  --ct-fail-c: 0.2;
+  --ct-ombre-1-h: 70;
+  --ct-ombre-2-h: 40;
+  --ct-ombre-3-h: 15;
+}
+[data-color-theme='ombre-unicorn'] {
+  --ct-surface-h: 260;
+  --ct-surface-c: 0.05;
+  --ct-primary-h: 330;
+  --ct-primary-c: 0.18;
+  --ct-primary-2-h: 190;
+  --ct-link-h: 230;
+  --ct-link-c: 0.17;
+  --ct-icon-h: 300;
+  --ct-icon-c: 0.17;
+  --ct-wait-h: 350;
+  --ct-wait-c: 0.17;
+  --ct-progress-h: 250;
+  --ct-progress-c: 0.17;
+  --ct-done-h: 165;
+  --ct-done-c: 0.16;
+  --ct-fail-h: 20;
+  --ct-fail-c: 0.2;
+  --ct-ombre-1-h: 320;
+  --ct-ombre-2-h: 260;
+  --ct-ombre-3-h: 180;
+}
+[data-color-theme='ombre-neon-tokyo'] {
+  --ct-surface-h: 290;
+  --ct-surface-c: 0.05;
+  --ct-primary-h: 340;
+  --ct-primary-c: 0.18;
+  --ct-primary-2-h: 255;
+  --ct-link-h: 190;
+  --ct-link-c: 0.17;
+  --ct-icon-h: 320;
+  --ct-icon-c: 0.17;
+  --ct-wait-h: 35;
+  --ct-wait-c: 0.17;
+  --ct-progress-h: 250;
+  --ct-progress-c: 0.17;
+  --ct-done-h: 165;
+  --ct-done-c: 0.16;
+  --ct-fail-h: 20;
+  --ct-fail-c: 0.2;
+  --ct-ombre-1-h: 330;
+  --ct-ombre-2-h: 290;
+  --ct-ombre-3-h: 250;
+}
+[data-color-theme='ombre-citrus-splash'] {
+  --ct-surface-h: 60;
+  --ct-surface-c: 0.05;
+  --ct-primary-h: 100;
+  --ct-primary-c: 0.18;
+  --ct-primary-2-h: 180;
+  --ct-link-h: 290;
+  --ct-link-c: 0.17;
+  --ct-icon-h: 85;
+  --ct-icon-c: 0.17;
+  --ct-wait-h: 70;
+  --ct-wait-c: 0.17;
+  --ct-progress-h: 200;
+  --ct-progress-c: 0.17;
+  --ct-done-h: 150;
+  --ct-done-c: 0.16;
+  --ct-fail-h: 25;
+  --ct-fail-c: 0.2;
+  --ct-ombre-1-h: 95;
+  --ct-ombre-2-h: 60;
+  --ct-ombre-3-h: 180;
+}
+[data-color-theme='ombre-flamingo-bay'] {
+  --ct-surface-h: 345;
+  --ct-surface-c: 0.05;
+  --ct-primary-h: 0;
+  --ct-primary-c: 0.18;
+  --ct-primary-2-h: 210;
+  --ct-link-h: 220;
+  --ct-link-c: 0.17;
+  --ct-icon-h: 355;
+  --ct-icon-c: 0.17;
+  --ct-wait-h: 40;
+  --ct-wait-c: 0.17;
+  --ct-progress-h: 230;
+  --ct-progress-c: 0.17;
+  --ct-done-h: 170;
+  --ct-done-c: 0.16;
+  --ct-fail-h: 20;
+  --ct-fail-c: 0.2;
+  --ct-ombre-1-h: 5;
+  --ct-ombre-2-h: 345;
+  --ct-ombre-3-h: 215;
+}
+[data-color-theme='ombre-cosmic-candy'] {
+  --ct-surface-h: 330;
+  --ct-surface-c: 0.05;
+  --ct-primary-h: 290;
+  --ct-primary-c: 0.18;
+  --ct-primary-2-h: 30;
+  --ct-link-h: 200;
+  --ct-link-c: 0.17;
+  --ct-icon-h: 285;
+  --ct-icon-c: 0.17;
+  --ct-wait-h: 55;
+  --ct-wait-c: 0.17;
+  --ct-progress-h: 265;
+  --ct-progress-c: 0.17;
+  --ct-done-h: 160;
+  --ct-done-c: 0.16;
+  --ct-fail-h: 20;
+  --ct-fail-c: 0.2;
+  --ct-ombre-1-h: 285;
+  --ct-ombre-2-h: 330;
+  --ct-ombre-3-h: 40;
+}
+[data-color-theme='ombre-kiwi-berry'] {
+  --ct-surface-h: 330;
+  --ct-surface-c: 0.05;
+  --ct-primary-h: 135;
+  --ct-primary-c: 0.18;
+  --ct-primary-2-h: 335;
+  --ct-link-h: 300;
+  --ct-link-c: 0.17;
+  --ct-icon-h: 140;
+  --ct-icon-c: 0.17;
+  --ct-wait-h: 80;
+  --ct-wait-c: 0.17;
+  --ct-progress-h: 320;
+  --ct-progress-c: 0.17;
+  --ct-done-h: 145;
+  --ct-done-c: 0.16;
+  --ct-fail-h: 15;
+  --ct-fail-c: 0.2;
+  --ct-ombre-1-h: 140;
+  --ct-ombre-2-h: 330;
+  --ct-ombre-3-h: 300;
+}
+[data-color-theme='ombre-solar-flare'] {
+  --ct-surface-h: 35;
+  --ct-surface-c: 0.05;
+  --ct-primary-h: 55;
+  --ct-primary-c: 0.18;
+  --ct-primary-2-h: 10;
+  --ct-link-h: 250;
+  --ct-link-c: 0.17;
+  --ct-icon-h: 50;
+  --ct-icon-c: 0.17;
+  --ct-wait-h: 85;
+  --ct-wait-c: 0.17;
+  --ct-progress-h: 240;
+  --ct-progress-c: 0.17;
+  --ct-done-h: 155;
+  --ct-done-c: 0.16;
+  --ct-fail-h: 25;
+  --ct-fail-c: 0.2;
+  --ct-ombre-1-h: 60;
+  --ct-ombre-2-h: 35;
+  --ct-ombre-3-h: 5;
+}
+[data-color-theme='ombre-ocean-ombre'] {
+  --ct-surface-h: 210;
+  --ct-surface-c: 0.05;
+  --ct-primary-h: 245;
+  --ct-primary-c: 0.18;
+  --ct-primary-2-h: 175;
+  --ct-link-h: 330;
+  --ct-link-c: 0.17;
+  --ct-icon-h: 215;
+  --ct-icon-c: 0.17;
+  --ct-wait-h: 330;
+  --ct-wait-c: 0.17;
+  --ct-progress-h: 215;
+  --ct-progress-c: 0.17;
+  --ct-done-h: 160;
+  --ct-done-c: 0.16;
+  --ct-fail-h: 20;
+  --ct-fail-c: 0.2;
+  --ct-ombre-1-h: 250;
+  --ct-ombre-2-h: 210;
+  --ct-ombre-3-h: 180;
+}
+
 /* Picker tiles read the same hues, so a tile shows the theme's real colours in the current mode. */
 [data-color-theme] {
   --ct-tile-ground: oklch(0.965 calc(var(--ct-surface-c) * 0.6) var(--ct-surface-h));
@@ -473,4 +919,54 @@ html[data-color-theme]:not([data-color-theme='none'])
   .rounded-full:is(.border, [class*='px-'][class*='text-xs'])[class*='bg-destructive/'][class*='text-destructive']
   [class*='text-destructive'] {
   color: inherit;
+}
+
+/* ── Ombre themes ────────────────────────────────────────────
+   An ombre theme (id starting with "ombre-") is a color theme whose
+   page background fades across three hues and whose solid buttons
+   blend two. Cards, menus, dialogs and the sidebar stay solid, so
+   text sits on a plain surface; progress bars are left alone.
+────────────────────────────────────────────────────────────── */
+[data-color-theme^='ombre-'] {
+  --ct-ombre-ground: linear-gradient(
+    135deg,
+    oklch(0.9 0.09 var(--ct-ombre-1-h)),
+    oklch(0.94 0.06 var(--ct-ombre-2-h)) 50%,
+    oklch(0.9 0.09 var(--ct-ombre-3-h))
+  );
+  --ct-primary-2: oklch(0.5 var(--ct-primary-c) var(--ct-primary-2-h));
+}
+.dark[data-color-theme^='ombre-'],
+.dark [data-color-theme^='ombre-'] {
+  --ct-ombre-ground: linear-gradient(
+    135deg,
+    oklch(var(--ct-ombre-dark-l, 0.3) var(--ct-ombre-dark-c, 0.14) var(--ct-ombre-1-h)),
+    oklch(calc(var(--ct-ombre-dark-l, 0.3) - 0.06) calc(var(--ct-ombre-dark-c, 0.14) * 0.85) var(--ct-ombre-2-h)) 50%,
+    oklch(var(--ct-ombre-dark-l, 0.3) var(--ct-ombre-dark-c, 0.14) var(--ct-ombre-3-h))
+  );
+  --ct-primary-2: oklch(0.78 var(--ct-primary-c) var(--ct-primary-2-h));
+}
+
+/* The page ground. Fixed, so the fade spans the window rather than the length of the page. It replaces a
+   background pattern while the theme is on. */
+html[data-color-theme^='ombre-'] body {
+  background-color: var(--background);
+  background-image: var(--ct-ombre-ground);
+  background-size: auto;
+  background-position: 0 0;
+  background-attachment: fixed;
+}
+
+/* Solid buttons blend the theme's two button hues. Only buttons and links: bars and dots that share the
+   primary colour stay one colour. */
+html[data-color-theme^='ombre-'] :is(button, a).bg-primary {
+  background-image: linear-gradient(90deg, var(--primary), var(--ct-primary-2));
+}
+
+/* Picker tiles preview the fade and the blended button. */
+.color-theme-tile[data-color-theme^='ombre-'] {
+  background-image: var(--ct-ombre-ground);
+}
+.color-theme-tile[data-color-theme^='ombre-'] .color-theme-tile-primary {
+  background-image: linear-gradient(90deg, var(--ct-tile-primary), var(--ct-primary-2));
 }
