@@ -101,7 +101,7 @@ describe('DashboardRepository', () => {
     expect(listChain.leftJoin.mock.calls[1]?.[0]).toBe(readingProgress);
     expect(listChain.leftJoin.mock.calls[2]?.[0]).toBe(userBookStatus);
     expect(listChain.leftJoin.mock.calls.some((call) => call[0] === audiobookProgress)).toBe(false);
-    expect(whereValues).toEqual(expect.arrayContaining(['unread', 'read', 'skimmed', 'abandoned']));
+    expect(whereValues).toEqual(expect.arrayContaining(['unread', 'want_to_read', 'read', 'skimmed', 'abandoned']));
     expect(listChain.innerJoin).not.toHaveBeenCalled();
     expect(listChain.orderBy).toHaveBeenCalledTimes(1);
     expect(listChain.limit).toHaveBeenCalledWith(10);
@@ -136,7 +136,7 @@ describe('DashboardRepository', () => {
       expect(sql).toContain('"reading_progress"."narration_percentage" > 0 and "reading_progress"."narration_percentage" < 100');
       expect(sql).toContain('group by "books"."id"');
       expect(sql).toContain('order by max("listened_at") desc, "books"."id" desc');
-      expect(params).toEqual(expect.arrayContaining([55, 8, 10, 'unread', 'read', 'skimmed', 'abandoned']));
+      expect(params).toEqual(expect.arrayContaining([55, 8, 10, 'unread', 'want_to_read', 'read', 'skimmed', 'abandoned']));
     });
 
     // Reading moves the narration marker to the page and clears its seconds. Only playing the
