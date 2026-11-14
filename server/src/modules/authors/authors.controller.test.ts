@@ -118,10 +118,22 @@ function makeController() {
   const queueRepo = {
     countEligibleLinkedAuthors: vi.fn(),
   };
+  const authorLinksService = {
+    list: vi.fn(),
+    link: vi.fn(),
+    unlink: vi.fn(),
+  };
 
-  const controller = new AuthorsController(authorsService as never, enrichmentOrchestrator as never, enrichmentConfig as never, queueRepo as never);
+  const controller = new AuthorsController(
+    authorsService as never,
+    enrichmentOrchestrator as never,
+    enrichmentConfig as never,
+    queueRepo as never,
+    {} as never,
+    authorLinksService as never,
+  );
 
-  return { controller, authorsService, enrichmentOrchestrator, enrichmentConfig, queueRepo };
+  return { controller, authorsService, enrichmentOrchestrator, enrichmentConfig, queueRepo, authorLinksService };
 }
 
 describe('AuthorsController', () => {
@@ -143,6 +155,22 @@ describe('AuthorsController', () => {
     expect(authorsService.findAll).toHaveBeenCalledWith(user, { page: 0 });
     expect(authorsService.findOne).toHaveBeenCalledWith(user, 2);
     expect(authorsService.findBooks).toHaveBeenCalledWith(user, 2, { page: 0 });
+  });
+
+  it('delegates linked-author endpoints to AuthorLinksService', async () => {
+    const { controller, authorLinksService } = makeController();
+    const user = makeUser();
+    authorLinksService.list.mockResolvedValue([{ id: 12, name: 'Amanda Woody' }]);
+    authorLinksService.link.mockResolvedValue([{ id: 12, name: 'Amanda Woody' }]);
+    authorLinksService.unlink.mockResolvedValue([]);
+
+    await expect(controller.findLinks(user, 9)).resolves.toEqual([{ id: 12, name: 'Amanda Woody' }]);
+    await expect(controller.link(user, 9, { authorId: 12 })).resolves.toEqual([{ id: 12, name: 'Amanda Woody' }]);
+    await expect(controller.unlink(user, 9, 12)).resolves.toEqual([]);
+
+    expect(authorLinksService.list).toHaveBeenCalledWith(user, 9);
+    expect(authorLinksService.link).toHaveBeenCalledWith(user, 9, 12);
+    expect(authorLinksService.unlink).toHaveBeenCalledWith(user, 9, 12);
   });
 
   it('returns metadata provider lists/searches and maps metadata stream events', async () => {
