@@ -511,15 +511,18 @@ describe('EditMetadataTab cover tiles', () => {
     expect(wrapper.getComponent(CoverEditorPanelStub).props('lockedFields')).toEqual(['cover', 'audioCover'])
   })
 
-  it('checks the audiobook cover lock before applying a searched cover to a book without an ebook', async () => {
+  it('stages an ebook cover on a book without an ebook, and still checks the audiobook lock', async () => {
     const wrapper = mountTab(makeBook({ coverMedia: ['audio'], lockedFields: ['audioCover'] }))
     await flushPromises()
     await wrapper.get('[aria-label="common.search"]').trigger('click')
 
-    wrapper.getComponent(MetadataSearchDrawerStub).vm.$emit('apply', { formPatch: {}, coverUrl: 'https://example.com/square.jpg' })
+    wrapper
+      .getComponent(MetadataSearchDrawerStub)
+      .vm.$emit('apply', { formPatch: {}, coverUrl: 'https://example.com/portrait.jpg', audioCoverUrl: 'https://example.com/square.jpg' })
     await flushPromises()
 
-    expect(panel.setUrl).not.toHaveBeenCalled()
+    expect(panel.setUrl).toHaveBeenCalledTimes(1)
+    expect(panel.setUrl).toHaveBeenCalledWith('https://example.com/portrait.jpg', 'ebook')
   })
 
   it('applies a searched cover to the panel when its slot is unlocked', async () => {

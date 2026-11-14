@@ -88,7 +88,8 @@ describe('MetadataSearchDrawer automatic search', () => {
 
     const reopened = mountDrawer()
     await flushPromises()
-    expect(searchCalls()).toHaveLength(1)
+    // The search, plus the one for the other format's cover row every book now gets.
+    expect(searchCalls()).toHaveLength(2)
     expect(searchCalls()[0]![0]).toContain('isbn=9780441172719')
     await reopened.get('input[type="checkbox"]').setValue(false)
     await flushPromises()
@@ -96,7 +97,7 @@ describe('MetadataSearchDrawer automatic search', () => {
 
     const manual = mountDrawer()
     await flushPromises()
-    expect(searchCalls()).toHaveLength(1)
+    expect(searchCalls()).toHaveLength(2)
     manual.unmount()
   })
 

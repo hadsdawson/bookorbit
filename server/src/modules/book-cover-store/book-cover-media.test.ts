@@ -9,6 +9,7 @@ import {
   coverMediaSql,
   didKoboCoverChange,
   getCoverMediaFromDatabaseFiles,
+  isServedSlot,
   type BookCoverSlotRow,
 } from './book-cover-store.repository';
 
@@ -123,5 +124,19 @@ describe('Kobo-visible cover changes', () => {
         mixedMedia,
       ),
     ).toBe(false);
+  });
+});
+
+describe('isServedSlot', () => {
+  const ebookOnly = { hasEbook: true, hasAudio: false };
+
+  it('serves a chosen cover for a format the book has no files of', () => {
+    expect(isServedSlot({ medium: 'audio', source: 'custom', dormantSince: null }, ebookOnly)).toBe(true);
+  });
+
+  it('does not serve an extracted cover for a missing format, or any cover asleep', () => {
+    expect(isServedSlot({ medium: 'audio', source: 'extracted', dormantSince: null }, ebookOnly)).toBe(false);
+    expect(isServedSlot({ medium: 'ebook', source: 'custom', dormantSince: new Date() }, ebookOnly)).toBe(false);
+    expect(isServedSlot({ medium: 'ebook', source: 'extracted', dormantSince: null }, ebookOnly)).toBe(true);
   });
 });

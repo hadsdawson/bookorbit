@@ -368,7 +368,7 @@ describe('CoverSlotReconciler on real files', () => {
     expect(shapeOf(bookId, 'audio')).toBe('folder_image:500x500');
   });
 
-  it('keeps a custom audiobook cover through a replace, where the M4B is unlinked and added again', async () => {
+  it('keeps a custom audiobook cover in use through a replace, where the M4B is unlinked and added again', async () => {
     const bookId = nextBookId++;
     const files = await folder({ 'book.epub': 'epub', 'book.m4b': 'm4b' });
     repository.addBook(bookId, files);
@@ -382,12 +382,24 @@ describe('CoverSlotReconciler on real files', () => {
       files.filter((file) => file.format !== 'm4b'),
     );
     await reconciler.reconcile(bookId, { filesChanged: true });
-    expect(repository.slot(bookId, 'audio')).toMatchObject({ source: 'custom', dormantSince: expect.any(Date) });
+    // Fork: a chosen cover stays in use for a format the book has no files of.
+    expect(repository.slot(bookId, 'audio')).toMatchObject({ source: 'custom', dormantSince: null });
 
     repository.setFiles(bookId, files);
     await reconciler.reconcile(bookId, { filesChanged: true });
     expect(repository.slot(bookId, 'audio')).toMatchObject({ source: 'custom', origin: 'upload', width: 640, dormantSince: null });
     expect(await readdir(audioDir)).toContain('cover_custom.jpg');
+  });
+
+  it('keeps a chosen audiobook cover awake on a book with only an ebook', async () => {
+    const bookId = nextBookId++;
+    const files = await folder({ 'book.epub': 'epub' });
+    repository.addBook(bookId, files);
+    repository.putSlot(bookId, 'audio', { source: 'custom', origin: 'url', width: 600, height: 600 });
+
+    await reconciler.reconcile(bookId);
+
+    expect(repository.slot(bookId, 'audio')).toMatchObject({ source: 'custom', dormantSince: null });
   });
 
   it('prunes an extracted slot dormant for a day but keeps a dormant custom one', async () => {

@@ -58,7 +58,7 @@ import { showCacheFallbackToast } from '@/features/metadata-cache/lib/cache-feed
 import { diagnosticsFallbackProviders } from '@/features/metadata-cache/lib/metadata-cache'
 import { filterProviderIdFields, isProviderIdFieldAvailable, isProviderIdFormField } from '@/features/book/lib/provider-id-fields'
 import { formatCommunityRatingLine } from '@/features/book/lib/community-rating'
-import { coverFieldMedium, coverLockField } from '@/features/book/lib/cover-slots'
+import { coverLockField } from '@/features/book/lib/cover-slots'
 import { formatList, formatNumber } from '@/i18n/formatters'
 import { useMetadataReminders } from '@/features/metadata-reminders/composables/useMetadataReminders'
 import { missingMetadataFields } from '@/features/metadata-reminders/lib/missing-metadata'
@@ -660,7 +660,7 @@ function applyPatchToForm(formPatch: MetadataPatch, covers: FetchedCovers): { sk
 
   for (const [medium, url] of Object.entries(covers) as [CoverMedium, string | undefined][]) {
     if (!url) continue
-    const target = props.book.coverMedia.includes(medium) ? medium : coverFieldMedium(props.book)
+    const target: CoverMedium | null = medium
     const coverField = coverLockField(target)
     if (isLocked(coverField)) {
       trackLockedField(coverField, skippedFields)
