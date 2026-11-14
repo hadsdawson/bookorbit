@@ -37,6 +37,13 @@ describe('ScoreWeightsLedger', () => {
     expect(wrapper.text()).toContain('A field at zero leaves the total too')
   })
 
+  it('lays out not-scored fields compactly so their names keep the room', () => {
+    const row = render().get('[data-testid="score-weight-row-subtitle"]')
+    expect(row.get('#score-field-subtitle').text()).toBe('Subtitle')
+    expect(row.classes()).toContain('md:grid-cols-[minmax(8rem,1fr)_92px_44px]')
+    expect(row.text()).not.toContain('Not scored')
+  })
+
   it('moves a field into the not-scored section when it is zeroed', () => {
     const wrapper = render({ weights: { ...defaults(), description: 0 } })
     expect(wrapper.text()).toContain('Not scored (5)')

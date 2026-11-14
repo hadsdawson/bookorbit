@@ -16,6 +16,8 @@ const props = defineProps<{
   /** Largest share on the page, so every bar is drawn against the same scale. */
   maxShare: number
   disabled?: boolean
+  /** Name, weight and change only, for the narrow not-scored grid where a share column would squeeze the name out. */
+  compact?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -36,6 +38,9 @@ const barWidth = computed(() => (props.maxShare <= 0 ? 0 : Math.max(2, (share.va
 // Always one decimal: rounding 12.8% to 13% collapses the gap between Title and Description,
 // which is the comparison this column exists to make.
 const sharePercent = computed(() => formatPercent(share.value / 100, 1))
+const rowLayout = computed(() =>
+  props.compact ? 'md:grid-cols-[minmax(8rem,1fr)_92px_44px]' : 'md:grid-cols-[minmax(0,1fr)_92px_minmax(110px,150px)_44px]',
+)
 
 function onAdjust(value: number) {
   emit('adjust', props.field, value)
@@ -52,8 +57,9 @@ function onReset() {
 
 <template>
   <div
-    class="grid grid-cols-[1fr_auto] items-start gap-x-3 gap-y-2 border-t border-border/60 px-4 py-2.5 first:border-t-0 md:grid-cols-[minmax(0,1fr)_92px_minmax(110px,150px)_44px] md:items-center md:gap-x-4 md:py-1.5"
-    :class="scoring ? '' : 'bg-muted/20'"
+    class="grid grid-cols-[1fr_auto] items-start gap-x-3 gap-y-2 border-t border-border/60 px-4 py-2.5 first:border-t-0 md:items-center md:gap-x-4 md:py-1.5"
+    :class="[rowLayout, scoring ? '' : 'bg-muted/20']"
+    :data-testid="`score-weight-row-${field}`"
   >
     <div class="min-w-0">
       <p :id="labelId" class="truncate text-[13px] font-semibold" :class="scoring ? 'text-foreground' : 'text-muted-foreground'">
@@ -76,7 +82,7 @@ function onReset() {
 
     <!-- Share is the number that means something; the raw weight above only has meaning against the total.
          On mobile it takes a full row of its own, since the stepper already fills the line above. -->
-    <div class="col-span-2 flex items-center gap-2.5 md:col-span-1 md:col-start-3">
+    <div v-if="!compact || changed" class="col-span-2 flex items-center gap-2.5 md:col-span-1 md:col-start-3" :class="compact ? 'md:hidden' : ''">
       <template v-if="scoring">
         <div class="h-1.5 min-w-10 flex-1 overflow-hidden rounded-full bg-foreground/10">
           <div class="h-full rounded-full bg-primary/70" :style="{ width: `${barWidth}%` }" />
@@ -84,7 +90,7 @@ function onReset() {
         <span class="w-11 shrink-0 text-right text-xs font-semibold tabular-nums text-foreground">{{ sharePercent }}</span>
       </template>
       <span
-        v-else
+        v-else-if="!compact"
         class="inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold text-muted-foreground"
       >
         <EyeOff :size="10" aria-hidden="true" />
