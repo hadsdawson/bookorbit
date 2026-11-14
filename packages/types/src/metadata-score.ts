@@ -69,13 +69,7 @@ export const METADATA_SCORE_FIELDS: Record<MetadataScoreField, MetadataScoreFiel
 };
 
 /** Display order for the groups. Not alphabetical: it runs from most to least weight by default. */
-export const METADATA_SCORE_GROUPS: readonly MetadataScoreGroup[] = [
-  "core",
-  "publishing",
-  "classification",
-  "enrichment",
-  "providers",
-];
+export const METADATA_SCORE_GROUPS: readonly MetadataScoreGroup[] = ["core", "publishing", "classification", "enrichment", "providers"];
 
 export type MetadataScoreWeights = Record<MetadataScoreField, number>;
 
@@ -94,12 +88,16 @@ export function isNumberedChapterTitle(title: string | null | undefined): boolea
   return typeof title === "string" && NUMBERED_CHAPTER_TITLE.test(title);
 }
 
+/** Fork. Chapter lists someone supplied or checked: edited by hand, from a metadata provider, or imported. */
+const CHECKED_CHAPTER_SOURCES: readonly string[] = ["manual", "provider", "migration"];
+
 /**
- * Fork. Whether an audiobook has real chapters: at least two, and not mostly bare track numbers. The same line the
- * chapter health page draws between "no chapters" or "numbered tracks" and a usable list.
+ * Fork. Whether an audiobook has real chapters: at least two, and either not mostly bare track numbers (the line the
+ * chapter health page draws) or a list someone supplied or checked, since many books number their chapters "1", "2".
  */
-export function hasRealAudiobookChapters(chapterCount: number, numberedChapterCount: number): boolean {
-  return chapterCount >= 2 && numberedChapterCount < chapterCount * 0.8;
+export function hasRealAudiobookChapters(chapterCount: number, numberedChapterCount: number, source?: string | null): boolean {
+  if (chapterCount < 2) return false;
+  return numberedChapterCount < chapterCount * 0.8 || (source != null && CHECKED_CHAPTER_SOURCES.includes(source));
 }
 
 export const DEFAULT_METADATA_SCORE_WEIGHTS: MetadataScoreWeights = Object.fromEntries(

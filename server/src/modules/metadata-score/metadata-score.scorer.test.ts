@@ -30,6 +30,7 @@ function makeData(overrides: Partial<ScoreData> = {}): ScoreData {
     tagCount: 0,
     chapterCount: 0,
     numberedChapterCount: 0,
+    chaptersSource: null,
     hasM4b: false,
     ...overrides,
   };
@@ -62,6 +63,21 @@ describe('MetadataScoreScorer', () => {
 
     it('counts real chapters on an M4B book', () => {
       expect(scorer.compute(makeData({ title: 'Dune', hasM4b: true, chapterCount: 20, numberedChapterCount: 2 }), weights(10))).toBe(100);
+    });
+
+    it('counts a numbered chapter list that a person edited, a provider supplied or an import brought in', () => {
+      for (const chaptersSource of ['manual', 'provider', 'migration']) {
+        expect(
+          scorer.compute(makeData({ title: 'Dune', hasM4b: true, chapterCount: 41, numberedChapterCount: 39, chaptersSource }), weights(10)),
+        ).toBe(100);
+      }
+      expect(
+        scorer.compute(
+          makeData({ title: 'Dune', hasM4b: true, chapterCount: 41, numberedChapterCount: 39, chaptersSource: 'embedded' }),
+          weights(10),
+        ),
+      ).toBe(50);
+      expect(scorer.compute(makeData({ title: 'Dune', hasM4b: true, chapterCount: 1, chaptersSource: 'manual' }), weights(10))).toBe(50);
     });
   });
 
