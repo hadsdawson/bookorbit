@@ -1,7 +1,7 @@
 import { computed } from 'vue'
 
 import type { DashboardConfig, WidgetConfig, WidgetType } from '@bookorbit/types'
-import { WIDGET_TYPES } from '@bookorbit/types'
+import { Permission, WIDGET_TYPES } from '@bookorbit/types'
 import { api } from '@/lib/api'
 import { useAuth } from '@/features/auth/composables/useAuth'
 
@@ -18,6 +18,7 @@ const DEFAULT_WIDGETS: WidgetConfig[] = [
   { id: '10', type: 'library-overview', enabled: false, order: 10 },
   { id: '11', type: 'year-projection', enabled: false, order: 11 },
   { id: '12', type: 'long-wait', enabled: false, order: 12 },
+  { id: '13', type: 'upcoming-releases', enabled: true, order: 13 },
 ]
 
 const VALID_TYPES = new Set<WidgetType>(WIDGET_TYPES)
@@ -77,6 +78,17 @@ function withLibraryIds(config: DashboardConfig, libraryIds: readonly number[] |
   const { libraryIds: _ignored, ...rest } = config
   const normalized = normalizeLibraryIds(libraryIds)
   return normalized ? { ...rest, libraryIds: normalized } : rest
+}
+
+/** Widgets that need a permission to show; others are for everyone. */
+const WIDGET_PERMISSIONS: Partial<Record<WidgetType, string>> = {
+  'upcoming-releases': Permission.NewReleasesAccess,
+}
+
+/** Whether a widget is one this user may have on the dashboard. */
+export function widgetAllowed(type: WidgetType, hasPermission: (name: string) => boolean): boolean {
+  const permission = WIDGET_PERMISSIONS[type]
+  return permission === undefined || hasPermission(permission)
 }
 
 export function useDashboardWidgets() {

@@ -16,11 +16,16 @@ export interface ReleaseTarget {
   nameKey: string;
   /** For a series, the author it was followed under. */
   authorHint: string | null;
+  /** For a series, Audible ASINs of books of it in the library, to find the series on Audible by id. */
+  audibleAsins?: string[];
 }
 
 const HARDCOVER_ENDPOINT = 'https://api.hardcover.app/v1/graphql';
 /** New Releases is US only, whatever store the metadata settings point Audible at. */
 const AUDIBLE_US_PRODUCTS = 'https://api.audible.com/1.0/catalog/products';
+/** Audible answers at most this many ASINs in one products call. */
+const AUDIBLE_ASINS_PER_CALL = 50;
+const AUDIBLE_PRODUCT_GROUPS = 'product_desc,product_attrs,media,series';
 const GOOGLE_VOLUMES = 'https://www.googleapis.com/books/v1/volumes';
 
 // Hardcover reading_format_id: 1 = physical, 2 = audiobook, 4 = ebook.
@@ -60,7 +65,40 @@ interface AudibleUpcomingProduct {
   authors?: { name: string }[];
   release_date?: string;
   product_images?: { 500?: string };
-  series?: { title: string; sequence?: string }[];
+  series?: { asin?: string; title: string; sequence?: string }[];
+}
+
+interface AudibleRelationship {
+  asin?: string;
+  relationship_to_product?: string;
+  relationship_type?: string;
+  sequence?: string;
+  sort?: string;
+}
+
+interface AudibleRelationshipsProduct {
+  asin?: string;
+  series?: { asin?: string; title?: string }[];
+  relationships?: AudibleRelationship[];
+}
+
+/** The series a book belongs to on Audible, by ASIN: from its series list, or its parent relationship. */
+export function seriesAsinOf(product: AudibleRelationshipsProduct | undefined): string | null {
+  const fromSeries = product?.series?.find((series) => series.asin)?.asin;
+  if (fromSeries) return fromSeries;
+  const parent = product?.relationships?.find(
+    (relation) => relation.relationship_to_product === 'parent' && relation.relationship_type === 'series' && relation.asin,
+  );
+  return parent?.asin ?? null;
+}
+
+/** The books of a series product, last in reading order first, since new books are added at the end. */
+export function seriesMemberAsins(series: AudibleRelationshipsProduct | undefined): string[] {
+  const children = (series?.relationships ?? []).filter(
+    (relation): relation is AudibleRelationship & { asin: string } => relation.relationship_to_product === 'child' && !!relation.asin,
+  );
+  const order = (relation: AudibleRelationship) => numberOrNull(relation.sort) ?? numberOrNull(relation.sequence) ?? 0;
+  return [...new Set(children.sort((a, b) => order(b) - order(a)).map((relation) => relation.asin))];
 }
 
 interface GoogleUpcomingVolume {
@@ -176,6 +214,12 @@ export function belongsToTarget(release: SourceRelease, target: ReleaseTarget): 
   return release.authors.some((author) => nameKey(author) === hint);
 }
 
+interface SourceLookup {
+  found: SourceRelease[];
+  /** True when every book found is known to be in the followed series, so no name check is needed. */
+  members?: boolean;
+}
+
 /**
  * Asks the book sites what a followed author or series has coming out: Hardcover first, then
  * Audible's US store, then Google Books. A site that is turned off, has no key, or fails is
@@ -206,20 +250,21 @@ export class ReleaseSourcesService {
     const config = await this.providerConfig.getConfig();
     const releases: SourceRelease[] = [];
     const failedSources: ReleaseSourceKey[] = [];
-    const steps: { source: ReleaseSourceKey; run: () => Promise<SourceRelease[]> }[] = [];
+    const steps: { source: ReleaseSourceKey; run: () => Promise<SourceLookup> }[] = [];
     if (config.hardcover.enabled && config.hardcover.apiKey.trim()) {
-      steps.push({ source: 'hardcover', run: () => this.fromHardcover(target, today, config.hardcover.apiKey) });
+      steps.push({ source: 'hardcover', run: async () => ({ found: await this.fromHardcover(target, today, config.hardcover.apiKey) }) });
     }
     if (config.audible.enabled) steps.push({ source: 'audible', run: () => this.fromAudible(target) });
     if (config.google.enabled && config.google.apiKey.trim()) {
-      steps.push({ source: 'google', run: () => this.fromGoogle(target, config.google.apiKey) });
+      steps.push({ source: 'google', run: async () => ({ found: await this.fromGoogle(target, config.google.apiKey) }) });
     }
 
     for (const [index, step] of steps.entries()) {
       if (index > 0 && this.paceMs > 0) await sleep(this.paceMs);
       try {
-        const found = await step.run();
-        releases.push(...found.filter((release) => belongsToTarget(release, target)));
+        const { found, members } = await step.run();
+        // A book Audible lists under the series' own id is in it, whatever its title or credits say.
+        releases.push(...found.filter((release) => members || belongsToTarget(release, target)));
       } catch (error) {
         failedSources.push(step.source);
         this.logger.warn(
@@ -250,11 +295,66 @@ export class ReleaseSourcesService {
     return (body.data?.books ?? []).flatMap(mapHardcoverBook);
   }
 
-  private async fromAudible(target: ReleaseTarget): Promise<SourceRelease[]> {
+  /**
+   * A series is looked up by its Audible id when the library has a book of it with an ASIN, which
+   * finds books whose series name is spelled differently there. Without one, or when Audible has no
+   * series for those books, it falls back to a search by name.
+   */
+  private async fromAudible(target: ReleaseTarget): Promise<SourceLookup> {
+    if (target.kind === 'series' && target.audibleAsins?.length) {
+      const members = await this.fromAudibleSeries(target);
+      if (members) return { found: members, members: true };
+    }
+    return { found: await this.fromAudibleSearch(target) };
+  }
+
+  private async fromAudibleSeries(target: ReleaseTarget): Promise<SourceRelease[] | null> {
+    let seriesAsin: string | null = null;
+    for (const asin of target.audibleAsins ?? []) {
+      const book = await this.audibleJson<{ product?: AudibleRelationshipsProduct }>(`${AUDIBLE_US_PRODUCTS}/${encodeURIComponent(asin)}`, {
+        response_groups: 'series,relationships',
+      });
+      seriesAsin = seriesAsinOf(book?.product);
+      if (seriesAsin) break;
+    }
+    if (!seriesAsin) return null;
+
+    const series = await this.audibleJson<{ product?: AudibleRelationshipsProduct }>(`${AUDIBLE_US_PRODUCTS}/${encodeURIComponent(seriesAsin)}`, {
+      response_groups: 'relationships',
+    });
+    const asins = seriesMemberAsins(series?.product).slice(0, AUDIBLE_ASINS_PER_CALL);
+    if (asins.length === 0) return null;
+
+    const body = await this.audibleJson<{ products?: AudibleUpcomingProduct[] }>(AUDIBLE_US_PRODUCTS, {
+      asins: asins.join(','),
+      response_groups: AUDIBLE_PRODUCT_GROUPS,
+      image_sizes: '500',
+    });
+    this.logger.debug(
+      `[new_releases.audible_series] [end] seriesAsin=${seriesAsin} name="${sanitizeLogValue(target.name)}" members=${asins.length} - series found by Audible id`,
+    );
+    return (body?.products ?? []).map((product) => {
+      const release = mapAudibleProduct(product);
+      const ownSeries = product.series?.find((entry) => entry.asin === seriesAsin);
+      return { ...release, seriesName: target.name, seriesIndex: numberOrNull(ownSeries?.sequence) ?? release.seriesIndex };
+    });
+  }
+
+  /** One Audible catalog call; null for a book or series Audible does not know. */
+  private async audibleJson<T>(endpoint: string, params: Record<string, string>): Promise<T | null> {
+    const url = new URL(endpoint);
+    for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+    const res = await fetchWithThrottle(url, { signal: buildRequestSignal(PROVIDER_TIMEOUT_MS.DEFAULT) });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`audible responded ${res.status}`);
+    return (await res.json()) as T;
+  }
+
+  private async fromAudibleSearch(target: ReleaseTarget): Promise<SourceRelease[]> {
     const url = new URL(AUDIBLE_US_PRODUCTS);
     url.searchParams.set('num_results', '50');
     url.searchParams.set('products_sort_by', '-ReleaseDate');
-    url.searchParams.set('response_groups', 'product_desc,product_attrs,media,series');
+    url.searchParams.set('response_groups', AUDIBLE_PRODUCT_GROUPS);
     url.searchParams.set('image_sizes', '500');
     if (target.kind === 'author') {
       url.searchParams.set('author', target.name);

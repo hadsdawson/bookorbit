@@ -9,7 +9,7 @@ import type { LibraryService } from '../library/library.service';
 import type { NewReleasesRepository } from './new-releases.repository';
 import type { SourceRelease } from './release-merge';
 import type { ReleaseSourcesService, ReleaseTarget } from './release-sources.service';
-import { NewReleasesService } from './new-releases.service';
+import { comingTuesday, NewReleasesService } from './new-releases.service';
 
 const TODAY = '2026-11-13';
 const user = { id: 3 } as RequestUser;
@@ -45,6 +45,8 @@ describe('NewReleasesService', () => {
     findPendingAutoRequests: ReturnType<typeof vi.fn<NewReleasesRepository['findPendingAutoRequests']>>;
     setRequested: ReturnType<typeof vi.fn<NewReleasesRepository['setRequested']>>;
     findUserSettings: ReturnType<typeof vi.fn<NewReleasesRepository['findUserSettings']>>;
+    findSeriesAudibleAsins: ReturnType<typeof vi.fn<NewReleasesRepository['findSeriesAudibleAsins']>>;
+    listForUser: ReturnType<typeof vi.fn<NewReleasesRepository['listForUser']>>;
   };
   let lookup: ReturnType<typeof vi.fn<ReleaseSourcesService['lookup']>>;
   let submit: ReturnType<typeof vi.fn<BookRequestService['submit']>>;
@@ -66,6 +68,8 @@ describe('NewReleasesService', () => {
       findPendingAutoRequests: vi.fn<NewReleasesRepository['findPendingAutoRequests']>().mockResolvedValue([]),
       setRequested: vi.fn<NewReleasesRepository['setRequested']>().mockResolvedValue(undefined),
       findUserSettings: vi.fn<NewReleasesRepository['findUserSettings']>().mockResolvedValue({ userId: 3, delivery: 'request', retentionDays: 60 }),
+      findSeriesAudibleAsins: vi.fn<NewReleasesRepository['findSeriesAudibleAsins']>().mockResolvedValue([]),
+      listForUser: vi.fn<NewReleasesRepository['listForUser']>().mockResolvedValue([]),
     };
     lookup = vi.fn<ReleaseSourcesService['lookup']>();
     submit = vi.fn<BookRequestService['submit']>().mockResolvedValue({} as never);
@@ -104,6 +108,17 @@ describe('NewReleasesService', () => {
     await service.checkTarget(target, TODAY);
 
     expect(repository.upsertRelease).toHaveBeenCalledWith(expect.objectContaining({ ebookDate: '2027-01-01' }), null);
+  });
+
+  it('hands a series check the Audible ASINs of its books in the library', async () => {
+    repository.findSeriesAudibleAsins.mockResolvedValue(['B0OWNED']);
+    lookup.mockResolvedValue({ releases: [], failedSources: [], attempted: 1 });
+    const series: ReleaseTarget = { kind: 'series', name: 'The Saga', nameKey: 'thesaga', authorHint: null };
+
+    await service.checkTarget(series, TODAY);
+
+    expect(repository.findSeriesAudibleAsins).toHaveBeenCalledWith('thesaga');
+    expect(lookup).toHaveBeenCalledWith({ ...series, audibleAsins: ['B0OWNED'] }, TODAY);
   });
 
   it('leaves a name due when every source failed', async () => {
@@ -157,10 +172,30 @@ describe('NewReleasesService', () => {
 
     expect(submit).toHaveBeenCalledWith(expect.objectContaining({ mediaKind: 'ebook', title: 'Next', publishedDate: '2027-03-09' }), user);
     expect(repository.setRequested).toHaveBeenCalledWith(3, 8);
-    await expect(service.requestRelease(user, 8, ['audiobook'])).rejects.toThrow('no confirmed release date');
+  });
+
+  it('requests a format that has no date yet, without a published date', async () => {
+    repository.findReleaseById.mockResolvedValue(listed);
+
+    await expect(service.requestRelease(user, 8, ['ebook', 'audiobook'])).resolves.toEqual({ requested: ['ebook', 'audiobook'] });
+
+    expect(submit).toHaveBeenCalledWith(expect.objectContaining({ mediaKind: 'audiobook', title: 'Next' }), user);
+    expect(submit).not.toHaveBeenCalledWith(expect.objectContaining({ mediaKind: 'audiobook', publishedDate: expect.anything() }), user);
+  });
+
+  it('auto-requests the server default of both formats even when one has no date yet', async () => {
+    repository.findPendingAutoRequests.mockResolvedValue([{ userId: 3, releaseId: 8 }]);
+    repository.findReleaseById.mockResolvedValue(listed);
+    findActingUser.mockResolvedValue({ id: 3, isSuperuser: false, permissions: ['new_releases_access', 'book_request_access'] } as never);
+
+    await expect(service.autoRequest(1_000)).resolves.toEqual({ filed: 1, failed: 0 });
+
+    expect(submit).toHaveBeenCalledWith(expect.objectContaining({ mediaKind: 'ebook' }), expect.anything());
+    expect(submit).toHaveBeenCalledWith(expect.objectContaining({ mediaKind: 'audiobook' }), expect.anything());
   });
 
   it('requests for people set to have books requested, once, and holds back one that fails', async () => {
+    appValues.set('new_releases_default_format', 'ebook');
     repository.findPendingAutoRequests.mockResolvedValue([
       { userId: 3, releaseId: 8 },
       { userId: 4, releaseId: 8 },
@@ -187,5 +222,30 @@ describe('NewReleasesService', () => {
     await service.autoRequest(1_000);
 
     expect(submit).not.toHaveBeenCalled();
+  });
+
+  it('lists followed books out on the coming Tuesday, with the formats out that day', async () => {
+    repository.listForUser.mockResolvedValue([
+      { ...listed, ebookDate: '2026-11-17', audiobookDate: '2026-12-01', matchedFollows: [], state: null, totalCount: 14 } as never,
+    ]);
+
+    const result = await service.upcomingTuesday({ ...user, isSuperuser: false, permissions: ['new_releases_access'] } as never, '2026-11-13');
+
+    expect(repository.listForUser).toHaveBeenCalledWith(3, { onDate: '2026-11-17' }, 12);
+    expect(result).toEqual({ date: '2026-11-17', total: 14, items: [expect.objectContaining({ id: 8, formats: ['ebook'] })] });
+  });
+
+  it('gives no widget data to someone without New Releases access', async () => {
+    await expect(service.upcomingTuesday({ ...user, isSuperuser: false, permissions: [] } as never, '2026-11-13')).resolves.toBeNull();
+    expect(repository.listForUser).not.toHaveBeenCalled();
+  });
+});
+
+describe('comingTuesday', () => {
+  it('is today on a Tuesday and the next Tuesday otherwise', () => {
+    expect(comingTuesday('2026-11-17')).toBe('2026-11-17');
+    expect(comingTuesday('2026-11-18')).toBe('2026-11-24');
+    expect(comingTuesday('2026-11-16')).toBe('2026-11-17');
+    expect(comingTuesday('2026-12-30')).toBe('2027-01-05');
   });
 });

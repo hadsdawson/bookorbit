@@ -414,6 +414,7 @@ onMounted(load)
                       v-if="item.state !== 'requested' && !isReleased(item.releaseDate)"
                       :item="item"
                       :busy="requesting === item.id"
+                      :default-format="overview.server.defaultFormat"
                       @request="handleRequest"
                     />
                     <button

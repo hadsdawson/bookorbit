@@ -112,3 +112,7 @@ export function fetchDiversityScore() {
 export function fetchReadingRhythm() {
   return requestWidget(WIDGET_TYPE.READING_RHYTHM)
 }
+
+export function fetchUpcomingReleases() {
+  return requestWidget(WIDGET_TYPE.UPCOMING_RELEASES)
+}

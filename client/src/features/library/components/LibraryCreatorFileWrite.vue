@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { FileCode, FilePenLine, FolderOpen } from '@lucide/vue'
+import { FileCode, FilePenLine, FileUp, FolderOpen } from '@lucide/vue'
 import { FOLDER_COVER_MEDIA, type FolderCoverMedia } from '@bookorbit/types'
 import ToggleSwitch from '@/components/ui/ToggleSwitch.vue'
 import { formatNumber } from '@/i18n/formatters'
@@ -13,6 +13,7 @@ const { t } = useI18n()
 const props = withDefaults(
   defineProps<{
     fileRenameEnabled: boolean
+    renameOnAddFile?: boolean
     fileWriteEnabled: boolean
     fileWriteWriteCover: boolean
     fileWriteFolderCovers: FolderCoverMedia
@@ -40,6 +41,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   'update:fileRenameEnabled': [value: boolean]
+  'update:renameOnAddFile': [value: boolean]
   'update:fileWriteEnabled': [value: boolean]
   'update:fileWriteWriteCover': [value: boolean]
   'update:fileWriteFolderCovers': [value: FolderCoverMedia]
@@ -145,6 +147,10 @@ function handleRenameToggle(value: boolean) {
   emit('update:fileRenameEnabled', value)
 }
 
+function handleRenameOnAddToggle(value: boolean) {
+  emit('update:renameOnAddFile', value)
+}
+
 function handleWriteToggle(value: boolean) {
   emit('update:fileWriteEnabled', value)
 }
@@ -190,6 +196,19 @@ function updateSize(row: FamilyRow, event: Event) {
         :model-value="fileRenameEnabled"
         :aria-label="t('library.creator.fileWrite.rename.title')"
         @update:model-value="handleRenameToggle"
+      />
+    </div>
+
+    <div class="flex items-start gap-3.5 px-4 py-3.5" data-testid="rename-on-add-file">
+      <FileUp :size="17" class="mt-0.5 shrink-0 text-foreground" aria-hidden="true" />
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-semibold text-foreground">{{ t('library.creator.fileWrite.renameOnAddFile.title') }}</p>
+        <p class="mt-0.5 text-xs text-muted-foreground">{{ t('library.creator.fileWrite.renameOnAddFile.hint') }}</p>
+      </div>
+      <ToggleSwitch
+        :model-value="renameOnAddFile ?? false"
+        :aria-label="t('library.creator.fileWrite.renameOnAddFile.title')"
+        @update:model-value="handleRenameOnAddToggle"
       />
     </div>
 

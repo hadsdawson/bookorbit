@@ -66,11 +66,13 @@ describe('LibraryCreatorFileWrite', () => {
     expect(wrapper.text()).toContain('Rename files after metadata changes')
     expect(wrapper.text()).not.toContain('Include cover image')
     const switches = wrapper.findAll('[role="switch"]')
-    expect(switches).toHaveLength(2)
+    expect(switches).toHaveLength(3)
 
     await switches[0]!.trigger('click')
     await switches[1]!.trigger('click')
+    await switches[2]!.trigger('click')
     expect(wrapper.emitted('update:fileRenameEnabled')).toEqual([[true]])
+    expect(wrapper.emitted('update:renameOnAddFile')).toEqual([[true]])
     expect(wrapper.emitted('update:fileWriteEnabled')).toEqual([[true]])
   })
 

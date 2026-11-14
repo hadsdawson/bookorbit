@@ -11221,7 +11221,8 @@
         "diversityScore": "Diversity Score",
         "libraryOverview": "Library Overview",
         "yearProjection": "Year Projection",
-        "longWait": "The Long Wait"
+        "longWait": "The Long Wait",
+        "upcomingReleases": "Out Tuesday"
       },
       "shelfNames": {
         "recentlyAdded": "Recently Added",
@@ -11369,6 +11370,17 @@
         "hours": "hours",
         "readCount": "{count} read",
         "daysLeft": "{count}d left"
+      },
+      "upcomingReleases": {
+        "title": "Out Tuesday",
+        "today": "Today",
+        "empty": "Nothing you follow comes out this Tuesday.",
+        "noAccess": "New Releases is not turned on for your account.",
+        "ebook": "Ebook",
+        "audiobook": "Audiobook",
+        "requested": "Requested",
+        "open": "Open New Releases",
+        "more": "{count, plural, one {# more on New Releases} other {# more on New Releases}}"
       }
     }
   },
@@ -12479,6 +12491,10 @@
         "rename": {
           "title": "Rename files after metadata changes",
           "hint": "Renames physical files when title, author, series, or year changes, using the library naming pattern."
+        },
+        "renameOnAddFile": {
+          "title": "Rename added files",
+          "hint": "Every file added to a book is renamed to the naming pattern, whoever adds it. In the add-file window the rename shows as always on."
         },
         "write": {
           "title": "Write metadata to files",
@@ -16310,12 +16326,18 @@
       "saved": "Saved how new books reach you"
     },
     "request": {
-      "button": "Request",
       "named": "Request {title}",
       "both": "Ebook and audiobook",
       "ebook": "Ebook",
       "audiobook": "Audiobook",
-      "done": "{count, plural, one {Requested {title}} other {Requested {title} in both formats}}"
+      "done": "{count, plural, one {Requested {title}} other {Requested {title} in both formats}}",
+      "default": {
+        "both": "Request both",
+        "ebook": "Request ebook",
+        "audiobook": "Request audiobook"
+      },
+      "otherFormats": "Other formats for {title}",
+      "noDate": "no date yet"
     },
     "server": {
       "title": "New Releases",
