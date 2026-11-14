@@ -1710,6 +1710,7 @@ watch(
 
     <!-- Main column -->
     <div
+      data-shadow-room
       class="flex min-w-0 flex-col gap-2.5 @min-[46rem]/book-detail:col-start-2 @min-[46rem]/book-detail:row-start-1 @min-[46rem]/book-detail:min-h-0 @min-[46rem]/book-detail:overflow-y-auto"
     >
       <div class="hidden @min-[46rem]/book-detail:block">
@@ -2172,6 +2173,7 @@ watch(
 
     <!-- Detail rail -->
     <div
+      data-shadow-room
       class="flex min-w-0 flex-col gap-3 @min-[46rem]/book-detail:col-start-3 @min-[46rem]/book-detail:row-start-1 @min-[46rem]/book-detail:min-h-0 @min-[46rem]/book-detail:overflow-y-auto"
     >
       <section

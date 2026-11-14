@@ -5,6 +5,9 @@
    round a full-height panel into a lozenge. */
 :root {
   --shell-radius: min(var(--radius), 1.25rem);
+  /* Fork: how far a box's edge rows keep from its corners, so the larger presets do not clip a header's
+     first letters or the last row. */
+  --box-corner-inset: max(0.625rem, calc(var(--radius) * 0.45));
 }
 
 html.radius-sharp {

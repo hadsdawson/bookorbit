@@ -1112,7 +1112,7 @@ function handleCoverChanged(medium: CoverMedium | null) {
       </button>
     </div>
 
-    <div class="-mx-1 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-1 pb-1">
+    <div data-shadow-room class="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
       <p v-if="combinedError" role="alert" class="flex-none text-sm text-destructive">{{ combinedError }}</p>
 
       <WriteAndRenameResultPanel
@@ -1150,7 +1150,7 @@ function handleCoverChanged(medium: CoverMedium | null) {
 
           <!-- Identity -->
           <section class="flex flex-col overflow-hidden rounded-xl border border-border bg-card">
-            <header class="flex h-7 flex-none items-center border-b border-border px-2.5">
+            <header class="flex h-7 flex-none items-center border-b border-border px-(--box-corner-inset)">
               <h3 class="text-[10px] font-bold tracking-[0.12em] text-muted-foreground uppercase">
                 {{ t('book.detail.editMetadata.identityCard') }}
               </h3>
@@ -1276,7 +1276,7 @@ function handleCoverChanged(medium: CoverMedium | null) {
           <section
             class="@container/catalog flex flex-col overflow-hidden rounded-xl border border-border bg-card @xl/edit:col-span-2 @3xl/edit:col-span-1"
           >
-            <header class="flex h-7 flex-none items-center border-b border-border px-2.5">
+            <header class="flex h-7 flex-none items-center border-b border-border px-(--box-corner-inset)">
               <h3 class="text-[10px] font-bold tracking-[0.12em] text-muted-foreground uppercase">
                 {{ t('book.detail.editMetadata.catalogCard') }}
               </h3>
@@ -1565,7 +1565,7 @@ function handleCoverChanged(medium: CoverMedium | null) {
           <!-- Description, plus the comic sheet when the primary file is a comic -->
           <div class="flex flex-col gap-2.5 @xl/edit:col-span-2 @3xl/edit:col-span-3 @min-[60rem]/edit:col-span-1 @min-[60rem]/edit:self-stretch">
             <section class="flex flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card">
-              <header class="flex h-7 flex-none items-center gap-2 border-b border-border px-2.5">
+              <header class="flex h-7 flex-none items-center gap-2 border-b border-border px-(--box-corner-inset)">
                 <h3 class="text-[10px] font-bold tracking-[0.12em] text-muted-foreground uppercase">
                   {{ t('book.detail.editMetadata.descriptionLabel') }}
                 </h3>

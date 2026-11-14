@@ -149,7 +149,7 @@ function handleCopyPath(file: TreeFile) {
       <span class="ml-auto truncate text-[11.5px] leading-none text-muted-foreground">{{ t('book.detail.files.groupedByReader') }}</span>
     </div>
 
-    <div class="min-h-0 flex-1 overflow-y-auto px-2 pb-3 pt-1">
+    <div class="min-h-0 flex-1 overflow-y-auto px-2 pt-1 pb-(--box-corner-inset)">
       <template v-for="group in groups" :key="group.key">
         <div class="flex h-[30px] items-center gap-2.5 px-2.5">
           <span class="size-[7px] shrink-0 rounded-full" :style="{ backgroundColor: GROUP_ACCENT[group.key] }" aria-hidden="true" />
