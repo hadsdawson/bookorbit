@@ -52,7 +52,7 @@ function makeService() {
   };
 
   const events = new ReadingAttemptEventsService();
-  const service = new DashboardWidgetService(widgetRepo as never, libraryService as never, events);
+  const service = new DashboardWidgetService(widgetRepo as never, libraryService as never, events, {} as never);
   return { service, widgetRepo, libraryService, events };
 }
 

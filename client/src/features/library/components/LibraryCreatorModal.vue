@@ -305,6 +305,7 @@ const sectionProps = computed(() => ({
   },
   fileWrite: {
     fileRenameEnabled: form.fileRenameEnabled,
+    renameOnAddFile: form.renameOnAddFile,
     fileWriteEnabled: form.fileWriteEnabled,
     fileWriteWriteCover: form.fileWriteWriteCover,
     fileWriteFolderCovers: form.fileWriteFolderCovers,
@@ -505,6 +506,7 @@ const sectionListeners = {
   'update:watch': handleWatchUpdate,
   'update:autoScanCronExpression': (value: string | null) => (form.autoScanCronExpression = value),
   'update:fileRenameEnabled': (value: boolean) => (form.fileRenameEnabled = value),
+  'update:renameOnAddFile': (value: boolean) => (form.renameOnAddFile = value),
   'update:fileWriteEnabled': (value: boolean) => (form.fileWriteEnabled = value),
   'update:fileWriteWriteCover': handleWriteCoverUpdate,
   'update:fileWriteFolderCovers': (value: FolderCoverMedia) => (form.fileWriteFolderCovers = value),

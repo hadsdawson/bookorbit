@@ -1,4 +1,5 @@
 import type { BookCard } from "./book";
+import type { NewReleaseRequestFormat, NewReleaseUserState } from "./new-releases";
 
 export const SCROLLER_TYPE = {
   RECENTLY_ADDED: "recently-added",
@@ -98,6 +99,7 @@ export const WIDGET_TYPE = {
   LIBRARY_OVERVIEW: "library-overview",
   YEAR_PROJECTION: "year-projection",
   LONG_WAIT: "long-wait",
+  UPCOMING_RELEASES: "upcoming-releases",
 } as const;
 
 export type WidgetType = (typeof WIDGET_TYPE)[keyof typeof WIDGET_TYPE];
@@ -226,6 +228,28 @@ export interface ReadingDnaWidgetData {
   booksAnalyzed: number;
 }
 
+/** Fork only. One followed book coming out on the widget's day. */
+export interface UpcomingReleaseWidgetItem {
+  id: number;
+  title: string;
+  authors: string[];
+  seriesName: string | null;
+  seriesIndex: number | null;
+  coverUrl: string | null;
+  /** The formats that come out on that day. */
+  formats: NewReleaseRequestFormat[];
+  state: NewReleaseUserState;
+}
+
+/** Fork only. Followed books out on the coming Tuesday, today when it is Tuesday. */
+export interface UpcomingReleasesWidgetData {
+  /** YYYY-MM-DD in the reader's time zone. */
+  date: string;
+  items: UpcomingReleaseWidgetItem[];
+  /** All books out that day, which can be more than the items shown. */
+  total: number;
+}
+
 export interface LongWaitWidgetData {
   bookId: number;
   title: string | null;
@@ -275,6 +299,8 @@ export interface WidgetDataByType {
   "library-overview": LibraryOverviewWidgetData;
   "year-projection": YearProjectionWidgetData;
   "long-wait": LongWaitWidgetData | null;
+  /** Null for someone without New Releases access. */
+  "upcoming-releases": UpcomingReleasesWidgetData | null;
 }
 
 export const DASHBOARD_WIDGET_BATCH_MAX = WIDGET_TYPES.length;

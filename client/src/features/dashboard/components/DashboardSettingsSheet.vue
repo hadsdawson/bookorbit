@@ -12,14 +12,14 @@ import { usePermissions } from '@/features/auth/composables/usePermissions'
 import { DEFAULT_SCROLLERS, SCROLLER_LABELS, SHELF_LAYOUT, useDashboardConfig, type DashboardShelfLayout } from '../composables/useDashboardConfig'
 import { SHELF_ROW_OPTIONS } from '../lib/shelf-rows'
 import { useDashboardLabels } from '../composables/useDashboardLabels'
-import { useDashboardWidgets } from '../composables/useDashboardWidgets'
+import { useDashboardWidgets, widgetAllowed } from '../composables/useDashboardWidgets'
 import { useDraggableList } from '../composables/useDraggableList'
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ 'update:open': [value: boolean]; saved: [] }>()
 
 const { t } = useI18n()
-const { isDemoRestrictedAccount } = usePermissions()
+const { isDemoRestrictedAccount, hasPermission } = usePermissions()
 
 const { scrollers, shelfLayout, syncAcrossSessions, saveShelfSettings, MAX_SCROLLERS } = useDashboardConfig()
 const { widgets, libraryIds, saveWidgets, saveLibraryScope, DEFAULT_WIDGETS } = useDashboardWidgets()
@@ -61,7 +61,7 @@ watch(
       shelfLayoutDraft.value = shelfLayout.value
       syncShelvesDraft.value = syncAcrossSessions.value
       saveError.value = false
-      widgetDraft.value = widgets.value.map((w) => ({ ...w }))
+      widgetDraft.value = widgets.value.filter((w) => widgetAllowed(w.type, hasPermission)).map((w) => ({ ...w }))
       libraryIdsDraft.value = libraryIds.value ? [...libraryIds.value] : null
       libraryScopeOpen.value = false
       fetchSmartScopes()
@@ -200,7 +200,7 @@ async function handleSave() {
 
 function resetToDefault() {
   if (activeTab.value === 'widgets') {
-    widgetDraft.value = DEFAULT_WIDGETS.map((w) => ({ ...w }))
+    widgetDraft.value = DEFAULT_WIDGETS.filter((w) => widgetAllowed(w.type, hasPermission)).map((w) => ({ ...w }))
   } else {
     draft.value = DEFAULT_SCROLLERS.map((s) => ({ ...s }))
     shelfLayoutDraft.value = SHELF_LAYOUT.WIDE

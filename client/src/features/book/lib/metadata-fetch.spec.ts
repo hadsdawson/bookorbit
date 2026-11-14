@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resolveCandidateDisplayTitle } from './metadata-fetch'
+import { hideOnError, resolveCandidateDisplayTitle } from './metadata-fetch'
 
 describe('resolveCandidateDisplayTitle', () => {
   it('prefers displayTitle when the candidate provides one', () => {
@@ -18,5 +18,17 @@ describe('resolveCandidateDisplayTitle', () => {
 
   it('returns undefined when the candidate has neither', () => {
     expect(resolveCandidateDisplayTitle({ title: undefined, displayTitle: undefined })).toBeUndefined()
+  })
+})
+
+describe('hideOnError', () => {
+  it('hides a broken image and shows it again once the element loads a working one', () => {
+    const img = document.createElement('img')
+    img.addEventListener('error', hideOnError)
+    img.dispatchEvent(new Event('error'))
+    expect(img.style.visibility).toBe('hidden')
+
+    img.dispatchEvent(new Event('load'))
+    expect(img.style.visibility).toBe('')
   })
 })

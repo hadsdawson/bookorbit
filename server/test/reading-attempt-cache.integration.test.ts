@@ -7,6 +7,7 @@ import { ReadingAttemptService } from '../src/modules/user-book-status/reading-a
 import { ReadingAttemptRepository } from '../src/modules/user-book-status/reading-attempt.repository';
 import { READING_ATTEMPT_CHANGED, ReadingAttemptEventsService } from '../src/modules/user-book-status/reading-attempt-events.service';
 import { DashboardWidgetService } from '../src/modules/dashboard/dashboard-widget.service';
+import { NewReleasesService } from '../src/modules/new-releases/new-releases.service';
 import { DashboardWidgetRepository } from '../src/modules/dashboard/dashboard-widget.repository';
 import { LibraryService } from '../src/modules/library/library.service';
 import { LibraryScopeService } from '../src/common/library-scope/library-scope.service';
@@ -63,6 +64,7 @@ describe('Reading attempt cache integration', () => {
         { provide: KoboStatusProjectionRepository, useValue: { isEnabled: vi.fn().mockResolvedValue(false) } },
         ReadingAttemptEventsService,
         DashboardWidgetService,
+        { provide: NewReleasesService, useValue: {} },
         UserStatisticsService,
         {
           provide: UserStatisticsRepository,

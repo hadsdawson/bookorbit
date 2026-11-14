@@ -69,6 +69,7 @@ function blankForm() {
     fileWriteReadAlongEnabled: false,
     fileWriteReadAlongMaxFileSizeMb: 1000,
     fileRenameEnabled: false,
+    renameOnAddFile: false,
   }
 }
 
@@ -220,6 +221,7 @@ export function useLibraryCreator() {
     form.fileWriteReadAlongEnabled = library.fileWriteReadAlongEnabled
     form.fileWriteReadAlongMaxFileSizeMb = library.fileWriteReadAlongMaxFileSizeMb
     form.fileRenameEnabled = library.fileRenameEnabled
+    form.renameOnAddFile = library.renameOnAddFile
   }
 
   /**

@@ -12,15 +12,12 @@ export function formatDate(release: Pick<UpcomingReleaseRow, 'ebookDate' | 'audi
 }
 
 /**
- * The formats to request on someone's behalf: the server's default format, narrowed to the formats
- * that have a confirmed date. A book only known as an ebook is not requested as an audiobook.
+ * The formats to request on someone's behalf: the server's default format. A format with no
+ * confirmed date yet is still requested, since the book itself is listed and that format usually
+ * follows; the request just carries no published date for it.
  */
-export function formatsToRequest(
-  release: Pick<UpcomingReleaseRow, 'ebookDate' | 'audiobookDate'>,
-  defaultFormat: NewReleaseFormat,
-): NewReleaseRequestFormat[] {
-  const wanted: NewReleaseRequestFormat[] = defaultFormat === 'both' ? ['ebook', 'audiobook'] : [defaultFormat];
-  return wanted.filter((format) => formatDate(release, format) !== null);
+export function formatsToRequest(defaultFormat: NewReleaseFormat): NewReleaseRequestFormat[] {
+  return defaultFormat === 'both' ? ['ebook', 'audiobook'] : [defaultFormat];
 }
 
 /** One request, as the request form would have filed it for this book in this format. */

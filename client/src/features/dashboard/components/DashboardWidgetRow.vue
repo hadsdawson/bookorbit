@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, watch, type Component, type ComponentPublicInstance } from 'vue'
+import { computed, ref, watch, type Component, type ComponentPublicInstance } from 'vue'
 import { ChevronLeft, ChevronRight, GripVertical } from '@lucide/vue'
 import { VueDraggable } from 'vue-draggable-plus'
 
 import type { WidgetConfig, WidgetType } from '@bookorbit/types'
-import { useDashboardWidgets } from '../composables/useDashboardWidgets'
+import { usePermissions } from '@/features/auth/composables/usePermissions'
+import { useDashboardWidgets, widgetAllowed } from '../composables/useDashboardWidgets'
 import ReadingGoalWidget from './widgets/ReadingGoalWidget.vue'
 import CurrentlyReadingWidget from './widgets/CurrentlyReadingWidget.vue'
 import ReadingStreakWidget from './widgets/ReadingStreakWidget.vue'
@@ -17,8 +18,11 @@ import ReadingDnaWidget from './widgets/ReadingDnaWidget.vue'
 import LongWaitWidget from './widgets/LongWaitWidget.vue'
 import DiversityScoreWidget from './widgets/DiversityScoreWidget.vue'
 import ReadingRhythmWidget from './widgets/ReadingRhythmWidget.vue'
+import UpcomingReleasesWidget from './widgets/UpcomingReleasesWidget.vue'
 
-const { widgets, enabledWidgets, saveWidgets } = useDashboardWidgets()
+const { widgets, enabledWidgets: allEnabledWidgets, saveWidgets } = useDashboardWidgets()
+const { hasPermission } = usePermissions()
+const enabledWidgets = computed(() => allEnabledWidgets.value.filter((widget) => widgetAllowed(widget.type, hasPermission)))
 
 // Local copy for optimistic drag updates — prevents flash on drop caused by
 // the async me() refresh briefly reverting the computed enabledWidgets.
@@ -54,6 +58,7 @@ const widgetComponents: Record<WidgetType, Component> = {
   'long-wait': LongWaitWidget,
   'diversity-score': DiversityScoreWidget,
   'reading-rhythm': ReadingRhythmWidget,
+  'upcoming-releases': UpcomingReleasesWidget,
 }
 
 type DashboardWidgetSize = '1x1' | '1x1.5'
@@ -71,6 +76,7 @@ const widgetLayout: Record<WidgetType, { size: DashboardWidgetSize }> = {
   'long-wait': { size: '1x1' },
   'diversity-score': { size: '1x1' },
   'reading-rhythm': { size: '1x1.5' },
+  'upcoming-releases': { size: '1x1.5' },
 }
 
 const widgetSizeClass: Record<DashboardWidgetSize, string> = {

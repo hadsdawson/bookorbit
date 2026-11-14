@@ -14,5 +14,6 @@ import { ReleaseSourcesService } from './release-sources.service';
   imports: [AppSettingsModule, AuthModule, BookRequestModule, LibraryModule, MetadataPreferencesModule],
   controllers: [NewReleasesController, NewReleasesAdminController],
   providers: [NewReleasesRepository, NewReleasesService, ReleaseSourcesService],
+  exports: [NewReleasesService],
 })
 export class NewReleasesModule {}

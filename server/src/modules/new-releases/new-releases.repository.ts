@@ -23,7 +23,12 @@ export interface FollowInput {
 export interface ListedReleaseRow extends UpcomingReleaseRow {
   matchedFollows: { kind: ReleaseFollowKind; name: string }[];
   state: 'requested' | 'dismissed' | null;
+  /** How many rows the whole list has, before the limit. */
+  totalCount: number;
 }
+
+/** Which books a user's list covers: still to come or out within some days, or out on one day. */
+export type ReleaseListWindow = { retentionDays: number } | { onDate: string };
 
 /** Escapes the LIKE wildcards in what a person typed, so "100%" searches for itself. */
 function likePattern(value: string): string {
@@ -184,6 +189,24 @@ export class NewReleasesRepository {
 
   // ── Checks ──────────────────────────────────────────────
 
+  /**
+   * Audible ASINs of library books in a followed series, newest additions to the series first, so
+   * the check can find that series on Audible by id. Bounded: one ASIN is normally enough.
+   */
+  async findSeriesAudibleAsins(nameKey: string, limit = 3): Promise<string[]> {
+    const result = await this.db.execute<{ audible_id: string }>(sql`
+      SELECT bm.audible_id
+      FROM release_follows f
+      JOIN book_series_memberships m ON m.series_id = f.series_id
+      JOIN book_metadata bm ON bm.book_id = m.book_id
+      WHERE f.kind = 'series' AND f.name_key = ${nameKey} AND bm.audible_id IS NOT NULL AND bm.audible_id <> ''
+      GROUP BY bm.audible_id
+      ORDER BY max(m.updated_at) DESC
+      LIMIT ${limit}
+    `);
+    return result.rows.map((row) => row.audible_id);
+  }
+
   /** Followed names due a look: never checked first, then the longest ago, skipping ones checked within `freshDays`. */
   async findDueTargets(freshDays: number, limit: number): Promise<ReleaseTarget[]> {
     const result = await this.db.execute<{ kind: ReleaseFollowKind; name_key: string; name: string; author_hint: string | null }>(sql`
@@ -285,15 +308,20 @@ export class NewReleasesRepository {
 
   /**
    * The user's list: books from their follows with a confirmed date that are still to come, or came
-   * out within `retentionDays`. Owned and hidden books are left out. Bounded, soonest first.
+   * out within `retentionDays`, or (for the dashboard) out on one day in either format. Owned and
+   * hidden books are left out. Bounded, soonest first.
    */
-  async listForUser(userId: number, retentionDays: number, limit: number): Promise<ListedReleaseRow[]> {
+  async listForUser(userId: number, window: ReleaseListWindow, limit: number): Promise<ListedReleaseRow[]> {
+    const inWindow =
+      'onDate' in window
+        ? sql`(r.ebook_date = ${window.onDate}::date OR r.audiobook_date = ${window.onDate}::date)`
+        : sql`r.release_date >= current_date - ${window.retentionDays}::int`;
     const activeStatuses = sql.join(
       ACTIVE_BOOK_REQUEST_STATUSES.map((status) => sql`${status}`),
       sql`, `,
     );
     const result = await this.db.execute<Record<string, unknown>>(sql`
-      SELECT r.*, matched.follows AS matched_follows,
+      SELECT r.*, matched.follows AS matched_follows, count(*) OVER () AS total_count,
         CASE
           WHEN st.state IS NOT NULL THEN st.state
           WHEN EXISTS (
@@ -312,7 +340,7 @@ export class NewReleasesRepository {
       LEFT JOIN release_user_states st ON st.user_id = ${userId} AND st.release_id = r.id
       WHERE matched.follows IS NOT NULL
         AND r.release_date IS NOT NULL
-        AND r.release_date >= current_date - ${retentionDays}::int
+        AND ${inWindow}
         AND r.owned_book_id IS NULL
         AND (st.state IS NULL OR st.state <> 'dismissed')
       ORDER BY r.release_date ASC, r.title ASC
@@ -339,6 +367,7 @@ export class NewReleasesRepository {
       lastSeenAt: row.last_seen_at as Date,
       matchedFollows: (row.matched_follows as { kind: ReleaseFollowKind; name: string }[] | null) ?? [],
       state: (row.user_state as 'requested' | 'dismissed' | null) ?? null,
+      totalCount: Number(row.total_count ?? 0),
     }));
   }
 

@@ -16,6 +16,7 @@ import type {
   ReadingGoalWidgetData,
   ReadingRhythmWidgetData,
   ReadingStreakWidgetData,
+  UpcomingReleasesWidgetData,
   UserSettings,
   WidgetType,
   YearProjectionWidgetData,
@@ -29,6 +30,7 @@ import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
 import { addDateKeyDays } from '../../common/utils/reading-daily-stats.utils';
 import { toTimeZoneStartOfDay } from '../../common/utils/timezone.utils';
 import { LibraryService } from '../library/library.service';
+import { NewReleasesService } from '../new-releases/new-releases.service';
 import {
   READING_ATTEMPT_CHANGED,
   ReadingAttemptEventsService,
@@ -76,6 +78,7 @@ export class DashboardWidgetService implements OnModuleInit, OnModuleDestroy {
     private readonly widgetRepo: DashboardWidgetRepository,
     private readonly libraryService: LibraryService,
     private readonly readingAttemptEvents: ReadingAttemptEventsService,
+    private readonly newReleases: NewReleasesService,
   ) {}
 
   private readonly onReadingAttemptChanged = ({ userId }: ReadingAttemptChangedPayload): void => {
@@ -411,6 +414,11 @@ export class DashboardWidgetService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
+  /** Fork only. Not cached: a book requested or hidden on New Releases shows here on the next refresh. */
+  getUpcomingReleases(user: RequestUser): Promise<UpcomingReleasesWidgetData | null> {
+    return this.newReleases.upcomingTuesday(user, this.readerClock(user).today);
+  }
+
   private readonly widgetLoaders: Record<WidgetType, (user: RequestUser, locale: Locale) => Promise<DashboardWidgetBatchResult['data']>> = {
     'reading-goal': (user) => this.getReadingGoal(user),
     'currently-reading': (user) => this.getCurrentlyReading(user),
@@ -424,6 +432,7 @@ export class DashboardWidgetService implements OnModuleInit, OnModuleDestroy {
     'long-wait': (user) => this.getLongWait(user),
     'diversity-score': (user) => this.getDiversityScore(user),
     'reading-rhythm': (user) => this.getReadingRhythm(user),
+    'upcoming-releases': (user) => this.getUpcomingReleases(user),
   };
 
   /**

@@ -44,5 +44,15 @@ export function toDisplayCoverUrl(url: string | null | undefined): string {
 }
 
 export function hideOnError(e: Event): void {
-  ;(e.target as HTMLImageElement).style.visibility = 'hidden'
+  const img = e.target as HTMLImageElement
+  img.style.visibility = 'hidden'
+  // Vue reuses the element when the picked cover changes, so a later image that loads must show
+  // again; otherwise only the blurred backdrop behind it is left.
+  img.addEventListener(
+    'load',
+    () => {
+      img.style.visibility = ''
+    },
+    { once: true },
+  )
 }

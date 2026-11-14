@@ -4,6 +4,7 @@ import {
   DEFAULT_NEW_RELEASE_RETENTION_DAYS,
   NEW_RELEASE_DELIVERIES,
   NEW_RELEASE_FORMATS,
+  NEW_RELEASE_REQUEST_FORMATS,
   type NewReleaseDelivery,
   type NewReleaseFormat,
   type NewReleaseItem,
@@ -17,6 +18,7 @@ import {
   type ReleaseFollowKind,
   type ReleaseFollowPage,
   Permission,
+  type UpcomingReleasesWidgetData,
   type UpdateNewReleasesUserSettingsPayload,
 } from '@bookorbit/types';
 
@@ -39,6 +41,8 @@ const RECHECK_DAYS = 7;
 /** Names looked up per hourly run: about ten minutes of paced calls to the book sites. */
 const TARGETS_PER_RUN = 60;
 const LIST_LIMIT = 500;
+/** Books the dashboard widget shows; the rest are counted. */
+const WIDGET_LIMIT = 12;
 const FOLLOW_ALL_PAGE = 1_000;
 /** Kept a while past the longest drop-off period, then deleted. */
 const KEEP_RELEASED_DAYS = 120;
@@ -50,6 +54,13 @@ const AUTO_REQUESTS_PER_RUN = 100;
 const AUTO_REQUEST_RETRY_MS = 24 * 60 * 60 * 1000;
 /** Lets a new follow get its first look soon, without starting a run per click. */
 const KICK_DELAY_MS = 10_000;
+
+/** The Tuesday on or after a YYYY-MM-DD day. */
+export function comingTuesday(today: string): string {
+  const day = new Date(`${today}T00:00:00Z`);
+  day.setUTCDate(day.getUTCDate() + ((2 - day.getUTCDay() + 7) % 7));
+  return day.toISOString().slice(0, 10);
+}
 
 function todayIso(now: Date = new Date()): string {
   return now.toISOString().slice(0, 10);
@@ -211,7 +222,7 @@ export class NewReleasesService implements OnApplicationBootstrap {
     ]);
     const retentionDays = (userSettings?.retentionDays ?? DEFAULT_NEW_RELEASE_RETENTION_DAYS) as NewReleaseRetentionDays;
     const delivery = (userSettings?.delivery as NewReleaseDelivery | null) ?? null;
-    const rows = await this.repository.listForUser(user.id, retentionDays, LIST_LIMIT);
+    const rows = await this.repository.listForUser(user.id, { retentionDays }, LIST_LIMIT);
     const items: NewReleaseItem[] = rows.map((row) => ({
       id: row.id,
       title: row.title,
@@ -235,6 +246,30 @@ export class NewReleasesService implements OnApplicationBootstrap {
       lastCheckedAt: lastCheckedAt?.toISOString() ?? null,
       checking: this.running !== null,
       pendingChecks,
+    };
+  }
+
+  /**
+   * For the dashboard: followed books out on the coming Tuesday, today when it is Tuesday, as the
+   * reader's calendar has it. Null for someone without New Releases access.
+   */
+  async upcomingTuesday(user: RequestUser, today: string): Promise<UpcomingReleasesWidgetData | null> {
+    if (!user.isSuperuser && !user.permissions.includes(Permission.NewReleasesAccess)) return null;
+    const date = comingTuesday(today);
+    const rows = await this.repository.listForUser(user.id, { onDate: date }, WIDGET_LIMIT);
+    return {
+      date,
+      total: rows[0]?.totalCount ?? 0,
+      items: rows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        authors: row.authors,
+        seriesName: row.seriesName,
+        seriesIndex: row.seriesIndex,
+        coverUrl: row.coverUrl,
+        formats: NEW_RELEASE_REQUEST_FORMATS.filter((format) => formatDate(row, format) === date),
+        state: row.state,
+      })),
     };
   }
 
@@ -267,9 +302,9 @@ export class NewReleasesService implements OnApplicationBootstrap {
   async requestRelease(user: RequestUser, releaseId: number, formats: NewReleaseRequestFormat[]): Promise<NewReleaseRequestResult> {
     const release = await this.repository.findReleaseById(releaseId);
     if (!release) throw new NotFoundException('Release not found');
-    const dated = formats.filter((format) => formatDate(release, format) !== null);
-    if (dated.length === 0) throw new BadRequestException('That format has no confirmed release date yet');
-    const requested = await this.fileRequests(user, release, dated);
+    const wanted = [...new Set(formats)];
+    if (wanted.length === 0) throw new BadRequestException('Pick a format to request');
+    const requested = await this.fileRequests(user, release, wanted);
     if (requested.length === 0) throw new ConflictException('The request could not be filed');
     return { requested };
   }
@@ -315,7 +350,7 @@ export class NewReleasesService implements OnApplicationBootstrap {
         !!user &&
         (user.isSuperuser || (user.permissions.includes(Permission.NewReleasesAccess) && user.permissions.includes(Permission.BookRequestAccess)));
       const release = allowed ? await this.repository.findReleaseById(releaseId) : null;
-      const formats = release ? formatsToRequest(release, server.defaultFormat) : [];
+      const formats = release ? formatsToRequest(server.defaultFormat) : [];
       if (!user || !release || formats.length === 0) {
         this.autoRequestRetryAt.set(key, now + AUTO_REQUEST_RETRY_MS);
         continue;
@@ -420,7 +455,8 @@ export class NewReleasesService implements OnApplicationBootstrap {
 
   /** Looks up one followed name and saves what it finds. Returns how many books have a date. */
   async checkTarget(target: ReleaseTarget, today: string = todayIso()): Promise<number> {
-    const { releases, failedSources, attempted } = await this.sources.lookup(target, today);
+    const audibleAsins = target.kind === 'series' ? await this.repository.findSeriesAudibleAsins(target.nameKey) : [];
+    const { releases, failedSources, attempted } = await this.sources.lookup({ ...target, audibleAsins }, today);
     const merged = mergeReleases(releases, today);
     const existing = new Map(
       (await this.repository.findReleasesByWorkKeys(merged.map((release) => release.workKey))).map((row) => [row.workKey, row]),

@@ -28,11 +28,10 @@ function release(overrides: Partial<UpcomingReleaseRow> = {}): UpcomingReleaseRo
 }
 
 describe('formatsToRequest', () => {
-  it('requests the server default format, only where that format has a date', () => {
-    expect(formatsToRequest(release(), 'both')).toEqual(['ebook', 'audiobook']);
-    expect(formatsToRequest(release({ audiobookDate: null }), 'both')).toEqual(['ebook']);
-    expect(formatsToRequest(release({ audiobookDate: null }), 'audiobook')).toEqual([]);
-    expect(formatsToRequest(release(), 'ebook')).toEqual(['ebook']);
+  it('requests the server default format', () => {
+    expect(formatsToRequest('both')).toEqual(['ebook', 'audiobook']);
+    expect(formatsToRequest('audiobook')).toEqual(['audiobook']);
+    expect(formatsToRequest('ebook')).toEqual(['ebook']);
   });
 });
 
