@@ -30,8 +30,10 @@ import { useBookDestination } from '@/features/library/composables/useBookDestin
 import BookDestinationFields from '@/features/library/components/BookDestinationFields.vue'
 import { useMetadataSearch } from '@/features/book/composables/useMetadataSearch'
 import type { MetadataDiffApply } from '@/features/book/composables/useMetadataDiff'
+import type { SecondCoverInput } from '@/features/book/composables/useSecondCoverRow'
 import { formatBytes } from '@/lib/formatting'
 import { toDisplayCoverUrl } from '@/features/book/lib/metadata-fetch'
+import RichDescriptionEditor from '@/features/book/components/detail/tabs/RichDescriptionEditor.vue'
 
 const { t } = useI18n()
 
@@ -76,6 +78,8 @@ const form = reactive({
   tags: '',
 })
 const selectedCoverUrl = ref('')
+/** The other format's cover, picked here so a merged ebook and audiobook both get art when filed. */
+const otherCoverUrl = ref('')
 const passthroughMetadata = ref<BookDockMetadata>({})
 const { search: searchSeriesName } = useSeriesNameSearch()
 const { search: searchAnyGenre } = useGenreSearch()
@@ -156,6 +160,7 @@ watch(
     form.genres = m.genres?.join(', ') ?? ''
     form.tags = m.tags?.join(', ') ?? ''
     selectedCoverUrl.value = m.coverUrl ?? ''
+    otherCoverUrl.value = m.otherFormatCoverPicked ? (m.otherFormatCoverUrl ?? '') : ''
     metaView.value = 'editor'
 
     destination.reset(props.file.targetLibraryId, props.file.targetFolderId)
@@ -200,7 +205,14 @@ function buildMetadataPatchFromForm(): Partial<BookDockMetadata> {
       : undefined,
     tags: form.tags ? splitList(form.tags) : undefined,
     coverUrl: selectedCoverUrl.value || undefined,
+    ...(otherCoverUrl.value ? { otherFormatCoverUrl: otherCoverUrl.value, otherFormatCoverPicked: true } : {}),
   }
+}
+
+function handleDescriptionChange(value: string | null) {
+  if ((value ?? '') === form.description) return
+  form.description = value ?? ''
+  onFieldChange()
 }
 
 function onFieldChange() {
@@ -359,10 +371,45 @@ const fileCoverMedium = computed<CoverMedium>(() => (fileMediaKind.value === 'au
 
 const fileCoverPriority = computed(() => (fileCoverMedium.value === 'audio' ? audioCoverProviderOrder.value : coverProviderOrder.value))
 
+// Ebooks and audiobooks also get a row of the other format's covers, searched as that format.
+const secondSearch = useMetadataSearch()
+const { results: secondResults, isStreaming: secondSearching } = secondSearch
+const otherCoverMedium = computed<CoverMedium | null>(() => {
+  if (fileMediaKind.value === 'ebook') return 'audio'
+  if (fileMediaKind.value === 'audiobook') return 'ebook'
+  return null
+})
+const otherCoverPriority = computed(() => (otherCoverMedium.value === 'audio' ? audioCoverProviderOrder.value : coverProviderOrder.value))
+const displayOtherCoverUrl = computed(() => toDisplayCoverUrl(otherCoverUrl.value))
+const secondCover = computed<SecondCoverInput | null>(() => {
+  const medium = otherCoverMedium.value
+  if (!medium) return null
+  return {
+    medium,
+    candidates: secondResults.value,
+    priority: otherCoverPriority.value,
+    currentUrl: displayOtherCoverUrl.value,
+    searching: secondSearching.value,
+  }
+})
+
+function searchOtherCovers(params: MetadataQuery) {
+  const medium = otherCoverMedium.value
+  if (!medium) return
+  // The ISBN names this file's edition, so the other format is looked up by title and author only.
+  void secondSearch.search({
+    title: params.title,
+    author: params.author,
+    mediaKind: medium === 'audio' ? 'audiobook' : 'ebook',
+    ...(otherCoverPriority.value.length ? { providers: otherCoverPriority.value } : {}),
+  })
+}
+
 function handleSearchSubmit(params: MetadataQuery) {
   const mediaKind = fileMediaKind.value
   if (mediaKind === 'ebook' || mediaKind === 'audiobook') {
     search({ ...params, mediaKind, mediaKinds: ['ebook', 'audiobook'] })
+    searchOtherCovers(params)
     return
   }
   search(mediaKind === 'unknown' ? params : { ...params, mediaKind })
@@ -379,6 +426,7 @@ function handleRetry(provider: MetadataProviderKey) {
 
 function handleSearchFresh() {
   void searchFresh()
+  if (otherCoverMedium.value) void secondSearch.searchFresh()
 }
 
 async function handleApply(patch: MetadataDiffApply) {
@@ -400,11 +448,14 @@ async function handleApply(patch: MetadataDiffApply) {
   if ('authors' in p) form.authors = (p.authors ?? []).join(', ')
   if ('genres' in p) form.genres = (p.genres ?? []).join(', ')
 
-  const coverUrl = patch.coverUrl ?? patch.audioCoverUrl
+  const ownCover = fileCoverMedium.value === 'audio' ? patch.audioCoverUrl : patch.coverUrl
+  const otherCover = fileCoverMedium.value === 'audio' ? patch.coverUrl : patch.audioCoverUrl
+  const coverUrl = otherCoverMedium.value ? ownCover : (patch.coverUrl ?? patch.audioCoverUrl)
   if (coverUrl !== undefined) {
     selectedCoverUrl.value = coverUrl
     passthroughMetadata.value.coverUrl = coverUrl
   }
+  if (otherCoverMedium.value && otherCover !== undefined) otherCoverUrl.value = otherCover
 
   if (debounceTimer) {
     clearTimeout(debounceTimer)
@@ -510,6 +561,17 @@ onMounted(() => {
             @error="onCurrentBookDockCoverError"
           />
           <BookOpen class="size-5 text-muted-foreground absolute" />
+        </div>
+        <div
+          v-if="displayOtherCoverUrl && otherCoverMedium"
+          class="relative size-12 shrink-0 overflow-hidden rounded-lg bg-muted"
+          :title="t(`bookDock.sheet.otherCover.${otherCoverMedium}`)"
+          data-testid="book-dock-other-cover"
+        >
+          <img :src="displayOtherCoverUrl" :alt="t(`bookDock.sheet.otherCover.${otherCoverMedium}`)" class="size-full object-cover" />
+          <span class="absolute inset-x-0 bottom-0 bg-black/55 text-center text-[9px] font-medium leading-3 text-white">{{
+            t(`bookDock.sheet.otherCover.short.${otherCoverMedium}`)
+          }}</span>
         </div>
         <div class="flex-1 min-w-0">
           <p class="text-sm font-semibold truncate">{{ file.fileName }}</p>
@@ -688,15 +750,10 @@ onMounted(() => {
                 </button>
               </div>
             </div>
-            <label class="sm:col-span-2">
+            <div class="sm:col-span-2" data-testid="book-dock-description">
               <span class="text-xs font-medium text-muted-foreground">{{ t('bookDock.field.description') }}</span>
-              <textarea
-                v-model="form.description"
-                rows="3"
-                class="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring resize-none"
-                @input="onFieldChange"
-              />
-            </label>
+              <RichDescriptionEditor :model-value="form.description" class="mt-1 min-h-48" @update:model-value="handleDescriptionChange" />
+            </div>
           </div>
 
           <BookDestinationFields
@@ -762,6 +819,7 @@ onMounted(() => {
           :current-cover-url="currentBookDockCoverUrl"
           :cover-medium="fileCoverMedium"
           :cover-priority="fileCoverPriority"
+          :second-cover="secondCover"
           :search-defaults="searchDefaults"
           :providers="providers"
           :results="filteredResults"

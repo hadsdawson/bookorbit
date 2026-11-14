@@ -39,7 +39,7 @@ function sentBody(): Record<string, unknown> {
 }
 
 function combineButton(wrapper: ReturnType<typeof mountDialog>) {
-  return wrapper.findAll('button').find((button) => button.text().trim() === 'Combine')!
+  return wrapper.findAll('button').find((button) => button.text().trim() === 'Merge')!
 }
 
 describe('BookDockCombineDialog', () => {

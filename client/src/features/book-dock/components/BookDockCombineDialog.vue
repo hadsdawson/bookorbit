@@ -108,7 +108,7 @@ function handleClose() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="book-dock-combine-title"
-        class="relative z-10 w-full max-w-md mx-4 bg-card border border-border rounded-lg shadow-2xl overflow-hidden"
+        class="relative z-10 w-[min(42.5rem,calc(100vw-2rem))] bg-card border border-border rounded-lg shadow-2xl overflow-hidden"
       >
         <div class="flex items-center justify-between px-5 py-4 border-b border-border">
           <h2 id="book-dock-combine-title" class="text-base font-semibold text-foreground">
@@ -124,10 +124,10 @@ function handleClose() {
           </button>
         </div>
 
-        <div v-if="!result" class="px-5 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
+        <div v-if="!result" class="px-5 py-4 space-y-4 max-h-[min(76vh,46rem)] overflow-y-auto">
           <p class="text-xs text-muted-foreground">{{ t('bookDock.combine.instructions') }}</p>
 
-          <fieldset class="space-y-1.5">
+          <fieldset class="min-w-0 space-y-1.5">
             <legend class="text-xs font-medium text-muted-foreground mb-1">{{ t('bookDock.combine.primaryLabel') }}</legend>
             <label
               v-for="file in files"
@@ -142,10 +142,10 @@ function handleClose() {
                 :checked="file.id === primaryFileId"
                 @change="choosePrimary(file.id)"
               />
-              <span class="min-w-0 flex-1 truncate">{{ file.fileName }}</span>
+              <span class="min-w-0 flex-1 break-words">{{ file.fileName }}</span>
               <span class="shrink-0 text-xs uppercase text-muted-foreground">{{ extensionOf(file) || t('bookDock.combine.folder') }}</span>
             </label>
-            <p class="text-xs text-muted-foreground">
+            <p class="text-xs break-words text-muted-foreground">
               {{ t('bookDock.combine.primaryHint', { title: primaryTitle }) }}
               <span v-if="primaryReason"> {{ primaryReason }}</span>
             </p>

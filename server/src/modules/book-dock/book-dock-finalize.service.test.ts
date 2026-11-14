@@ -1594,7 +1594,7 @@ describe('BookDockFinalizeService', () => {
   });
 
   describe("the other format's cover", () => {
-    function setUp(unitFormats: string[], slotEmpty = true) {
+    function setUp(unitFormats: string[], slotEmpty = true, picked = false) {
       const ctx = makeService();
       const updateChain = { set: vi.fn(), where: vi.fn().mockResolvedValue(undefined) };
       updateChain.set.mockReturnValue(updateChain);
@@ -1604,10 +1604,20 @@ describe('BookDockFinalizeService', () => {
       const row = makeRow({
         format: 'epub',
         coverPath: null,
-        selectedMetadata: { title: 'Dune', otherFormatCoverUrl: 'https://audible/dune.jpg' } as BookDockMetadata,
+        selectedMetadata: {
+          title: 'Dune',
+          otherFormatCoverUrl: 'https://audible/dune.jpg',
+          ...(picked ? { otherFormatCoverPicked: true } : {}),
+        } as BookDockMetadata,
       });
       return { ...ctx, row };
     }
+
+    it('uses a picked audiobook cover as chosen art, even over the folder file and a filled slot', async () => {
+      const { service, metadataService, row } = setUp(['epub', 'm4b'], false, true);
+      await (service as any).applyMetadata(15, row);
+      expect(metadataService.downloadAndSaveCover).toHaveBeenCalledWith([{ url: 'https://audible/dune.jpg' }], 15, 'audio', { userChosen: true });
+    });
 
     it('fills the audiobook slot of an ebook-only book', async () => {
       const { service, metadataService, row } = setUp(['epub']);

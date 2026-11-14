@@ -9608,7 +9608,15 @@
       "review": "Review",
       "added": "Added {date}",
       "searchMetadata": "Search Metadata",
-      "results": "Results"
+      "results": "Results",
+      "otherCover": {
+        "audio": "Audiobook cover, used when the book is filed",
+        "ebook": "Ebook cover, used when the book is filed",
+        "short": {
+          "audio": "Audio",
+          "ebook": "Ebook"
+        }
+      }
     },
     "bulkEdit": {
       "title": "{count, plural, =0 {Bulk Edit no files} one {Bulk Edit # file} other {Bulk Edit # files}}",
@@ -9763,19 +9771,19 @@
       }
     },
     "combine": {
-      "action": "Combine",
+      "action": "Merge",
       "actionHint": "File the selected files as one book, such as an ebook and its audiobook",
-      "title": "Combine {count} files into one book",
+      "title": "Merge {count} files into one book",
       "instructions": "The primary file is filed as the book. The other files are added to the same book folder as more formats, for example the audiobook of the same book.",
       "primaryLabel": "Primary file",
       "primaryHint": "The book takes its title, authors and other details from the primary file: {title}",
       "folder": "Folder",
-      "libraryNote": "Combining needs a library that keeps each book in its own folder.",
-      "submit": "Combine",
-      "resultTitle": "Files combined",
+      "libraryNote": "Merging needs a library that keeps each book in its own folder.",
+      "submit": "Merge",
+      "resultTitle": "Files merged",
       "done": "{count, plural, one {# file filed} other {All # files filed as one book}}",
       "partial": "{done} of {total} files filed",
-      "failed": "Could not combine those files",
+      "failed": "Could not merge those files",
       "primaryByPriority": "Picked by the library's format priority."
     }
   },

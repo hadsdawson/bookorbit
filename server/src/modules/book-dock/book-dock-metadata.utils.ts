@@ -25,6 +25,7 @@ const PASSTHROUGH_FIELDS = [
   'tags',
   'coverUrl',
   'otherFormatCoverUrl',
+  'otherFormatCoverPicked',
   'abridged',
   'googleBooksId',
   'goodreadsId',

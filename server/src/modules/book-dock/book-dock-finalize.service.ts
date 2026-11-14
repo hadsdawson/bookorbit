@@ -1482,16 +1482,20 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
   }
 
   /**
-   * The other format's cover from the Book Dock lookup, so its slot is ready before that format's
-   * files arrive. It only fills an empty slot: art already there, such as from the other file of a
-   * two-format folder, is never replaced.
+   * The other format's cover, so its slot is ready before that format's files arrive. One a person
+   * picked in the Book Dock is used as chosen art, replacing what the slot holds. One that only came
+   * from the lookup fills an empty slot, and gives way to a file of that format in the same folder,
+   * which brings its own art.
    */
   private async applyOtherFormatCover(bookId: number, row: BookDockFileRow, medium: CoverMedium): Promise<void> {
-    const url =
-      normalizeBookDockMetadata(row.selectedMetadata)?.otherFormatCoverUrl ?? normalizeBookDockMetadata(row.fetchedMetadata)?.otherFormatCoverUrl;
-    if (!url) return;
+    const selected = normalizeBookDockMetadata(row.selectedMetadata);
     const otherMedium: CoverMedium = medium === 'audio' ? 'ebook' : 'audio';
-    // A folder that brings the other format's file brings that file's own art, which comes first.
+    if (selected?.otherFormatCoverPicked && selected.otherFormatCoverUrl) {
+      await this.metadataService.downloadAndSaveCover([{ url: selected.otherFormatCoverUrl }], bookId, otherMedium, { userChosen: true });
+      return;
+    }
+    const url = selected?.otherFormatCoverUrl ?? normalizeBookDockMetadata(row.fetchedMetadata)?.otherFormatCoverUrl;
+    if (!url) return;
     const unitFiles = await this.repo.findUnitFiles(row.id);
     if (unitFiles.some((file) => file.role === 'content' && file.format != null && isAudioFormat(file.format) === (otherMedium === 'audio'))) return;
     if (!(await this.metadataService.coverSlotIsEmpty(bookId, otherMedium))) return;
