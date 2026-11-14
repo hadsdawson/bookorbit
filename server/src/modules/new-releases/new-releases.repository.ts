@@ -310,6 +310,10 @@ export class NewReleasesRepository {
    * The user's list: books from their follows with a confirmed date that are still to come, or came
    * out within `retentionDays`, or (for the dashboard) out on one day in either format. Owned and
    * hidden books are left out. Bounded, soonest first.
+   *
+   * A book shows as requested only while the user has an active request for it, so a cancelled or
+   * deleted request makes it requestable again. The stored "requested" mark still keeps automatic
+   * requests from filing it a second time.
    */
   async listForUser(userId: number, window: ReleaseListWindow, limit: number): Promise<ListedReleaseRow[]> {
     const inWindow =
@@ -323,7 +327,6 @@ export class NewReleasesRepository {
     const result = await this.db.execute<Record<string, unknown>>(sql`
       SELECT r.*, matched.follows AS matched_follows, count(*) OVER () AS total_count,
         CASE
-          WHEN st.state IS NOT NULL THEN st.state
           WHEN EXISTS (
             SELECT 1 FROM book_requests br
             WHERE br.user_id = ${userId} AND br.status IN (${activeStatuses}) AND lower(br.title) = lower(r.title)
