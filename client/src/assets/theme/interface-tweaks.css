@@ -58,6 +58,27 @@ html:is([data-box-depth='subtle'], [data-box-depth='strong'])
   box-shadow: var(--ui-box-shadow);
 }
 
+/* A scroll area clips the shadows of the boxes inside it, which shows as dark square corners under rounded
+   boxes. A scroll area marked data-shadow-room reaches out into the gap around it and pads itself by the
+   same amount, so its contents stay where they were and the shadow fades out before the edge. */
+html {
+  --ui-box-room-x: 0.25rem;
+  --ui-box-room-b: 0.25rem;
+}
+html[data-box-depth='subtle'] {
+  --ui-box-room-x: 0.5rem;
+  --ui-box-room-b: 1rem;
+}
+html[data-box-depth='strong'] {
+  --ui-box-room-x: 0.75rem;
+  --ui-box-room-b: 2rem;
+}
+[data-shadow-room] {
+  margin-inline: calc(-1 * var(--ui-box-room-x));
+  padding-inline: var(--ui-box-room-x);
+  padding-bottom: var(--ui-box-room-b);
+}
+
 /* ── Outlines ── */
 html[data-box-outline='medium'] {
   --ui-box-border: color-mix(in oklch, var(--border) 65%, var(--foreground));

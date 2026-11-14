@@ -26,7 +26,7 @@ function formatLabel(file: BookDetail['files'][number]): string {
 
 <template>
   <section class="flex flex-col overflow-hidden rounded-xl border border-border bg-card" :aria-label="t('book.detail.editMetadata.sourceCard')">
-    <header class="flex h-7 flex-none items-center gap-2 border-b border-border px-2.5">
+    <header class="flex h-7 flex-none items-center gap-2 border-b border-border px-(--box-corner-inset)">
       <h3 class="text-[10px] font-bold tracking-[0.12em] text-muted-foreground uppercase">{{ t('book.detail.editMetadata.sourceCard') }}</h3>
       <span class="ml-auto text-[10px] font-semibold text-muted-foreground">
         {{ t('book.detail.editMetadata.fileCount', { count: book.files.length }) }}
