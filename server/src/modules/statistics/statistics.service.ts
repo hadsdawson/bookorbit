@@ -489,8 +489,6 @@ export class StatisticsService {
       excludeTagIds: [...new Set(contentFilters.excludeTagIds)].sort((a, b) => a - b),
       includeGenreIds: [...new Set(contentFilters.includeGenreIds)].sort((a, b) => a - b),
       excludeGenreIds: [...new Set(contentFilters.excludeGenreIds)].sort((a, b) => a - b),
-      includeAgeRatings: [...new Set(contentFilters.includeAgeRatings ?? [])].sort((a, b) => a - b),
-      excludeAgeRatings: [...new Set(contentFilters.excludeAgeRatings ?? [])].sort((a, b) => a - b),
     };
   }
 }

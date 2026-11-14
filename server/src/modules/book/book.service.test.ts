@@ -146,8 +146,6 @@ function makeService(
     findNarratorsByBookIds: vi.fn(),
     findPrimaryFile: vi.fn(),
     findById: vi.fn(),
-    findEffectiveAgeRating: vi.fn().mockResolvedValue(null),
-    setAgeRating: vi.fn().mockResolvedValue([]),
     findRatingByBookAndUser: vi.fn().mockResolvedValue(null),
     findCollectionsByBookId: vi.fn(),
     findKoboReadingState: vi.fn(),

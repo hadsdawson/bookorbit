@@ -1,4 +1,3 @@
-import type { AgeRating } from '@bookorbit/types';
 import type {
   AudiobookChapter,
   AudiobookChapterSource,
@@ -65,8 +64,6 @@ export class BookDetailDto {
   seriesIndex: string | null;
   seriesMemberships: BookSeriesMembership[];
   rating: number | null;
-  /** Fork: the series' rating when the book is in a rated series, otherwise the book's own. */
-  ageRating?: AgeRating | null;
   personalNote: string | null;
   personalNoteUpdatedAt: Date | null;
   communityRatings: BookCommunityRating[];

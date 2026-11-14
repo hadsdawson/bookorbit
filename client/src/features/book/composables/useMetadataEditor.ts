@@ -3,7 +3,6 @@ import { api } from '@/lib/api'
 import { readApiErrorDetail } from '@/lib/api-error'
 import {
   isKnownMetadataProviderKey,
-  type AgeRating,
   type BookCommunityRating,
   type BookDetail,
   type BookMetadataLockField,
@@ -31,7 +30,6 @@ const ROOT_FIELDS = [
   'isbn10',
   'isbn13',
   'rating',
-  'ageRating',
   'authors',
   'genres',
   'tags',
@@ -157,7 +155,6 @@ export function useMetadataEditor() {
     publishedDate: null as string | null,
     publishedYear: null as number | null,
     language: null as string | null,
-    ageRating: null as AgeRating | null,
     pageCount: null as number | null,
     communityRatings: [] as BookCommunityRating[],
     seriesName: null as string | null,
@@ -217,7 +214,6 @@ export function useMetadataEditor() {
     form.publishedDate = book.publishedDate
     form.publishedYear = book.publishedYear
     form.language = book.language
-    form.ageRating = book.ageRating ?? null
     form.pageCount = book.pageCount
     form.communityRatings = [...book.communityRatings]
     form.seriesName = book.seriesName

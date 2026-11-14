@@ -1,13 +1,10 @@
 import { randomUUID } from 'crypto';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { and, asc } from 'drizzle-orm';
+import { asc } from 'drizzle-orm';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Client, Pool } from 'pg';
 
-import { EMPTY_CONTENT_FILTER_RULES, type ContentFilterRules } from '@bookorbit/types';
-import { setBookAgeRating } from '../src/common/utils/age-rating-write.utils';
-import { buildContentFilterClauses } from '../src/common/utils/content-filter-sql.utils';
 import * as schema from '../src/db/schema';
 
 function escapeIdentifier(identifier: string): string {
@@ -20,15 +17,16 @@ function migrationStatementsFor(tables: string[]): string[] {
   return text
     .split('--> statement-breakpoint')
     .map((statement) => statement.trim())
+    .filter((statement) => !statement.includes('age_rating'))
     .filter((statement) => tables.some((table) => statement.includes(`ON "${table}"`) || statement.startsWith(`ALTER TABLE "${table}"`)));
 }
 
 /**
- * Fork: age ratings and article-free sort keys against a real PostgreSQL. Only the tables these
- * features touch are created, with the columns the queries use; the new columns, checks and
- * indexes come from the generated migration itself.
+ * Fork: article-free sort keys against a real PostgreSQL. Only the tables they touch are created,
+ * with the columns the queries use; the sort key columns and indexes come from the migration
+ * itself. Its age rating statements are skipped: that feature was removed later.
  */
-describe('Age ratings and sort keys (e2e)', { timeout: 60_000 }, () => {
+describe('Sort keys (e2e)', { timeout: 60_000 }, () => {
   let admin: Client;
   let pool: Pool;
   let db: NodePgDatabase<typeof schema>;
@@ -36,7 +34,7 @@ describe('Age ratings and sort keys (e2e)', { timeout: 60_000 }, () => {
 
   beforeAll(async () => {
     const baseUrl = new URL(process.env.DATABASE_URL!);
-    databaseName = `age_rating_${randomUUID().replace(/-/g, '').slice(0, 12)}_e2e`;
+    databaseName = `sort_keys_${randomUUID().replace(/-/g, '').slice(0, 12)}_e2e`;
     const targetUrl = new URL(baseUrl);
     targetUrl.pathname = `/${databaseName}`;
     const adminUrl = new URL(baseUrl);
@@ -79,16 +77,6 @@ describe('Age ratings and sort keys (e2e)', { timeout: 60_000 }, () => {
     return rows[0]!.id;
   }
 
-  async function visible(rules: Partial<ContentFilterRules>): Promise<number[]> {
-    const clauses = buildContentFilterClauses({ ...EMPTY_CONTENT_FILTER_RULES, ...rules }, db);
-    const rows = await db
-      .select({ id: schema.books.id })
-      .from(schema.books)
-      .where(clauses.length > 0 ? and(...clauses) : undefined)
-      .orderBy(asc(schema.books.id));
-    return rows.map((row) => row.id);
-  }
-
   it('sorts titles and series names without a leading "The", "A" or "An"', async () => {
     for (const title of ['The Hobbit', 'A Wizard of Earthsea', 'Anansi Boys', 'Theory of Everything', '  An Echo', 'Dune']) await addBook(title);
     await addSeries('The Expanse');
@@ -110,58 +98,5 @@ describe('Age ratings and sort keys (e2e)', { timeout: 60_000 }, () => {
     await pool.query(`UPDATE book_metadata SET series_name = 'The Wheel of Time' WHERE title = 'Dune'`);
     const { rows } = await pool.query('SELECT series_name_sort_key FROM book_metadata WHERE title = $1', ['Dune']);
     expect(rows[0].series_name_sort_key).toBe('wheel of time');
-  });
-
-  it('gives a rating chosen on one book to its whole series, including books added later', async () => {
-    const expanse = await addSeries('The Expanse');
-    const first = await addBook('Leviathan Wakes', expanse);
-    const second = await addBook("Caliban's War", expanse);
-    const standalone = await addBook('Dune');
-
-    expect((await setBookAgeRating(db, first, 16)).sort()).toEqual([first, second].sort());
-    const later = await addBook("Abaddon's Gate", expanse);
-
-    expect(await visible({ excludeAgeRatings: [16] })).toEqual([standalone]);
-    expect(await visible({ includeAgeRatings: [16] })).toEqual([first, second, later]);
-
-    const { rows } = await pool.query('SELECT book_id, age_rating FROM book_metadata ORDER BY book_id');
-    expect(rows).toEqual([
-      { book_id: first, age_rating: 16 },
-      { book_id: second, age_rating: 16 },
-      { book_id: standalone, age_rating: null },
-      { book_id: later, age_rating: null },
-    ]);
-  });
-
-  it('treats a book with no rating as Not rated, which can be shown or hidden', async () => {
-    const rated = await addBook('Charlotte’s Web');
-    const unrated = await addBook('Dune');
-    await setBookAgeRating(db, rated, 0);
-
-    expect(await visible({ includeAgeRatings: [0] })).toEqual([rated]);
-    expect(await visible({ includeAgeRatings: [0, -1] })).toEqual([rated, unrated]);
-    expect(await visible({ excludeAgeRatings: [-1] })).toEqual([rated]);
-    expect(await visible({ excludeAgeRatings: [18] })).toEqual([rated, unrated]);
-    expect(await visible({})).toEqual([rated, unrated]);
-  });
-
-  it("lets a series' rating win over a book's own, and clearing it clears the series", async () => {
-    const series = await addSeries('Discworld');
-    const book = await addBook('Mort', series);
-    await pool.query('UPDATE book_metadata SET age_rating = 10 WHERE book_id = $1', [book]);
-    await pool.query('UPDATE book_series SET age_rating = 13 WHERE id = $1', [series]);
-
-    expect(await visible({ includeAgeRatings: [13] })).toEqual([book]);
-    expect(await visible({ includeAgeRatings: [10] })).toEqual([]);
-
-    await setBookAgeRating(db, book, null);
-    expect(await visible({ includeAgeRatings: [-1] })).toEqual([book]);
-    const { rows } = await pool.query('SELECT age_rating FROM book_series WHERE id = $1', [series]);
-    expect(rows[0].age_rating).toBeNull();
-  });
-
-  it('refuses a rating that is not one of the five', async () => {
-    const book = await addBook('Dune');
-    await expect(pool.query('UPDATE book_metadata SET age_rating = 12 WHERE book_id = $1', [book])).rejects.toThrow(/bm_age_rating_chk/);
   });
 });
