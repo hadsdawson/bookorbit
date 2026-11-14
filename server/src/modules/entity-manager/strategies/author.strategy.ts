@@ -8,12 +8,8 @@ import * as schema from '../../../db/schema';
 import { authors, bookAuthors, books, bookMetadata } from '../../../db/schema';
 import { buildContentFilterClauses } from '../../../common/utils/content-filter-sql.utils';
 import { accentInsensitiveIlike } from '../../../common/utils/accent-insensitive-search.utils';
-import {
-  chooseCanonicalMetadataTextRow,
-  normalizeMetadataText,
-  normalizeMetadataTextKey,
-  normalizeMetadataTextKeySql,
-} from '../../../common/utils/metadata-text-normalize.utils';
+import { chooseCanonicalMetadataTextRow } from '../../../common/utils/metadata-text-normalize.utils';
+import { normalizePersonName, normalizePersonNameKey, normalizePersonNameKeySql } from '../../../common/utils/person-name.utils';
 import { AuthorImageStorageService } from '../../authors/author-image-storage.service';
 import { AuthorsRepository } from '../../authors/authors.repository';
 import { AuthorEnrichmentOrchestratorService } from '../../authors/author-enrichment-orchestrator.service';
@@ -37,7 +33,7 @@ import { assertEntityRelationsWithinLibraries, buildEntityBookScopeClauses } fro
 type Db = NodePgDatabase<typeof schema>;
 
 const AUTHOR_ENRICHMENT_REASONS = { AUTHOR_MERGE_TARGET: 'author_merge_target' as const };
-const NORMALIZED_AUTHOR_NAME_SQL = normalizeMetadataTextKeySql(authors.name);
+const NORMALIZED_AUTHOR_NAME_SQL = normalizePersonNameKeySql(authors.name);
 
 function escapeLike(s: string): string {
   return s.replace(/[%_\\]/g, '\\$&');
@@ -285,8 +281,8 @@ export class AuthorStrategy implements EntityStrategy {
     if (!entity) throw new NotFoundException('Author not found');
 
     const oldName = entity.name;
-    const displayName = normalizeMetadataText(input.newName);
-    const normalizedName = normalizeMetadataTextKey(displayName);
+    const displayName = normalizePersonName(input.newName);
+    const normalizedName = normalizePersonNameKey(displayName);
     if (!displayName || !normalizedName) throw new BadRequestException('Name cannot be empty');
 
     const existingRows = await this.db
@@ -339,8 +335,8 @@ export class AuthorStrategy implements EntityStrategy {
     await this.db.transaction(async (tx) => {
       const seenNewNames = new Set<string>();
       for (const name of input.newNames) {
-        const displayName = normalizeMetadataText(name);
-        const normalizedName = normalizeMetadataTextKey(displayName);
+        const displayName = normalizePersonName(name);
+        const normalizedName = normalizePersonNameKey(displayName);
         if (!displayName || !normalizedName) continue;
         if (seenNewNames.has(normalizedName)) continue;
         seenNewNames.add(normalizedName);

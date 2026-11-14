@@ -16,7 +16,7 @@ import type {
 import { assembleBookCards, assembleCollapsedBookCards } from '../book/utils/assemble-book-cards';
 import { MAX_OFFSET_ROWS, isOffsetWithinLimit } from '../../common/constants/pagination.constants';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
-import { normalizeMetadataText } from '../../common/utils/metadata-text-normalize.utils';
+import { normalizePersonName } from '../../common/utils/person-name.utils';
 import type { CacheDirective } from '../../common/provider-cache/provider-cache-spec';
 import type { RequestUser } from '../../common/types/request-user';
 import { BookReadService } from '../book/book-read.service';
@@ -366,13 +366,13 @@ export class AuthorsService {
       const values: Parameters<AuthorsRepository['updateAuthorById']>[1] = {};
 
       if ('name' in dto) {
-        const name = normalizeMetadataText(dto.name);
+        const name = normalizePersonName(dto.name);
         if (!name) throw new BadRequestException('name cannot be empty');
         values.name = name;
       }
 
       if ('sortName' in dto) {
-        values.sortName = normalizeMetadataText(dto.sortName);
+        values.sortName = normalizePersonName(dto.sortName);
       }
 
       if ('description' in dto) {
