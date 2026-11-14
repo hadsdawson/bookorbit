@@ -112,7 +112,7 @@ export const GLOW_REACH_DEFAULT = 50;
 
 /** A whole visual style: surfaces, type, shell material and component accents. Independent of
  *  mode, accent, radius and background, which keep their values when the style changes. */
-export const STYLE_IDS = ["bookorbit", "nostalgia"] as const;
+export const STYLE_IDS = ["bookorbit", "nostalgia", "solid", "ombre"] as const;
 export type Style = (typeof STYLE_IDS)[number];
 export const DEFAULT_STYLE: Style = "nostalgia";
 
@@ -181,6 +181,43 @@ export const COLOR_THEME_IDS = [
 ] as const;
 export type ColorTheme = (typeof COLOR_THEME_IDS)[number];
 export const DEFAULT_COLOR_THEME: ColorTheme = "none";
+
+/** Fork only. The styles that are made of color themes: each one offers its own set of themes. */
+export const COLOR_THEME_STYLE_IDS = ["solid", "ombre"] as const;
+export type ColorThemeStyle = (typeof COLOR_THEME_STYLE_IDS)[number];
+
+/** Which color-theme style a theme belongs to; "none" belongs to neither. */
+export function colorThemeStyleOf(colorTheme: ColorTheme): ColorThemeStyle | null {
+  if (colorTheme === "none") return null;
+  return colorTheme.startsWith("ombre-") ? "ombre" : "solid";
+}
+
+export function colorThemesForStyle(style: ColorThemeStyle): ColorTheme[] {
+  return COLOR_THEME_IDS.filter((id) => colorThemeStyleOf(id) === style);
+}
+
+export function isColorThemeStyle(style: Style): style is ColorThemeStyle {
+  return (COLOR_THEME_STYLE_IDS as readonly string[]).includes(style);
+}
+
+/**
+ * Fork only. Keeps a style and a color theme in step: Solid and Ombre always carry one of their own themes,
+ * and BookOrbit and Nostalgia never carry one. A theme saved alongside BookOrbit or Nostalgia (before themes
+ * moved under Style) moves the style to the theme's own group, so the look does not change.
+ *
+ * `prefer` names the value that was just chosen and wins a disagreement: picking a style keeps the style,
+ * picking (or loading) a theme keeps the theme.
+ */
+export function reconcileStyleAndColorTheme(
+  style: Style,
+  colorTheme: ColorTheme,
+  prefer: "style" | "colorTheme",
+): { style: Style; colorTheme: ColorTheme } {
+  const themeStyle = colorThemeStyleOf(colorTheme);
+  if (prefer === "colorTheme" && themeStyle) return { style: themeStyle, colorTheme };
+  if (!isColorThemeStyle(style)) return { style, colorTheme: "none" };
+  return { style, colorTheme: themeStyle === style ? colorTheme : colorThemesForStyle(style)[0] };
+}
 
 /** Fork only. How far boxes (cards, panels, dialogs, the sidebar) lift off the page with a shadow. */
 export const BOX_DEPTH_IDS = ["off", "subtle", "strong"] as const;

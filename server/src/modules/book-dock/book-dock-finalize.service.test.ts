@@ -111,6 +111,8 @@ function makeService() {
     suggest: vi.fn().mockResolvedValue(new Map()),
   };
 
+  const scanner = { announceBooksAdded: vi.fn() };
+
   const service = new BookDockFinalizeService(
     db as never,
     repo as never,
@@ -131,9 +133,12 @@ function makeService() {
     seriesMemberships as never,
     undefined as never,
     joinService as never,
+    undefined as never,
+    scanner as never,
   );
 
   return {
+    scanner,
     service,
     db,
     repo,
@@ -2854,6 +2859,8 @@ describe('BookDockFinalizeService', () => {
       // The staged cover came from the primary file, so only its book gets it; reconcile fills the rest.
       expect(applyMetadata.mock.calls.map((call: unknown[]) => call[2])).toEqual([true, false]);
       expect(harness.processor.reconcileCoversAsync).toHaveBeenCalledWith([81, 82]);
+      // Fork: the new books show up in an open library view without a refresh.
+      expect(harness.scanner.announceBooksAdded).toHaveBeenCalledWith(expect.any(Number), [81, 82]);
     });
 
     /**

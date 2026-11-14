@@ -31,9 +31,10 @@ defineProps<{
 const { t } = useI18n()
 const themeStore = useThemeStore()
 const INTERFACE_TWEAKS: InterfaceTweakKind[] = ['boxDepth', 'boxOutline', 'interfaceFont', 'interfaceTextSize']
-/** A color theme brings its own accent and surfaces, so those pickers step aside while one is on. */
-const colorThemeOn = computed(() => themeStore.colorTheme !== 'none')
-const showSurfacePalette = computed(() => themeStore.appearanceControls.surfacePalette && !colorThemeOn.value)
+/** Solid and Ombre offer their own color themes, which bring their own accent and surfaces. */
+const colorThemeGroup = computed(() => themeStore.appearanceControls.colorThemes)
+const showAccent = computed(() => themeStore.appearanceControls.accent)
+const showSurfacePalette = computed(() => themeStore.appearanceControls.surfacePalette)
 const showSurfaceOpacity = computed(() => themeStore.appearanceControls.surfaceOpacity)
 const showSurfaceBrightness = computed(() => themeStore.resolvedTheme === 'dark' && themeStore.appearanceControls.brightness)
 
@@ -92,11 +93,7 @@ function openSheet() {
             <span class="text-[13px] text-muted-foreground">{{ t('components.appHeader.theme') }}</span>
             <ThemePicker block />
           </div>
-          <div class="space-y-2">
-            <span class="text-[13px] text-muted-foreground">{{ t('components.appHeader.colorTheme') }}</span>
-            <ColorThemePicker />
-          </div>
-          <div v-if="!colorThemeOn" class="space-y-2">
+          <div v-if="showAccent" class="space-y-2">
             <div class="flex items-baseline justify-between gap-2">
               <span class="text-[13px] text-muted-foreground">{{ t('components.appHeader.accent') }}</span>
               <span class="truncate text-[13px] font-medium text-foreground">{{ accentLabel }}</span>
@@ -106,6 +103,10 @@ function openSheet() {
           <div class="space-y-2">
             <span class="text-[13px] text-muted-foreground">{{ t('components.appHeader.style') }}</span>
             <StylePicker block />
+          </div>
+          <div v-if="colorThemeGroup" class="space-y-2" data-testid="panel-style-color-themes">
+            <span class="text-[13px] text-muted-foreground">{{ t(`settings.appearance.theme.colorTheme.groupLabel.${colorThemeGroup}`) }}</span>
+            <ColorThemePicker :group="colorThemeGroup" />
           </div>
           <div v-if="showSurfacePalette" class="space-y-2">
             <span class="text-[13px] text-muted-foreground">{{ t('components.appHeader.surfacePalette') }}</span>
@@ -160,12 +161,7 @@ function openSheet() {
           <ThemePicker touch />
         </section>
 
-        <section class="space-y-2 rounded-lg border border-border bg-card p-3">
-          <h3 class="text-sm font-medium text-foreground">{{ t('components.appHeader.colorTheme') }}</h3>
-          <ColorThemePicker />
-        </section>
-
-        <section v-if="!colorThemeOn" class="space-y-2 rounded-lg border border-border bg-card p-3">
+        <section v-if="showAccent" class="space-y-2 rounded-lg border border-border bg-card p-3">
           <div class="flex items-baseline justify-between gap-2">
             <h3 class="text-sm font-medium text-foreground">{{ t('components.appHeader.accent') }}</h3>
             <span class="truncate text-[13px] text-muted-foreground">{{ accentLabel }}</span>
@@ -177,6 +173,10 @@ function openSheet() {
           <div class="space-y-2">
             <h3 class="text-sm font-medium text-foreground">{{ t('components.appHeader.style') }}</h3>
             <StylePicker touch />
+          </div>
+          <div v-if="colorThemeGroup" class="space-y-2 border-t border-border pt-3" data-testid="sheet-style-color-themes">
+            <h3 class="text-sm font-medium text-foreground">{{ t(`settings.appearance.theme.colorTheme.groupLabel.${colorThemeGroup}`) }}</h3>
+            <ColorThemePicker :group="colorThemeGroup" />
           </div>
           <div v-if="showSurfacePalette" class="space-y-2 border-t border-border pt-3">
             <h3 class="text-sm font-medium text-foreground">{{ t('components.appHeader.surfacePalette') }}</h3>

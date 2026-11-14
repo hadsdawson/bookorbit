@@ -10,6 +10,10 @@
    card, popover or shell colour. Only the outermost box is changed,
    so rows and toggles inside a card stay quiet. Buttons, inputs,
    menu rows and pills are left out, so they keep their own look.
+
+   A box marked data-box-frame is a page frame rather than a card
+   (the book detail page's outer panel): it is dressed itself, and
+   the cards laid out inside it are dressed too.
 ────────────────────────────────────────────────────────────── */
 
 /* ── Depth ── */
@@ -49,7 +53,7 @@ html:is([data-box-depth='subtle'], [data-box-depth='strong'])
     [class*='shadow-lg'],
     [class*='shadow-xl'],
     [class*='shadow-2xl'],
-    :is([class*='bg-card'], [class*='bg-popover']).border *
+    :is([class*='bg-card'], [class*='bg-popover']).border:not([data-box-frame]) *
   ) {
   box-shadow: var(--ui-box-shadow);
 }
@@ -80,7 +84,7 @@ html:is([data-box-outline='medium'], [data-box-outline='bold'])
     [role='button'],
     [role='menuitem'],
     [role='option'],
-    :is([class*='bg-card'], [class*='bg-popover']).border *
+    :is([class*='bg-card'], [class*='bg-popover']).border:not([data-box-frame]) *
   ) {
   border-width: var(--ui-box-border-width);
 }
@@ -110,7 +114,7 @@ html:is([data-box-outline='medium'], [data-box-outline='bold'])
     [class*='border-amber'],
     [class*='border-red'],
     [class*='border-emerald'],
-    :is([class*='bg-card'], [class*='bg-popover']).border *
+    :is([class*='bg-card'], [class*='bg-popover']).border:not([data-box-frame]) *
   ) {
   border-color: var(--ui-box-border);
 }

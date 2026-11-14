@@ -50,6 +50,7 @@ describe('NewReleasesService', () => {
   };
   let lookup: ReturnType<typeof vi.fn<ReleaseSourcesService['lookup']>>;
   let submit: ReturnType<typeof vi.fn<BookRequestService['submit']>>;
+  let submitPair: ReturnType<typeof vi.fn<BookRequestService['submitPair']>>;
   let findActingUser: ReturnType<typeof vi.fn<AuthService['findActingUser']>>;
   let appValues: Map<string, string>;
   let service: NewReleasesService;
@@ -73,6 +74,7 @@ describe('NewReleasesService', () => {
     };
     lookup = vi.fn<ReleaseSourcesService['lookup']>();
     submit = vi.fn<BookRequestService['submit']>().mockResolvedValue({} as never);
+    submitPair = vi.fn<BookRequestService['submitPair']>().mockResolvedValue({} as never);
     findActingUser = vi.fn<AuthService['findActingUser']>();
     appValues = new Map([['new_releases_default_delivery', 'request']]);
     service = new NewReleasesService(
@@ -80,7 +82,7 @@ describe('NewReleasesService', () => {
       { lookup } as unknown as ReleaseSourcesService,
       { getValues: vi.fn<AppSettingsService['getValues']>(() => Promise.resolve(appValues)) } as unknown as AppSettingsService,
       { findAccessibleLibraryIds: vi.fn<LibraryService['findAccessibleLibraryIds']>().mockResolvedValue([1, 2]) } as unknown as LibraryService,
-      { submit } as unknown as BookRequestService,
+      { submit, submitPair } as unknown as BookRequestService,
       { findActingUser } as unknown as AuthService,
     );
   });
@@ -174,8 +176,26 @@ describe('NewReleasesService', () => {
     expect(repository.setRequested).toHaveBeenCalledWith(3, 8);
   });
 
-  it('requests a format that has no date yet, without a published date', async () => {
+  it('requests both formats as one paired request, each with its own date', async () => {
     repository.findReleaseById.mockResolvedValue(listed);
+
+    await expect(service.requestRelease(user, 8, ['ebook', 'audiobook'])).resolves.toEqual({ requested: ['ebook', 'audiobook'] });
+
+    expect(submit).not.toHaveBeenCalled();
+    expect(submitPair).toHaveBeenCalledTimes(1);
+    const [work, actor, halves] = submitPair.mock.calls[0]!;
+    expect(work).toEqual(expect.objectContaining({ title: 'Next' }));
+    expect(work).not.toHaveProperty('mediaKind');
+    expect(work).not.toHaveProperty('publishedDate');
+    expect(actor).toBe(user);
+    expect(halves?.ebook).toEqual(expect.objectContaining({ publishedDate: '2027-03-09' }));
+    expect(halves?.audiobook?.publishedDate).toBeUndefined();
+    expect(repository.setRequested).toHaveBeenCalledWith(3, 8);
+  });
+
+  it('files each format on its own when the paired request is refused', async () => {
+    repository.findReleaseById.mockResolvedValue(listed);
+    submitPair.mockRejectedValueOnce(new Error('pairs not allowed'));
 
     await expect(service.requestRelease(user, 8, ['ebook', 'audiobook'])).resolves.toEqual({ requested: ['ebook', 'audiobook'] });
 
@@ -190,8 +210,8 @@ describe('NewReleasesService', () => {
 
     await expect(service.autoRequest(1_000)).resolves.toEqual({ filed: 1, failed: 0 });
 
-    expect(submit).toHaveBeenCalledWith(expect.objectContaining({ mediaKind: 'ebook' }), expect.anything());
-    expect(submit).toHaveBeenCalledWith(expect.objectContaining({ mediaKind: 'audiobook' }), expect.anything());
+    expect(submitPair).toHaveBeenCalledTimes(1);
+    expect(submit).not.toHaveBeenCalled();
   });
 
   it('requests for people set to have books requested, once, and holds back one that fails', async () => {
@@ -222,6 +242,7 @@ describe('NewReleasesService', () => {
     await service.autoRequest(1_000);
 
     expect(submit).not.toHaveBeenCalled();
+    expect(submitPair).not.toHaveBeenCalled();
   });
 
   it('lists followed books out on the coming Tuesday, with the formats out that day', async () => {

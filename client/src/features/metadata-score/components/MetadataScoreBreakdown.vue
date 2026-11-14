@@ -6,6 +6,9 @@ import type { BookDetail, MetadataScoreWeights } from '@bookorbit/types'
 import {
   METADATA_SCORE_FIELDS,
   METADATA_SCORE_GROUPS,
+  audiobookChaptersApply,
+  hasRealAudiobookChapters,
+  isNumberedChapterTitle,
   isPositiveSeriesIndex,
   type MetadataScoreField,
   type MetadataScoreGroup,
@@ -78,6 +81,10 @@ function isFieldFilled(field: MetadataScoreField): boolean {
       return !!b.providerIds.kobo?.trim()
     case 'aladinId':
       return !!b.providerIds.aladin?.trim()
+    case 'audiobookChapters': {
+      const chapters = b.audioMetadata?.chapters ?? []
+      return hasRealAudiobookChapters(chapters.length, chapters.filter((chapter) => isNumberedChapterTitle(chapter.title)).length)
+    }
     default:
       return false
   }
@@ -102,6 +109,8 @@ const groups = computed<GroupEntry[]>(() => {
   for (const [field, meta] of Object.entries(METADATA_SCORE_FIELDS) as [MetadataScoreField, (typeof METADATA_SCORE_FIELDS)[MetadataScoreField]][]) {
     const weight = props.weights[field]
     if (weight === 0) continue
+    // Fork. Audiobook chapters only count for a book with an M4B file, as on the server.
+    if (field === 'audiobookChapters' && !audiobookChaptersApply(props.book.files.map((file) => file.format))) continue
     const entry: FieldEntry = { field, label: t(scoreFieldLabelKey(field)), weight, filled: isFieldFilled(field) }
     const list = map.get(meta.group) ?? []
     list.push(entry)

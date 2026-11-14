@@ -1,5 +1,7 @@
 import type { NewReleaseFormat, NewReleaseRequestFormat } from '@bookorbit/types';
 
+import type { PairHalfWork } from '../book-request/book-request.service';
+import type { CreateBookRequestPairDto } from '../book-request/dto/create-book-request-pair.dto';
 import type { CreateBookRequestDto } from '../book-request/dto/create-book-request.dto';
 import type { UpcomingReleaseRow } from './new-releases.repository';
 import type { SourceRelease } from './release-merge';
@@ -44,4 +46,29 @@ export function requestFor(release: UpcomingReleaseRow, format: NewReleaseReques
     dto.providerId = audible.asin;
   }
   return dto as CreateBookRequestDto;
+}
+
+/**
+ * Fork. Both formats of one book as a single paired request, as the request form files "both": the work
+ * they share, and what each format sets for itself (its own date, the ebook's ISBN, the audiobook's
+ * Audible id).
+ */
+export function pairRequestFor(release: UpcomingReleaseRow): {
+  work: CreateBookRequestPairDto;
+  halves: Record<NewReleaseRequestFormat, PairHalfWork>;
+} {
+  const ebook = requestFor(release, 'ebook');
+  const audiobook = requestFor(release, 'audiobook');
+  const shared: Partial<CreateBookRequestPairDto> = { title: ebook.title, authors: ebook.authors, note: ebook.note };
+  if (ebook.seriesName !== undefined) shared.seriesName = ebook.seriesName;
+  if (ebook.seriesIndex !== undefined) shared.seriesIndex = ebook.seriesIndex;
+  if (ebook.coverUrl !== undefined) shared.coverUrl = ebook.coverUrl;
+  const ownWork = (dto: CreateBookRequestDto): PairHalfWork => ({
+    isbn13: dto.isbn13,
+    publishedDate: dto.publishedDate,
+    publishedYear: dto.publishedYear,
+    providerKey: dto.providerKey,
+    providerId: dto.providerId,
+  });
+  return { work: shared as CreateBookRequestPairDto, halves: { ebook: ownWork(ebook), audiobook: ownWork(audiobook) } };
 }

@@ -22,7 +22,8 @@ export type MetadataScoreField =
   | "openLibraryId"
   | "itunesId"
   | "koboId"
-  | "aladinId";
+  | "aladinId"
+  | "audiobookChapters";
 
 export type MetadataScoreGroup = "core" | "publishing" | "classification" | "enrichment" | "providers";
 
@@ -30,7 +31,7 @@ export type MetadataScoreGroup = "core" | "publishing" | "classification" | "enr
  * How the scorer decides a field is present. The client shows this to explain a row; the server
  * keeps the matching behaviour in SCORE_RULES. The two must stay in step.
  */
-export type MetadataScoreRule = "text" | "positive" | "count" | "cover" | "providerId" | "seriesIndex";
+export type MetadataScoreRule = "text" | "positive" | "count" | "cover" | "providerId" | "seriesIndex" | "audiobookChapters";
 
 export interface MetadataScoreFieldMeta {
   group: MetadataScoreGroup;
@@ -55,6 +56,8 @@ export const METADATA_SCORE_FIELDS: Record<MetadataScoreField, MetadataScoreFiel
   seriesIndex: { group: "classification", rule: "seriesIndex", defaultWeight: 0 },
   tags: { group: "enrichment", rule: "count", defaultWeight: 2 },
   rating: { group: "enrichment", rule: "positive", defaultWeight: 1 },
+  // Fork. Off until given a weight. Only scored for a book with an M4B file, so an ebook alone is never marked down.
+  audiobookChapters: { group: "enrichment", rule: "audiobookChapters", defaultWeight: 0 },
   googleBooksId: { group: "providers", rule: "providerId", defaultWeight: 1 },
   goodreadsId: { group: "providers", rule: "providerId", defaultWeight: 1 },
   amazonId: { group: "providers", rule: "providerId", defaultWeight: 1 },
@@ -75,6 +78,29 @@ export const METADATA_SCORE_GROUPS: readonly MetadataScoreGroup[] = [
 ];
 
 export type MetadataScoreWeights = Record<MetadataScoreField, number>;
+
+/**
+ * Fork. Audiobook chapters count only for a book with an M4B file; for any other book the field is left out of the
+ * score, denominator included.
+ */
+export function audiobookChaptersApply(fileFormats: readonly (string | null | undefined)[]): boolean {
+  return fileFormats.some((format) => format?.toLowerCase() === "m4b");
+}
+
+/** A chapter title that is only a track number ("Track 3", "03", "Part 2 of 9"). Mirrors book_metadata.numbered_chapter_count. */
+const NUMBERED_CHAPTER_TITLE = /^\s*((track|disc|cd|part)\s*)?[#._-]*\s*[0-9]+(\s*(of|\/)\s*[0-9]+)?\s*$/i;
+
+export function isNumberedChapterTitle(title: string | null | undefined): boolean {
+  return typeof title === "string" && NUMBERED_CHAPTER_TITLE.test(title);
+}
+
+/**
+ * Fork. Whether an audiobook has real chapters: at least two, and not mostly bare track numbers. The same line the
+ * chapter health page draws between "no chapters" or "numbered tracks" and a usable list.
+ */
+export function hasRealAudiobookChapters(chapterCount: number, numberedChapterCount: number): boolean {
+  return chapterCount >= 2 && numberedChapterCount < chapterCount * 0.8;
+}
 
 export const DEFAULT_METADATA_SCORE_WEIGHTS: MetadataScoreWeights = Object.fromEntries(
   Object.entries(METADATA_SCORE_FIELDS).map(([field, meta]) => [field, meta.defaultWeight]),

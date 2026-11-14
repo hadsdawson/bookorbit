@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { BookOpen, BookText } from '@lucide/vue'
+import { BookOpen, BookText, Pencil } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 import ToggleSwitch from '@/components/ui/ToggleSwitch.vue'
-import { useDisplaySettings, type BookThumbnailClickAction } from '@/composables/useDisplaySettings'
+import { useDisplaySettings, type BookDetailsButtonAction, type BookThumbnailClickAction } from '@/composables/useDisplaySettings'
 import { useSeriesCollapsePreference } from '@/features/book/composables/useSeriesCollapsePreference'
 import { useBookRequestVisibility } from '@/features/book-requests/composables/useBookRequestVisibility'
 
 const { t } = useI18n()
 
-const { smartScopeFilterExpanded, thumbnailClickAction } = useDisplaySettings()
+const { smartScopeFilterExpanded, thumbnailClickAction, bookDetailsButtonAction } = useDisplaySettings()
 const { prefs, setPreference } = useSeriesCollapsePreference()
 const { showBookRequests, saving: savingBookRequestVisibility, setShowBookRequests } = useBookRequestVisibility()
 
@@ -37,6 +37,25 @@ const thumbnailClickOptions = computed<
     icon: BookText,
   },
 ])
+
+const detailsButtonOptions = computed<{ id: BookDetailsButtonAction; label: string; hint: string; icon: typeof BookOpen }[]>(() => [
+  {
+    id: 'details',
+    label: t('settings.appearance.behavior.detailsButton.details'),
+    hint: t('settings.appearance.behavior.detailsButton.detailsHint'),
+    icon: BookText,
+  },
+  {
+    id: 'edit-metadata',
+    label: t('settings.appearance.behavior.detailsButton.editMetadata'),
+    hint: t('settings.appearance.behavior.detailsButton.editMetadataHint'),
+    icon: Pencil,
+  },
+])
+
+function setBookDetailsButtonAction(action: BookDetailsButtonAction) {
+  bookDetailsButtonAction.value = action
+}
 
 async function handleGlobalCollapseToggle(value: boolean) {
   await setPreference('global', value)
@@ -76,6 +95,35 @@ function setThumbnailClickAction(action: BookThumbnailClickAction) {
             class="flex min-w-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-left text-xs font-medium transition-colors"
             :class="thumbnailClickAction === opt.id ? 'bg-background shadow-xs text-foreground' : 'text-muted-foreground hover:text-foreground'"
             @click="setThumbnailClickAction(opt.id)"
+          >
+            <component :is="opt.icon" class="size-3.5 shrink-0" />
+            <span class="min-w-0">
+              <span class="block truncate">{{ opt.label }}</span>
+              <span class="block truncate text-[10px] font-normal opacity-75">{{ opt.hint }}</span>
+            </span>
+          </button>
+        </div>
+      </div>
+      <div class="flex flex-col gap-3 px-4 py-3.5 md:flex-row md:items-center md:justify-between md:px-5 md:py-4 bg-card">
+        <div class="min-w-0">
+          <p class="settings-label">
+            {{ t('settings.appearance.behavior.detailsButton.label') }}
+          </p>
+          <p class="settings-hint md:whitespace-normal">
+            {{ t('settings.appearance.behavior.detailsButton.hint') }}
+          </p>
+        </div>
+        <div
+          class="grid w-full gap-1 rounded-lg border border-border bg-muted/50 p-1 sm:w-auto sm:grid-cols-2"
+          data-testid="details-button-action-control"
+        >
+          <button
+            v-for="opt in detailsButtonOptions"
+            :key="opt.id"
+            class="flex min-w-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-left text-xs font-medium transition-colors"
+            :class="bookDetailsButtonAction === opt.id ? 'bg-background shadow-xs text-foreground' : 'text-muted-foreground hover:text-foreground'"
+            :aria-pressed="bookDetailsButtonAction === opt.id"
+            @click="setBookDetailsButtonAction(opt.id)"
           >
             <component :is="opt.icon" class="size-3.5 shrink-0" />
             <span class="min-w-0">

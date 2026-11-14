@@ -12,6 +12,7 @@
   --ct-surface-c: 0.04;
   --ct-primary-h: 350;
   --ct-primary-c: 0.16;
+  --ct-primary-2-h: 165;
   --ct-link-h: 350;
   --ct-link-c: 0.15;
   --ct-icon-h: 300;
@@ -30,6 +31,7 @@
   --ct-surface-c: 0.045;
   --ct-primary-h: 255;
   --ct-primary-c: 0.14;
+  --ct-primary-2-h: 95;
   --ct-link-h: 255;
   --ct-link-c: 0.13;
   --ct-icon-h: 320;
@@ -48,6 +50,7 @@
   --ct-surface-c: 0.005;
   --ct-primary-h: 125;
   --ct-primary-c: 0.17;
+  --ct-primary-2-h: 60;
   --ct-link-h: 125;
   --ct-link-c: 0.15;
   --ct-icon-h: 125;
@@ -66,6 +69,7 @@
   --ct-surface-c: 0.05;
   --ct-primary-h: 350;
   --ct-primary-c: 0.16;
+  --ct-primary-2-h: 230;
   --ct-link-h: 235;
   --ct-link-c: 0.13;
   --ct-icon-h: 300;
@@ -84,6 +88,7 @@
   --ct-surface-c: 0.05;
   --ct-primary-h: 65;
   --ct-primary-c: 0.17;
+  --ct-primary-2-h: 205;
   --ct-link-h: 340;
   --ct-link-c: 0.18;
   --ct-icon-h: 130;
@@ -102,6 +107,7 @@
   --ct-surface-c: 0.07;
   --ct-primary-h: 345;
   --ct-primary-c: 0.2;
+  --ct-primary-2-h: 210;
   --ct-link-h: 210;
   --ct-link-c: 0.15;
   --ct-icon-h: 50;
@@ -120,6 +126,7 @@
   --ct-surface-c: 0.06;
   --ct-primary-h: 30;
   --ct-primary-c: 0.17;
+  --ct-primary-2-h: 225;
   --ct-link-h: 55;
   --ct-link-c: 0.13;
   --ct-icon-h: 225;
@@ -138,6 +145,7 @@
   --ct-surface-c: 0.06;
   --ct-primary-h: 100;
   --ct-primary-c: 0.17;
+  --ct-primary-2-h: 280;
   --ct-link-h: 100;
   --ct-link-c: 0.16;
   --ct-icon-h: 255;
@@ -156,6 +164,7 @@
   --ct-surface-c: 0.045;
   --ct-primary-h: 155;
   --ct-primary-c: 0.16;
+  --ct-primary-2-h: 300;
   --ct-link-h: 300;
   --ct-link-c: 0.14;
   --ct-icon-h: 195;
@@ -174,6 +183,7 @@
   --ct-surface-c: 0.045;
   --ct-primary-h: 40;
   --ct-primary-c: 0.14;
+  --ct-primary-2-h: 200;
   --ct-link-h: 200;
   --ct-link-c: 0.11;
   --ct-icon-h: 40;
@@ -192,6 +202,7 @@
   --ct-surface-c: 0.07;
   --ct-primary-h: 160;
   --ct-primary-c: 0.14;
+  --ct-primary-2-h: 10;
   --ct-link-h: 10;
   --ct-link-c: 0.16;
   --ct-icon-h: 305;
@@ -210,6 +221,7 @@
   --ct-surface-c: 0.05;
   --ct-primary-h: 350;
   --ct-primary-c: 0.18;
+  --ct-primary-2-h: 190;
   --ct-link-h: 190;
   --ct-link-c: 0.13;
   --ct-icon-h: 95;
@@ -228,6 +240,7 @@
   --ct-surface-c: 0;
   --ct-primary-h: 25;
   --ct-primary-c: 0.2;
+  --ct-primary-2-h: 150;
   --ct-link-h: 25;
   --ct-link-c: 0.19;
   --ct-icon-h: 25;
@@ -969,4 +982,129 @@ html[data-color-theme^='ombre-'] :is(button, a).bg-primary {
 }
 .color-theme-tile[data-color-theme^='ombre-'] .color-theme-tile-primary {
   background-image: linear-gradient(90deg, var(--ct-tile-primary), var(--ct-primary-2));
+}
+
+/* ── Format badges, genres and tags ─────────────────────────
+   Fork only. Under a color theme (the Solid and Ombre styles) a
+   book's format badges, chips and genre and tag chips wear the
+   theme's own hues instead of the fixed format palette. Each format
+   takes one of the theme's hues: EPUB its button colour and M4B its
+   second hue, so a book's ebook and audiobook stay easy to tell apart.
+   --pill-format-* paints chips and text (tuned per mode, like every
+   text colour); --format-fill-* paints the solid badges laid over a
+   cover, which keep white text in both modes.
+────────────────────────────────────────────────────────────── */
+html[data-color-theme]:not([data-color-theme='none']) {
+  --pill-format-epub: oklch(0.55 var(--ct-primary-c) var(--ct-primary-h));
+  --pill-format-kepub: oklch(0.55 var(--ct-link-c) var(--ct-link-h));
+  --pill-format-readalong: oklch(0.55 var(--ct-link-c) var(--ct-link-h));
+  --pill-format-mobi: oklch(0.55 var(--ct-progress-c) var(--ct-progress-h));
+  --pill-format-azw3: oklch(0.55 var(--ct-progress-c) var(--ct-progress-h));
+  --pill-format-azw: oklch(0.55 var(--ct-progress-c) var(--ct-progress-h));
+  --pill-format-fb2: oklch(0.55 var(--ct-icon-c) var(--ct-icon-h));
+  --pill-format-m4b: oklch(0.55 var(--ct-primary-c) var(--ct-primary-2-h));
+  --pill-format-m4a: oklch(0.55 var(--ct-wait-c) var(--ct-wait-h));
+  --pill-format-mp3: oklch(0.55 var(--ct-wait-c) var(--ct-wait-h));
+  --pill-format-opus: oklch(0.55 var(--ct-done-c) var(--ct-done-h));
+  --pill-format-ogg: oklch(0.55 var(--ct-done-c) var(--ct-done-h));
+  --pill-format-flac: oklch(0.55 var(--ct-done-c) var(--ct-done-h));
+  --pill-format-pdf: oklch(0.55 var(--ct-fail-c) var(--ct-fail-h));
+  --pill-format-cbz: oklch(0.55 var(--ct-icon-c) var(--ct-icon-h));
+  --pill-format-cbr: oklch(0.55 var(--ct-wait-c) var(--ct-wait-h));
+  --pill-format-cb7: oklch(0.55 var(--ct-progress-c) var(--ct-progress-h));
+  --pill-format-cbx: oklch(0.55 var(--ct-primary-c) var(--ct-primary-2-h));
+  --pill-format-default: oklch(0.55 calc(var(--ct-surface-c) * 2) var(--ct-surface-h));
+  --pill-format-djvu: var(--pill-format-default);
+  --pill-format-txt: var(--pill-format-default);
+
+  --format-fill-epub: oklch(0.55 var(--ct-primary-c) var(--ct-primary-h));
+  --format-fill-kepub: oklch(0.55 var(--ct-link-c) var(--ct-link-h));
+  --format-fill-readalong: oklch(0.55 var(--ct-link-c) var(--ct-link-h));
+  --format-fill-mobi: oklch(0.55 var(--ct-progress-c) var(--ct-progress-h));
+  --format-fill-azw3: oklch(0.55 var(--ct-progress-c) var(--ct-progress-h));
+  --format-fill-azw: oklch(0.55 var(--ct-progress-c) var(--ct-progress-h));
+  --format-fill-fb2: oklch(0.55 var(--ct-icon-c) var(--ct-icon-h));
+  --format-fill-m4b: oklch(0.55 var(--ct-primary-c) var(--ct-primary-2-h));
+  --format-fill-m4a: oklch(0.55 var(--ct-wait-c) var(--ct-wait-h));
+  --format-fill-mp3: oklch(0.55 var(--ct-wait-c) var(--ct-wait-h));
+  --format-fill-opus: oklch(0.55 var(--ct-done-c) var(--ct-done-h));
+  --format-fill-ogg: oklch(0.55 var(--ct-done-c) var(--ct-done-h));
+  --format-fill-flac: oklch(0.55 var(--ct-done-c) var(--ct-done-h));
+  --format-fill-pdf: oklch(0.55 var(--ct-fail-c) var(--ct-fail-h));
+  --format-fill-cbz: oklch(0.55 var(--ct-icon-c) var(--ct-icon-h));
+  --format-fill-cbr: oklch(0.55 var(--ct-wait-c) var(--ct-wait-h));
+  --format-fill-cb7: oklch(0.55 var(--ct-progress-c) var(--ct-progress-h));
+  --format-fill-cbx: oklch(0.55 var(--ct-primary-c) var(--ct-primary-2-h));
+  --format-fill-default: oklch(0.5 calc(var(--ct-surface-c) * 2) var(--ct-surface-h));
+  --format-fill-djvu: var(--format-fill-default);
+  --format-fill-txt: var(--format-fill-default);
+}
+html[data-color-theme]:not([data-color-theme='none']).dark {
+  --pill-format-epub: oklch(0.76 var(--ct-primary-c) var(--ct-primary-h));
+  --pill-format-kepub: oklch(0.76 var(--ct-link-c) var(--ct-link-h));
+  --pill-format-readalong: oklch(0.76 var(--ct-link-c) var(--ct-link-h));
+  --pill-format-mobi: oklch(0.76 var(--ct-progress-c) var(--ct-progress-h));
+  --pill-format-azw3: oklch(0.76 var(--ct-progress-c) var(--ct-progress-h));
+  --pill-format-azw: oklch(0.76 var(--ct-progress-c) var(--ct-progress-h));
+  --pill-format-fb2: oklch(0.76 var(--ct-icon-c) var(--ct-icon-h));
+  --pill-format-m4b: oklch(0.76 var(--ct-primary-c) var(--ct-primary-2-h));
+  --pill-format-m4a: oklch(0.76 var(--ct-wait-c) var(--ct-wait-h));
+  --pill-format-mp3: oklch(0.76 var(--ct-wait-c) var(--ct-wait-h));
+  --pill-format-opus: oklch(0.76 var(--ct-done-c) var(--ct-done-h));
+  --pill-format-ogg: oklch(0.76 var(--ct-done-c) var(--ct-done-h));
+  --pill-format-flac: oklch(0.76 var(--ct-done-c) var(--ct-done-h));
+  --pill-format-pdf: oklch(0.76 var(--ct-fail-c) var(--ct-fail-h));
+  --pill-format-cbz: oklch(0.76 var(--ct-icon-c) var(--ct-icon-h));
+  --pill-format-cbr: oklch(0.76 var(--ct-wait-c) var(--ct-wait-h));
+  --pill-format-cb7: oklch(0.76 var(--ct-progress-c) var(--ct-progress-h));
+  --pill-format-cbx: oklch(0.76 var(--ct-primary-c) var(--ct-primary-2-h));
+  --pill-format-default: oklch(0.76 calc(var(--ct-surface-c) * 2) var(--ct-surface-h));
+}
+
+/* Genres and tags are filled like the theme's status pills, each chip in the next of four theme hues so a
+   row of them reads as a set of colours rather than one. Genres lead with the button hues, tags with the
+   status hues. */
+html[data-color-theme]:not([data-color-theme='none']) :is(.chip-genre, .chip-tag) {
+  --chip-l: 0.55;
+  --chip-genre-bg: oklch(var(--chip-l) var(--chip-c) var(--chip-h));
+  --chip-genre-fg: var(--ct-pill-ink);
+  --chip-genre-border: transparent;
+  --chip-tag-bg: var(--chip-genre-bg);
+  --chip-tag-fg: var(--ct-pill-ink);
+  --chip-tag-border: var(--chip-genre-bg);
+}
+html[data-color-theme]:not([data-color-theme='none']).dark :is(.chip-genre, .chip-tag) {
+  --chip-l: 0.76;
+}
+html[data-color-theme]:not([data-color-theme='none']) .chip-genre {
+  --chip-h: var(--ct-primary-h);
+  --chip-c: var(--ct-primary-c);
+}
+html[data-color-theme]:not([data-color-theme='none']) .chip-genre:nth-child(4n + 2) {
+  --chip-h: var(--ct-primary-2-h);
+  --chip-c: var(--ct-primary-c);
+}
+html[data-color-theme]:not([data-color-theme='none']) .chip-genre:nth-child(4n + 3) {
+  --chip-h: var(--ct-icon-h);
+  --chip-c: var(--ct-icon-c);
+}
+html[data-color-theme]:not([data-color-theme='none']) .chip-genre:nth-child(4n + 4) {
+  --chip-h: var(--ct-link-h);
+  --chip-c: var(--ct-link-c);
+}
+html[data-color-theme]:not([data-color-theme='none']) .chip-tag {
+  --chip-h: var(--ct-progress-h);
+  --chip-c: var(--ct-progress-c);
+}
+html[data-color-theme]:not([data-color-theme='none']) .chip-tag:nth-child(4n + 2) {
+  --chip-h: var(--ct-done-h);
+  --chip-c: var(--ct-done-c);
+}
+html[data-color-theme]:not([data-color-theme='none']) .chip-tag:nth-child(4n + 3) {
+  --chip-h: var(--ct-wait-h);
+  --chip-c: var(--ct-wait-c);
+}
+html[data-color-theme]:not([data-color-theme='none']) .chip-tag:nth-child(4n + 4) {
+  --chip-h: var(--ct-icon-h);
+  --chip-c: var(--ct-icon-c);
 }

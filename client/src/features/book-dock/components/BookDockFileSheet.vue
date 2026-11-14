@@ -2,7 +2,7 @@
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatDateTime } from '@/i18n/formatters'
-import { X, BookOpen, Check, Trash2, Sparkles, ArrowLeft, Wand2, AlertCircle, Plus } from '@lucide/vue'
+import { X, BookOpen, Check, Trash2, Sparkles, ArrowLeft, Wand2, AlertCircle } from '@lucide/vue'
 import {
   getBookMediaKind,
   resolveBookDockSearchTitle,
@@ -21,7 +21,7 @@ import IdentifierInput from '@/components/ui/IdentifierInput.vue'
 import ChipInput from '@/components/ui/ChipInput.vue'
 import InputWithSuggestions from '@/components/ui/InputWithSuggestions.vue'
 import { useSeriesNameSearch } from '@/features/book/composables/useMetadataFieldSearch'
-import { useGenreSearch } from '@/features/book/composables/useTagSearch'
+import { useGenreSearch, useTagSearch } from '@/features/book/composables/useTagSearch'
 import { useGenrePolicy } from '@/features/book/composables/useGenrePolicy'
 import MetadataMatchWorkspace from '@/features/book/components/metadata-match/MetadataMatchWorkspace.vue'
 import type { MetadataQuery } from '@/features/book/components/metadata-match/MetadataMatchQuery.vue'
@@ -86,6 +86,8 @@ const { search: searchAnyGenre } = useGenreSearch()
 const { restricted: genresRestricted, load: loadGenrePolicy, acceptGenre, searchAllowed: searchAllowedGenres } = useGenrePolicy()
 const searchGenres = computed(() => (genresRestricted.value ? searchAllowedGenres : searchAnyGenre))
 onMounted(loadGenrePolicy)
+/** Fork. Tags offer the tags already in the library as you type; genres are their own field and never feed tags. */
+const { search: searchTags } = useTagSearch()
 
 /** The genres field is a chip list over the same comma-separated text the rest of the form reads. */
 const genreList = computed({
@@ -108,30 +110,14 @@ function splitList(value: string): string[] {
     .filter(Boolean)
 }
 
-/** Genres the metadata sources gave that are not tags yet, offered one tap away. */
-const genreSuggestions = computed(() => {
-  const taken = new Set(splitList(form.tags).map((tag) => tag.toLowerCase()))
-  const seen = new Set<string>()
-  return splitList(form.genres).filter((genre) => {
-    const key = genre.toLowerCase()
-    if (taken.has(key) || seen.has(key)) return false
-    seen.add(key)
-    return true
-  })
+/** The tags field is a chip list over the same comma-separated text the rest of the form reads, like genres. */
+const tagList = computed({
+  get: () => splitList(form.tags),
+  set: (tags: string[]) => {
+    form.tags = tags.join(', ')
+    onFieldChange()
+  },
 })
-
-function addTags(names: string[]) {
-  form.tags = [...splitList(form.tags), ...names].join(', ')
-  onFieldChange()
-}
-
-function addTagFromGenre(genre: string) {
-  addTags([genre])
-}
-
-function addAllGenresAsTags() {
-  addTags(genreSuggestions.value)
-}
 
 const seriesIndexError = computed(() => form.seriesIndex !== '' && !isValidSeriesIndex(form.seriesIndex.trim()))
 
@@ -718,37 +704,9 @@ onMounted(() => {
               <ChipInput v-model="genreList" input-id="book-dock-genres" :search-fn="searchGenres" :normalize="acceptGenre" class="mt-1" />
               <p v-if="genresRestricted" class="mt-1 text-xs text-muted-foreground">{{ t('bookDock.field.genresRestricted') }}</p>
             </div>
-            <div class="sm:col-span-2">
-              <label>
-                <span class="text-xs font-medium text-muted-foreground">{{ t('bookDock.field.tagsCommaSeparated') }}</span>
-                <input
-                  v-model="form.tags"
-                  class="mt-1 w-full h-8 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-1 focus:ring-ring"
-                  @input="onFieldChange"
-                />
-              </label>
-              <div v-if="genreSuggestions.length" class="mt-1.5 flex flex-wrap items-center gap-1.5">
-                <span class="text-xs text-muted-foreground">{{ t('bookDock.field.tagsFromGenres') }}</span>
-                <button
-                  v-for="genre in genreSuggestions"
-                  :key="genre"
-                  type="button"
-                  class="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs text-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                  :aria-label="t('bookDock.field.addTag', { tag: genre })"
-                  @click="addTagFromGenre(genre)"
-                >
-                  <Plus :size="11" aria-hidden="true" />
-                  {{ genre }}
-                </button>
-                <button
-                  v-if="genreSuggestions.length > 1"
-                  type="button"
-                  class="rounded-full px-2 py-0.5 text-xs text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                  @click="addAllGenresAsTags"
-                >
-                  {{ t('bookDock.field.addAllGenres') }}
-                </button>
-              </div>
+            <div class="sm:col-span-2" data-testid="book-dock-tags">
+              <label for="book-dock-tags" class="text-xs font-medium text-muted-foreground">{{ t('bookDock.field.tags') }}</label>
+              <ChipInput v-model="tagList" input-id="book-dock-tags" :search-fn="searchTags" class="mt-1" />
             </div>
             <div class="sm:col-span-2" data-testid="book-dock-description">
               <span class="text-xs font-medium text-muted-foreground">{{ t('bookDock.field.description') }}</span>

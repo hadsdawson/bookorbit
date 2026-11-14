@@ -66,6 +66,7 @@ import { FileWriteService } from '../file-write/file-write.service';
 import { LibraryService } from '../library/library.service';
 import { MetadataService } from '../metadata/metadata.service';
 import { MetadataScoreService } from '../metadata-score/metadata-score.service';
+import { ScannerService } from '../scanner/scanner.service';
 import { UploadProcessorService, type UnitBookFileInput, type UnitBookRecords } from '../upload/upload-processor.service';
 import { UploadStorageService } from '../upload/upload-storage.service';
 import { UploadValidatorService } from '../upload/upload-validator.service';
@@ -296,6 +297,7 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
     @Optional() private readonly providerIdStore?: ProviderIdStore,
     @Optional() private readonly joinService?: BookDockJoinService,
     @Optional() private readonly paths?: BookDockPathsService,
+    @Optional() private readonly scanner?: ScannerService,
   ) {
     this.autoFinalizeQueue = new BookDockWorkQueue(
       AUTO_FINALIZE_QUEUE_CONCURRENCY,
@@ -496,6 +498,8 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
       // After the metadata, whose duration it supersedes, and before any write-back touches the files.
       await this.measureAudioDurations(written.bookIds, row.id);
       this.processor.reconcileCoversAsync(written.bookIds);
+      // Fork. New books appear in an open library view without a refresh, as a scan's do.
+      if (written.createdBookIds.length > 0) this.scanner?.announceBooksAdded(library.id, written.createdBookIds);
       await this.cleanupBookDockRecord(row);
       if (library.fileWriteEnabled) {
         for (const created of written.bookIds) {

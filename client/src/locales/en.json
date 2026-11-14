@@ -109,7 +109,7 @@
         "title": "Theme",
         "style": {
           "label": "Style",
-          "hint": "The overall look of the app. Mode, accent, corners and background keep their settings.",
+          "hint": "The overall look of the app. Solid and Ombre are made of color themes: pick one to see its themes.",
           "bookorbit": {
             "label": "BookOrbit",
             "description": "Tinted surfaces, glass panels and serif headings."
@@ -117,6 +117,14 @@
           "nostalgia": {
             "label": "Nostalgia",
             "description": "Neutral grounds, system type, flat panels and a top glow."
+          },
+          "solid": {
+            "label": "Solid",
+            "description": "Nostalgia's layout in a solid color theme: grounds, buttons, links, icons and pills in the theme's colors."
+          },
+          "ombre": {
+            "label": "Ombre",
+            "description": "Nostalgia's layout in an ombre color theme: a fading background and blended buttons."
           }
         },
         "colorScheme": {
@@ -149,7 +157,7 @@
         },
         "colorTheme": {
           "label": "Color theme",
-          "hint": "Repaints backgrounds, buttons, links, icons and status pills, which are filled in the theme's colors. While a theme is on, it replaces the accent color and surface.",
+          "hint": "Each theme repaints backgrounds, buttons, links, icons, status pills, format badges, genres and tags in its own colors, and replaces the accent color and surface.",
           "themes": {
             "none": "Off",
             "velvet-night": "Velvet Night",
@@ -189,6 +197,10 @@
           "groups": {
             "solid": "Solid",
             "ombre": "Ombre"
+          },
+          "groupLabel": {
+            "solid": "Solid theme",
+            "ombre": "Ombre theme"
           }
         },
         "topGlow": {
@@ -562,6 +574,14 @@
           "readFirstHint": "Open the reader when a readable file exists",
           "openDetails": "Open details",
           "openDetailsHint": "Go to the book details page from grid and list thumbnails"
+        },
+        "detailsButton": {
+          "label": "Book Details button",
+          "hint": "Choose where the Book Details button on a book's cover goes. It shows when thumbnail clicks open details.",
+          "details": "Book details",
+          "detailsHint": "Open the book's details page",
+          "editMetadata": "Edit metadata",
+          "editMetadataHint": "Open the Edit Metadata page instead"
         },
         "filterPreview": {
           "label": "Show filter preview by default",
@@ -1569,7 +1589,8 @@
           "count": "Counts when at least one is set",
           "cover": "Counts when a cover image is stored",
           "providerId": "Counts when the ID is stored",
-          "seriesIndex": "Counts when above zero, so volume 0 never counts"
+          "seriesIndex": "Counts when above zero, so volume 0 never counts",
+          "audiobookChapters": "Counts only for books with an M4B file, when they have real chapters rather than none or bare track numbers"
         },
         "rail": {
           "title": "Where your books land",
@@ -1908,7 +1929,8 @@
         "openLibraryId": "Open Library ID",
         "itunesId": "iTunes ID",
         "koboId": "Kobo ID",
-        "aladinId": "Aladin ID"
+        "aladinId": "Aladin ID",
+        "audiobookChapters": "Audiobook Chapters"
       },
       "mergeStrategy": {
         "fillMissing": {
@@ -9618,10 +9640,7 @@
       "genres": "Genres",
       "genresCommaSeparated": "Genres (comma-separated)",
       "description": "Description",
-      "tagsCommaSeparated": "Tags (comma-separated)",
-      "tagsFromGenres": "Add from genres:",
-      "addTag": "Add {tag} as a tag",
-      "addAllGenres": "Add all",
+      "tags": "Tags",
       "genresRestricted": "Only genres from the allowed list in settings can be added."
     },
     "upload": {

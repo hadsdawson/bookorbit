@@ -15,9 +15,9 @@ import AppearancePreferenceStorage from './AppearancePreferenceStorage.vue'
 const { t } = useI18n()
 const themeStore = useThemeStore()
 const INTERFACE_TWEAKS: InterfaceTweakKind[] = ['boxDepth', 'boxOutline', 'interfaceFont', 'interfaceTextSize']
-/** A color theme brings its own surfaces and accent, so their pickers step aside while one is on. */
-const colorThemeOn = computed(() => themeStore.colorTheme !== 'none')
-const showSurfacePalette = computed(() => themeStore.appearanceControls.surfacePalette && !colorThemeOn.value)
+/** Solid and Ombre offer their own color themes, which bring their own surfaces and accent. */
+const colorThemeGroup = computed(() => themeStore.appearanceControls.colorThemes)
+const showSurfacePalette = computed(() => themeStore.appearanceControls.surfacePalette)
 
 const showSurfaceBrightness = computed(() => themeStore.resolvedTheme === 'dark' && themeStore.appearanceControls.brightness)
 
@@ -98,16 +98,16 @@ function handleBrightnessInput(event: Event) {
           </div>
         </div>
 
-        <div class="settings-row">
+        <div v-if="colorThemeGroup" class="settings-row" data-testid="style-color-themes">
           <div>
             <p class="settings-label">
-              {{ t('settings.appearance.theme.colorTheme.label') }}
+              {{ t(`settings.appearance.theme.colorTheme.groupLabel.${colorThemeGroup}`) }}
             </p>
             <p class="settings-hint settings-prose">
               {{ t('settings.appearance.theme.colorTheme.hint') }}
             </p>
           </div>
-          <ColorThemePicker class="self-start md:w-96 md:shrink-0" />
+          <ColorThemePicker :group="colorThemeGroup" class="self-start md:w-96 md:shrink-0" />
         </div>
         <div v-if="showSurfacePalette" class="settings-row">
           <div>
@@ -166,7 +166,7 @@ function handleBrightnessInput(event: Event) {
           </div>
         </div>
 
-        <div v-if="!colorThemeOn" class="px-4 py-3.5 md:px-5 md:py-4 bg-card">
+        <div v-if="themeStore.appearanceControls.accent" class="px-4 py-3.5 md:px-5 md:py-4 bg-card">
           <p class="settings-label mb-0.5">
             {{ t('settings.appearance.theme.accentColor.label') }}
           </p>

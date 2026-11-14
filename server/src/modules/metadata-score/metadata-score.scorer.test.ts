@@ -28,12 +28,42 @@ function makeData(overrides: Partial<ScoreData> = {}): ScoreData {
     authorCount: 0,
     genreCount: 0,
     tagCount: 0,
+    chapterCount: 0,
+    numberedChapterCount: 0,
+    hasM4b: false,
     ...overrides,
   };
 }
 
 describe('MetadataScoreScorer', () => {
   const scorer = new MetadataScoreScorer();
+
+  describe('audiobook chapters', () => {
+    const weights = (chapters: number): MetadataScoreWeights =>
+      ({
+        ...Object.fromEntries(Object.keys(DEFAULT_METADATA_SCORE_WEIGHTS).map((key) => [key, 0])),
+        title: 10,
+        audiobookChapters: chapters,
+      }) as MetadataScoreWeights;
+
+    it('is off by default', () => {
+      expect(DEFAULT_METADATA_SCORE_WEIGHTS.audiobookChapters).toBe(0);
+    });
+
+    it('never marks down a book without an M4B file', () => {
+      expect(scorer.compute(makeData({ title: 'Dune', hasM4b: false }), weights(10))).toBe(100);
+    });
+
+    it('marks down an M4B book with no chapters, or only numbered tracks', () => {
+      expect(scorer.compute(makeData({ title: 'Dune', hasM4b: true, chapterCount: 0 }), weights(10))).toBe(50);
+      expect(scorer.compute(makeData({ title: 'Dune', hasM4b: true, chapterCount: 1 }), weights(10))).toBe(50);
+      expect(scorer.compute(makeData({ title: 'Dune', hasM4b: true, chapterCount: 20, numberedChapterCount: 20 }), weights(10))).toBe(50);
+    });
+
+    it('counts real chapters on an M4B book', () => {
+      expect(scorer.compute(makeData({ title: 'Dune', hasM4b: true, chapterCount: 20, numberedChapterCount: 2 }), weights(10))).toBe(100);
+    });
+  });
 
   it('returns 0 when total weight is zero', () => {
     const zeroWeights = Object.fromEntries(Object.keys(DEFAULT_METADATA_SCORE_WEIGHTS).map((key) => [key, 0])) as MetadataScoreWeights;
