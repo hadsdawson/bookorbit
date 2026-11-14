@@ -182,6 +182,28 @@ export const COLOR_THEME_IDS = [
 export type ColorTheme = (typeof COLOR_THEME_IDS)[number];
 export const DEFAULT_COLOR_THEME: ColorTheme = "none";
 
+/** Fork only. How far boxes (cards, panels, dialogs, the sidebar) lift off the page with a shadow. */
+export const BOX_DEPTH_IDS = ["off", "subtle", "strong"] as const;
+export type BoxDepth = (typeof BOX_DEPTH_IDS)[number];
+export const DEFAULT_BOX_DEPTH: BoxDepth = "off";
+
+/** Fork only. How strongly boxes are outlined. "default" keeps the style's own borders. */
+export const BOX_OUTLINE_IDS = ["default", "medium", "bold"] as const;
+export type BoxOutline = (typeof BOX_OUTLINE_IDS)[number];
+export const DEFAULT_BOX_OUTLINE: BoxOutline = "default";
+
+/** Fork only. The typeface of the app's own text. "default" keeps the style's font; readers keep theirs. */
+export const INTERFACE_FONT_IDS = ["default", "system", "atkinson", "lexend", "nunito", "source-serif"] as const;
+export type InterfaceFont = (typeof INTERFACE_FONT_IDS)[number];
+export const DEFAULT_INTERFACE_FONT: InterfaceFont = "default";
+
+/** Fork only. The size of the app's text, as a scale on the default. Kept to a small range so busy
+ *  screens (tables, pills, sidebar counts) still fit. */
+export const INTERFACE_TEXT_SIZE_IDS = ["default", "large", "larger"] as const;
+export type InterfaceTextSize = (typeof INTERFACE_TEXT_SIZE_IDS)[number];
+export const DEFAULT_INTERFACE_TEXT_SIZE: InterfaceTextSize = "default";
+export const INTERFACE_TEXT_SCALES: Record<InterfaceTextSize, number> = { default: 1, large: 1.1, larger: 1.2 };
+
 export interface ThemePreferences {
   theme: Theme;
   accent: Accent;
@@ -199,4 +221,12 @@ export interface ThemePreferences {
   glowReach?: number;
   /** Optional for the same reason; absent means "none". */
   colorTheme?: ColorTheme;
+  /** Fork. Optional for the same reason; absent means DEFAULT_BOX_DEPTH. */
+  boxDepth?: BoxDepth;
+  /** Fork. Optional for the same reason; absent means DEFAULT_BOX_OUTLINE. */
+  boxOutline?: BoxOutline;
+  /** Fork. Optional for the same reason; absent means DEFAULT_INTERFACE_FONT. */
+  interfaceFont?: InterfaceFont;
+  /** Fork. Optional for the same reason; absent means DEFAULT_INTERFACE_TEXT_SIZE. */
+  interfaceTextSize?: InterfaceTextSize;
 }

@@ -79,9 +79,11 @@ const widgetLayout: Record<WidgetType, { size: DashboardWidgetSize }> = {
   'upcoming-releases': { size: '1x1.5' },
 }
 
+// Fork: in rem (220px and 336px at the default size) so widgets widen with the interface text size,
+// as their height already does.
 const widgetSizeClass: Record<DashboardWidgetSize, string> = {
-  '1x1': 'w-[220px]',
-  '1x1.5': 'w-[336px]',
+  '1x1': 'w-[13.75rem]',
+  '1x1.5': 'w-[21rem]',
 }
 </script>
 

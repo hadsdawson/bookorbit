@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useUiTextScale } from '@/lib/ui-text-scale'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { defaultRangeExtractor, useVirtualizer } from '@tanstack/vue-virtual'
@@ -71,11 +72,14 @@ const headerIndexes = computed(() => rows.value.reduce<number[]>((acc, row, inde
 /** The header pinned to the top of the viewport, kept rendered even when scrolled out of range. */
 const activeHeaderIndex = ref(0)
 
+const textScale = useUiTextScale()
+
 const virtualizer = useVirtualizer(
   computed(() => ({
     count: rows.value.length,
     getScrollElement: () => listRef.value,
-    estimateSize: (index: number) => (rows.value[index]?.kind === 'header' ? HEADER_HEIGHT : ITEM_HEIGHT),
+    // Fork: rows hold text, so they are taller at a larger interface text size.
+    estimateSize: (index: number) => Math.round((rows.value[index]?.kind === 'header' ? HEADER_HEIGHT : ITEM_HEIGHT) * textScale.value),
     overscan: 12,
     rangeExtractor: (range: { startIndex: number; endIndex: number; overscan: number; count: number }) => {
       const pinned = [...headerIndexes.value].reverse().find((index) => index <= range.startIndex) ?? 0

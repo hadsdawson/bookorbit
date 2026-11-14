@@ -5,7 +5,20 @@ import {
   type Background,
   ACCENT_IDS,
   type Accent,
+  BOX_DEPTH_IDS,
+  BOX_OUTLINE_IDS,
   COLOR_THEME_IDS,
+  DEFAULT_BOX_DEPTH,
+  DEFAULT_BOX_OUTLINE,
+  DEFAULT_INTERFACE_FONT,
+  DEFAULT_INTERFACE_TEXT_SIZE,
+  INTERFACE_FONT_IDS,
+  INTERFACE_TEXT_SCALES,
+  INTERFACE_TEXT_SIZE_IDS,
+  type BoxDepth,
+  type BoxOutline,
+  type InterfaceFont,
+  type InterfaceTextSize,
   type ColorTheme,
   DEFAULT_COLOR_THEME,
   DEFAULT_STYLE,
@@ -144,6 +157,10 @@ export const useThemeStore = defineStore('theme', () => {
   const surfacePalette = ref<SurfacePalette>(storedChoice('surfacePalette', SURFACE_PALETTE_IDS, DEFAULT_SURFACE_PALETTE))
   const glowReach = ref<number>(clampGlowReach(storage.get<unknown>('glowReach', GLOW_REACH_DEFAULT)))
   const colorTheme = ref<ColorTheme>(storedChoice('colorTheme', COLOR_THEME_IDS, DEFAULT_COLOR_THEME))
+  const boxDepth = ref<BoxDepth>(storedChoice('boxDepth', BOX_DEPTH_IDS, DEFAULT_BOX_DEPTH))
+  const boxOutline = ref<BoxOutline>(storedChoice('boxOutline', BOX_OUTLINE_IDS, DEFAULT_BOX_OUTLINE))
+  const interfaceFont = ref<InterfaceFont>(storedChoice('interfaceFont', INTERFACE_FONT_IDS, DEFAULT_INTERFACE_FONT))
+  const interfaceTextSize = ref<InterfaceTextSize>(storedChoice('interfaceTextSize', INTERFACE_TEXT_SIZE_IDS, DEFAULT_INTERFACE_TEXT_SIZE))
 
   /** A style dresses the app shell only; sign-in pages and readers always paint as BookOrbit. */
   const styleScopeActive = ref(isAppShellPath(window.location.pathname))
@@ -151,6 +168,13 @@ export const useThemeStore = defineStore('theme', () => {
   const appliedStyleDefinition = computed(() => getThemeStyle(appliedStyle.value))
   /** Like a style, a color theme only dresses the app shell. */
   const appliedColorTheme = computed<ColorTheme>(() => (styleScopeActive.value ? colorTheme.value : 'none'))
+  /** Box, font and text-size choices dress the app shell only too: readers and sign-in keep their own type. */
+  const appliedBoxDepth = computed<BoxDepth>(() => (styleScopeActive.value ? boxDepth.value : DEFAULT_BOX_DEPTH))
+  const appliedBoxOutline = computed<BoxOutline>(() => (styleScopeActive.value ? boxOutline.value : DEFAULT_BOX_OUTLINE))
+  const appliedInterfaceFont = computed<InterfaceFont>(() => (styleScopeActive.value ? interfaceFont.value : DEFAULT_INTERFACE_FONT))
+  const appliedInterfaceTextSize = computed<InterfaceTextSize>(() => (styleScopeActive.value ? interfaceTextSize.value : DEFAULT_INTERFACE_TEXT_SIZE))
+  /** The text scale in effect (1 at the default size), for layout that measures rows in pixels. */
+  const appliedInterfaceTextScale = computed(() => INTERFACE_TEXT_SCALES[appliedInterfaceTextSize.value])
   const styleDefinition = computed(() => getThemeStyle(style.value))
   const appearanceControls = computed(() => getAppearanceControls(style.value))
 
@@ -239,6 +263,28 @@ export const useThemeStore = defineStore('theme', () => {
     colorTheme.value = next
   }
 
+  function setBoxDepth(value: BoxDepth) {
+    boxDepth.value = value
+  }
+
+  function setBoxOutline(value: BoxOutline) {
+    boxOutline.value = value
+  }
+
+  function setInterfaceFont(value: InterfaceFont) {
+    interfaceFont.value = value
+  }
+
+  function setInterfaceTextSize(value: InterfaceTextSize) {
+    interfaceTextSize.value = value
+  }
+
+  /** interface-tweaks.css scales rem-sized text and spacing through the root font size, and px text through
+   *  --ui-text-scale, for the size named here. */
+  function applyInterfaceTextSize(value: InterfaceTextSize) {
+    root.setAttribute('data-text-size', value)
+  }
+
   function setGlowReach(reach: number) {
     glowReach.value = clampGlowReach(reach)
   }
@@ -265,6 +311,10 @@ export const useThemeStore = defineStore('theme', () => {
   watch(surfacePalette, (palette) => root.setAttribute('data-surface', palette), SYNC)
   watch(glowReach, applyGlowReach, SYNC)
   watch(appliedColorTheme, (value) => root.setAttribute('data-color-theme', value), SYNC)
+  watch(appliedBoxDepth, (value) => root.setAttribute('data-box-depth', value), SYNC)
+  watch(appliedBoxOutline, (value) => root.setAttribute('data-box-outline', value), SYNC)
+  watch(appliedInterfaceFont, (value) => root.setAttribute('data-ui-font', value), SYNC)
+  watch(appliedInterfaceTextSize, applyInterfaceTextSize, SYNC)
   watch(appearanceKey, applyThemeColorMeta, { immediate: true, flush: 'post' })
 
   watch(theme, (t) => storage.set('theme', t), { immediate: true })
@@ -277,6 +327,10 @@ export const useThemeStore = defineStore('theme', () => {
   watch(surfacePalette, (palette) => storage.set('surfacePalette', palette), { immediate: true })
   watch(glowReach, (reach) => storage.set('glowReach', reach), { immediate: true })
   watch(colorTheme, (value) => storage.set('colorTheme', value), { immediate: true })
+  watch(boxDepth, (value) => storage.set('boxDepth', value), { immediate: true })
+  watch(boxOutline, (value) => storage.set('boxOutline', value), { immediate: true })
+  watch(interfaceFont, (value) => storage.set('interfaceFont', value), { immediate: true })
+  watch(interfaceTextSize, (value) => storage.set('interfaceTextSize', value), { immediate: true })
 
   return {
     theme,
@@ -290,6 +344,11 @@ export const useThemeStore = defineStore('theme', () => {
     surfacePalette,
     glowReach,
     colorTheme,
+    boxDepth,
+    boxOutline,
+    interfaceFont,
+    interfaceTextSize,
+    appliedInterfaceTextScale,
     appliedStyle,
     styleDefinition,
     appearanceControls,
@@ -306,6 +365,10 @@ export const useThemeStore = defineStore('theme', () => {
     setSurfacePalette,
     setGlowReach,
     setColorTheme,
+    setBoxDepth,
+    setBoxOutline,
+    setInterfaceFont,
+    setInterfaceTextSize,
     setStyleScopeActive,
   }
 })

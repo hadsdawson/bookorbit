@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useUiTextScale } from '@/lib/ui-text-scale'
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useElementSize, useWindowSize, watchDebounced } from '@vueuse/core'
 import { RecycleScroller } from 'vue-virtual-scroller'
@@ -123,10 +124,12 @@ const cardWidth = computed(() => Math.max(1, itemSecondarySize.value - gapPx.val
 const cardHeight = computed(() => Math.max(1, Math.round(cardWidth.value * aspectMultiplier.value)))
 
 const { gridCardSecondaryLabel, cardInfoMode } = useDisplaySettings()
+const textScale = useUiTextScale()
 const labelAreaHeight = computed(() => {
   if (cardInfoMode.value !== 'below-cover') return 0
   const hasSecondary = gridCardSecondaryLabel.value !== 'hidden'
-  return hasSecondary ? 40 : 24
+  // Fork: the labels are text, so their room grows with the interface text size.
+  return Math.round((hasSecondary ? 40 : 24) * textScale.value)
 })
 const showLabel = computed(() => cardInfoMode.value === 'below-cover')
 

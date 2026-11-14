@@ -7,6 +7,7 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { lucideIconsPlugin } from './build/vite-plugin-lucide-icons'
+import { uiTextScalePlugin } from './build/vite-plugin-ui-text-scale'
 
 const apiAgent = new Agent({ keepAlive: true })
 /** Lets a second dev client point at a throwaway API instance, so restart testing leaves the main stack alone. */
@@ -25,6 +26,7 @@ export default defineConfig({
     vue(),
     vueDevTools(),
     tailwindcss(),
+    uiTextScalePlugin(),
     lucideIconsPlugin(),
     VitePWA({
       registerType: 'autoUpdate',

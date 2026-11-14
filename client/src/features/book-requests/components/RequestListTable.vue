@@ -12,6 +12,7 @@ import type {
 } from '@bookorbit/types'
 import { formatDate, formatPercent, formatRelativeFromNow } from '@/i18n/formatters'
 import { formatBytes } from '@/lib/formatting'
+import { scaledPx, uiTextScale } from '@/lib/ui-text-scale'
 import type { RequestListDensity } from '../composables/useRequestListDensity'
 import { canBulkActRequest } from '../requestActions'
 import { requestBookCoverSources } from '../requestBookCover'
@@ -90,15 +91,15 @@ const tableMinWidth = computed(
 function columnStyle(column: RequestTableColumn) {
   if (column === 'title') {
     const stored = columns.storedWidthOf('title')
-    return stored === null ? {} : { width: `${stored}px` }
+    return stored === null ? {} : { width: scaledPx(stored) }
   }
-  return { width: `${columns.widthOf(column)}px` }
+  return { width: scaledPx(columns.widthOf(column)) }
 }
 
 /** What the header is drawn at now, which for a flexible title is not its stored width. */
 function renderedWidth(event: Event, column: RequestTableColumn): number {
   const header = (event.currentTarget as HTMLElement | null)?.closest('th')
-  return header ? header.getBoundingClientRect().width : columns.widthOf(column)
+  return header ? header.getBoundingClientRect().width / uiTextScale() : columns.widthOf(column)
 }
 
 function columnFromEvent(event: Event): RequestTableColumn | null {
@@ -106,11 +107,11 @@ function columnFromEvent(event: Event): RequestTableColumn | null {
   return value && (REQUEST_TABLE_COLUMNS as readonly string[]).includes(value) ? (value as RequestTableColumn) : null
 }
 
-let resizing: { column: RequestTableColumn; startX: number; startWidth: number } | null = null
+let resizing: { column: RequestTableColumn; startX: number; startWidth: number; scale: number } | null = null
 
 function onResizeMove(event: PointerEvent) {
   if (!resizing) return
-  columns.setWidth(resizing.column, resizing.startWidth + (event.clientX - resizing.startX))
+  columns.setWidth(resizing.column, resizing.startWidth + (event.clientX - resizing.startX) / resizing.scale)
 }
 
 function onResizeEnd() {
@@ -127,7 +128,7 @@ function startResize(event: PointerEvent) {
   if (!column) return
   event.preventDefault()
   event.stopPropagation()
-  resizing = { column, startX: event.clientX, startWidth: renderedWidth(event, column) }
+  resizing = { column, startX: event.clientX, startWidth: renderedWidth(event, column), scale: uiTextScale() }
   document.body.style.cursor = 'col-resize'
   document.body.style.userSelect = 'none'
   window.addEventListener('pointermove', onResizeMove)
@@ -497,14 +498,14 @@ function rowDismissed(row: BookRequestItem): boolean {
       box that never scrolls vertically, and the header would stop sticking.
     -->
     <div class="hidden max-h-[calc(100svh-14rem)] overflow-auto rounded-lg lg:block">
-      <table class="table-fixed border-collapse text-sm" :style="{ width: '100%', minWidth: `${tableMinWidth}px` }">
+      <table class="table-fixed border-collapse text-sm" :style="{ width: '100%', minWidth: scaledPx(tableMinWidth) }">
         <caption class="sr-only">
           {{
             t('bookRequests.table.caption')
           }}
         </caption>
         <colgroup>
-          <col v-if="hasSelectableRows" :style="{ width: `${SELECT_COLUMN_WIDTH}px` }" />
+          <col v-if="hasSelectableRows" :style="{ width: scaledPx(SELECT_COLUMN_WIDTH) }" />
           <col v-for="column in columns.visibleColumns.value" :key="column" :style="columnStyle(column)" />
         </colgroup>
         <thead class="sticky top-0 z-10 bg-card">

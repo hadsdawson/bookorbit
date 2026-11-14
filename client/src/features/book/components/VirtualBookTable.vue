@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { scaledPx } from '@/lib/ui-text-scale'
+import { useUiTextScale } from '@/lib/ui-text-scale'
 import { ref, computed, watch, nextTick, onMounted, onUnmounted, onActivated, onDeactivated } from 'vue'
 import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
 import { useVirtualizer } from '@tanstack/vue-virtual'
@@ -419,10 +421,11 @@ const activeSorts = computed(() =>
 // Skeleton rows for initial loading
 const SKELETON_ROW_COUNT = 12
 
+const textScale = useUiTextScale()
+// Fork: rows grow with the interface text size, so the estimate does too.
 const rowEstimate = computed(() => {
-  if (tableDensity.value === 'compact') return 36
-  if (tableDensity.value === 'roomy') return 52
-  return 44
+  const base = tableDensity.value === 'compact' ? 36 : tableDensity.value === 'roomy' ? 52 : 44
+  return Math.round(base * textScale.value)
 })
 
 const virtualizer = useVirtualizer(
@@ -765,7 +768,13 @@ defineExpose({
         <!-- Skeleton loading rows -->
         <tbody v-if="!initialized && loading" role="rowgroup">
           <tr v-for="i in SKELETON_ROW_COUNT" :key="`skeleton-${i}`" role="row" class="border-b border-border/50">
-            <td v-if="selectionMode" role="gridcell" class="px-2 align-middle" :class="rowPaddingClass" :style="{ width: '36px', minWidth: '36px' }">
+            <td
+              v-if="selectionMode"
+              role="gridcell"
+              class="px-2 align-middle"
+              :class="rowPaddingClass"
+              :style="{ width: scaledPx(36), minWidth: scaledPx(36) }"
+            >
               <div class="mx-auto h-4 w-4 rounded-xs bg-muted animate-pulse" />
             </td>
             <td
@@ -774,7 +783,7 @@ defineExpose({
               role="gridcell"
               class="overflow-hidden px-2 align-middle"
               :class="rowPaddingClass"
-              :style="{ width: `${col.defaultWidth}px`, minWidth: `${col.minWidth}px` }"
+              :style="{ width: scaledPx(col.defaultWidth), minWidth: scaledPx(col.minWidth) }"
             >
               <div v-if="col.cellType === 'cover'" class="h-9 w-9 rounded-sm bg-muted animate-pulse" />
               <div v-else-if="col.cellType === 'rating'" class="flex items-center gap-0.5">
@@ -794,14 +803,20 @@ defineExpose({
 
           <template v-for="vItem in virtualItems" :key="String(vItem.key)">
             <tr v-if="isPlaceholderRow(vItem.index)" role="row" class="border-b border-border/50" :data-row-index="vItem.index">
-              <td v-if="selectionMode" role="gridcell" class="px-2" :class="rowPaddingClass" :style="{ width: '36px', minWidth: '36px' }" />
+              <td
+                v-if="selectionMode"
+                role="gridcell"
+                class="px-2"
+                :class="rowPaddingClass"
+                :style="{ width: scaledPx(36), minWidth: scaledPx(36) }"
+              />
               <td
                 v-for="col in displayColumns"
                 :key="col.id"
                 role="gridcell"
                 class="overflow-hidden px-2 align-middle"
                 :class="rowPaddingClass"
-                :style="{ width: `${col.defaultWidth}px`, minWidth: `${col.minWidth}px` }"
+                :style="{ width: scaledPx(col.defaultWidth), minWidth: scaledPx(col.minWidth) }"
               >
                 <div class="h-3.5 max-w-32 animate-pulse rounded-xs bg-foreground/5" data-testid="book-row-skeleton" />
               </td>
@@ -828,7 +843,7 @@ defineExpose({
                 role="gridcell"
                 class="overflow-hidden px-2 bg-background"
                 :class="rowPaddingClass"
-                :style="{ width: '36px', minWidth: '36px', position: 'sticky', left: '0px', zIndex: 20 }"
+                :style="{ width: scaledPx(36), minWidth: scaledPx(36), position: 'sticky', left: '0px', zIndex: 20 }"
               >
                 <div class="flex items-center justify-center">
                   <input
@@ -858,12 +873,12 @@ defineExpose({
                     : '',
                 ]"
                 :style="{
-                  width: `${col.defaultWidth}px`,
-                  minWidth: `${col.minWidth}px`,
+                  width: scaledPx(col.defaultWidth),
+                  minWidth: scaledPx(col.minWidth),
                   ...(col.pinned === 'left' || col.id === 'lockRow'
                     ? {
                         position: 'sticky',
-                        left: `${(selectionMode ? 36 : 0) + (pinnedLeftOffsets.get(col.id) ?? 0)}px`,
+                        left: scaledPx((selectionMode ? 36 : 0) + (pinnedLeftOffsets.get(col.id) ?? 0)),
                         zIndex: col.id === 'lockRow' ? 20 : 2,
                         background: getPinnedCellBackground(
                           rowBook(vItem.index),

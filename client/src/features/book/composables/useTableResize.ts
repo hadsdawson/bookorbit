@@ -1,5 +1,6 @@
 import { ref, onMounted, onUnmounted, type Ref } from 'vue'
 import type { ColumnDef } from './useTableColumns'
+import { uiTextScale } from '@/lib/ui-text-scale'
 
 const NON_RESIZABLE_COLUMNS = new Set<string>(['lockRow', 'cover', 'read'])
 
@@ -12,6 +13,8 @@ export function useTableResize(
   const resizingColumnId = ref<string | null>(null)
   const resizeStartX = ref(0)
   const resizeStartWidth = ref(0)
+  // Fork: columns are drawn at their stored width times the interface text scale.
+  const resizeScale = ref(1)
 
   function isResizableCol(col: ColumnDef): boolean {
     return !isReadOnly.value && !NON_RESIZABLE_COLUMNS.has(col.id)
@@ -23,12 +26,13 @@ export function useTableResize(
     resizingColumnId.value = colId
     resizeStartX.value = e.clientX
     resizeStartWidth.value = currentWidth
+    resizeScale.value = uiTextScale()
     e.preventDefault()
   }
 
   function onResizeMove(e: MouseEvent) {
     if (!resizingColumnId.value) return
-    const delta = e.clientX - resizeStartX.value
+    const delta = (e.clientX - resizeStartX.value) / resizeScale.value
     setColumnWidth(resizingColumnId.value, resizeStartWidth.value + delta)
   }
 
@@ -45,7 +49,9 @@ export function useTableResize(
     const column = displayColumns.value.find((currentColumn) => currentColumn.id === colId)
     if (!column) return
 
-    let maxWidth = column.minWidth
+    // Fork: measured on screen, where widths are drawn at the interface text scale; stored unscaled.
+    const scale = uiTextScale()
+    let maxWidth = column.minWidth * scale
     const headerCell = table.querySelector(`thead [data-col-id="${colId}"] [data-col-label]`) as HTMLElement | null
     if (headerCell) {
       maxWidth = Math.max(maxWidth, headerCell.scrollWidth + 32)
@@ -57,7 +63,7 @@ export function useTableResize(
       maxWidth = Math.max(maxWidth, element.scrollWidth + 16)
     })
 
-    setColumnWidth(colId, Math.min(400, maxWidth))
+    setColumnWidth(colId, Math.min(400, Math.round(maxWidth / scale)))
   }
 
   function autoFitAllColumns(): void {

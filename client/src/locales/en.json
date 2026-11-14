@@ -629,6 +629,48 @@
         "layout": "Layout",
         "behavior": "Behavior",
         "language": "Language"
+      },
+      "interface": {
+        "title": "Boxes and text",
+        "boxDepth": {
+          "label": "Box depth",
+          "hint": "Adds a shadow under cards and panels so they lift off the page.",
+          "options": {
+            "off": "Off",
+            "subtle": "Subtle",
+            "strong": "Strong"
+          }
+        },
+        "boxOutline": {
+          "label": "Box outlines",
+          "hint": "Makes the edges of cards and panels stand out more.",
+          "options": {
+            "default": "Default",
+            "medium": "Medium",
+            "bold": "Bold"
+          }
+        },
+        "interfaceFont": {
+          "label": "Interface font",
+          "hint": "The font for menus, lists and buttons. Readers keep their own font settings.",
+          "options": {
+            "default": "Default",
+            "system": "System",
+            "atkinson": "Atkinson",
+            "lexend": "Lexend",
+            "nunito": "Nunito",
+            "source-serif": "Source Serif"
+          }
+        },
+        "interfaceTextSize": {
+          "label": "Text size",
+          "hint": "Makes the app's text and spacing larger. On a phone, Larger is shown as Large. Readers keep their own text size.",
+          "options": {
+            "default": "Default",
+            "large": "Large",
+            "larger": "Larger"
+          }
+        }
       }
     },
     "account": {
@@ -10819,7 +10861,11 @@
       "surfaceOpacity": "Surface opacity",
       "surfaceOpacityValue": "{value}%",
       "surfaceBrightnessValue": "{value}%",
-      "readingHistory": "History"
+      "readingHistory": "History",
+      "boxDepth": "Box depth",
+      "boxOutline": "Box outlines",
+      "interfaceFont": "Font",
+      "interfaceTextSize": "Text size"
     },
     "sidebar": {
       "dashboard": "Dashboard",
