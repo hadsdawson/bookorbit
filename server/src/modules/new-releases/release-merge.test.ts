@@ -52,8 +52,15 @@ describe('confirmedDate', () => {
     );
   });
 
-  it('holds a date two sources disagree on', () => {
-    expect(confirmedDate([report(), report({ source: 'google', sourceId: 'g', date: '2027-04-01' })], TODAY)).toBeNull();
+  it("takes the leading source's date when two sources disagree", () => {
+    const google = report({ source: 'google', sourceId: 'g', date: '2027-04-01' });
+    expect(confirmedDate([report(), google], TODAY, ['hardcover', 'google', 'audible'])).toBe('2027-03-09');
+    expect(confirmedDate([report(), google], TODAY, ['google', 'hardcover', 'audible'])).toBe('2027-04-01');
+  });
+
+  it('skips a parked 1 January date for the next source when sources disagree', () => {
+    const google = report({ source: 'google', sourceId: 'g', date: '2027-04-01' });
+    expect(confirmedDate([report({ date: '2027-01-01' }), google], TODAY, ['hardcover', 'google', 'audible'])).toBe('2027-04-01');
   });
 
   it('confirms the date two sources share even when a third differs', () => {
