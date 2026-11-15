@@ -147,6 +147,7 @@ import { computeFileHash } from '../scanner/lib/hash';
 import { compareCfi } from '../position-converter/cfi.utils';
 import { PositionConverterService } from '../position-converter/position-converter.service';
 import { BookAliasService } from '../book-alias/book-alias.service';
+import { RecycleBinService } from '../recycle-bin/recycle-bin.service';
 
 type SeriesCollapseQueryOptions = {
   seriesSelectionFilter: GroupRule | undefined;
@@ -355,6 +356,7 @@ export class BookService {
     @Optional() private readonly providerRegistry?: ProviderRegistry,
     @Optional() private readonly bookAlias?: BookAliasService,
     @Optional() private readonly linkMembers?: BookLinkMembersRepository,
+    @Optional() private readonly recycleBin?: RecycleBinService,
   ) {
     this.appDataPath = this.config.get<string>('storage.appDataPath')!;
   }
@@ -1834,7 +1836,18 @@ export class BookService {
       const file = await this.verifyFileAccess(fileId, user);
 
       try {
-        await rm(file.absolutePath, { force: true });
+        const recycleBin = (await this.recycleBin?.isEnabled()) ? this.recycleBin : undefined;
+        if (recycleBin) {
+          const [audit] = await this.bookRepo.findDeletionAuditBooksByIds([file.bookId]);
+          await recycleBin.recycle(file.libraryFolderPath, {
+            kind: 'file',
+            title: audit?.title ?? null,
+            deletedBy: user.name || user.username,
+            absolutePaths: [file.absolutePath],
+          });
+        } else {
+          await rm(file.absolutePath, { force: true });
+        }
       } catch {
         throw new InternalServerErrorException('Failed to delete file from disk');
       }
@@ -1915,7 +1928,9 @@ export class BookService {
       const paths = [...new Set(files.map((file) => file.absolutePath))];
       // Defer watcher reconciliation until the records reflect the intentional removal.
       await this.selfWriteRegistry.track(paths, async () => {
-        const fileResults = await mapWithConcurrency(paths, BOOK_DELETION_CONCURRENCY, (path) => removeTarget(path, 'bookFile'));
+        const fileResults = (await this.recycleBin?.isEnabled())
+          ? await this.recycleBookFiles(deletedBookIds, user, event, startedAt)
+          : await mapWithConcurrency(paths, BOOK_DELETION_CONCURRENCY, (path) => removeTarget(path, 'bookFile'));
         if (fileResults.some((removed) => !removed)) {
           throw new InternalServerErrorException(
             "Could not delete all book files. Book records were kept, but some files may already be removed. Check the server's library permissions or read-only mounts, then retry.",
@@ -1947,6 +1962,35 @@ export class BookService {
       );
       throw err;
     }
+  }
+
+  /** Moves each book's files to the recycle bin, one entry per book and library folder. */
+  private async recycleBookFiles(bookIds: number[], user: RequestUser, event: string, startedAt: number): Promise<boolean[]> {
+    const groups = new Map<string, { libraryFolderPath: string; title: string | null; absolutePaths: string[] }>();
+    for (const file of await this.bookRepo.findRecycleBinFilesByBookIds(bookIds)) {
+      const key = `${file.bookId}\0${file.libraryFolderPath}`;
+      const group = groups.get(key) ?? { libraryFolderPath: file.libraryFolderPath, title: file.title, absolutePaths: [] };
+      group.absolutePaths.push(file.absolutePath);
+      groups.set(key, group);
+    }
+    return mapWithConcurrency([...groups.values()], BOOK_DELETION_CONCURRENCY, async (group) => {
+      try {
+        await this.recycleBin!.recycle(group.libraryFolderPath, {
+          kind: 'book',
+          title: group.title,
+          deletedBy: user.name || user.username,
+          absolutePaths: group.absolutePaths,
+        });
+        return true;
+      } catch (err) {
+        const errorClass = err instanceof Error ? err.name : 'Error';
+        const errorMessage = sanitizeLogValue(err instanceof Error ? err.message : String(err));
+        this.logger.warn(
+          `[${event}] [fail] userId=${user.id} path="${sanitizeLogValue(group.libraryFolderPath)}" kind=recycleBin durationMs=${Date.now() - startedAt} errorClass=${errorClass} error="${errorMessage}" - delete books recycle bin move failed`,
+        );
+        return false;
+      }
+    });
   }
 
   async updateMetadata(

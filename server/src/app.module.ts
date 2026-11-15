@@ -98,6 +98,7 @@ import { SharedReadingInsightsModule } from './modules/shared-reading-insights/s
 import { BookDuplicatesModule } from './modules/book-duplicates/book-duplicates.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 import { BackupModule } from './modules/backup/backup.module';
+import { RecycleBinModule } from './modules/recycle-bin/recycle-bin.module';
 import { CommunityRatingsRefreshModule } from './modules/community-ratings-refresh/community-ratings-refresh.module';
 import { NewReleasesModule } from './modules/new-releases/new-releases.module';
 import { BookLinkModule } from './modules/book-link/book-link.module';
@@ -224,6 +225,7 @@ import { StoryEditsModule } from './modules/story-edits/story-edits.module';
     BookDuplicatesModule,
     MaintenanceModule,
     BackupModule,
+    RecycleBinModule,
     CommunityRatingsRefreshModule,
     NewReleasesModule,
     BookMoveModule,

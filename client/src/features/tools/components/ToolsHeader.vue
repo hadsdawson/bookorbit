@@ -8,7 +8,7 @@ import { usePermissions } from '@/features/auth/composables/usePermissions'
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
-const { hasPermission } = usePermissions()
+const { hasPermission, isSuperuser } = usePermissions()
 
 interface ToolSection {
   label: string
@@ -37,6 +37,10 @@ const sections = computed<ToolSection[]>(() => {
 
   if (hasPermission('manage_metadata_config')) {
     result.push({ label: t('tools.header.communityRatings'), routeName: 'tools-community-ratings' })
+  }
+
+  if (isSuperuser.value) {
+    result.push({ label: t('tools.header.recycleBin'), routeName: 'tools-recycle-bin' })
   }
 
   return result
