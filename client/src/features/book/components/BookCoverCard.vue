@@ -161,8 +161,18 @@ const {
 /** Fork. The Book Details button can go straight to Edit Metadata instead, for someone allowed to edit. */
 const detailsButtonEditsMetadata = computed(() => bookDetailsButtonAction.value === 'edit-metadata' && canEditMetadata.value)
 const injectedCoverAspectRatio = inject(COVER_ASPECT_RATIO_KEY, ref(DEFAULT_COVER_ASPECT_RATIO))
-const effectiveCoverAspectRatio = computed<CoverAspectRatio>(
-  () => props.coverAspectRatio ?? mediaView.value?.coverAspectRatio ?? props.book.coverAspectRatio ?? injectedCoverAspectRatio.value,
+/**
+ * Fork: in a library set to square covers, a book whose only art is a portrait (ebook) cover shows
+ * the square placeholder instead, so the grid stays square and it reads as having no audiobook art.
+ */
+const squarePlaceholder = computed(
+  () => !props.coverAspectRatio && !mediaView.value && injectedCoverAspectRatio.value === '1/1' && props.book.coverAspectRatio === '2/3',
+)
+const showsCoverArt = computed(() => props.book.hasCover && !squarePlaceholder.value)
+const effectiveCoverAspectRatio = computed<CoverAspectRatio>(() =>
+  squarePlaceholder.value
+    ? '1/1'
+    : (props.coverAspectRatio ?? mediaView.value?.coverAspectRatio ?? props.book.coverAspectRatio ?? injectedCoverAspectRatio.value),
 )
 const showSendDialog = ref(false)
 
@@ -205,7 +215,7 @@ const showMobileOverlay = ref(false)
 const root = ref<HTMLElement | null>(null)
 const coverSlotRatio = computed(() => coverAspectRatioValue(String(effectiveCoverAspectRatio.value)))
 const coverOverlayFrameStyle = computed(() => {
-  if (bookCoverDisplayMode.value !== 'natural-bottom' || !props.book.hasCover || !coverLoaded.value || coverFailed.value) return { inset: '0' }
+  if (bookCoverDisplayMode.value !== 'natural-bottom' || !showsCoverArt.value || !coverLoaded.value || coverFailed.value) return { inset: '0' }
   return fittedCoverFrameStyle(coverImageRatio.value, coverSlotRatio.value, 'bottom')
 })
 
@@ -389,7 +399,7 @@ function openAuthorBrowse() {
 }
 
 const showHoverTitle = computed(
-  () => (cardInfoMode.value === 'hover-overlay' || !props.showLabel) && (coverLoaded.value || !props.book.hasCover || coverFailed.value),
+  () => (cardInfoMode.value === 'hover-overlay' || !props.showLabel) && (coverLoaded.value || !showsCoverArt.value || coverFailed.value),
 )
 const showAuthorOnHover = computed(() => showHoverTitle.value && !!authorLine.value)
 const hoverTitleClampClass = computed(() => (effectiveCoverAspectRatio.value === '1/1' ? 'line-clamp-1' : 'line-clamp-2'))
@@ -484,10 +494,10 @@ const secondaryLabelText = computed(() => resolveBookLabel(gridCardSecondaryLabe
 
         <BookCoverArtwork
           :src="coverSrc"
-          :has-cover="book.hasCover"
+          :has-cover="showsCoverArt"
           :title="book.title"
           :author-line="authorLine"
-          :is-audio="isAudiobook"
+          :is-audio="isAudiobook || squarePlaceholder"
           :seed="book.title ?? String(book.id)"
           :alt="book.title ?? ''"
           :frame-aspect-ratio="effectiveCoverAspectRatio"

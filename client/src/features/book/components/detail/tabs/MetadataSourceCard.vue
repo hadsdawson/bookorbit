@@ -42,10 +42,11 @@ function formatLabel(file: BookDetail['files'][number]): string {
       <template v-if="primaryFile">
         <dt class="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">{{ t('book.detail.editMetadata.primaryRow') }}</dt>
         <dd class="flex min-w-0 items-center justify-end gap-1.5">
-          <span class="shrink-0 rounded-xs bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-primary">
+          <span class="min-w-0 truncate rounded-xs bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-primary">
             {{ formatLabel(primaryFile) }}
           </span>
-          <span class="truncate text-muted-foreground">{{ formatBytes(primaryFile.sizeBytes) }}</span>
+          <!-- Fork: the size keeps its whole width; the format pill gives way instead, so "9.4 MB" never reads "9." -->
+          <span class="shrink-0 whitespace-nowrap text-muted-foreground">{{ formatBytes(primaryFile.sizeBytes) }}</span>
         </dd>
       </template>
 
