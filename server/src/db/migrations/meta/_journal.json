@@ -1058,6 +1058,13 @@
       "when": 1794699691120,
       "tag": "0150_author_links",
       "breakpoints": true
+    },
+    {
+      "idx": 151,
+      "version": "7",
+      "when": 1794703892454,
+      "tag": "0151_author_aliases",
+      "breakpoints": true
     }
   ]
 }

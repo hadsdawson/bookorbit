@@ -268,16 +268,22 @@ export const bookAuthors = pgTable(
   ],
 );
 
-/** Fork: names one person writes under. A book credited to any of them is credited to all of them. */
-export const authorLinks = pgTable(
-  'author_links',
+/**
+ * Fork: other names an author is known by (pen names, spellings). A book credited to one of these
+ * names is credited to the author instead. `nameKey` is the person-name key, unique across authors.
+ */
+export const authorAliases = pgTable(
+  'author_aliases',
   {
+    id: serial('id').primaryKey(),
     authorId: integer('author_id')
-      .primaryKey()
+      .notNull()
       .references(() => authors.id, { onDelete: 'cascade' }),
-    groupId: integer('group_id').notNull(),
+    name: varchar('name', { length: 500 }).notNull(),
+    nameKey: varchar('name_key', { length: 500 }).notNull().unique(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('author_links_group_id_idx').on(t.groupId)],
+  (t) => [index('author_aliases_author_id_idx').on(t.authorId)],
 );
 
 export const authorEnrichmentQueue = pgTable(

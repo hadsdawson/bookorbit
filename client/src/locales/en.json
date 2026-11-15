@@ -6339,9 +6339,9 @@
         "deleting": "Deleting...",
         "exitSelection": "Exit selection",
         "confirmDeleteCount": "{count, plural, =0 {Delete # author?} one {Delete # author?} other {Delete # authors?}}",
-        "linkAuthors": "Link as one person (select 2 or more)",
-        "confirmLinkCount": "Link {count} authors as one person?",
-        "linkAction": "Link"
+        "combineAuthors": "Combine as one author (select 2 or more)",
+        "combineKeep": "Keep the name",
+        "combineAction": "Combine"
       },
       "toast": {
         "refreshed": "Author metadata refreshed",
@@ -6352,8 +6352,8 @@
         "bulkRefreshFailed": "Failed to refresh selected authors",
         "deleteSuccess": "{count, plural, =0 {Deleted # author; affected {books} books} one {Deleted # author; affected {books} books} other {Deleted # authors; affected {books} books}}",
         "deleteFailed": "Failed to delete author(s)",
-        "linkSuccess": "{count, plural, one {Linked # author} other {Linked # authors}} as one person, {books, plural, =0 {no new book credits} one {credited on # more book} other {credited on # more books}}",
-        "linkFailed": "Could not link authors"
+        "combineSuccess": "{count, plural, one {Combined # author} other {Combined # authors}} into {name}; {books, plural, =0 {no books moved} one {# book moved} other {# books moved}}",
+        "combineFailed": "Could not combine authors"
       }
     },
     "detail": {
@@ -6441,19 +6441,19 @@
         "deleteSuccess": "Deleted author; affected {books} books",
         "deleteFailed": "Failed to delete author"
       },
-      "links": {
-        "heading": "Linked authors",
-        "none": "None yet",
-        "add": "Link author",
-        "hint": "Names the same person writes under. A book credited to any of them is credited to all of them, including books already in your library.",
-        "searchPlaceholder": "Search authors to link",
-        "searching": "Searching...",
-        "noMatches": "No other authors match",
-        "unlink": "Unlink {name}",
-        "linked": "Authors linked",
-        "unlinked": "Author unlinked",
-        "linkFailed": "Could not link authors",
-        "unlinkFailed": "Could not unlink authors"
+      "aliases": {
+        "heading": "Also known as",
+        "none": "No alternate names",
+        "add": "Add name",
+        "hint": "Pen names and other spellings. A book that comes in under one of these names is credited to this author instead. If another author already has the name, their books move here.",
+        "placeholder": "Alternate name, such as a pen name",
+        "save": "Add",
+        "remove": "Remove {name}",
+        "added": "Alternate name added",
+        "addedAndCombined": "{books, plural, =0 {Alternate name added; that author was combined into this one} one {Alternate name added; # book moved here} other {Alternate name added; # books moved here}}",
+        "removed": "Alternate name removed",
+        "addFailed": "Could not add the alternate name",
+        "removeFailed": "Could not remove the alternate name"
       }
     },
     "portrait": {

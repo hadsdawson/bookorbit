@@ -23,7 +23,7 @@ import AuthorHeader from '../components/AuthorHeader.vue'
 import AuthorConfirmDialog from '../components/AuthorConfirmDialog.vue'
 import AuthorFactsFields from '../components/AuthorFactsFields.vue'
 import AuthorMatchSheet from '../components/AuthorMatchSheet.vue'
-import AuthorLinksCard from '../components/AuthorLinksCard.vue'
+import AuthorAliasesCard from '../components/AuthorAliasesCard.vue'
 import { authorFactsDraft, authorFactsPayload, sameFactsDraft, type AuthorFactsDraft, type AuthorFactsField } from '../lib/author-facts'
 import {
   deleteAuthorImage,
@@ -109,9 +109,11 @@ const {
 
 const canUpdate = computed(() => hasPermissionInAnyLibrary('library_edit_metadata', 'editor'))
 
-// Fork: linking credits the other name on this author's books, so the list can change.
-function handleLinksChanged() {
-  void loadBooks(true)
+// Fork: adding a name another author used folds that author in, so the books and counts change.
+const aliasesCard = ref<InstanceType<typeof AuthorAliasesCard> | null>(null)
+
+function handleAliasesChanged() {
+  void Promise.all([loadAuthor(), loadBooks(true)])
 }
 const canMerge = computed(() => isSuperuser.value)
 const canDelete = computed(() => isSuperuser.value)
@@ -438,6 +440,7 @@ async function runMerge() {
     mergeOpen.value = false
 
     await loadBooks(true)
+    void aliasesCard.value?.load()
     toast.success(t('author.detail.toast.mergeSuccess', { count: result.mergedAuthorIds.length, books: result.affectedBookCount }))
   } catch (error) {
     toast.error(error instanceof Error ? error.message : t('author.detail.toast.mergeFailed'))
@@ -643,7 +646,7 @@ defineOptions({ name: 'AuthorDetailView' })
           @delete="confirmDeleteOpen = true"
         />
         <AuthorMatchSheet v-if="author && matchSheetOpen && canUpdate" :author="author" @close="closeMatchSheet" @updated="handleMatchUpdated" />
-        <AuthorLinksCard v-if="author" :author-id="author.id" :can-edit="canUpdate" @changed="handleLinksChanged" />
+        <AuthorAliasesCard v-if="author" ref="aliasesCard" :author-id="author.id" :can-edit="canUpdate" @changed="handleAliasesChanged" />
 
         <div v-if="metadataPreviewError" class="mt-3 rounded-md border border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
           {{ t('author.detail.previewError') }}

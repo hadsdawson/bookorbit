@@ -30,7 +30,7 @@ import { BookMetadataLockService } from '../book-metadata-lock/book-metadata-loc
 import { ComicMetadataRepository } from './comic-metadata.repository';
 import { MetadataScoreService } from '../metadata-score/metadata-score.service';
 import { NarratorService } from '../narrator/narrator.service';
-import { authorLinks, authors, bookAuthors, bookGenres, bookMetadata, bookTags, genres, tags } from '../../db/schema';
+import { authorAliases, authors, bookAuthors, bookGenres, bookMetadata, bookTags, genres, tags } from '../../db/schema';
 import {
   type AudiobookChapter,
   type ComicMetadataFields,
@@ -838,6 +838,8 @@ export class MetadataService {
       return [];
     }
 
+    uniqueAuthors = await this.resolveAuthorAliases(executor, uniqueAuthors);
+
     const authorByNameKey = new Map<string, { id: number }>();
     await this.addExistingAuthorsByNormalizedName(
       executor,
@@ -875,12 +877,6 @@ export class MetadataService {
       return [{ bookId, authorId: match.id, displayOrder: index }];
     });
 
-    const linkedAuthorIds = await this.findLinkedAuthorIds(
-      executor,
-      links.map((link) => link.authorId),
-    );
-    links.push(...linkedAuthorIds.map((authorId, index) => ({ bookId, authorId, displayOrder: links.length + index })));
-
     if (links.length > 0) {
       await executor.insert(bookAuthors).values(links).onConflictDoNothing();
     }
@@ -890,21 +886,38 @@ export class MetadataService {
     return links.map((link) => link.authorId);
   }
 
-  /** Fork: the other names, in linked-author groups, of the authors a book is being credited to. */
-  private async findLinkedAuthorIds(executor: RelationMutationExecutor, authorIds: number[]): Promise<number[]> {
-    if (authorIds.length === 0) return [];
-    const ids = sql.join(
-      authorIds.map((id) => sql`${id}`),
-      sql`, `,
-    );
-    const { rows } = await executor.execute<{ authorId: number }>(sql`
-      SELECT DISTINCT linked.author_id AS "authorId"
-      FROM ${authorLinks} mine
-      JOIN ${authorLinks} linked ON linked.group_id = mine.group_id
-      WHERE mine.author_id IN (${ids}) AND linked.author_id NOT IN (${ids})
-      ORDER BY linked.author_id
+  /**
+   * Fork: swaps any alternate name (an author alias) for the author it belongs to, and drops a name
+   * that then repeats one already credited, so "A.M. Woody" lands on Amanda Woody.
+   */
+  private async resolveAuthorAliases(
+    executor: RelationMutationExecutor,
+    names: { name: string; sortName: string | null }[],
+  ): Promise<{ name: string; sortName: string | null }[]> {
+    const keys = [...new Set(names.map((author) => normalizePersonNameKey(author.name)).filter((key): key is string => key !== null))];
+    if (keys.length === 0) return names;
+    const { rows } = await executor.execute<{ nameKey: string; authorName: string }>(sql`
+      SELECT ${authorAliases.nameKey} AS "nameKey", ${authors.name} AS "authorName"
+      FROM ${authorAliases}
+      JOIN ${authors} ON ${authors.id} = ${authorAliases.authorId}
+      WHERE ${authorAliases.nameKey} IN (${sql.join(
+        keys.map((key) => sql`${key}`),
+        sql`, `,
+      )})
     `);
-    return rows.map((row) => Number(row.authorId));
+    if (!rows?.length) return names;
+    const masterByKey = new Map(rows.map((row) => [row.nameKey, row.authorName]));
+    const seen = new Set<string>();
+    const resolved: { name: string; sortName: string | null }[] = [];
+    for (const author of names) {
+      const master = masterByKey.get(normalizePersonNameKey(author.name) ?? '');
+      const next = master ? { name: master, sortName: null } : author;
+      const key = normalizePersonNameKey(next.name);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      resolved.push(next);
+    }
+    return resolved;
   }
 
   private async addExistingAuthorsByNormalizedName(

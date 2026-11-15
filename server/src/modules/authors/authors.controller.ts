@@ -31,9 +31,8 @@ import { ForbidPermission } from '../../common/decorators/forbid-permission.deco
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
 import { AuthorMetadataPreferencesService } from './author-metadata-preferences.service';
 import { AuthorImageUrlDto } from './dto/author-image-url.dto';
-import { LinkAuthorDto } from './dto/link-author.dto';
-import { LinkAuthorsDto } from './dto/link-authors.dto';
-import { AuthorLinksService } from './author-links.service';
+import { AddAuthorAliasDto } from './dto/add-author-alias.dto';
+import { AuthorAliasesService } from './author-aliases.service';
 import { UpdateAuthorMetadataPreferencesDto } from './dto/update-author-metadata-preferences.dto';
 import { imageContentTypeFromPath } from '../../common/image-content-type';
 import type { MultipartRequest } from '../../common/types/multipart-request';
@@ -64,7 +63,7 @@ export class AuthorsController {
     private readonly enrichmentConfig: AuthorEnrichmentConfigService,
     private readonly queueRepo: AuthorEnrichmentRepository,
     private readonly metadataPreferences: AuthorMetadataPreferencesService,
-    private readonly authorLinksService: AuthorLinksService,
+    private readonly authorAliasesService: AuthorAliasesService,
   ) {}
 
   @Get()
@@ -351,45 +350,33 @@ export class AuthorsController {
     return this.authorsService.unpinMetadataMatch(user, id);
   }
 
-  @Post('links')
-  @HttpCode(HttpStatus.OK)
-  @RequirePermission(Permission.LibraryEditMetadata)
-  @Auditable({
-    action: AuditAction.AuthorUpdate,
-    resource: AuditResource.Author,
-    description: (req) => `Linked ${(req.body as { authorIds?: number[] })?.authorIds?.length ?? 0} authors as one person`,
-  })
-  linkMany(@CurrentUser() user: RequestUser, @Body() dto: LinkAuthorsDto) {
-    return this.authorLinksService.linkMany(user, dto.authorIds);
+  @Get(':id/aliases')
+  findAliases(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
+    return this.authorAliasesService.list(user, id);
   }
 
-  @Get(':id/links')
-  findLinks(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
-    return this.authorLinksService.list(user, id);
-  }
-
-  @Post(':id/links')
+  @Post(':id/aliases')
   @RequirePermission(Permission.LibraryEditMetadata)
   @Auditable({
     action: AuditAction.AuthorUpdate,
     resource: AuditResource.Author,
     getResourceId: (req) => parseInt(req.params['id'], 10),
-    description: (req) => `Linked author #${(req.body as { authorId?: number })?.authorId ?? 'unknown'} to author #${req.params['id']}`,
+    description: (req) => `Added an alternate name to author #${req.params['id']}`,
   })
-  link(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number, @Body() dto: LinkAuthorDto) {
-    return this.authorLinksService.link(user, id, dto.authorId);
+  addAlias(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number, @Body() dto: AddAuthorAliasDto) {
+    return this.authorAliasesService.add(user, id, dto.name);
   }
 
-  @Delete(':id/links/:linkedId')
+  @Delete(':id/aliases/:aliasId')
   @RequirePermission(Permission.LibraryEditMetadata)
   @Auditable({
     action: AuditAction.AuthorUpdate,
     resource: AuditResource.Author,
     getResourceId: (req) => parseInt(req.params['id'], 10),
-    description: (req) => `Unlinked author #${req.params['linkedId']} from author #${req.params['id']}`,
+    description: (req) => `Removed alternate name #${req.params['aliasId']} from author #${req.params['id']}`,
   })
-  unlink(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number, @Param('linkedId', ParseIntPipe) linkedId: number) {
-    return this.authorLinksService.unlink(user, id, linkedId);
+  removeAlias(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number, @Param('aliasId', ParseIntPipe) aliasId: number) {
+    return this.authorAliasesService.remove(user, id, aliasId);
   }
 
   @Patch(':id')

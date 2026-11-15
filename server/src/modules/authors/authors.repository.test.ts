@@ -390,6 +390,7 @@ describe('AuthorsRepository', () => {
       select: vi.fn().mockReturnValue(txSelectBuilder),
       insert: vi.fn().mockReturnValue(txInsertBuilder),
       delete: vi.fn().mockReturnValue(txDeleteBuilder),
+      update: vi.fn().mockReturnValue({ set: () => ({ where: () => Promise.resolve(undefined) }) }),
       execute: vi.fn().mockResolvedValue({ rowCount: 0, rows: [] }),
     };
     const db = {
@@ -401,6 +402,30 @@ describe('AuthorsRepository', () => {
 
     expect(tx.insert).toHaveBeenCalled();
     expect(txDeleteBuilder.where).toHaveBeenCalledTimes(2);
+  });
+
+  it('mergeAuthors keeps the merged names as alternate names of the target', async () => {
+    const selects = [[{ bookId: 1, displayOrder: 0 }], [{ name: 'A. M. Woody' }]];
+    const tx = {
+      select: vi.fn(() => ({ from: () => ({ where: () => Promise.resolve(selects.shift() ?? []) }) })),
+      insert: vi.fn(),
+      delete: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
+      update: vi.fn().mockReturnValue({ set: () => ({ where: () => Promise.resolve(undefined) }) }),
+      execute: vi.fn().mockResolvedValue({ rowCount: 0, rows: [] }),
+    };
+    const aliasValues: unknown[] = [];
+    tx.insert.mockImplementation(() => ({
+      values: (rows: unknown) => {
+        aliasValues.push(rows);
+        return { onConflictDoNothing: () => Promise.resolve(undefined), onConflictDoUpdate: () => Promise.resolve(undefined) };
+      },
+    }));
+    const db = { transaction: vi.fn(async (handler: (client: typeof tx) => Promise<void>) => handler(tx)) };
+
+    await new AuthorsRepository(db as never).mergeAuthors(12, [9]);
+
+    expect(tx.update).toHaveBeenCalled();
+    expect(aliasValues).toContainEqual([{ authorId: 12, name: 'A.M. Woody', nameKey: 'a.m. woody' }]);
   });
 
   it('mergeAuthors skips insert when source authors have no linked books', async () => {
@@ -418,6 +443,7 @@ describe('AuthorsRepository', () => {
       select: vi.fn().mockReturnValue(txSelectBuilder),
       insert: vi.fn(),
       delete: vi.fn().mockReturnValue(txDeleteBuilder),
+      update: vi.fn().mockReturnValue({ set: () => ({ where: () => Promise.resolve(undefined) }) }),
       execute: vi.fn().mockResolvedValue({ rowCount: 0, rows: [] }),
     };
     const db = {
