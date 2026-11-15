@@ -112,6 +112,19 @@ export interface BookDockFile {
    * `readAlong=true` answers it, since it means opening the file; every other response leaves it out.
    */
   readAlong?: boolean;
+  /**
+   * Fork: other files merged under this one in Book Dock, to be filed with it as one book. Empty
+   * for a file that was not merged.
+   */
+  mergedFiles?: BookDockMergedFile[];
+}
+
+/** Fork: a file merged under another in Book Dock. */
+export interface BookDockMergedFile {
+  id: number;
+  fileName: string;
+  fileSize: number | null;
+  format: string | null;
 }
 
 export interface BookDockFilesPage {

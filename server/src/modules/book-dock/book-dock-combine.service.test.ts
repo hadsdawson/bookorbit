@@ -17,11 +17,16 @@ function makeService(
 ) {
   const repo = {
     findByIds: vi.fn().mockResolvedValue([
-      { id: 11, fileName: 'Book A.m4b', targetLibraryId: options.targetLibraryId ?? null },
+      { id: 11, fileName: 'Book A.m4b', targetLibraryId: options.targetLibraryId ?? null, targetFolderId: null },
       { id: 12, fileName: 'Book A.epub', targetLibraryId: null },
     ]),
+    update: vi.fn().mockResolvedValue(undefined),
+    setMergeGroup: vi.fn().mockResolvedValue(undefined),
+    clearMergeGroup: vi.fn().mockResolvedValue(1),
+    findMergedMembers: vi.fn().mockResolvedValue(new Map([[12, [{ id: 11 }]]])),
   };
   const finalizeService = {
+    announceChange: vi.fn(),
     previewFinalize: vi.fn().mockImplementation((_u: unknown, _s: unknown, _m: unknown, fileIds: number[]) =>
       Promise.resolve({
         items: fileIds.map((fileId, index) => ({
@@ -138,5 +143,37 @@ describe('BookDockCombineService', () => {
     const { service, finalizeService } = makeService({ otherStatus: 'destination_conflict' });
     await service.combine({ fileIds: [11, 12] }, user, false);
     expect(finalizeService.finalize).toHaveBeenCalledTimes(2);
+  });
+
+  describe('merging in Book Dock (fork)', () => {
+    it('holds the files together under the main one and files nothing', async () => {
+      const { service, repo, finalizeService } = makeService();
+      await expect(service.merge({ fileIds: [11, 12] }, user, false)).resolves.toEqual({ primaryFileId: 12, fileIds: [12, 11] });
+      expect(repo.setMergeGroup).toHaveBeenCalledWith(12, [11, 12]);
+      expect(finalizeService.finalize).not.toHaveBeenCalled();
+      expect(finalizeService.announceChange).toHaveBeenCalled();
+    });
+
+    it('gives the main file the destination picked when it has none', async () => {
+      const { service, repo } = makeService();
+      await service.merge({ fileIds: [11, 12], primaryFileId: 11, defaultLibraryId: 3, defaultFolderId: 4 }, user, false);
+      expect(repo.update).toHaveBeenCalledWith(11, { targetLibraryId: 3, targetFolderId: 4 });
+      expect(repo.setMergeGroup).toHaveBeenCalledWith(11, [11, 12]);
+    });
+
+    it('needs two files that are still docked', async () => {
+      const { service, repo } = makeService();
+      await expect(service.merge({ fileIds: [11] }, user, false)).rejects.toBeInstanceOf(BadRequestException);
+      repo.findByIds.mockResolvedValueOnce([{ id: 11, fileName: 'Book A.m4b', targetLibraryId: null }]);
+      await expect(service.merge({ fileIds: [11, 12] }, user, false)).rejects.toBeInstanceOf(BadRequestException);
+      expect(repo.setMergeGroup).not.toHaveBeenCalled();
+    });
+
+    it('splits a merged item back into its files', async () => {
+      const { service, repo } = makeService();
+      repo.findByIds.mockResolvedValueOnce([{ id: 12, fileName: 'Book A.epub', mergedIntoId: 12 }]);
+      await expect(service.unmerge(12, user, false)).resolves.toEqual({ fileIds: [12, 11] });
+      expect(repo.clearMergeGroup).toHaveBeenCalledWith(12);
+    });
   });
 });

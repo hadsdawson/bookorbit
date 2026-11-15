@@ -1,0 +1,3 @@
+ALTER TABLE "book_dock_files" ADD COLUMN "merged_into_id" integer;--> statement-breakpoint
+ALTER TABLE "book_dock_files" ADD CONSTRAINT "book_dock_files_merged_into_id_book_dock_files_id_fk" FOREIGN KEY ("merged_into_id") REFERENCES "public"."book_dock_files"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "book_dock_files_merged_into_id_idx" ON "book_dock_files" USING btree ("merged_into_id");

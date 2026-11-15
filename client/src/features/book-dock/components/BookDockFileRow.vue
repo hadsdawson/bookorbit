@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { AlertCircle, ArrowRight, Check, ChevronRight, Copy, Files, FolderPlus, PenLine, RotateCw, Trash2, Wand2 } from '@lucide/vue'
+import { AlertCircle, ArrowRight, Check, ChevronRight, Combine, Copy, Files, FolderPlus, PenLine, RotateCw, Split, Trash2, Wand2 } from '@lucide/vue'
 import type { BookDockFile } from '@bookorbit/types'
 import { formatBytes } from '@/lib/formatting'
 import BookDockStatusBadge from './BookDockStatusBadge.vue'
@@ -39,6 +39,7 @@ const emit = defineEmits<{
   open: [BookDockFile]
   discard: [BookDockFile]
   retry: [BookDockFile]
+  unmerge: [BookDockFile]
 }>()
 
 const { t } = useI18n()
@@ -71,6 +72,20 @@ const conflictLabel = computed(() => {
   if (!props.conflict) return ''
   return t(`bookDock.layout.conflict.${props.conflict.status}`)
 })
+
+/** Fork: files merged under this one, filed with it as one book. */
+const mergedFiles = computed(() => props.file.mergedFiles ?? [])
+const isMerged = computed(() => mergedFiles.value.length > 0)
+const mergedFormats = computed(() =>
+  [props.file, ...mergedFiles.value]
+    .map((file) => file.format?.toUpperCase())
+    .filter((format): format is string => !!format)
+    .join(' + '),
+)
+
+function onUnmerge() {
+  emit('unmerge', props.file)
+}
 
 /** A unit's anchor row describes only its primary file, so the row must state the whole unit. */
 const isUnit = computed(() => props.file.unitFiles.length > 1)
@@ -163,6 +178,16 @@ function onRetry() {
         >
           <Files class="size-2.5" aria-hidden="true" />
           {{ t('bookDock.layout.unit.fileCount', { count: props.file.unitFiles.length }) }}
+        </span>
+
+        <span
+          v-if="isMerged"
+          class="inline-flex items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-[10.5px] font-semibold text-primary"
+          :title="t('bookDock.layout.merged.badgeTitle')"
+          data-testid="book-dock-merged-badge"
+        >
+          <Combine class="size-2.5" aria-hidden="true" />
+          {{ t('bookDock.layout.merged.badge', { formats: mergedFormats }) }}
         </span>
 
         <!-- Known before finalize rather than discovered during it. -->
@@ -300,6 +325,35 @@ function onRetry() {
             <span class="shrink-0 text-muted-foreground">{{ unitFileDetail(unitFile) }}</span>
           </li>
         </ol>
+      </div>
+
+      <div v-if="isMerged" class="mb-2.5 rounded-lg border border-border bg-card p-3" data-testid="book-dock-merged-files">
+        <div class="mb-2 flex items-center gap-2">
+          <p class="text-[9.5px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">
+            {{ t('bookDock.layout.merged.heading', { count: mergedFiles.length + 1 }) }}
+          </p>
+          <span class="h-px flex-1 bg-border" />
+          <button
+            type="button"
+            class="inline-flex h-6 items-center gap-1 rounded-md border border-input px-2 text-[11px] text-foreground hover:bg-muted"
+            data-testid="book-dock-unmerge"
+            @click="onUnmerge"
+          >
+            <Split class="size-3" aria-hidden="true" />
+            {{ t('bookDock.layout.merged.unmerge') }}
+          </button>
+        </div>
+        <ul class="grid gap-1">
+          <li class="flex min-w-0 items-baseline gap-2 text-xs">
+            <span class="min-w-0 flex-1 truncate text-foreground">{{ props.file.fileName }}</span>
+            <span class="shrink-0 text-muted-foreground">{{ t('bookDock.layout.merged.main') }}</span>
+          </li>
+          <li v-for="merged in mergedFiles" :key="merged.id" class="flex min-w-0 items-baseline gap-2 text-xs">
+            <span class="min-w-0 flex-1 truncate text-foreground">{{ merged.fileName }}</span>
+            <span class="shrink-0 text-muted-foreground">{{ merged.fileSize != null ? formatBytes(merged.fileSize) : '' }}</span>
+          </li>
+        </ul>
+        <p class="mt-2 text-[11px] text-muted-foreground">{{ t('bookDock.layout.merged.hint') }}</p>
       </div>
 
       <div class="rounded-lg border border-border bg-card p-3">

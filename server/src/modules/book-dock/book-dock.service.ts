@@ -8,6 +8,7 @@ import { DB } from '../../db';
 import * as schema from '../../db/schema';
 import { libraries, libraryFolders } from '../../db/schema';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
+import { isMergePrimary } from './book-dock-merge';
 import { BookDockRepository, type ListOptions } from './book-dock.repository';
 import { BookDockPathsService, removeLeftoverFolders } from './book-dock-paths.service';
 import { BookDockDefaultTargetService } from './book-dock-default-target.service';
@@ -46,9 +47,11 @@ export class BookDockService {
     // One query for the whole page rather than one per unit row, which at a page of 100 units
     // would be 100 round trips for a list nobody has even expanded yet.
     const unitFiles = await this.repo.findUnitFilesByDockFileIds(items.map((row) => row.id));
+    const primaries = items.filter(isMergePrimary).map((row) => row.id);
+    const merged = primaries.length > 0 ? await this.repo.findMergedMembers(primaries) : new Map<number, BookDockFileRow[]>();
 
     return {
-      items: items.map((row) => toDto(row, unitFiles.get(row.id) ?? [])),
+      items: items.map((row) => toDto(row, unitFiles.get(row.id) ?? [], merged.get(row.id) ?? [])),
       total,
       page: query.page,
       size: query.limit,
@@ -57,7 +60,8 @@ export class BookDockService {
 
   async getFile(id: number, userId: number, canManageAll: boolean, options: { readAlong?: boolean } = {}): Promise<BookDockFile> {
     const row = await this.findFileForUser(id, userId, canManageAll);
-    const dto = toDto(row, await this.repo.findUnitFiles(row.id));
+    const merged = isMergePrimary(row) ? ((await this.repo.findMergedMembers([row.id])).get(row.id) ?? []) : [];
+    const dto = toDto(row, await this.repo.findUnitFiles(row.id), merged);
     if (!options.readAlong || row.format?.toLowerCase() !== 'epub') return dto;
     const startedAt = Date.now();
     const { mediaOverlayAvailable } = await inspectEpubMediaOverlayFields(row.absolutePath, row.format, (err) => {
@@ -92,14 +96,23 @@ export class BookDockService {
         : data;
     const updated = await this.repo.update(id, updateData);
     if (!updated) throw new NotFoundException('Book Dock file not found');
-    return toDto(updated);
+    // Fork: a merged group is filed to one place, so the files merged under this one follow it.
+    if (isMergePrimary(updated) && (data.targetLibraryId !== undefined || data.targetFolderId !== undefined)) {
+      await this.repo.setTargetsByIds([id], updated.targetLibraryId, updated.targetFolderId);
+    }
+    const merged = isMergePrimary(updated) ? ((await this.repo.findMergedMembers([id])).get(id) ?? []) : [];
+    return toDto(updated, [], merged);
   }
 
   async discardFile(id: number, userId: number, canManageAll: boolean): Promise<void> {
     const row = await this.findFileForUser(id, userId, canManageAll);
+    // Fork: discarding a merged item discards every file merged into it.
+    const members = isMergePrimary(row) ? ((await this.repo.findMergedMembers([id])).get(id) ?? []) : [];
 
+    for (const member of members) await this.cleanupFiles(member);
     await this.cleanupFiles(row);
-    await this.repo.deleteById(id);
+    if (members.length === 0) await this.repo.deleteById(id);
+    else await this.repo.deleteByIds([...members.map((member) => member.id), id]);
   }
 
   async bulkDiscard(
@@ -126,10 +139,13 @@ export class BookDockService {
         canManageAll,
       },
       async (rows) => {
-        for (const row of rows) {
+        const primaries = rows.filter(isMergePrimary).map((row) => row.id);
+        const merged = primaries.length > 0 ? await this.repo.findMergedMembers(primaries) : new Map<number, BookDockFileRow[]>();
+        const all = [...rows, ...[...merged.values()].flat()];
+        for (const row of all) {
           await this.cleanupFiles(row);
         }
-        await this.repo.deleteByIds(rows.map((row) => row.id));
+        await this.repo.deleteByIds(all.map((row) => row.id));
       },
     );
   }
@@ -559,7 +575,7 @@ export class BookDockService {
   }
 }
 
-function toDto(row: BookDockFileRow, unitFiles: BookDockUnitFileRow[] = []): BookDockFile {
+function toDto(row: BookDockFileRow, unitFiles: BookDockUnitFileRow[] = [], mergedFiles: BookDockFileRow[] = []): BookDockFile {
   return {
     id: row.id,
     fileName: row.fileName,
@@ -583,6 +599,12 @@ function toDto(row: BookDockFileRow, unitFiles: BookDockUnitFileRow[] = []): Boo
       format: file.format,
       role: file.role as BookDockUnitFile['role'],
       sortOrder: file.sortOrder,
+    })),
+    mergedFiles: mergedFiles.map((file) => ({
+      id: file.id,
+      fileName: file.fileName,
+      fileSize: file.fileSize === null ? null : Number(file.fileSize),
+      format: file.format,
     })),
   };
 }

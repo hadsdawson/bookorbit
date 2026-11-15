@@ -244,6 +244,19 @@ describe('BookDockFinalizeService', () => {
       expect(finalizeSpy).not.toHaveBeenCalled();
     });
 
+    it('leaves a file merged in Book Dock for a person to file (fork)', async () => {
+      const { service, repo, appSettings } = makeService();
+      appSettings.getAutoFinalizeSettings.mockResolvedValue({ enabled: true, threshold: 0, libraryId: 5, folderId: 9, metadataMode: 'safe_merge' });
+      const finalizeSpy = vi.spyOn(service as never, 'finalizeFile');
+
+      for (const row of [makeRow({ id: 4, mergedIntoId: 4 }), makeRow({ id: 5, mergedIntoId: 4 })]) {
+        repo.findById.mockResolvedValue(row);
+        await service.triggerAutoFinalize(row.id);
+      }
+
+      expect(finalizeSpy).not.toHaveBeenCalled();
+    });
+
     it('merges embedded and fetched metadata when auto-finalizing and selected metadata is empty', async () => {
       const { service, repo, appSettings } = makeService();
       const fetched = { title: 'Fetched Title', authors: ['Fetched Author'] } as BookDockMetadata;
@@ -534,6 +547,55 @@ describe('BookDockFinalizeService', () => {
       expect(repo.findSelectionBatch).toHaveBeenCalledWith(expect.objectContaining({ readyToFile: true }));
       expect(result.total).toBe(2);
       expect(result.failed).toBe(0);
+    });
+  });
+
+  describe('filing a merged item (fork)', () => {
+    it('files the files merged under the main one into the book it becomes', async () => {
+      const { service, repo } = makeService();
+      const primary = makeRow({ id: 1, mergedIntoId: 1 });
+      const member = makeRow({ id: 2, mergedIntoId: 1, fileName: 'book.m4b' });
+      repo.findByIds.mockResolvedValue([primary]);
+      repo.findMergedMembers = vi.fn().mockResolvedValue(new Map([[1, [member]]]));
+      const prepare = vi.spyOn(service as never, 'prepareFinalizeBatch').mockImplementation(
+        (rows: unknown[]) =>
+          Promise.resolve({
+            analyses: rows.map((row: any) => ({ fileId: row.id, fileName: row.fileName, row, status: 'ready' })),
+            existingDestinations: new Map(),
+          }) as never,
+      );
+      vi.spyOn(service as never, 'finalizePreparedCandidate').mockImplementation(
+        (analysis: any) => Promise.resolve({ fileId: analysis.fileId, fileName: analysis.fileName, success: true, bookId: 300 }) as never,
+      );
+      vi.spyOn(service as never, 'emitChange').mockReturnValue(undefined as never);
+
+      const result = await service.finalize(7, true, true, [1], false, [], 5, 9);
+
+      expect(result.succeeded).toBe(2);
+      expect(prepare).toHaveBeenLastCalledWith([member], 5, 9, new Map([[2, { requestedJoinBookId: 300 }]]), 7, true, undefined);
+    });
+
+    it('leaves the merged files docked when the main file could not be filed', async () => {
+      const { service, repo } = makeService();
+      const primary = makeRow({ id: 1, mergedIntoId: 1 });
+      repo.findByIds.mockResolvedValue([primary]);
+      repo.findMergedMembers = vi.fn().mockResolvedValue(new Map([[1, [makeRow({ id: 2, mergedIntoId: 1 })]]]));
+      const prepare = vi.spyOn(service as never, 'prepareFinalizeBatch').mockResolvedValue({
+        analyses: [{ fileId: 1, fileName: 'book.epub', row: primary, status: 'ready' }],
+        existingDestinations: new Map(),
+      } as never);
+      vi.spyOn(service as never, 'finalizePreparedCandidate').mockResolvedValue({
+        fileId: 1,
+        fileName: 'book.epub',
+        success: false,
+        message: 'Destination exists',
+      } as never);
+      vi.spyOn(service as never, 'emitChange').mockReturnValue(undefined as never);
+
+      const result = await service.finalize(7, true, true, [1], false, [], 5, 9);
+
+      expect(result.failed).toBe(1);
+      expect(prepare).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { bigint, boolean, check, index, integer, jsonb, pgTable, serial, text, timestamp, varchar } from 'drizzle-orm/pg-core';
+import { bigint, boolean, check, index, integer, jsonb, pgTable, serial, text, timestamp, varchar, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import type { BookDockMetadata } from '@bookorbit/types';
 
 import { libraries, libraryFolders } from './libraries';
@@ -41,6 +41,12 @@ export const bookDockFiles = pgTable(
      * The dock deliberately does not learn which module, only that it is not its call to make.
      */
     autoFinalizeSuppressed: boolean('auto_finalize_suppressed').notNull().default(false),
+    /**
+     * Fork: files merged in Book Dock to be filed later as one book. Every file of the group,
+     * including the main one, points at the main file, so the main file points at itself. Only the
+     * main file shows in the list; filing it files the others into the same book.
+     */
+    mergedIntoId: integer('merged_into_id').references((): AnyPgColumn => bookDockFiles.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .notNull()
@@ -51,6 +57,7 @@ export const bookDockFiles = pgTable(
     index('book_dock_files_status_idx').on(t.status),
     index('book_dock_files_target_library_id_idx').on(t.targetLibraryId),
     index('book_dock_files_uploaded_by_idx').on(t.uploadedBy),
+    index('book_dock_files_merged_into_id_idx').on(t.mergedIntoId),
     check('book_dock_files_status_chk', sql`${t.status} in ('pending', 'extracting', 'fetching', 'ready', 'error')`),
     check('book_dock_files_confidence_range_chk', sql`${t.confidence} is null or (${t.confidence} >= 0 and ${t.confidence} <= 100)`),
   ],
