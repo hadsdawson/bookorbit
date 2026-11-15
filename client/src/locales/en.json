@@ -7662,7 +7662,9 @@
         "neverWritten": "Never",
         "fileCount": "{count, plural, =0 {no files} one {one file} other {# files}}",
         "unknownFormat": "Unknown",
-        "genresRestricted": "Only genres from the allowed list in settings can be added."
+        "genresRestricted": "Only genres from the allowed list in settings can be added.",
+        "authorAliasHint": "Did you mean {name}? \"{alias}\" is an alternate name of theirs, so saving credits {name}.",
+        "authorAliasUse": "Use {name}"
       },
       "files": {
         "title": "Book files",

@@ -25,6 +25,7 @@ function makeService(libraryIds: number[] = [1, 2]) {
     searchLanguages: vi.fn(),
     listLanguages: vi.fn(),
     searchCollections: vi.fn(),
+    resolveAuthorAliases: vi.fn(),
   } as unknown as Mocked<CatalogRepository>;
   const libraryService = {
     findAccessibleLibraryIds: vi.fn().mockResolvedValue(libraryIds),
@@ -140,5 +141,18 @@ describe('CatalogService', () => {
 
     expect(catalogRepository.searchCollections).toHaveBeenCalledWith(42, 'favorites');
     expect(libraryService.findAccessibleLibraryIds).not.toHaveBeenCalled();
+  });
+
+  it('reports which typed author names are alternate names, by person-name key', async () => {
+    const { service, catalogRepository } = makeService();
+    catalogRepository.resolveAuthorAliases.mockResolvedValue([{ nameKey: 'a.m. woody', name: 'Amanda Woody', alias: 'A.M. Woody' }]);
+
+    await expect(service.resolveAuthorAliases(requestUser(), ['A. M. Woody', 'Someone Else'])).resolves.toEqual([
+      { alias: 'A. M. Woody', name: 'Amanda Woody' },
+    ]);
+    expect(catalogRepository.resolveAuthorAliases).toHaveBeenCalledWith(
+      ['a.m. woody', 'someone else'],
+      expect.objectContaining({ libraryIds: [1, 2] }),
+    );
   });
 });
