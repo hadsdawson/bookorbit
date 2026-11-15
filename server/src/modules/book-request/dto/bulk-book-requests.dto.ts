@@ -1,6 +1,6 @@
 import { ArrayMaxSize, ArrayNotEmpty, IsArray, IsIn, IsInt, IsOptional, IsString, MaxLength, Min, ValidateIf } from 'class-validator';
 import { BOOK_REQUEST_BULK_LIMIT, BOOK_REQUEST_TRACKING_STATUSES } from '@bookorbit/types';
-import type { BookRequestTrackingStatus, BulkBookRequestsPayload, BulkRejectBookRequestsPayload } from '@bookorbit/types';
+import type { BookRequestTrackingChoice, BulkBookRequestsPayload, BulkRejectBookRequestsPayload } from '@bookorbit/types';
 
 /**
  * Deliberately ids only. Bulk approval takes each request's own destination; rerouting a library
@@ -30,6 +30,6 @@ export class BulkRejectBookRequestsDto extends BulkBookRequestsDto implements Bu
 /** One tracking status for the whole selection, or null to clear it on every row. */
 export class BulkTrackingStatusDto extends BulkBookRequestsDto {
   @ValidateIf((_object, value) => value !== null)
-  @IsIn(BOOK_REQUEST_TRACKING_STATUSES as readonly string[] as string[])
-  trackingStatus!: BookRequestTrackingStatus | null;
+  @IsIn([...BOOK_REQUEST_TRACKING_STATUSES, 'auto'])
+  trackingStatus!: BookRequestTrackingChoice;
 }

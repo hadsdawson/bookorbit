@@ -40,6 +40,7 @@ function request(overrides: Partial<BookRequestItem> = {}): BookRequestItem {
     mediaKind: 'ebook',
     status: 'approved',
     trackingStatus: null,
+    trackingStatusAuto: false,
     preferredFormats: ['epub'],
     note: null,
     targetLibraryId: 1,

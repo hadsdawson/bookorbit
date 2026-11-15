@@ -1,6 +1,7 @@
 import { LibraryScopeService } from '../../common/library-scope/library-scope.service';
 import { BadRequestException, ForbiddenException, HttpException, HttpStatus, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import {
+  isTrackingManual,
   ACTIVE_BOOK_REQUEST_DOWNLOAD_STATUSES,
   ACTIVE_BOOK_REQUEST_STATUSES,
   BOOK_REQUEST_ACTION_ERROR_CODES,
@@ -30,7 +31,7 @@ import type {
   BookRequestSubmitErrorCode,
   BookRequestFormatPolicy,
   BookRequestItem,
-  BookRequestTrackingStatus,
+  BookRequestTrackingChoice,
   BookRequestMediaKind,
   BookRequestMetadataSource,
   BookRequestPage,
@@ -1086,17 +1087,25 @@ export class BookRequestService {
    * A note set by hand, apart from the workflow status, so it may change at any point in the
    * request's life. Only whoever may drive the request can set it, the same as its language.
    */
-  async setTrackingStatus(id: number, trackingStatus: BookRequestTrackingStatus | null, user: RequestUser): Promise<BookRequestItem> {
+  async setTrackingStatus(id: number, choice: BookRequestTrackingChoice, user: RequestUser): Promise<BookRequestItem> {
     const joined = await this.repo.findById(id);
     if (!joined) throw new NotFoundException('Book request not found');
     if (!this.canDrive(joined.request, user)) throw new ForbiddenException('You cannot change this book request');
 
-    const previous = joined.request.trackingStatus ?? null;
-    if (previous !== trackingStatus) {
-      const updated = await this.repo.update(id, { trackingStatus });
+    // Fork: a status picked by hand is kept as 'manual' so the release-date rule never overrides
+    // it; "auto" hands the row back to that rule.
+    const previous = isTrackingManual(joined.request.trackingStatusSource ?? null, joined.request.trackingStatus ?? null)
+      ? (joined.request.trackingStatus ?? 'none')
+      : 'auto';
+    const next = choice === 'auto' ? 'auto' : (choice ?? 'none');
+    if (previous !== next) {
+      const updated = await this.repo.update(
+        id,
+        choice === 'auto' ? { trackingStatus: null, trackingStatusSource: 'auto' } : { trackingStatus: choice, trackingStatusSource: 'manual' },
+      );
       if (!updated) throw new NotFoundException('Book request not found');
       this.logger.log(
-        `[book_request.set_tracking_status] [end] requestId=${id} userId=${user.id} from=${previous ?? 'none'} to=${trackingStatus ?? 'none'} - request tracking status changed`,
+        `[book_request.set_tracking_status] [end] requestId=${id} userId=${user.id} from=${previous} to=${next} - request tracking status changed`,
       );
       this.gateway.emitChanged();
     }

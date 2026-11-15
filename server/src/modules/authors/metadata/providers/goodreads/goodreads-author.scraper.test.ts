@@ -35,6 +35,14 @@ function authorPage(options?: { photo?: string; died?: boolean; noAbout?: boolea
 }
 
 describe('parseGoodreadsAuthorPage', () => {
+  it('drops the "edit data" link Goodreads shows when an author has no biography', () => {
+    const html = authorPage({ noAbout: true }).replace(
+      '<div class="dataTitle">Born</div>',
+      '<div class="aboutAuthorInfo"><span><a href="/author/edit/1">edit data</a></span></div><div class="dataTitle">Born</div>',
+    );
+    expect(parseGoodreadsAuthorPage(html)?.description).toBeUndefined();
+  });
+
   it('extracts the full record from an author page', () => {
     const parsed = parseGoodreadsAuthorPage(authorPage());
 

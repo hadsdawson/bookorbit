@@ -409,6 +409,16 @@ export class AuthorsRepository {
     return rows.map((row) => row.libraryId);
   }
 
+  /** Fork: clears biographies that are only Goodreads' "edit data" link, saved by older builds. */
+  async clearEditDataDescriptions(): Promise<number> {
+    const cleared = await this.db
+      .update(authors)
+      .set({ description: null })
+      .where(sql`lower(btrim(${authors.description})) = 'edit data'`)
+      .returning({ id: authors.id });
+    return cleared.length;
+  }
+
   async mergeAuthors(targetAuthorId: number, sourceAuthorIds: number[]): Promise<void> {
     if (sourceAuthorIds.length === 0) return;
 

@@ -29,6 +29,7 @@ function request(overrides: Partial<BookRequestItem> = {}): BookRequestItem {
     mediaKind: 'audiobook',
     status: 'available',
     trackingStatus: null,
+    trackingStatusAuto: false,
     preferredFormats: [],
     note: null,
     targetLibraryId: 1,

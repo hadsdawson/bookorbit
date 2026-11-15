@@ -9,9 +9,10 @@ import type {
   BookRequestSubscriber,
   BookRequestTrackingStatus,
 } from '@bookorbit/types';
-import { DOWNLOAD_CLIENT_ALWAYS_DELETES_REMOTE } from '@bookorbit/types';
+import { DOWNLOAD_CLIENT_ALWAYS_DELETES_REMOTE, autoTrackingStatus, isTrackingManual } from '@bookorbit/types';
 
 import type { BookRequestJoinedRow } from './book-request.repository';
+import { trackingToday } from './book-request-tracking';
 import type { BookRequestDownloadJoinedRow } from './fulfillment/book-request-download.repository';
 
 /**
@@ -24,6 +25,7 @@ export function mapBookRequestRow(
   subscribers: BookRequestSubscriber[],
   download: BookRequestDownloadJoinedRow | null,
   dismissed: boolean,
+  today: string = trackingToday(),
 ): BookRequestItem {
   const r = row.request;
   return {
@@ -33,7 +35,7 @@ export function mapBookRequestRow(
     requesterName: row.requesterName,
     mediaKind: r.mediaKind as BookRequestMediaKind,
     status: r.status as BookRequestStatus,
-    trackingStatus: (r.trackingStatus as BookRequestTrackingStatus | null) ?? null,
+    ...trackingFields(r, today),
     title: r.title,
     subtitle: r.subtitle,
     authors: r.authors ?? [],
@@ -111,4 +113,15 @@ export function mapBookRequestDownload({
     releaseUnits: download.releaseUnits ?? null,
     createdAt: download.createdAt.toISOString(),
   };
+}
+
+/** Fork: a status someone chose, or the one the release date implies. */
+function trackingFields(
+  r: BookRequestJoinedRow['request'],
+  today: string,
+): { trackingStatus: BookRequestTrackingStatus | null; trackingStatusAuto: boolean } {
+  if (isTrackingManual(r.trackingStatusSource ?? null, r.trackingStatus ?? null)) {
+    return { trackingStatus: (r.trackingStatus as BookRequestTrackingStatus | null) ?? null, trackingStatusAuto: false };
+  }
+  return { trackingStatus: autoTrackingStatus(r.status, r.publishedDate ?? null, today), trackingStatusAuto: true };
 }

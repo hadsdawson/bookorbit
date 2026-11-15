@@ -113,10 +113,13 @@ export function parseGoodreadsAuthorPage(html: string): ParsedGoodreadsAuthor | 
   };
 }
 
+// Fork: an author with no biography shows only Goodreads' own "edit data" link here.
+const EDIT_DATA_LINK = /\s*\bedit data\s*$/i;
+
 function dataItemAbout($: CheerioAPI): string {
   const container = $('.aboutAuthorInfo').first();
   if (container.length === 0) return '';
-  return spanText($, container);
+  return spanText($, container).replace(EDIT_DATA_LINK, '').trim();
 }
 
 export function parseGoodreadsAuthorSearch(html: string): GoodreadsAuthorRef[] {

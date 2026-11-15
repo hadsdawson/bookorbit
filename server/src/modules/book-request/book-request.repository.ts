@@ -40,6 +40,7 @@ import type {
 
 import { isUniqueViolation } from '../../common/utils/db-error.utils';
 import { DB } from '../../db';
+import { trackingToday } from './book-request-tracking';
 import * as schema from '../../db/schema';
 import {
   authorAliases,
@@ -158,6 +159,21 @@ const companionRequests = alias(bookRequests, 'companion');
 /** The visibility and filter rules are asked of a request and of its companion alike. */
 type RequestTable = typeof bookRequests | typeof companionRequests;
 
+/**
+ * Fork: the tracking status a row shows. A status a person chose stands; otherwise it follows the
+ * release date, as `autoTrackingStatus` does in the mapper, so filters and sorting agree with it.
+ */
+function effectiveTrackingStatus(table: RequestTable, today: string): SQL<string | null> {
+  const manual = sql`(${table.trackingStatusSource} = 'manual' or (${table.trackingStatusSource} is null and ${table.trackingStatus} is not null))`;
+  return sql<string | null>`case
+    when ${manual} then ${table.trackingStatus}
+    when ${table.status} in ('available', 'cancelled', 'rejected') then null
+    when ${table.publishedDate} is null then 'format_not_available'
+    when ${table.publishedDate} > ${today}::date then 'not_yet_released'
+    else 'missing'
+  end`;
+}
+
 export interface BookRequestJoinedRow {
   request: BookRequestRow;
   requesterUsername: string;
@@ -216,8 +232,9 @@ export class BookRequestRepository {
     if (opts.mediaKind) conditions.push(eq(table.mediaKind, opts.mediaKind));
     if (opts.requesterUserId !== undefined) conditions.push(eq(table.userId, opts.requesterUserId));
     if (opts.selfServe !== undefined) conditions.push(eq(table.selfServe, opts.selfServe));
-    if (opts.trackingStatus === 'none') conditions.push(isNull(table.trackingStatus));
-    else if (opts.trackingStatus) conditions.push(eq(table.trackingStatus, opts.trackingStatus));
+    const tracking = effectiveTrackingStatus(table, trackingToday());
+    if (opts.trackingStatus === 'none') conditions.push(sql`${tracking} is null`);
+    else if (opts.trackingStatus) conditions.push(sql`${tracking} = ${opts.trackingStatus}`);
     return conditions;
   }
 
@@ -234,7 +251,7 @@ export class BookRequestRepository {
     // or tracking status shows the rows that have one first.
     const dir = opts.sortDir === 'asc' ? sql.raw('asc') : sql.raw('desc');
     const NULLS_LAST_SORTS = {
-      trackingStatus: sql`${bookRequests.trackingStatus} ${dir} nulls last`,
+      trackingStatus: sql`${effectiveTrackingStatus(bookRequests, trackingToday())} ${dir} nulls last`,
       // Only a full date counts: the list shows N/A for a year alone, so those rows sort with the empty ones.
       publishedDate: sql`${bookRequests.publishedDate} ${dir} nulls last`,
     } as const;

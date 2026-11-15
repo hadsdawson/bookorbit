@@ -1,0 +1,1 @@
+ALTER TABLE "book_requests" ADD COLUMN "tracking_status_source" varchar(10);
