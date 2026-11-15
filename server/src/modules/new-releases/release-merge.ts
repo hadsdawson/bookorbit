@@ -28,6 +28,10 @@ export interface SourceRelease {
   isbn13: string | null;
   asin: string | null;
   date: string | null;
+  /** Fork: the language the source states for this edition, as a two-letter code, when it says. */
+  language?: string | null;
+  /** Fork: the book's page id on the source, where its link needs more than `sourceId` (Hardcover's slug). */
+  slug?: string | null;
 }
 
 export interface MergedRelease {

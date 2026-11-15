@@ -42,11 +42,23 @@ export interface NewReleaseItem {
   /** Why it is listed: the follows of this user it matched. */
   matchedFollows: { kind: ReleaseFollowKind; name: string }[];
   state: NewReleaseUserState;
+  /** Fork: each author, with their id when they are in the user's libraries (by name or alternate name). */
+  authorLinks: { name: string; authorId: number | null }[];
+  /** Fork: the series' id when it is in the user's libraries. */
+  seriesId: number | null;
+  /** Fork: ids for the book's pages on the sites that reported it, for link badges. */
+  providerIds: NewReleaseProviderIds;
+  isbn13: string | null;
 }
+
+/** Fork: Hardcover's slug, the Audible and Amazon ASINs, and the Google Books id. */
+export type NewReleaseProviderIds = Partial<Record<"hardcover" | "audible" | "amazon" | "google", string>>;
 
 export interface NewReleasesServerSettings {
   defaultFormat: NewReleaseFormat;
   defaultDelivery: NewReleaseDelivery;
+  /** Fork: only list books in this language (two-letter code), or "any". */
+  language: string;
 }
 
 export interface NewReleasesUserSettings {

@@ -14,8 +14,8 @@ import { apiJson, apiSend, jsonBody } from '@/lib/api-json'
 
 const BASE = '/api/v1/new-releases'
 
-export function getNewReleases(): Promise<NewReleasesOverview> {
-  return apiJson(BASE, undefined, 'newReleases.errors.load')
+export function getNewReleases(options: { includeHidden?: boolean } = {}): Promise<NewReleasesOverview> {
+  return apiJson(options.includeHidden ? `${BASE}?hidden=true` : BASE, undefined, 'newReleases.errors.load')
 }
 
 export function listReleaseFollows(query: {

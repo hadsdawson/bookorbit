@@ -16361,7 +16361,11 @@
       "hideNamed": "Hide {title}",
       "hidden": "Hid {title}",
       "undo": "Undo",
-      "released": "Out now"
+      "released": "Out now",
+      "hiddenBadge": "Hidden",
+      "unhide": "Show again",
+      "unhideNamed": "Show {title} again",
+      "linksLabel": "Pages for {title}"
     },
     "following": {
       "search": "Search followed names",
@@ -16451,7 +16455,11 @@
       },
       "delivery": "New books",
       "deliveryHint": "Suggest lists them to request by hand. Request files the request as soon as a date is confirmed, following each person's usual approval rules.",
-      "saved": "New Releases defaults saved"
-    }
+      "saved": "New Releases defaults saved",
+      "language": "Language",
+      "languageHint": "Only list books in this language. A book a source says is in another language is left off; one with no stated language is kept. Books already found are re-checked on the next weekly check.",
+      "anyLanguage": "Any language"
+    },
+    "showHidden": "Show hidden"
   }
 }

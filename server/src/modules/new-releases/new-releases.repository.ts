@@ -4,6 +4,7 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { ACTIVE_BOOK_REQUEST_STATUSES, type ReleaseFollowKind } from '@bookorbit/types';
 
 import { DB } from '../../db';
+import { normalizePersonNameKeySql } from '../../common/utils/person-name.utils';
 import * as schema from '../../db/schema';
 import type { MergedRelease, SourceRelease } from './release-merge';
 import type { ReleaseTarget } from './release-sources.service';
@@ -330,7 +331,20 @@ export class NewReleasesRepository {
    * deleted request makes it requestable again. The stored "requested" mark still keeps automatic
    * requests from filing it a second time.
    */
-  async listForUser(userId: number, window: ReleaseListWindow, limit: number): Promise<ListedReleaseRow[]> {
+  async listForUser(
+    userId: number,
+    window: ReleaseListWindow,
+    limit: number,
+    options: { includeHidden?: boolean; language?: string | null } = {},
+  ): Promise<ListedReleaseRow[]> {
+    // Fork: a source that states another language than the one asked for keeps the book off the list.
+    const languageOk = options.language
+      ? sql`NOT EXISTS (
+          SELECT 1 FROM jsonb_array_elements(r.sources) src
+          WHERE src->>'language' IS NOT NULL AND src->>'language' <> ${options.language}
+        )`
+      : sql`TRUE`;
+    const hiddenOk = options.includeHidden ? sql`TRUE` : sql`(st.state IS NULL OR st.state <> 'dismissed')`;
     const inWindow =
       'onDate' in window
         ? sql`(r.ebook_date = ${window.onDate}::date OR r.audiobook_date = ${window.onDate}::date)`
@@ -346,6 +360,7 @@ export class NewReleasesRepository {
             SELECT 1 FROM book_requests br
             WHERE br.user_id = ${userId} AND br.status IN (${activeStatuses}) AND lower(br.title) = lower(r.title)
           ) THEN 'requested'
+          WHEN st.state = 'dismissed' THEN 'dismissed'
           ELSE NULL
         END AS user_state
       FROM upcoming_releases r
@@ -360,7 +375,8 @@ export class NewReleasesRepository {
         AND r.release_date IS NOT NULL
         AND ${inWindow}
         AND r.owned_book_id IS NULL
-        AND (st.state IS NULL OR st.state <> 'dismissed')
+        AND ${hiddenOk}
+        AND ${languageOk}
       ORDER BY r.release_date ASC, r.title ASC
       LIMIT ${limit}
     `);
@@ -387,6 +403,61 @@ export class NewReleasesRepository {
       state: (row.user_state as 'requested' | 'dismissed' | null) ?? null,
       totalCount: Number(row.total_count ?? 0),
     }));
+  }
+
+  /**
+   * Fork: the library authors and series a page of releases names, so the list can link to them.
+   * Matched by name (and authors also by alternate name), among books in the given libraries.
+   */
+  async findLibraryLinks(
+    authorKeys: string[],
+    seriesNames: string[],
+    libraryIds: number[],
+  ): Promise<{ authors: Map<string, number>; series: Map<string, number> }> {
+    const authors = new Map<string, number>();
+    const series = new Map<string, number>();
+    if (libraryIds.length === 0) return { authors, series };
+    const libraries = sql.join(
+      libraryIds.map((id) => sql`${id}`),
+      sql`, `,
+    );
+    if (authorKeys.length > 0) {
+      const keys = sql.join(
+        authorKeys.map((key) => sql`${key}`),
+        sql`, `,
+      );
+      const byName = normalizePersonNameKeySql(sql.raw('a.name'));
+      const { rows } = await this.db.execute<{ key: string; id: number }>(sql`
+        SELECT DISTINCT ON (k.key) k.key, k.id FROM (
+          SELECT ${byName} AS key, a.id FROM authors a WHERE ${byName} IN (${keys})
+          UNION ALL
+          SELECT al.name_key AS key, al.author_id AS id FROM author_aliases al WHERE al.name_key IN (${keys})
+        ) k
+        WHERE EXISTS (
+          SELECT 1 FROM book_authors ba JOIN books b ON b.id = ba.book_id
+          WHERE ba.author_id = k.id AND b.library_id IN (${libraries})
+        )
+        ORDER BY k.key, k.id
+      `);
+      for (const row of rows) authors.set(row.key, Number(row.id));
+    }
+    if (seriesNames.length > 0) {
+      const names = sql.join(
+        [...new Set(seriesNames.map((name) => name.toLowerCase()))].map((name) => sql`${name}`),
+        sql`, `,
+      );
+      const { rows } = await this.db.execute<{ key: string; id: number }>(sql`
+        SELECT DISTINCT ON (lower(s.name)) lower(s.name) AS key, s.id FROM book_series s
+        WHERE lower(s.name) IN (${names})
+          AND EXISTS (
+            SELECT 1 FROM book_series_memberships m JOIN books b ON b.id = m.book_id
+            WHERE m.series_id = s.id AND b.library_id IN (${libraries})
+          )
+        ORDER BY lower(s.name), s.id
+      `);
+      for (const row of rows) series.set(row.key, Number(row.id));
+    }
+    return { authors, series };
   }
 
   async releaseExists(id: number): Promise<boolean> {

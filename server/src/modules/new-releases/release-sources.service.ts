@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { NewReleaseSourceStatus, ReleaseFollowKind } from '@bookorbit/types';
+import { toRequestLanguage, type NewReleaseSourceStatus, type ReleaseFollowKind } from '@bookorbit/types';
 
 import { toBearerAuthorization } from '../../common/utils/bearer-token.utils';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
@@ -39,29 +39,39 @@ const HARDCOVER_UPCOMING_QUERY = `
   query UpcomingBooks($where: books_bool_exp!) {
     books(where: $where, order_by: { release_date: asc }, limit: 40) {
       id
+      slug
       title
       release_date
       image { url }
       contributions { author { name } }
       book_series { position series { name } }
-      editions(limit: 25) { isbn_13 asin release_date reading_format_id }
+      editions(limit: 25) { isbn_13 asin release_date reading_format_id language { code2 } }
     }
   }
 `;
 
 interface HardcoverUpcomingBook {
   id: number;
+  slug?: string | null;
   title: string;
   release_date?: string | null;
   image?: { url?: string | null } | null;
   contributions?: { author?: { name?: string | null } | null }[];
   book_series?: { position?: number | null; series?: { name?: string | null } | null }[];
-  editions?: { isbn_13?: string | null; asin?: string | null; release_date?: string | null; reading_format_id?: number | null }[];
+  editions?: {
+    isbn_13?: string | null;
+    asin?: string | null;
+    release_date?: string | null;
+    reading_format_id?: number | null;
+    language?: { code2?: string | null } | null;
+  }[];
 }
 
 interface AudibleUpcomingProduct {
   asin: string;
   title: string;
+  /** Fork: Audible's language name, such as "english" or "french" (product_attrs). */
+  language?: string;
   authors?: { name: string }[];
   release_date?: string;
   product_images?: { 500?: string };
@@ -107,6 +117,7 @@ interface GoogleUpcomingVolume {
     title: string;
     authors?: string[];
     publishedDate?: string;
+    language?: string;
     imageLinks?: { thumbnail?: string };
     industryIdentifiers?: { type: string; identifier: string }[];
   };
@@ -131,6 +142,12 @@ function sameName(candidate: string | null | undefined, key: string): boolean {
   return !!candidate && nameKey(candidate) === key;
 }
 
+/** Fork: the language the editions state, when they agree on one. */
+function editionLanguage(editions: NonNullable<HardcoverUpcomingBook['editions']>): string | null {
+  const codes = new Set(editions.map((edition) => toRequestLanguage(edition.language?.code2)).filter((code): code is string => !!code));
+  return codes.size === 1 ? [...codes][0]! : null;
+}
+
 export function mapHardcoverBook(book: HardcoverUpcomingBook): SourceRelease[] {
   const authors = (book.contributions ?? []).map((entry) => entry.author?.name?.trim() ?? '').filter(Boolean);
   const series = (book.book_series ?? []).find((entry) => entry.series?.name);
@@ -144,6 +161,7 @@ export function mapHardcoverBook(book: HardcoverUpcomingBook): SourceRelease[] {
     seriesIndex: numberOrNull(series?.position),
     coverUrl: httpsCover(book.image?.url),
     isbn13,
+    slug: book.slug ?? null,
   };
 
   const audio = editions.filter((edition) => edition.reading_format_id === HARDCOVER_AUDIOBOOK_FORMAT);
@@ -154,6 +172,7 @@ export function mapHardcoverBook(book: HardcoverUpcomingBook): SourceRelease[] {
       sourceId: `${book.id}:ebook`,
       mediaKind: 'ebook',
       asin: ebook.find((edition) => edition.asin)?.asin ?? null,
+      language: editionLanguage(ebook),
       // The book's own date is its first edition's, which for a new book is the ebook or print one.
       date: earliest(ebook.map((edition) => edition.release_date)) ?? book.release_date ?? null,
     },
@@ -165,6 +184,7 @@ export function mapHardcoverBook(book: HardcoverUpcomingBook): SourceRelease[] {
       sourceId: `${book.id}:audiobook`,
       mediaKind: 'audiobook',
       asin: audio.find((edition) => edition.asin)?.asin ?? null,
+      language: editionLanguage(audio),
       date: audioDate,
     });
   }
@@ -185,6 +205,7 @@ export function mapAudibleProduct(product: AudibleUpcomingProduct): SourceReleas
     isbn13: null,
     asin: product.asin,
     date: product.release_date ?? null,
+    language: toRequestLanguage(product.language),
   };
 }
 
@@ -202,6 +223,7 @@ export function mapGoogleVolume(volume: GoogleUpcomingVolume, seriesName: string
     isbn13: info.industryIdentifiers?.find((identifier) => identifier.type === 'ISBN_13')?.identifier ?? null,
     asin: null,
     date: info.publishedDate ?? null,
+    language: toRequestLanguage(info.language),
   };
 }
 

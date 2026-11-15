@@ -7,7 +7,7 @@ import type { RequestUser } from '../../common/types/request-user';
 import { CreateReleaseFollowDto, FindReleaseFollowQueryDto, FollowAllDto, ListReleaseFollowsQueryDto } from './dto/follow.dto';
 import { SetReleaseStateDto } from './dto/set-release-state.dto';
 import { RequestReleaseDto } from './dto/request-release.dto';
-import { UpdateNewReleasesServerSettingsDto, UpdateNewReleasesSettingsDto } from './dto/update-settings.dto';
+import { NewReleasesOverviewQueryDto, UpdateNewReleasesServerSettingsDto, UpdateNewReleasesSettingsDto } from './dto/update-settings.dto';
 import { NewReleasesService } from './new-releases.service';
 
 @Controller('new-releases')
@@ -16,8 +16,8 @@ export class NewReleasesController {
   constructor(private readonly service: NewReleasesService) {}
 
   @Get()
-  overview(@CurrentUser() user: RequestUser) {
-    return this.service.overview(user);
+  overview(@CurrentUser() user: RequestUser, @Query() query: NewReleasesOverviewQueryDto) {
+    return this.service.overview(user, { includeHidden: query.hidden === 'true' });
   }
 
   @Put('settings')

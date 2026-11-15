@@ -20,7 +20,7 @@ import NewReleasesServerSettings from '../components/NewReleasesServerSettings.v
 describe('NewReleasesServerSettings', () => {
   beforeEach(() => {
     mocks.allowed = true
-    mocks.getNewReleasesServerSettings.mockReset().mockResolvedValue({ defaultFormat: 'both', defaultDelivery: 'suggest' })
+    mocks.getNewReleasesServerSettings.mockReset().mockResolvedValue({ defaultFormat: 'both', defaultDelivery: 'suggest', language: 'en' })
     mocks.saveNewReleasesServerSettings.mockReset().mockImplementation(async (settings) => settings)
   })
 
@@ -29,10 +29,13 @@ describe('NewReleasesServerSettings', () => {
     await flushPromises()
     await wrapper.get('#new-releases-default-format').setValue('audiobook')
     await flushPromises()
-    expect(mocks.saveNewReleasesServerSettings).toHaveBeenCalledWith({ defaultFormat: 'audiobook', defaultDelivery: 'suggest' })
+    expect(mocks.saveNewReleasesServerSettings).toHaveBeenCalledWith({ defaultFormat: 'audiobook', defaultDelivery: 'suggest', language: 'en' })
     await wrapper.get('#new-releases-default-delivery').setValue('request')
     await flushPromises()
-    expect(mocks.saveNewReleasesServerSettings).toHaveBeenLastCalledWith({ defaultFormat: 'audiobook', defaultDelivery: 'request' })
+    expect(mocks.saveNewReleasesServerSettings).toHaveBeenLastCalledWith({ defaultFormat: 'audiobook', defaultDelivery: 'request', language: 'en' })
+    await wrapper.get('#new-releases-language').setValue('any')
+    await flushPromises()
+    expect(mocks.saveNewReleasesServerSettings).toHaveBeenLastCalledWith({ defaultFormat: 'audiobook', defaultDelivery: 'request', language: 'any' })
   })
 
   it('stays hidden from people who cannot manage requests', async () => {
