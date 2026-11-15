@@ -87,6 +87,16 @@ describe('AuthorAliasesService', () => {
       expect(ctx.authorsService.merge).not.toHaveBeenCalled();
     });
 
+    it('asks for authors with that name with the spelling typed, so the one with books can be picked', async () => {
+      ctx.aliasesRepo.findAuthorIdsByNameKey.mockResolvedValue([
+        { id: 2227, name: 'J.H. Markert' },
+        { id: 1253, name: 'J. H. Markert' },
+      ]);
+      await ctx.service.addName(editor, 12, 'J.H. Markert', 'penName');
+      expect(ctx.aliasesRepo.findAuthorIdsByNameKey).toHaveBeenCalledWith('j.h. markert', 'J.H. Markert');
+      expect(ctx.aliasesRepo.linkPenName).toHaveBeenCalledWith(2227, 12);
+    });
+
     it('creates the pen name when no author has it yet', async () => {
       await ctx.service.addName(editor, 12, 'A. Deborah Baker', 'penName');
       expect(ctx.aliasesRepo.createAuthor).toHaveBeenCalledWith('A. Deborah Baker');

@@ -52,13 +52,16 @@ function handleBookUpdate(updated: BookCard) {
   items.value = items.value.map((book) => (book.id === updated.id ? updated : book))
 }
 
-watch(
-  () => [props.penName.id, props.sort, props.order, props.libraryId, props.collapseSeries],
-  () => {
-    syncQuery()
-    void load(true)
-  },
-)
+// A pen name with no books yet has nothing to fetch, and the server answers it as not found.
+const hasBooks = computed(() => props.penName.bookCount > 0)
+
+function reload() {
+  if (!hasBooks.value) return
+  syncQuery()
+  void load(true)
+}
+
+watch(() => [props.penName.id, props.penName.bookCount, props.sort, props.order, props.libraryId, props.collapseSeries], reload)
 
 // Arriving from a pen name's own link lands on its section.
 async function scrollIntoViewIfLinked() {
@@ -68,8 +71,10 @@ async function scrollIntoViewIfLinked() {
 }
 
 onMounted(async () => {
-  syncQuery()
-  await load(true)
+  if (hasBooks.value) {
+    syncQuery()
+    await load(true)
+  }
   await scrollIntoViewIfLinked()
 })
 </script>
@@ -78,12 +83,18 @@ onMounted(async () => {
   <section :id="`pen-name-${penName.id}`" class="mt-8 scroll-mt-20" :data-testid="`pen-name-section-${penName.id}`">
     <h2 class="mb-3 text-sm font-semibold text-foreground">
       {{ t('author.detail.penNameSection.heading', { name: penName.name }) }}
-      <span class="ml-1 text-xs font-normal text-muted-foreground">{{ t('author.index.bookCount', { count: bookTotal || penName.bookCount }) }}</span>
+      <span class="ml-1 text-xs font-normal text-muted-foreground">{{
+        t('author.index.bookCount', { count: hasBooks ? bookTotal || penName.bookCount : 0 })
+      }}</span>
     </h2>
 
-    <div v-if="error" class="mb-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">{{ error }}</div>
+    <div v-if="error && hasBooks" class="mb-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+      {{ error }}
+    </div>
 
-    <p v-if="!loading && items.length === 0 && !error" class="text-xs text-muted-foreground">{{ t('author.detail.penNameSection.empty') }}</p>
+    <p v-if="!hasBooks || (!loading && items.length === 0 && !error)" class="text-xs text-muted-foreground" data-testid="pen-name-empty">
+      {{ t('author.detail.penNameSection.empty') }}
+    </p>
 
     <VirtualBookGrid
       v-if="viewMode === 'grid' && items.length > 0"
