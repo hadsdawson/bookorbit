@@ -266,6 +266,20 @@ describe('NewReleasesService', () => {
     expect(result).toEqual({ date: '2026-11-17', total: 14, items: [expect.objectContaining({ id: 8, formats: ['ebook'] })] });
   });
 
+  it('gives no widget data to someone without New Releases access', async () => {
+    await expect(service.upcomingTuesday({ ...user, isSuperuser: false, permissions: [] } as never, '2026-11-13')).resolves.toBeNull();
+    expect(repository.listForUser).not.toHaveBeenCalled();
+  });
+});
+
+describe('comingTuesday', () => {
+  it('is today on a Tuesday and the next Tuesday otherwise', () => {
+    expect(comingTuesday('2026-11-17')).toBe('2026-11-17');
+    expect(comingTuesday('2026-11-18')).toBe('2026-11-24');
+    expect(comingTuesday('2026-11-16')).toBe('2026-11-17');
+    expect(comingTuesday('2026-12-30')).toBe('2027-01-05');
+  });
+
   it('follows the other names of a followed author', async () => {
     repository.insertFollow.mockResolvedValue({ id: 1, kind: 'author', name: 'Seanan McGuire', createdAt: new Date() } as never);
     repository.findLinkedAuthorNames.mockResolvedValue([{ userId: 3, name: 'A. Deborah Baker', authorId: 40 }]);
@@ -291,19 +305,5 @@ describe('NewReleasesService', () => {
     expect(repository.findLinkedAuthorNames).toHaveBeenCalledWith({ userId: 3, followId: 1 }, false);
     expect(repository.deleteAuthorFollowsByKeys).toHaveBeenCalledWith(3, [expect.not.stringMatching(/^seananmcguire$/)]);
     expect(repository.deleteFollow).toHaveBeenCalledWith(3, 1);
-  });
-
-  it('gives no widget data to someone without New Releases access', async () => {
-    await expect(service.upcomingTuesday({ ...user, isSuperuser: false, permissions: [] } as never, '2026-11-13')).resolves.toBeNull();
-    expect(repository.listForUser).not.toHaveBeenCalled();
-  });
-});
-
-describe('comingTuesday', () => {
-  it('is today on a Tuesday and the next Tuesday otherwise', () => {
-    expect(comingTuesday('2026-11-17')).toBe('2026-11-17');
-    expect(comingTuesday('2026-11-18')).toBe('2026-11-24');
-    expect(comingTuesday('2026-11-16')).toBe('2026-11-17');
-    expect(comingTuesday('2026-12-30')).toBe('2027-01-05');
   });
 });
