@@ -6,16 +6,12 @@ import { DB } from '../../db';
 import * as schema from '../../db/schema';
 import { bookNarrators, narrators } from '../../db/schema';
 import { inNameOrder } from '../../common/utils/insert-lock-order.utils';
-import {
-  chooseCanonicalMetadataTextRow,
-  normalizeMetadataText,
-  normalizeMetadataTextKey,
-  normalizeMetadataTextKeySql,
-} from '../../common/utils/metadata-text-normalize.utils';
+import { chooseCanonicalMetadataTextRow } from '../../common/utils/metadata-text-normalize.utils';
+import { normalizePersonName, normalizePersonNameKey, normalizePersonNameKeySql } from '../../common/utils/person-name.utils';
 
 type Db = NodePgDatabase<typeof schema>;
 type NarratorMutationExecutor = Pick<Db, 'delete' | 'insert' | 'select' | 'update'>;
-const NORMALIZED_NARRATOR_NAME_SQL = normalizeMetadataTextKeySql(narrators.name);
+const NORMALIZED_NARRATOR_NAME_SQL = normalizePersonNameKeySql(narrators.name);
 
 @Injectable()
 export class NarratorRepository {
@@ -43,7 +39,7 @@ export class NarratorRepository {
 
     const uniqueByName = new Map<string, { name: string; sortName: string | null }>();
     for (const value of names) {
-      const key = normalizeMetadataTextKey(value.name);
+      const key = normalizePersonNameKey(value.name);
       if (key && !uniqueByName.has(key)) {
         uniqueByName.set(key, value);
       }
@@ -58,7 +54,7 @@ export class NarratorRepository {
     );
 
     const missingNames = uniqueNames.filter((narrator) => {
-      const key = normalizeMetadataTextKey(narrator.name);
+      const key = normalizePersonNameKey(narrator.name);
       return key ? !narratorByNameKey.has(key) : false;
     });
 
@@ -69,7 +65,7 @@ export class NarratorRepository {
         .onConflictDoNothing()
         .returning({ id: narrators.id, name: narrators.name });
       for (const row of insertedNarrators) {
-        const key = normalizeMetadataTextKey(row.name);
+        const key = normalizePersonNameKey(row.name);
         if (key) narratorByNameKey.set(key, { id: row.id });
       }
     }
@@ -77,11 +73,11 @@ export class NarratorRepository {
     await this.addExistingNarratorsByNormalizedName(
       executor,
       narratorByNameKey,
-      uniqueNames.filter((narrator) => !narratorByNameKey.has(normalizeMetadataTextKey(narrator.name) ?? '')).map((narrator) => narrator.name),
+      uniqueNames.filter((narrator) => !narratorByNameKey.has(normalizePersonNameKey(narrator.name) ?? '')).map((narrator) => narrator.name),
     );
 
     const links = uniqueNames.flatMap((value, index) => {
-      const key = normalizeMetadataTextKey(value.name);
+      const key = normalizePersonNameKey(value.name);
       const match = key ? narratorByNameKey.get(key) : undefined;
       if (!match) return [];
       return [{ bookId, narratorId: match.id, displayOrder: index }];
@@ -97,7 +93,7 @@ export class NarratorRepository {
     narratorByNameKey: Map<string, { id: number }>,
     names: string[],
   ): Promise<void> {
-    const keys = [...new Set(names.map((name) => normalizeMetadataTextKey(name)).filter((key): key is string => key !== null))].filter(
+    const keys = [...new Set(names.map((name) => normalizePersonNameKey(name)).filter((key): key is string => key !== null))].filter(
       (key) => !narratorByNameKey.has(key),
     );
     if (keys.length === 0) return;
@@ -109,8 +105,8 @@ export class NarratorRepository {
 
     const desiredNameByKey = new Map<string, string>();
     for (const name of names) {
-      const key = normalizeMetadataTextKey(name);
-      const displayName = normalizeMetadataText(name);
+      const key = normalizePersonNameKey(name);
+      const displayName = normalizePersonName(name);
       if (key && displayName && !desiredNameByKey.has(key)) {
         desiredNameByKey.set(key, displayName);
       }
@@ -118,7 +114,7 @@ export class NarratorRepository {
 
     const rowsByKey = new Map<string, typeof existingNarrators>();
     for (const row of existingNarrators) {
-      const key = normalizeMetadataTextKey(row.normalizedName) ?? normalizeMetadataTextKey(row.name);
+      const key = normalizePersonNameKey(row.normalizedName) ?? normalizePersonNameKey(row.name);
       if (!key || narratorByNameKey.has(key)) continue;
       const rows = rowsByKey.get(key) ?? [];
       rows.push(row);
@@ -130,7 +126,7 @@ export class NarratorRepository {
       const match = chooseCanonicalMetadataTextRow(rows, { desiredName });
       if (!match) continue;
 
-      const canonicalName = normalizeMetadataText(match.name);
+      const canonicalName = normalizePersonName(match.name);
       if (canonicalName && match.name !== canonicalName && !rows.some((row) => row.id !== match.id && row.name === canonicalName)) {
         await executor.update(narrators).set({ name: canonicalName }).where(eq(narrators.id, match.id));
       }

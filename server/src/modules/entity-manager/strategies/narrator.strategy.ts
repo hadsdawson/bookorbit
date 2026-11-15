@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, eq, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
+import { joinNameInitials } from '../../../common/utils/person-name.utils';
 import { DB } from '../../../db';
 import * as schema from '../../../db/schema';
 import { bookMetadata, bookNarrators, books, narrators } from '../../../db/schema';
@@ -27,6 +28,10 @@ export class NarratorStrategy extends JunctionEntityStrategy {
 
   constructor(@Inject(DB) db: Db) {
     super(db);
+  }
+
+  protected override tidyName(name: string): string {
+    return joinNameInitials(name.trim());
   }
 
   protected buildJunctionRow(bookId: number, entityId: number) {
