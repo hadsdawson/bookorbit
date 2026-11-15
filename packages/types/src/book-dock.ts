@@ -313,6 +313,10 @@ export interface BookDockBulkEditResult {
 export interface BookDockStatistics {
   totalSizeBytes: number;
   byFormat: { format: string; count: number; sizeBytes: number }[];
+  /** Fork: books in the list, where files merged together count once. */
+  itemCount?: number;
+  /** Fork: every docked file, merged or not. */
+  fileCount?: number;
 }
 
 /** Most files one book can be combined from in one go: a format or two plus a few extras. */

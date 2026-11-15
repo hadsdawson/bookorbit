@@ -30,9 +30,11 @@ vi.mock('@/features/book-dock/composables/useBookDockSummary', () => ({
     socketConnected: ref(true),
   }),
 }))
-vi.mock('@/features/book-dock/composables/useBookDockStatistics', () => ({
-  useBookDockStatistics: () => ({ statistics: ref(null), fetchStatistics: vi.fn<() => void>() }),
-}))
+const statisticsState = vi.hoisted(() => ({ value: null as unknown }))
+vi.mock('@/features/book-dock/composables/useBookDockStatistics', async () => {
+  const { ref: vueRef } = await import('vue')
+  return { useBookDockStatistics: () => ({ statistics: vueRef(statisticsState.value), fetchStatistics: vi.fn<() => void>() }) }
+})
 const { addFilesMock } = vi.hoisted(() => ({ addFilesMock: vi.fn<(files: FileList | File[]) => void>() }))
 
 vi.mock('@/features/book-dock/composables/useBookDockUpload', () => ({
@@ -114,5 +116,31 @@ describe('BookDockView links from the command palette', () => {
     wrapper.unmount()
     delete routeQuery.search
     delete routeQuery.file
+  })
+})
+
+describe('BookDockView statistics (fork)', () => {
+  it('counts merged files as one book next to the file count', () => {
+    statisticsState.value = {
+      totalSizeBytes: 3000,
+      byFormat: [
+        { format: 'epub', count: 785, sizeBytes: 1000 },
+        { format: 'm4b', count: 539, sizeBytes: 2000 },
+        { format: 'pdf', count: 4, sizeBytes: 0 },
+      ],
+      itemCount: 1311,
+      fileCount: 1328,
+    }
+    const wrapper = shallowMount(BookDockView)
+    expect(wrapper.get('[data-testid="book-dock-books-and-files"]').text()).toBe('1,311 books · 1,328 files')
+    wrapper.unmount()
+  })
+
+  it('says only books when nothing is merged', () => {
+    statisticsState.value = { totalSizeBytes: 0, byFormat: [{ format: 'epub', count: 3, sizeBytes: 0 }], itemCount: 3, fileCount: 3 }
+    const wrapper = shallowMount(BookDockView)
+    expect(wrapper.find('[data-testid="book-dock-statistics"]').exists()).toBe(false)
+    wrapper.unmount()
+    statisticsState.value = null
   })
 })
