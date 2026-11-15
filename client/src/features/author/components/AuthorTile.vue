@@ -35,6 +35,8 @@ const bookCountLabel = computed(() => formatNumber(props.author.bookCount))
 const lastAdded = computed(() => (props.author.lastAddedAt ? formatRelativeFromNow(new Date(props.author.lastAddedAt)) : ''))
 
 const countLine = computed(() => t('author.index.bookCount', { count: props.author.bookCount }))
+// Fork: shown on hover so pen names and spellings are discoverable from the grid.
+const aliasLine = computed(() => (props.author.otherNameCount ? t('author.index.aliasCount', { count: props.author.otherNameCount }) : ''))
 
 const accessibleLabel = computed(() => t('author.index.rowLabel', { name: props.author.name, count: props.author.bookCount }))
 
@@ -108,6 +110,7 @@ function handleDelete() {
           :class="shape === 'circle' ? 'rounded-full p-[16%] text-center' : 'rounded-[10px] p-2'"
         >
           <span class="truncate text-[11px] font-bold leading-tight text-white">{{ countLine }}</span>
+          <span v-if="aliasLine" class="truncate text-[10px] leading-tight text-white/90" data-testid="author-tile-alias-count">{{ aliasLine }}</span>
           <span v-if="lastAdded" class="hidden truncate text-[10px] leading-tight text-white/75 @[5.5rem]:block">{{ lastAdded }}</span>
         </span>
 

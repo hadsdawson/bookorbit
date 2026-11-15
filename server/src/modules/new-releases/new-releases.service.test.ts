@@ -47,6 +47,11 @@ describe('NewReleasesService', () => {
     findUserSettings: ReturnType<typeof vi.fn<NewReleasesRepository['findUserSettings']>>;
     findSeriesAudibleAsins: ReturnType<typeof vi.fn<NewReleasesRepository['findSeriesAudibleAsins']>>;
     listForUser: ReturnType<typeof vi.fn<NewReleasesRepository['listForUser']>>;
+    insertFollow: ReturnType<typeof vi.fn<NewReleasesRepository['insertFollow']>>;
+    findLinkedAuthorNames: ReturnType<typeof vi.fn<NewReleasesRepository['findLinkedAuthorNames']>>;
+    findFollowById: ReturnType<typeof vi.fn<NewReleasesRepository['findFollowById']>>;
+    deleteAuthorFollowsByKeys: ReturnType<typeof vi.fn<NewReleasesRepository['deleteAuthorFollowsByKeys']>>;
+    deleteFollow: ReturnType<typeof vi.fn<NewReleasesRepository['deleteFollow']>>;
   };
   let lookup: ReturnType<typeof vi.fn<ReleaseSourcesService['lookup']>>;
   let submit: ReturnType<typeof vi.fn<BookRequestService['submit']>>;
@@ -71,6 +76,11 @@ describe('NewReleasesService', () => {
       findUserSettings: vi.fn<NewReleasesRepository['findUserSettings']>().mockResolvedValue({ userId: 3, delivery: 'request', retentionDays: 60 }),
       findSeriesAudibleAsins: vi.fn<NewReleasesRepository['findSeriesAudibleAsins']>().mockResolvedValue([]),
       listForUser: vi.fn<NewReleasesRepository['listForUser']>().mockResolvedValue([]),
+      insertFollow: vi.fn<NewReleasesRepository['insertFollow']>(),
+      findLinkedAuthorNames: vi.fn<NewReleasesRepository['findLinkedAuthorNames']>().mockResolvedValue([]),
+      findFollowById: vi.fn<NewReleasesRepository['findFollowById']>(),
+      deleteAuthorFollowsByKeys: vi.fn<NewReleasesRepository['deleteAuthorFollowsByKeys']>().mockResolvedValue(0),
+      deleteFollow: vi.fn<NewReleasesRepository['deleteFollow']>().mockResolvedValue(true),
     };
     lookup = vi.fn<ReleaseSourcesService['lookup']>();
     submit = vi.fn<BookRequestService['submit']>().mockResolvedValue({} as never);
@@ -270,6 +280,33 @@ describe('NewReleasesService', () => {
   it('gives no widget data to someone without New Releases access', async () => {
     await expect(service.upcomingTuesday({ ...user, isSuperuser: false, permissions: [] } as never, '2026-11-13')).resolves.toBeNull();
     expect(repository.listForUser).not.toHaveBeenCalled();
+  });
+
+  it('follows the other names of a followed author', async () => {
+    repository.insertFollow.mockResolvedValue({ id: 1, kind: 'author', name: 'Seanan McGuire', createdAt: new Date() } as never);
+    repository.findLinkedAuthorNames.mockResolvedValue([{ userId: 3, name: 'A. Deborah Baker', authorId: 40 }]);
+    repository.insertFollowsIfMissing.mockResolvedValue(1);
+
+    await service.follow(user, { kind: 'author', name: 'Seanan McGuire', authorId: 12 });
+
+    expect(repository.findLinkedAuthorNames).toHaveBeenCalledWith({ userId: 3 }, true);
+    expect(repository.insertFollowsIfMissing).toHaveBeenCalledWith(3, [
+      expect.objectContaining({ kind: 'author', name: 'A. Deborah Baker', authorId: 40 }),
+    ]);
+  });
+
+  it('unfollows the other names with the author', async () => {
+    repository.findFollowById.mockResolvedValue({ id: 1, kind: 'author', name: 'Seanan McGuire', nameKey: 'seananmcguire' } as never);
+    repository.findLinkedAuthorNames.mockResolvedValue([
+      { userId: 3, name: 'Seanan McGuire', authorId: 12 },
+      { userId: 3, name: 'A. Deborah Baker', authorId: 40 },
+    ]);
+
+    await service.unfollow(user, 1);
+
+    expect(repository.findLinkedAuthorNames).toHaveBeenCalledWith({ userId: 3, followId: 1 }, false);
+    expect(repository.deleteAuthorFollowsByKeys).toHaveBeenCalledWith(3, [expect.not.stringMatching(/^seananmcguire$/)]);
+    expect(repository.deleteFollow).toHaveBeenCalledWith(3, 1);
   });
 });
 

@@ -16,6 +16,8 @@ export type AuthorSummary = {
    * before it falls back to a monogram. Null when none of their books has a cover.
    */
   coverBookId?: number | null;
+  /** Fork: how many other names (pen names and other spellings) this author goes by. */
+  otherNameCount?: number;
 };
 
 /** One bucket of the authors A-Z rail. `letter` is "#" for anything non-alphabetic. */
@@ -28,6 +30,36 @@ export type AuthorLetterCount = {
 export type AuthorAlias = {
   id: number;
   name: string;
+};
+
+/** Fork: an author linked to another as a pen name, or as the person behind one. */
+export type AuthorNameLink = {
+  id: number;
+  name: string;
+  /** Books under this name the viewer can see. */
+  bookCount: number;
+};
+
+/** Fork: how a name typed on an author page is added. */
+export const AUTHOR_NAME_KINDS = ["penName", "spelling", "mainName"] as const;
+export type AuthorNameKind = (typeof AUTHOR_NAME_KINDS)[number];
+
+/** Fork: every other name an author goes by. */
+export type AuthorNames = {
+  /** Other spellings: books credited to one are credited to the author. */
+  spellings: AuthorAlias[];
+  /** Pen names this person wrote under; books keep the pen name. */
+  penNames: AuthorNameLink[];
+  /** For a pen name, the person or people who wrote under it. */
+  penNameOf: AuthorNameLink[];
+};
+
+/** Fork: the result of adding a name. `openAuthorId` is the page to show next, when it moved. */
+export type AddAuthorNameResult = {
+  names: AuthorNames;
+  mergedAuthorCount: number;
+  affectedBookCount: number;
+  openAuthorId: number | null;
 };
 
 /** Fork: the result of adding an alternate name, which can fold an existing author in. */

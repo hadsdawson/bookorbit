@@ -189,6 +189,60 @@ export class NewReleasesRepository {
     return rows.length;
   }
 
+  /**
+   * Fork: the names in the same group as followed authors: the person, every pen name they wrote
+   * under, and other spellings of each. With `onlyMissing`, only names the user does not follow yet,
+   * and only for groups that have more than one name, so a large follow list stays cheap.
+   */
+  async findLinkedAuthorNames(
+    scope: { userId?: number; followId?: number },
+    onlyMissing: boolean,
+  ): Promise<{ userId: number; name: string; authorId: number }[]> {
+    const filters = [sql`f.kind = 'author'`];
+    if (scope.userId !== undefined) filters.push(sql`f.user_id = ${scope.userId}`);
+    if (scope.followId !== undefined) filters.push(sql`f.id = ${scope.followId}`);
+    const missing = onlyMissing
+      ? sql`AND (n.is_alias OR EXISTS (SELECT 1 FROM author_pen_names x WHERE x.author_id = n.head_id))
+        AND NOT EXISTS (
+          SELECT 1 FROM release_follows f2 WHERE f2.user_id = n.user_id AND f2.kind = 'author' AND lower(f2.name) = lower(n.name)
+        )`
+      : sql``;
+    const result = await this.db.execute<{ user_id: number; name: string; author_id: number }>(sql`
+      WITH fa AS (
+        SELECT f.user_id, COALESCE(f.author_id, a.id) AS author_id
+        FROM release_follows f
+        LEFT JOIN authors a ON f.author_id IS NULL AND lower(a.name) = lower(f.name)
+        WHERE ${sql.join(filters, sql` AND `)}
+      ), heads AS (
+        SELECT DISTINCT fa.user_id, COALESCE(pn.author_id, fa.author_id) AS head_id
+        FROM fa LEFT JOIN author_pen_names pn ON pn.pen_name_author_id = fa.author_id
+        WHERE fa.author_id IS NOT NULL
+      ), members AS (
+        SELECT user_id, head_id, head_id AS member_id FROM heads
+        UNION
+        SELECT h.user_id, h.head_id, pn.pen_name_author_id FROM heads h JOIN author_pen_names pn ON pn.author_id = h.head_id
+      ), n AS (
+        SELECT m.user_id, m.head_id, a.id AS author_id, a.name, false AS is_alias FROM members m JOIN authors a ON a.id = m.member_id
+        UNION
+        SELECT m.user_id, m.head_id, al.author_id, al.name, true AS is_alias FROM members m JOIN author_aliases al ON al.author_id = m.member_id
+      )
+      SELECT DISTINCT n.user_id, n.name, n.author_id FROM n
+      WHERE TRUE ${missing}
+    `);
+    return result.rows.map((row) => ({ userId: Number(row.user_id), name: row.name, authorId: Number(row.author_id) }));
+  }
+
+  async deleteAuthorFollowsByKeys(userId: number, nameKeys: string[]): Promise<number> {
+    if (nameKeys.length === 0) return 0;
+    const rows = await this.db
+      .delete(schema.releaseFollows)
+      .where(
+        and(eq(schema.releaseFollows.userId, userId), eq(schema.releaseFollows.kind, 'author'), inArray(schema.releaseFollows.nameKey, nameKeys)),
+      )
+      .returning({ id: schema.releaseFollows.id });
+    return rows.length;
+  }
+
   /** The author a series' books are most often first credited to, to tell it from a same-named series. */
   async findSeriesAuthor(seriesId: number): Promise<string | null> {
     const result = await this.db.execute<{ name: string }>(sql`

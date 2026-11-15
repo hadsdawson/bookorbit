@@ -6445,24 +6445,55 @@
       },
       "aliases": {
         "heading": "Also known as",
-        "none": "No alternate names",
+        "none": "No other names",
         "add": "Add name",
-        "hint": "Pen names and other spellings. A book that comes in under one of these names is credited to this author instead. If another author already has the name, their books move here.",
-        "placeholder": "Alternate name, such as a pen name",
+        "placeholder": "Name, such as a pen name",
         "save": "Add",
+        "kindLabel": "What this name is",
+        "kinds": {
+          "penName": {
+            "label": "Pen name",
+            "hint": "Books keep the pen name and show here under it. One pen name can belong to more than one author."
+          },
+          "spelling": {
+            "label": "Other spelling",
+            "hint": "Books under this spelling are credited to {name} instead. If another author already has it, their books move here."
+          },
+          "mainName": {
+            "label": "Main name",
+            "hint": "{name} becomes a pen name of this name, and its page opens instead."
+          }
+        },
+        "penNamesLabel": "Pen names",
+        "spellingsLabel": "Other spellings",
         "remove": "Remove {name}",
-        "added": "Alternate name added",
-        "addedAndCombined": "{books, plural, =0 {Alternate name added; that author was combined into this one} one {Alternate name added; # book moved here} other {Alternate name added; # books moved here}}",
-        "removed": "Alternate name removed",
-        "addFailed": "Could not add the alternate name",
-        "removeFailed": "Could not remove the alternate name"
-      }
+        "removePenName": "Untie pen name {name}",
+        "added": "Name added",
+        "mainNameAdded": "Now listed under {name}",
+        "addedAndCombined": "{books, plural, =0 {Spelling added; that author was combined into this one} one {Spelling added; # book moved here} other {Spelling added; # books moved here}}",
+        "removed": "Spelling removed",
+        "penNameRemoved": "Pen name untied; its books keep their own author page",
+        "addFailed": "Could not add the name",
+        "removeFailed": "Could not remove the name"
+      },
+      "penNameSection": {
+        "heading": "As {name}",
+        "empty": "No books under this name yet.",
+        "noOwnBooks": "No books under {name} yet. Books under their pen names are below.",
+        "showMore": "Show more"
+      },
+      "penNameChooser": {
+        "title": "Open which author?",
+        "description": "{name} is a pen name shared by more than one author."
+      },
+      "penNameRedirect": "Opening the author behind this pen name..."
     },
     "portrait": {
       "fromTheirBook": "Cover of one of their books; no portrait on file"
     },
     "index": {
       "bookCount": "{count, plural, =0 {no books} one {# book} other {# books}}",
+      "aliasCount": "{count, plural, one {# alias} other {# aliases}}",
       "rowLabel": "{name}, {count, plural, =0 {no books} one {# book} other {# books}}",
       "actionsFor": "Actions for {name}",
       "refreshing": "Refreshing metadata for {name}",

@@ -52,6 +52,34 @@ export class BookFolderFilesRepository {
     return row ?? null;
   }
 
+  /**
+   * Fork: every other name each of the book's credited authors goes by (the people behind a pen
+   * name, their other pen names, and other spellings), for metadata.json. Authors with none are left out.
+   */
+  async findAuthorOtherNames(bookId: number): Promise<Record<string, string[]>> {
+    const result = await this.db.execute<{ credited: string; other: string }>(sql`
+      WITH credited AS (
+        SELECT a.id, a.name, ba.display_order FROM book_authors ba JOIN authors a ON a.id = ba.author_id WHERE ba.book_id = ${bookId}
+      ), heads AS (
+        SELECT c.id AS credited_id, COALESCE(pn.author_id, c.id) AS head_id
+        FROM credited c LEFT JOIN author_pen_names pn ON pn.pen_name_author_id = c.id
+      ), members AS (
+        SELECT credited_id, head_id AS member_id FROM heads
+        UNION SELECT h.credited_id, pn.pen_name_author_id FROM heads h JOIN author_pen_names pn ON pn.author_id = h.head_id
+      ), names AS (
+        SELECT m.credited_id, a.name FROM members m JOIN authors a ON a.id = m.member_id
+        UNION SELECT m.credited_id, al.name FROM members m JOIN author_aliases al ON al.author_id = m.member_id
+      )
+      SELECT c.name AS credited, n.name AS other
+      FROM credited c JOIN names n ON n.credited_id = c.id
+      WHERE n.name <> c.name
+      ORDER BY c.display_order, n.name
+    `);
+    const out: Record<string, string[]> = {};
+    for (const row of result.rows) (out[row.credited] ??= []).push(row.other);
+    return out;
+  }
+
   async findChapterSource(bookId: number): Promise<{ chapters: AudiobookChapter[]; durationSeconds: number | null; abridged: boolean }> {
     const [meta] = await this.db
       .select({ chapters: bookMetadata.chapters, durationSeconds: bookMetadata.durationSeconds, abridged: bookMetadata.abridged })

@@ -19,6 +19,8 @@ export interface AbsMetadataJson {
   language: string | null;
   explicit: boolean;
   abridged: boolean;
+  /** Fork: other names each credited author goes by. Only written when an author has any. */
+  authorsAlsoKnownAs?: Record<string, string[]>;
 }
 
 export interface AbsMetadataSource {
@@ -44,6 +46,8 @@ export interface AbsMetadataSource {
   durationSeconds: number | null;
   /** BookOrbit keeps no such flag of its own, so it is carried over from the folder's existing file. */
   explicit?: boolean;
+  /** Fork: other names each credited author goes by. */
+  authorsAlsoKnownAs?: Record<string, string[]>;
 }
 
 export const METADATA_JSON_NAME = 'metadata.json';
@@ -69,6 +73,7 @@ export function buildAbsMetadata(source: AbsMetadataSource): AbsMetadataJson {
     language: source.language,
     explicit: source.explicit === true,
     abridged: source.abridged,
+    ...(source.authorsAlsoKnownAs && Object.keys(source.authorsAlsoKnownAs).length > 0 ? { authorsAlsoKnownAs: source.authorsAlsoKnownAs } : {}),
   };
 }
 

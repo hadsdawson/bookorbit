@@ -49,6 +49,7 @@ function makeService(
       ownsFolder: options.ownsFolder ?? true,
     }),
     findChapterSource: vi.fn().mockResolvedValue({ chapters: [{ title: 'One', startMs: 0 }], durationSeconds: 90, abridged: false }),
+    findAuthorOtherNames: vi.fn().mockResolvedValue({}),
     countLibraryBooks: vi.fn().mockResolvedValue({ total: 5, ownFolder: 3 }),
     findContentFilesAt: vi.fn().mockResolvedValue(new Set<string>()),
     listOwnFolderBookIds: vi.fn().mockImplementation((_libraryId: number, afterId: number) => Promise.resolve(afterId === 0 ? [7, 8, 9] : [])),
