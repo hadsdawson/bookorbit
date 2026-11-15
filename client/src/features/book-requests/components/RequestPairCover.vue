@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Headphones } from '@lucide/vue'
 import RequestCover from './RequestCover.vue'
 
 /**
@@ -8,8 +7,9 @@ import RequestCover from './RequestCover.vue'
  * art tucked into its lower corner. One glance says "this is both", and each half still shows the
  * shape it really has, so a square audiobook cover is never cropped into a portrait frame.
  *
- * When no audiobook art is known, or it is the same image as the ebook's, the corner carries a
- * headphones badge instead: the same picture twice says nothing the first one did not.
+ * When no audiobook art is known, or it is the same image as the ebook's, the corner stays empty:
+ * the same picture twice says nothing the first one did not, and the Format column already says
+ * "both". (Fork: the headphones badge that used to sit there is gone.)
  */
 const props = withDefaults(
   defineProps<{
@@ -59,12 +59,5 @@ function handleSourceChange(payload: { key: string | undefined; src: string | nu
       :icon-size="insetIconSize"
       @source-change="handleSourceChange"
     />
-    <span
-      v-else
-      class="absolute -end-1.5 -bottom-1.5 flex aspect-square w-[46%] items-center justify-center rounded-full border border-border bg-muted text-muted-foreground shadow-sm ring-2 ring-card"
-      aria-hidden="true"
-    >
-      <Headphones :size="insetIconSize" />
-    </span>
   </div>
 </template>

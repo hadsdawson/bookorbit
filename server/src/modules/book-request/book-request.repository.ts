@@ -176,6 +176,10 @@ export interface OwnedMatchLookup {
   byTitle: Map<string, OwnedTitleMatch[]>;
 }
 
+/** Fork: an ebook-and-audiobook pair is one book, so counts read per book, not per format. */
+const REQUESTED_BOOK_COUNT =
+  sql<number>`count(distinct least(${bookRequests.id}, coalesce(${bookRequests.companionRequestId}, ${bookRequests.id})))`.mapWith(Number);
+
 @Injectable()
 export class BookRequestRepository {
   constructor(@Inject(DB) private readonly db: Db) {}
@@ -991,7 +995,7 @@ export class BookRequestRepository {
       conditions.push(notInArray(bookRequests.id, dismissed));
     }
     const [row] = await this.db
-      .select({ total: count() })
+      .select({ total: REQUESTED_BOOK_COUNT })
       .from(bookRequests)
       .where(conditions.length ? and(...conditions) : undefined);
     return row?.total ?? 0;
@@ -1014,7 +1018,7 @@ export class BookRequestRepository {
       conditions.push(notInArray(bookRequests.id, dismissed));
     }
     const [row] = await this.db
-      .select({ total: count() })
+      .select({ total: REQUESTED_BOOK_COUNT })
       .from(bookRequests)
       .where(and(...conditions));
     return row?.total ?? 0;
