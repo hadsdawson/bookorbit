@@ -1005,6 +1005,30 @@ describe('AuthorsService', () => {
     expect(result).toEqual(expect.objectContaining({ id: 41, imageUrl: '/api/v1/authors/41/image?t=1234' }));
   });
 
+  it('uploadImageFromUrl downloads the image, then marks hasPhoto=true', async () => {
+    authorsRepo.findVisibleAuthorIds.mockResolvedValue([41]);
+    authorsRepo.findRelatedLibraryIds.mockResolvedValue([1]);
+    authorImageStorage.saveFromUrl.mockResolvedValue(true);
+    authorsRepo.updateAuthorById.mockResolvedValue({ id: 41 });
+    authorsRepo.findById.mockResolvedValue({ id: 41, name: 'Photo Author', sortName: null, description: null, bookCount: 1, lastAddedAt: null });
+    authorImageStorage.getImageUrlIfExists.mockResolvedValue('/api/v1/authors/41/image?t=1');
+
+    const result = await service.uploadImageFromUrl(reqUser(), 41, 'https://example.com/a.jpg');
+
+    expect(authorImageStorage.saveFromUrl).toHaveBeenCalledWith(41, 'https://example.com/a.jpg');
+    expect(authorsRepo.updateAuthorById).toHaveBeenCalledWith(41, { hasPhoto: true });
+    expect(result).toEqual(expect.objectContaining({ id: 41 }));
+  });
+
+  it('uploadImageFromUrl reports a link it could not download', async () => {
+    authorsRepo.findVisibleAuthorIds.mockResolvedValue([41]);
+    authorsRepo.findRelatedLibraryIds.mockResolvedValue([1]);
+    authorImageStorage.saveFromUrl.mockResolvedValue(false);
+
+    await expect(service.uploadImageFromUrl(reqUser(), 41, 'http://192.168.1.5/a.jpg')).rejects.toBeInstanceOf(BadRequestException);
+    expect(authorsRepo.updateAuthorById).not.toHaveBeenCalledWith(41, { hasPhoto: true });
+  });
+
   it('uploadImage rejects non-image mime types', async () => {
     await expect(service.uploadImage(reqUser(), 41, Buffer.from('nope'), 'text/plain')).rejects.toMatchObject({
       name: BadRequestException.name,

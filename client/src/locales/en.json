@@ -6379,7 +6379,9 @@
         "lifeDateHint": "Born and died take a year, or a full date as year-month-day.",
         "lifeDateInvalid": "Enter a year or a real date as year-month-day.",
         "genres": "Genres",
-        "influences": "Influences"
+        "influences": "Influences",
+        "imageUrlPlaceholder": "Or paste an image link (https://...)",
+        "useImageUrl": "Use link"
       },
       "merge": {
         "searchPlaceholder": "Search authors to merge into this author",

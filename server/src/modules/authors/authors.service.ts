@@ -636,6 +636,44 @@ export class AuthorsService {
     }
   }
 
+  /** Fork: set an author's photo from an image link. The storage service refuses private and local addresses. */
+  async uploadImageFromUrl(user: RequestUser, authorId: number, url: string): Promise<AuthorDetail> {
+    const event = 'author.upload_image_url';
+    const startedAt = Date.now();
+    this.logger.log(`[${event}] [start] userId=${user.id} authorId=${authorId} - author image download started`);
+    try {
+      await this.assertMutationAccess(user, [authorId]);
+
+      let saved: boolean;
+      try {
+        saved = await this.authorImageStorage.saveFromUrl(authorId, url);
+      } catch (error) {
+        if (error instanceof AuthorImageStorageError) {
+          if (this.isLikelyInvalidImageError(error)) throw new BadRequestException('That link is not an image');
+          throw new ServiceUnavailableException('Failed to persist author image');
+        }
+        throw error;
+      }
+      if (!saved) {
+        throw new BadRequestException('Could not download an image from that link. Use a public http or https image link.');
+      }
+
+      await this.authorsRepo.updateAuthorById(authorId, { hasPhoto: true });
+      const detail = await this.findOne(user, authorId);
+      this.logger.log(
+        `[${event}] [end] userId=${user.id} authorId=${authorId} durationMs=${Date.now() - startedAt} hasPhoto=true - author image download completed`,
+      );
+      return detail;
+    } catch (error) {
+      const errorClass = error instanceof Error ? error.name : 'Error';
+      const errorMessage = sanitizeLogValue(error instanceof Error ? error.message : String(error));
+      this.logger.warn(
+        `[${event}] [fail] userId=${user.id} authorId=${authorId} durationMs=${Date.now() - startedAt} errorClass=${errorClass} error="${errorMessage}" - author image download failed`,
+      );
+      throw error;
+    }
+  }
+
   async deleteImage(user: RequestUser, authorId: number): Promise<AuthorDetail> {
     const event = 'author.delete_image';
     const startedAt = Date.now();

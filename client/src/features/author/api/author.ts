@@ -219,6 +219,19 @@ export async function uploadAuthorImage(authorId: number, file: File): Promise<A
   return res.json()
 }
 
+export async function uploadAuthorImageFromUrl(authorId: number, url: string): Promise<AuthorDetail> {
+  const res = await api(`/api/v1/authors/${authorId}/image/url`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url }),
+  })
+  if (!res.ok) {
+    const payload = await res.json().catch(() => null)
+    throw new Error(extractErrorMessage(payload, 'Failed to download author image'))
+  }
+  return res.json()
+}
+
 export async function deleteAuthorImage(authorId: number): Promise<AuthorDetail> {
   const res = await api(`/api/v1/authors/${authorId}/image`, {
     method: 'DELETE',

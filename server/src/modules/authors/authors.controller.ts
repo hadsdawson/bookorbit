@@ -30,6 +30,7 @@ import { Auditable } from '../../common/decorators/auditable.decorator';
 import { ForbidPermission } from '../../common/decorators/forbid-permission.decorator';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
 import { AuthorMetadataPreferencesService } from './author-metadata-preferences.service';
+import { AuthorImageUrlDto } from './dto/author-image-url.dto';
 import { UpdateAuthorMetadataPreferencesDto } from './dto/update-author-metadata-preferences.dto';
 import { imageContentTypeFromPath } from '../../common/image-content-type';
 import type { MultipartRequest } from '../../common/types/multipart-request';
@@ -255,6 +256,19 @@ export class AuthorsController {
 
     reply.type(imageContentTypeFromPath(imagePath));
     reply.send(createReadStream(imagePath));
+  }
+
+  @Post(':id/image/url')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission(Permission.LibraryEditMetadata)
+  @Auditable({
+    action: AuditAction.AuthorUpdate,
+    resource: AuditResource.Author,
+    getResourceId: (req) => parseInt(req.params['id'], 10),
+    description: (req) => `Set image from a link for author #${req.params['id']}`,
+  })
+  uploadImageFromUrl(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number, @Body() dto: AuthorImageUrlDto) {
+    return this.authorsService.uploadImageFromUrl(user, id, dto.url);
   }
 
   @Post(':id/image')
