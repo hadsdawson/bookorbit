@@ -4,7 +4,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatNumber } from '@/i18n/formatters'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowUpDown, ChevronDown, ChevronLeft, ImageMinus, Layers, LayoutGrid, List, Upload } from '@lucide/vue'
+import { ArrowUpDown, ChevronDown, ChevronLeft, ImageMinus, Layers, LayoutGrid, Link, List, Upload } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 
 import type { AuthorDetail, AuthorSummary, BookCard } from '@bookorbit/types'
@@ -34,6 +34,7 @@ import {
   refreshAuthorMetadata,
   updateAuthor,
   uploadAuthorImage,
+  uploadAuthorImageFromUrl,
 } from '../api/author'
 import { useAuthorBooks } from '../composables/useAuthorBooks'
 import { useAuthorDetail } from '../composables/useAuthorDetail'
@@ -124,6 +125,7 @@ const merging = ref(false)
 const deleting = ref(false)
 const refreshingMetadata = ref(false)
 const uploadingImage = ref(false)
+const imageUrlDraft = ref('')
 const removingImage = ref(false)
 const authorImageInput = ref<HTMLInputElement | null>(null)
 
@@ -329,6 +331,23 @@ async function saveAuthorEdits() {
 function openAuthorImagePicker() {
   if (!author.value || authorImageBusy.value) return
   authorImageInput.value?.click()
+}
+
+// Fork: set the photo from an image link instead of a file.
+async function useAuthorImageUrl() {
+  const url = imageUrlDraft.value.trim()
+  if (!url || !author.value || authorImageBusy.value) return
+
+  uploadingImage.value = true
+  try {
+    author.value = await uploadAuthorImageFromUrl(author.value.id, url)
+    imageUrlDraft.value = ''
+    toast.success(t('author.detail.toast.imageUpdated'))
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : t('author.detail.toast.imageUploadFailed'))
+  } finally {
+    uploadingImage.value = false
+  }
 }
 
 async function onAuthorImageSelected(event: Event) {
@@ -674,6 +693,25 @@ defineOptions({ name: 'AuthorDetailView' })
                   {{ removingImage ? t('author.detail.edit.removing') : t('author.detail.edit.removeImage') }}
                 </button>
               </div>
+              <form class="flex flex-wrap items-center gap-2" @submit.prevent="useAuthorImageUrl">
+                <input
+                  v-model="imageUrlDraft"
+                  type="url"
+                  inputmode="url"
+                  class="h-8 min-w-0 flex-1 rounded-md border border-input bg-background px-2.5 text-sm"
+                  :placeholder="t('author.detail.edit.imageUrlPlaceholder')"
+                  :aria-label="t('author.detail.edit.imageUrlPlaceholder')"
+                  :disabled="authorImageBusy"
+                />
+                <button
+                  type="submit"
+                  :disabled="authorImageBusy || !imageUrlDraft.trim()"
+                  class="inline-flex h-8 items-center gap-1.5 rounded-md border border-input px-3 text-sm text-foreground transition-colors hover:bg-muted disabled:opacity-60"
+                >
+                  <Link :size="14" />
+                  {{ t('author.detail.edit.useImageUrl') }}
+                </button>
+              </form>
               <p class="text-[11px] text-muted-foreground">
                 {{ t('author.detail.edit.imageHint', { size: Math.floor(MAX_AUTHOR_IMAGE_BYTES / 1024 / 1024) }) }}
               </p>
