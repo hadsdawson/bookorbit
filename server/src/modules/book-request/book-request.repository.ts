@@ -42,6 +42,7 @@ import { isUniqueViolation } from '../../common/utils/db-error.utils';
 import { DB } from '../../db';
 import * as schema from '../../db/schema';
 import {
+  authorAliases,
   authors,
   bookAuthors,
   bookDockFiles,
@@ -1072,11 +1073,13 @@ export class BookRequestRepository {
     if (lowerTitles.length) {
       const titleKey = sql<string>`lower(${bookMetadata.title})`;
       const rows = await this.db
-        .select({ bookId: books.id, titleKey, authorName: authors.name })
+        .select({ bookId: books.id, titleKey, authorName: authors.name, aliasName: authorAliases.name })
         .from(bookMetadata)
         .innerJoin(books, eq(books.id, bookMetadata.bookId))
         .leftJoin(bookAuthors, eq(bookAuthors.bookId, books.id))
         .leftJoin(authors, eq(authors.id, bookAuthors.authorId))
+        // Fork: an author's alternate names count too, so a request under a pen name sees the book.
+        .leftJoin(authorAliases, eq(authorAliases.authorId, authors.id))
         .where(and(inArray(titleKey, lowerTitles), present, hasRequestedMedia, ...scope));
 
       const byBookId = new Map<number, OwnedTitleMatch>();
@@ -1089,7 +1092,8 @@ export class BookRequestRepository {
           bucket.push(match);
           byTitle.set(row.titleKey, bucket);
         }
-        if (row.authorName) match.authorNames.push(row.authorName);
+        if (row.authorName && !match.authorNames.includes(row.authorName)) match.authorNames.push(row.authorName);
+        if (row.aliasName && !match.authorNames.includes(row.aliasName)) match.authorNames.push(row.aliasName);
       }
     }
 

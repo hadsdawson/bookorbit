@@ -24,10 +24,17 @@ export type AuthorLetterCount = {
   count: number;
 };
 
-/** Fork: another name the same person writes under. */
-export type AuthorLink = {
+/** Fork: another name an author is known by. Books credited to it are credited to the author. */
+export type AuthorAlias = {
   id: number;
   name: string;
+};
+
+/** Fork: the result of adding an alternate name, which can fold an existing author in. */
+export type AuthorAliasesResult = {
+  aliases: AuthorAlias[];
+  mergedAuthorCount: number;
+  affectedBookCount: number;
 };
 
 export type AuthorDetail = AuthorSummary & {

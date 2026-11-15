@@ -1434,22 +1434,22 @@ describe('MetadataService', () => {
     expect(db.update).toHaveBeenCalledWith(authors);
     expect(updateSet).toHaveBeenCalledWith({ name: 'Known Author' });
     expect(updateWhere).toHaveBeenCalledTimes(1);
-    // Sort-name refreshes plus the linked-author lookup.
+    // Sort-name refreshes plus the alternate-name lookup.
     expect(db.execute).toHaveBeenCalledTimes(3);
     expect(insertedBookAuthors).toEqual([{ bookId: 6, authorId: 9, displayOrder: 0 }]);
   });
 
-  it('replaceAuthors also credits the linked names of an author', async () => {
+  it('replaceAuthors credits an alternate name to the author it belongs to', async () => {
     const { db } = makeDb();
     const service = makeService(db);
     const insertedBookAuthors: Array<{ bookId: number; authorId: number; displayOrder: number }> = [];
 
     db.select.mockImplementation(() => ({
       from: () => ({
-        where: () => Promise.resolve([{ id: 9, name: 'A.M. Woody', normalizedName: 'a.m. woody' }]),
+        where: () => Promise.resolve([{ id: 12, name: 'Amanda Woody', normalizedName: 'amanda woody' }]),
       }),
     }));
-    db.execute.mockImplementation(() => Promise.resolve({ rows: [{ authorId: 12 }] }));
+    db.execute.mockImplementation(() => Promise.resolve({ rows: [{ nameKey: 'a.m. woody', authorName: 'Amanda Woody' }] }));
     db.insert.mockImplementation((table: unknown) => {
       if (table === bookAuthors) {
         return {
@@ -1462,13 +1462,13 @@ describe('MetadataService', () => {
       return { values: () => ({ onConflictDoNothing: () => ({ returning: () => Promise.resolve([]) }) }) };
     });
 
-    const ids = await service.replaceAuthors(6, [{ name: 'A.M. Woody', sortName: null }]);
-
-    expect(insertedBookAuthors).toEqual([
-      { bookId: 6, authorId: 9, displayOrder: 0 },
-      { bookId: 6, authorId: 12, displayOrder: 1 },
+    const ids = await service.replaceAuthors(6, [
+      { name: 'A. M. Woody', sortName: 'Woody, A. M.' },
+      { name: 'Amanda Woody', sortName: null },
     ]);
-    expect(ids).toEqual([9, 12]);
+
+    expect(insertedBookAuthors).toEqual([{ bookId: 6, authorId: 12, displayOrder: 0 }]);
+    expect(ids).toEqual([12]);
   });
 
   it('replaceAuthors prefers an existing clean author row over a legacy whitespace variant', async () => {

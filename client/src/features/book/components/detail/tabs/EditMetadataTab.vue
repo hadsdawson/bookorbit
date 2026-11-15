@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, toRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   Check,
@@ -48,6 +48,7 @@ import { type FileMetadata, useFileMetadata } from '../../../composables/useFile
 import { useWriteAndRename } from '../../../composables/useWriteAndRename'
 import { useMetadataLocks } from '../../../composables/useMetadataLocks'
 import { useAuthorSearch } from '../../../composables/useAuthorSearch'
+import { useAuthorAliasHints } from '../../../composables/useAuthorAliasHints'
 import { useNarratorSearch } from '../../../composables/useNarratorSearch'
 import { useGenreSearch, useTagSearch } from '../../../composables/useTagSearch'
 import { useGenrePolicy } from '../../../composables/useGenrePolicy'
@@ -185,6 +186,8 @@ const {
   unlockAll,
 } = useMetadataLocks({ deferred: true })
 const { search: searchAuthors } = useAuthorSearch()
+// Fork: "did you mean" for author names that are another author's alternate name.
+const { hints: authorAliasHints, applyHint: applyAuthorAliasHint } = useAuthorAliasHints(toRef(form, 'authors'))
 const { search: searchNarrators } = useNarratorSearch()
 const { search: searchAnyGenre } = useGenreSearch()
 const { restricted: genresRestricted, load: loadGenrePolicy, acceptGenre, searchAllowed: searchAllowedGenres } = useGenrePolicy()
@@ -1185,6 +1188,22 @@ function handleCoverChanged(medium: CoverMedium | null) {
                 @toggle="handleLockToggle"
               >
                 <ChipInput v-model="form.authors" :search-fn="searchAuthors" :disabled="isLocked('authors')" control-class="pr-11" />
+                <p
+                  v-for="hint in authorAliasHints"
+                  :key="hint.alias"
+                  class="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground"
+                  role="status"
+                >
+                  <span>{{ t('book.detail.editMetadata.authorAliasHint', { alias: hint.alias, name: hint.name }) }}</span>
+                  <button
+                    v-if="!isLocked('authors')"
+                    type="button"
+                    class="font-medium text-primary hover:underline"
+                    @click="applyAuthorAliasHint(hint)"
+                  >
+                    {{ t('book.detail.editMetadata.authorAliasUse', { name: hint.name }) }}
+                  </button>
+                </p>
               </MetadataFieldLabel>
 
               <MetadataFieldLabel

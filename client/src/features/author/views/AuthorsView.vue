@@ -3,7 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatNumber } from '@/i18n/formatters'
 import { useRoute, useRouter } from 'vue-router'
-import { CheckCheck, Link2, RefreshCcw, Trash2, X } from '@lucide/vue'
+import { CheckCheck, Combine, RefreshCcw, Trash2, X } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 
 import SelectionActionBar from '@/components/SelectionActionBar.vue'
@@ -22,7 +22,7 @@ import { useScrollRestoreOnActivate } from '@/features/book/composables/useScrol
 import { useLibraries } from '@/features/library/composables/useLibraries'
 import { useLibraryPermissions } from '@/features/library/composables/useLibraryPermissions'
 import JumpRail from '@/features/book/components/JumpRail.vue'
-import { bulkRefreshAuthorsMetadata, deleteAuthors, linkAuthorsTogether, refreshAuthorMetadata } from '../api/author'
+import { bulkRefreshAuthorsMetadata, deleteAuthors, mergeAuthors, refreshAuthorMetadata } from '../api/author'
 import AuthorConfirmDialog from '../components/AuthorConfirmDialog.vue'
 import AuthorIndexRow from '../components/AuthorIndexRow.vue'
 import AuthorTile from '../components/AuthorTile.vue'
@@ -68,8 +68,9 @@ const bulkDeleting = ref(false)
 const deletingAuthorId = ref<number | null>(null)
 const confirmingBulkDelete = ref(false)
 const confirmingBulkRefresh = ref(false)
-const confirmingBulkLink = ref(false)
-const bulkLinking = ref(false)
+const confirmingBulkCombine = ref(false)
+const bulkCombining = ref(false)
+const combineKeepId = ref<number | null>(null)
 const bulkRefreshIgnoreCache = ref(false)
 const bulkRefreshConfirmButton = ref<HTMLButtonElement | null>(null)
 
@@ -78,6 +79,8 @@ const deleteDialogOpen = ref(false)
 
 const canRefreshMetadata = computed(() => hasPermissionInAnyLibrary('library_edit_metadata', 'editor') && !isDemoRestrictedAccount.value)
 const canDeleteAuthors = computed(() => isSuperuser.value)
+const canCombineAuthors = computed(() => isSuperuser.value)
+const selectedAuthors = computed(() => items.value.filter((author) => selectedIds.value.has(author.id)))
 
 /** The page offers exactly the two views the design has; `table` is not one of them. */
 const authorViewMode = computed<BookViewMode>({
@@ -439,31 +442,41 @@ function cancelDeleteAuthors() {
   pendingDeleteIds.value = []
 }
 
-// Fork: link the selected authors as names one person writes under.
-function startBulkLinkConfirm() {
-  if (selectedCount.value < 2 || bulkLinking.value || !canRefreshMetadata.value) return
-  confirmingBulkLink.value = true
+// Fork: combine the selected authors under the name chosen to keep; the other names become its
+// alternate names, so books that come in under them later land on it too.
+function startBulkCombineConfirm() {
+  if (selectedAuthors.value.length < 2 || bulkCombining.value || !canCombineAuthors.value) return
+  const mostBooks = [...selectedAuthors.value].sort((a, b) => b.bookCount - a.bookCount)[0]
+  combineKeepId.value = mostBooks?.id ?? null
+  confirmingBulkCombine.value = true
 }
 
-function cancelBulkLinkConfirm() {
-  confirmingBulkLink.value = false
+function cancelBulkCombineConfirm() {
+  confirmingBulkCombine.value = false
 }
 
-async function confirmBulkLink() {
-  const ids = [...selectedIds.value]
-  confirmingBulkLink.value = false
-  if (ids.length < 2 || bulkLinking.value) return
+function onCombineKeepChange(event: Event) {
+  combineKeepId.value = Number((event.target as HTMLSelectElement).value)
+}
 
-  bulkLinking.value = true
+async function confirmBulkCombine() {
+  const keepId = combineKeepId.value
+  const sourceIds = selectedAuthors.value.map((author) => author.id).filter((id) => id !== keepId)
+  confirmingBulkCombine.value = false
+  if (keepId === null || sourceIds.length === 0 || bulkCombining.value) return
+
+  bulkCombining.value = true
   try {
-    const result = await linkAuthorsTogether(ids)
+    const result = await mergeAuthors({ targetAuthorId: keepId, sourceAuthorIds: sourceIds })
     exitSelectionMode()
     await load(true)
-    toast.success(t('author.list.toast.linkSuccess', { count: result.linkedAuthorIds.length, books: result.booksCredited }))
+    toast.success(
+      t('author.list.toast.combineSuccess', { count: result.mergedAuthorIds.length, books: result.affectedBookCount, name: result.target.name }),
+    )
   } catch (actionError) {
-    toast.error(actionError instanceof Error ? actionError.message : t('author.list.toast.linkFailed'))
+    toast.error(actionError instanceof Error ? actionError.message : t('author.list.toast.combineFailed'))
   } finally {
-    bulkLinking.value = false
+    bulkCombining.value = false
   }
 }
 
@@ -573,7 +586,7 @@ watch(
     if (!mode || count === 0) {
       confirmingBulkDelete.value = false
       confirmingBulkRefresh.value = false
-      confirmingBulkLink.value = false
+      confirmingBulkCombine.value = false
     }
   },
   { flush: 'post' },
@@ -826,26 +839,36 @@ defineOptions({ name: 'AuthorsView' })
 
     <SelectionActionBar :visible="selectionMode" :count="selectedCount" @exit="exitSelectionMode">
       <template #content>
-        <template v-if="confirmingBulkLink">
-          <span class="whitespace-nowrap px-3 text-sm font-semibold text-foreground" data-testid="author-bulk-link-confirm">
-            {{ t('author.list.selection.confirmLinkCount', { count: selectedCount }) }}
-          </span>
+        <template v-if="confirmingBulkCombine">
+          <label
+            class="flex items-center gap-2 whitespace-nowrap px-3 text-sm font-semibold text-foreground"
+            data-testid="author-bulk-combine-confirm"
+          >
+            {{ t('author.list.selection.combineKeep') }}
+            <select
+              :value="combineKeepId ?? undefined"
+              class="h-8 max-w-48 rounded-md border border-input bg-background px-2 text-sm font-normal"
+              @change="onCombineKeepChange"
+            >
+              <option v-for="author in selectedAuthors" :key="author.id" :value="author.id">{{ author.name }}</option>
+            </select>
+          </label>
 
           <div class="mx-1 h-5 w-px shrink-0 bg-border" />
 
           <button
             type="button"
             class="h-8 rounded-full px-3 text-sm font-medium text-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
-            data-testid="author-bulk-link-confirm-action"
-            @click="confirmBulkLink"
+            data-testid="author-bulk-combine-confirm-action"
+            @click="confirmBulkCombine"
           >
-            {{ t('author.list.selection.linkAction') }}
+            {{ t('author.list.selection.combineAction') }}
           </button>
 
           <button
             type="button"
             class="h-8 rounded-full px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            @click="cancelBulkLinkConfirm"
+            @click="cancelBulkCombineConfirm"
           >
             {{ t('common.cancel') }}
           </button>
@@ -923,20 +946,20 @@ defineOptions({ name: 'AuthorsView' })
             </TooltipContent>
           </Tooltip>
 
-          <Tooltip v-if="canRefreshMetadata">
+          <Tooltip v-if="canCombineAuthors">
             <TooltipTrigger as-child>
               <button
-                :disabled="selectedCount < 2 || bulkLinking"
-                :aria-label="t('author.list.selection.linkAuthors')"
+                :disabled="selectedAuthors.length < 2 || bulkCombining"
+                :aria-label="t('author.list.selection.combineAuthors')"
                 class="flex size-9 items-center justify-center rounded-full transition-colors"
-                :class="selectedCount >= 2 ? 'text-foreground hover:bg-muted' : 'cursor-not-allowed text-muted-foreground'"
-                data-testid="author-bulk-link"
-                @click="startBulkLinkConfirm"
+                :class="selectedAuthors.length >= 2 ? 'text-foreground hover:bg-muted' : 'cursor-not-allowed text-muted-foreground'"
+                data-testid="author-bulk-combine"
+                @click="startBulkCombineConfirm"
               >
-                <Link2 :size="17" />
+                <Combine :size="17" />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="top">{{ t('author.list.selection.linkAuthors') }}</TooltipContent>
+            <TooltipContent side="top">{{ t('author.list.selection.combineAuthors') }}</TooltipContent>
           </Tooltip>
 
           <Tooltip v-if="canDeleteAuthors">

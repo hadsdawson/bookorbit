@@ -25,8 +25,8 @@ import { GoodreadsAuthorMetadataProvider } from './metadata/providers/goodreads/
 import { AuthorMetadataProvider } from './metadata/providers/author-metadata-provider';
 import { AuthorEnrichmentSessionService } from './author-enrichment-session.service';
 import { AuthorsRepository } from './authors.repository';
-import { AuthorLinksRepository } from './author-links.repository';
-import { AuthorLinksService } from './author-links.service';
+import { AuthorAliasesRepository } from './author-aliases.repository';
+import { AuthorAliasesService } from './author-aliases.service';
 import { AuthorsService } from './authors.service';
 import { AuthorMetadataPreferencesService } from './author-metadata-preferences.service';
 import { AuthorMetadataPreferenceResolver } from './metadata/author-metadata-preference-resolver';
@@ -68,8 +68,8 @@ const AUTHOR_PROVIDER_CLASSES = [AudnexusAuthorMetadataProvider, GoodreadsAuthor
     AuthorEnrichmentRepository,
     AuthorsService,
     AuthorsRepository,
-    AuthorLinksRepository,
-    AuthorLinksService,
+    AuthorAliasesRepository,
+    AuthorAliasesService,
     AuthorPhotoFlagBackfillService,
   ],
   exports: [AuthorsService, AuthorsRepository, AuthorImageStorageService, AuthorEnrichmentOrchestratorService, AuthorMetadataPreferencesService],

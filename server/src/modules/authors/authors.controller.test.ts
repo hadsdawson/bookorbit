@@ -118,10 +118,10 @@ function makeController() {
   const queueRepo = {
     countEligibleLinkedAuthors: vi.fn(),
   };
-  const authorLinksService = {
+  const authorAliasesService = {
     list: vi.fn(),
-    link: vi.fn(),
-    unlink: vi.fn(),
+    add: vi.fn(),
+    remove: vi.fn(),
   };
 
   const controller = new AuthorsController(
@@ -130,10 +130,10 @@ function makeController() {
     enrichmentConfig as never,
     queueRepo as never,
     {} as never,
-    authorLinksService as never,
+    authorAliasesService as never,
   );
 
-  return { controller, authorsService, enrichmentOrchestrator, enrichmentConfig, queueRepo, authorLinksService };
+  return { controller, authorsService, enrichmentOrchestrator, enrichmentConfig, queueRepo, authorAliasesService };
 }
 
 describe('AuthorsController', () => {
@@ -157,20 +157,20 @@ describe('AuthorsController', () => {
     expect(authorsService.findBooks).toHaveBeenCalledWith(user, 2, { page: 0 });
   });
 
-  it('delegates linked-author endpoints to AuthorLinksService', async () => {
-    const { controller, authorLinksService } = makeController();
+  it('delegates alternate-name endpoints to AuthorAliasesService', async () => {
+    const { controller, authorAliasesService } = makeController();
     const user = makeUser();
-    authorLinksService.list.mockResolvedValue([{ id: 12, name: 'Amanda Woody' }]);
-    authorLinksService.link.mockResolvedValue([{ id: 12, name: 'Amanda Woody' }]);
-    authorLinksService.unlink.mockResolvedValue([]);
+    authorAliasesService.list.mockResolvedValue([{ id: 3, name: 'A.M. Woody' }]);
+    authorAliasesService.add.mockResolvedValue({ aliases: [{ id: 3, name: 'A.M. Woody' }], mergedAuthorCount: 1, affectedBookCount: 4 });
+    authorAliasesService.remove.mockResolvedValue([]);
 
-    await expect(controller.findLinks(user, 9)).resolves.toEqual([{ id: 12, name: 'Amanda Woody' }]);
-    await expect(controller.link(user, 9, { authorId: 12 })).resolves.toEqual([{ id: 12, name: 'Amanda Woody' }]);
-    await expect(controller.unlink(user, 9, 12)).resolves.toEqual([]);
+    await expect(controller.findAliases(user, 12)).resolves.toEqual([{ id: 3, name: 'A.M. Woody' }]);
+    await expect(controller.addAlias(user, 12, { name: 'A.M. Woody' })).resolves.toEqual(expect.objectContaining({ mergedAuthorCount: 1 }));
+    await expect(controller.removeAlias(user, 12, 3)).resolves.toEqual([]);
 
-    expect(authorLinksService.list).toHaveBeenCalledWith(user, 9);
-    expect(authorLinksService.link).toHaveBeenCalledWith(user, 9, 12);
-    expect(authorLinksService.unlink).toHaveBeenCalledWith(user, 9, 12);
+    expect(authorAliasesService.list).toHaveBeenCalledWith(user, 12);
+    expect(authorAliasesService.add).toHaveBeenCalledWith(user, 12, 'A.M. Woody');
+    expect(authorAliasesService.remove).toHaveBeenCalledWith(user, 12, 3);
   });
 
   it('returns metadata provider lists/searches and maps metadata stream events', async () => {

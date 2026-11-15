@@ -11,6 +11,7 @@ import { normalizeMetadataText } from '../../common/utils/metadata-text-normaliz
 import { DB } from '../../db';
 import * as schema from '../../db/schema';
 import {
+  authorAliases,
   authors,
   bookAuthors,
   bookGenres,
@@ -58,8 +59,45 @@ const LANGUAGE_LIST_LIMIT = 200;
 export class CatalogRepository {
   constructor(@Inject(DB) private readonly db: Db) {}
 
-  searchAuthors(q: string, scope: CatalogSearchScope): Promise<SearchResult[]> {
-    return this.searchByName(q, authors, AUTHOR_JUNCTION, scope);
+  /**
+   * Authors by name, then authors whose alternate name matches (Fork), so typing a pen name offers
+   * the author it belongs to. Those hits carry the alternate name they matched.
+   */
+  async searchAuthors(q: string, scope: CatalogSearchScope): Promise<(SearchResult & { alias?: string })[]> {
+    const pattern = this.toContainsPattern(q);
+    if (!pattern) return [];
+    const [byName, byAlias] = await Promise.all([
+      this.searchByName(q, authors, AUTHOR_JUNCTION, scope),
+      this.db
+        .selectDistinct({ name: authors.name, alias: authorAliases.name })
+        .from(authorAliases)
+        .innerJoin(authors, eq(authors.id, authorAliases.authorId))
+        .innerJoin(bookAuthors, eq(bookAuthors.authorId, authors.id))
+        .innerJoin(books, eq(books.id, bookAuthors.bookId))
+        .where(and(accentInsensitiveIlike(authorAliases.name, pattern), ...this.visibilityClauses(scope)))
+        .orderBy(authorAliases.name)
+        .limit(DEFAULT_SEARCH_LIMIT),
+    ]);
+    const seen = new Set(byName.map((row) => row.name));
+    const aliasHits: (SearchResult & { alias: string })[] = [];
+    for (const row of byAlias) {
+      if (seen.has(row.name)) continue;
+      seen.add(row.name);
+      aliasHits.push(row);
+    }
+    return [...aliasHits, ...byName].slice(0, DEFAULT_SEARCH_LIMIT);
+  }
+
+  /** Fork: the authors these names are alternate names of, among authors on visible books. */
+  async resolveAuthorAliases(nameKeys: string[], scope: CatalogSearchScope): Promise<{ nameKey: string; name: string; alias: string }[]> {
+    if (nameKeys.length === 0) return [];
+    return this.db
+      .selectDistinct({ nameKey: authorAliases.nameKey, name: authors.name, alias: authorAliases.name })
+      .from(authorAliases)
+      .innerJoin(authors, eq(authors.id, authorAliases.authorId))
+      .innerJoin(bookAuthors, eq(bookAuthors.authorId, authors.id))
+      .innerJoin(books, eq(books.id, bookAuthors.bookId))
+      .where(and(inArray(authorAliases.nameKey, nameKeys), ...this.visibilityClauses(scope)));
   }
 
   searchGenres(q: string, scope: CatalogSearchScope): Promise<SearchResultWithId[]> {

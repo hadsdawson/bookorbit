@@ -1,7 +1,8 @@
 import { api } from '@/lib/api'
 import type {
   AuthorsPage,
-  AuthorLink,
+  AuthorAlias,
+  AuthorAliasesResult,
   AuthorBooksPage,
   AuthorDetail,
   AuthorMetadataCandidate,
@@ -419,43 +420,30 @@ export async function refreshAuthorMetadata(authorId: number): Promise<AuthorMet
   return res.json()
 }
 
-export async function fetchAuthorLinks(authorId: number): Promise<AuthorLink[]> {
-  const res = await api(`/api/v1/authors/${authorId}/links`)
-  if (!res.ok) throw new Error('Failed to load linked authors')
+export async function fetchAuthorAliases(authorId: number): Promise<AuthorAlias[]> {
+  const res = await api(`/api/v1/authors/${authorId}/aliases`)
+  if (!res.ok) throw new Error('Failed to load alternate names')
   return res.json()
 }
 
-export async function linkAuthor(authorId: number, otherAuthorId: number): Promise<AuthorLink[]> {
-  const res = await api(`/api/v1/authors/${authorId}/links`, {
+export async function addAuthorAlias(authorId: number, name: string): Promise<AuthorAliasesResult> {
+  const res = await api(`/api/v1/authors/${authorId}/aliases`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ authorId: otherAuthorId }),
+    body: JSON.stringify({ name }),
   })
   if (!res.ok) {
     const payload = await res.json().catch(() => null)
-    throw new Error(extractErrorMessage(payload, 'Failed to link authors'))
+    throw new Error(extractErrorMessage(payload, 'Failed to add alternate name'))
   }
   return res.json()
 }
 
-export async function unlinkAuthor(authorId: number, linkedAuthorId: number): Promise<AuthorLink[]> {
-  const res = await api(`/api/v1/authors/${authorId}/links/${linkedAuthorId}`, { method: 'DELETE' })
+export async function removeAuthorAlias(authorId: number, aliasId: number): Promise<AuthorAlias[]> {
+  const res = await api(`/api/v1/authors/${authorId}/aliases/${aliasId}`, { method: 'DELETE' })
   if (!res.ok) {
     const payload = await res.json().catch(() => null)
-    throw new Error(extractErrorMessage(payload, 'Failed to unlink authors'))
-  }
-  return res.json()
-}
-
-export async function linkAuthorsTogether(authorIds: number[]): Promise<{ linkedAuthorIds: number[]; booksCredited: number }> {
-  const res = await api('/api/v1/authors/links', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ authorIds }),
-  })
-  if (!res.ok) {
-    const payload = await res.json().catch(() => null)
-    throw new Error(extractErrorMessage(payload, 'Failed to link authors'))
+    throw new Error(extractErrorMessage(payload, 'Failed to remove alternate name'))
   }
   return res.json()
 }

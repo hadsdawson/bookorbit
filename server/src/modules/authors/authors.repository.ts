@@ -8,7 +8,8 @@ import { accentInsensitiveIlike, buildSearchPattern } from '../../common/utils/a
 import { DB } from '../../db';
 import { refreshPrimaryAuthorSortNamesForAuthors, refreshPrimaryAuthorSortNamesForBooks } from '../../db/book-author-sort-key';
 import * as schema from '../../db/schema';
-import { authors, bookAuthors, bookMetadata, books } from '../../db/schema';
+import { authorAliases, authors, bookAuthors, bookMetadata, books } from '../../db/schema';
+import { normalizePersonName, normalizePersonNameKey } from '../../common/utils/person-name.utils';
 import { AuthorBookSort } from './dto/list-author-books.dto';
 import { AuthorListSort, SortDirection } from './dto/list-authors.dto';
 
@@ -434,6 +435,23 @@ export class AuthorsRepository {
       }
 
       await tx.delete(bookAuthors).where(inArray(bookAuthors.authorId, sourceAuthorIds));
+
+      // Fork: the merged names and their own alternate names become the target's alternate names,
+      // so a book that comes in later under any of them goes to the target.
+      await tx.update(authorAliases).set({ authorId: targetAuthorId }).where(inArray(authorAliases.authorId, sourceAuthorIds));
+      const sources = await tx.select({ name: authors.name }).from(authors).where(inArray(authors.id, sourceAuthorIds));
+      const aliasRows = sources.flatMap((source) => {
+        const name = normalizePersonName(source.name);
+        const nameKey = normalizePersonNameKey(name);
+        return name && nameKey ? [{ authorId: targetAuthorId, name, nameKey }] : [];
+      });
+      if (aliasRows.length > 0) {
+        await tx
+          .insert(authorAliases)
+          .values(aliasRows)
+          .onConflictDoUpdate({ target: authorAliases.nameKey, set: { authorId: targetAuthorId } });
+      }
+
       await tx.delete(authors).where(inArray(authors.id, sourceAuthorIds));
       await refreshPrimaryAuthorSortNamesForBooks(
         tx,

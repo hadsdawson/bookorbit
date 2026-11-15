@@ -1,7 +1,8 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query } from '@nestjs/common';
 
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { RequestUser } from '../../common/types/request-user';
+import { ResolveAuthorAliasesDto } from './dto/resolve-author-aliases.dto';
 import { SearchCatalogQueryDto } from './dto/search-catalog-query.dto';
 import { CatalogService } from './catalog.service';
 
@@ -12,6 +13,13 @@ export class CatalogController {
   @Get('authors')
   searchAuthors(@CurrentUser() user: RequestUser, @Query() query: SearchCatalogQueryDto) {
     return this.catalogService.searchAuthors(user, query.q);
+  }
+
+  /** Fork: which typed author names are alternate names of an author, for "did you mean". */
+  @Post('authors/resolve-aliases')
+  @HttpCode(HttpStatus.OK)
+  resolveAuthorAliases(@CurrentUser() user: RequestUser, @Body() dto: ResolveAuthorAliasesDto) {
+    return this.catalogService.resolveAuthorAliases(user, dto.names);
   }
 
   @Get('genres')
