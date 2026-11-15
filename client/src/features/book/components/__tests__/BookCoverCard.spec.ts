@@ -201,6 +201,14 @@ describe('BookCoverCard — cover aspect override', () => {
     expect(style.includes('aspect-ratio: 1 / 1') || style.includes('aspect-ratio: 1/1')).toBe(true)
   })
 
+  it('shows the square placeholder for a portrait-only book in a square-cover library', () => {
+    const wrapper = mountCard({ ...presentBookWithCover, coverAspectRatio: '2/3' }, '1/1')
+    const style = wrapper.find('[style*="aspect-ratio"]').attributes('style') ?? ''
+
+    expect(style.includes('aspect-ratio: 1 / 1') || style.includes('aspect-ratio: 1/1')).toBe(true)
+    expect(wrapper.findComponent({ name: 'BookCoverArtwork' }).props('hasCover')).toBe(false)
+  })
+
   it('uses explicit coverAspectRatio prop over injected ratio', () => {
     const wrapper = mountCard(presentBookWithCover, '2/3', '1/1')
     const coverDiv = wrapper.find('[style*="aspect-ratio"]')
