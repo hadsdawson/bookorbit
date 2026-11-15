@@ -12,6 +12,7 @@ import { DB } from '../../db';
 import * as schema from '../../db/schema';
 import {
   authorAliases,
+  authorPenNames,
   authors,
   bookAuthors,
   bookGenres,
@@ -61,12 +62,13 @@ export class CatalogRepository {
 
   /**
    * Authors by name, then authors whose alternate name matches (Fork), so typing a pen name offers
-   * the author it belongs to. Those hits carry the alternate name they matched.
+   * the author it belongs to. Those hits carry the alternate name they matched. Pen names and main
+   * names with no books of their own are offered too, when the name they are tied to has books (Fork).
    */
   async searchAuthors(q: string, scope: CatalogSearchScope): Promise<(SearchResult & { alias?: string })[]> {
     const pattern = this.toContainsPattern(q);
     if (!pattern) return [];
-    const [byName, byAlias] = await Promise.all([
+    const [byName, byAlias, byLink] = await Promise.all([
       this.searchByName(q, authors, AUTHOR_JUNCTION, scope),
       this.db
         .selectDistinct({ name: authors.name, alias: authorAliases.name })
@@ -77,6 +79,15 @@ export class CatalogRepository {
         .where(and(accentInsensitiveIlike(authorAliases.name, pattern), ...this.visibilityClauses(scope)))
         .orderBy(authorAliases.name)
         .limit(DEFAULT_SEARCH_LIMIT),
+      this.db
+        .selectDistinct({ name: authors.name })
+        .from(authorPenNames)
+        .innerJoin(authors, or(eq(authors.id, authorPenNames.penNameAuthorId), eq(authors.id, authorPenNames.authorId)))
+        .innerJoin(bookAuthors, or(eq(bookAuthors.authorId, authorPenNames.penNameAuthorId), eq(bookAuthors.authorId, authorPenNames.authorId)))
+        .innerJoin(books, eq(books.id, bookAuthors.bookId))
+        .where(and(accentInsensitiveIlike(authors.name, pattern), ...this.visibilityClauses(scope)))
+        .orderBy(authors.name)
+        .limit(DEFAULT_SEARCH_LIMIT),
     ]);
     const seen = new Set(byName.map((row) => row.name));
     const aliasHits: (SearchResult & { alias: string })[] = [];
@@ -85,7 +96,13 @@ export class CatalogRepository {
       seen.add(row.name);
       aliasHits.push(row);
     }
-    return [...aliasHits, ...byName].slice(0, DEFAULT_SEARCH_LIMIT);
+    const linkHits: SearchResult[] = [];
+    for (const row of byLink) {
+      if (seen.has(row.name)) continue;
+      seen.add(row.name);
+      linkHits.push(row);
+    }
+    return [...aliasHits, ...linkHits, ...byName].slice(0, DEFAULT_SEARCH_LIMIT);
   }
 
   /** Fork: the authors these names are alternate names of, among authors on visible books. */
