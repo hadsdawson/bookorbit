@@ -85,7 +85,11 @@ function isFieldFilled(field: MetadataScoreField): boolean {
       return !!b.providerIds.aladin?.trim()
     case 'audiobookChapters': {
       const chapters = b.audioMetadata?.chapters ?? []
-      return hasRealAudiobookChapters(chapters.length, chapters.filter((chapter) => isNumberedChapterTitle(chapter.title)).length)
+      return hasRealAudiobookChapters(
+        chapters.length,
+        chapters.filter((chapter) => isNumberedChapterTitle(chapter.title)).length,
+        b.audioMetadata?.chaptersSource,
+      )
     }
     default:
       return false

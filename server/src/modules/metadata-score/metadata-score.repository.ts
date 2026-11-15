@@ -34,6 +34,7 @@ export const METADATA_SCORE_BASE_SELECT = {
   // Fork: audiobook chapters, scored only for a book with an M4B file.
   chapterCount: sql<number>`coalesce(${bookMetadata.chapterCount}, 0)`.mapWith(Number),
   numberedChapterCount: sql<number>`coalesce(${bookMetadata.numberedChapterCount}, 0)`.mapWith(Number),
+  chaptersSource: bookMetadata.chaptersSource,
   // Spelled out with its table: in a one-table select Drizzle prints the column bare, and inside this subquery a bare
   // book_id is the file's own, which made every book count as having an M4B once any book did.
   hasM4b: sql<boolean>`exists (select 1 from book_files f where f.book_id = book_metadata.book_id and lower(f.format) = 'm4b')`.mapWith(Boolean),

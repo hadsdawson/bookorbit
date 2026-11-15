@@ -29,6 +29,8 @@ export type ScoreData = {
   /** Fork. The stored audiobook chapter list's length, and how many of its titles are bare track numbers. */
   chapterCount: number;
   numberedChapterCount: number;
+  /** Fork. Where the chapter list came from; a checked list counts even when its titles are bare numbers. */
+  chaptersSource: string | null;
   /** Fork. Whether the book has an M4B file; audiobook chapters are only scored when it does. */
   hasM4b: boolean;
 };
@@ -68,7 +70,7 @@ const SCORE_RULES: Record<MetadataScoreField, ScoreRule> = {
   aladinId: { kind: 'string', value: (data) => data.aladinId },
   audiobookChapters: {
     kind: 'flag',
-    value: (data) => hasRealAudiobookChapters(data.chapterCount, data.numberedChapterCount),
+    value: (data) => hasRealAudiobookChapters(data.chapterCount, data.numberedChapterCount, data.chaptersSource),
     applies: (data) => data.hasM4b,
   },
 };
