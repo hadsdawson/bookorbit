@@ -32,6 +32,7 @@ import { RequirePermission } from '../../common/decorators/require-permission.de
 import { AuthorMetadataPreferencesService } from './author-metadata-preferences.service';
 import { AuthorImageUrlDto } from './dto/author-image-url.dto';
 import { LinkAuthorDto } from './dto/link-author.dto';
+import { LinkAuthorsDto } from './dto/link-authors.dto';
 import { AuthorLinksService } from './author-links.service';
 import { UpdateAuthorMetadataPreferencesDto } from './dto/update-author-metadata-preferences.dto';
 import { imageContentTypeFromPath } from '../../common/image-content-type';
@@ -348,6 +349,18 @@ export class AuthorsController {
   })
   unpinMetadataMatch(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
     return this.authorsService.unpinMetadataMatch(user, id);
+  }
+
+  @Post('links')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission(Permission.LibraryEditMetadata)
+  @Auditable({
+    action: AuditAction.AuthorUpdate,
+    resource: AuditResource.Author,
+    description: (req) => `Linked ${(req.body as { authorIds?: number[] })?.authorIds?.length ?? 0} authors as one person`,
+  })
+  linkMany(@CurrentUser() user: RequestUser, @Body() dto: LinkAuthorsDto) {
+    return this.authorLinksService.linkMany(user, dto.authorIds);
   }
 
   @Get(':id/links')

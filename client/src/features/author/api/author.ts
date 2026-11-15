@@ -446,3 +446,16 @@ export async function unlinkAuthor(authorId: number, linkedAuthorId: number): Pr
   }
   return res.json()
 }
+
+export async function linkAuthorsTogether(authorIds: number[]): Promise<{ linkedAuthorIds: number[]; booksCredited: number }> {
+  const res = await api('/api/v1/authors/links', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ authorIds }),
+  })
+  if (!res.ok) {
+    const payload = await res.json().catch(() => null)
+    throw new Error(extractErrorMessage(payload, 'Failed to link authors'))
+  }
+  return res.json()
+}

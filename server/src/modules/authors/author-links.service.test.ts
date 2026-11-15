@@ -66,4 +66,16 @@ describe('AuthorLinksService', () => {
     ctx.linksRepo.unlink.mockResolvedValue(false);
     await expect(ctx.service.unlink(user, 9, 12)).rejects.toBeInstanceOf(NotFoundException);
   });
+
+  it('links a selection of authors into one group', async () => {
+    ctx.linksRepo.link.mockResolvedValueOnce([9, 12]).mockResolvedValueOnce([9, 12, 13]);
+    await expect(ctx.service.linkMany(user, [9, 12, 13, 12])).resolves.toEqual({ linkedAuthorIds: [9, 12, 13], booksCredited: 2 });
+    expect(ctx.linksRepo.link).toHaveBeenNthCalledWith(1, 9, 12);
+    expect(ctx.linksRepo.link).toHaveBeenNthCalledWith(2, 9, 13);
+    expect(ctx.linksRepo.creditGroupOnBooks).toHaveBeenCalledWith([9, 12, 13]);
+  });
+
+  it('needs two different authors to link a selection', async () => {
+    await expect(ctx.service.linkMany(user, [9, 9])).rejects.toBeInstanceOf(BadRequestException);
+  });
 });

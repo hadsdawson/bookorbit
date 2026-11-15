@@ -6338,7 +6338,10 @@
         "deleteSelected": "Delete selected",
         "deleting": "Deleting...",
         "exitSelection": "Exit selection",
-        "confirmDeleteCount": "{count, plural, =0 {Delete # author?} one {Delete # author?} other {Delete # authors?}}"
+        "confirmDeleteCount": "{count, plural, =0 {Delete # author?} one {Delete # author?} other {Delete # authors?}}",
+        "linkAuthors": "Link as one person (select 2 or more)",
+        "confirmLinkCount": "Link {count} authors as one person?",
+        "linkAction": "Link"
       },
       "toast": {
         "refreshed": "Author metadata refreshed",
@@ -6348,7 +6351,9 @@
         "bulkRefreshSuccess": "Refreshed metadata for {updated} author(s)",
         "bulkRefreshFailed": "Failed to refresh selected authors",
         "deleteSuccess": "{count, plural, =0 {Deleted # author; affected {books} books} one {Deleted # author; affected {books} books} other {Deleted # authors; affected {books} books}}",
-        "deleteFailed": "Failed to delete author(s)"
+        "deleteFailed": "Failed to delete author(s)",
+        "linkSuccess": "{count, plural, one {Linked # author} other {Linked # authors}} as one person, {books, plural, =0 {no new book credits} one {credited on # more book} other {credited on # more books}}",
+        "linkFailed": "Could not link authors"
       }
     },
     "detail": {

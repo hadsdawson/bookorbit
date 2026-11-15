@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import RequestCover from './RequestCover.vue'
 
 /**
@@ -29,10 +29,23 @@ const emit = defineEmits<{
   sourceChange: [payload: { key: string | undefined; src: string | null }]
 }>()
 
-const distinctAudioArt = computed(() => props.audioSrc !== null && props.audioSrc !== props.ebookSrc)
+// Fork: an inset whose art never loads would fall back to a headphones placeholder, so it is hidden instead.
+const audioArtFailed = ref(false)
+watch(
+  () => [props.audioSrc, ...props.audioFallbacks].join('\u0000'),
+  () => {
+    audioArtFailed.value = false
+  },
+)
+const distinctAudioArt = computed(() => props.audioSrc !== null && props.audioSrc !== props.ebookSrc && !audioArtFailed.value)
 const insetIconSize = computed(() => Math.max(9, Math.round(props.iconSize * 0.6)))
 
 function handleSourceChange(payload: { key: string | undefined; src: string | null }) {
+  emit('sourceChange', payload)
+}
+
+function handleAudioSourceChange(payload: { key: string | undefined; src: string | null }) {
+  if (payload.src === null && props.audioSrc !== null) audioArtFailed.value = true
   emit('sourceChange', payload)
 }
 </script>
@@ -57,7 +70,7 @@ function handleSourceChange(payload: { key: string | undefined; src: string | nu
       media-kind="audiobook"
       class="absolute -end-1.5 -bottom-1.5 aspect-square w-[58%] shadow-sm ring-2 ring-card"
       :icon-size="insetIconSize"
-      @source-change="handleSourceChange"
+      @source-change="handleAudioSourceChange"
     />
   </div>
 </template>
