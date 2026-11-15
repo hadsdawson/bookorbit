@@ -1,11 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { normalizePersonNameKeySql } from '../../common/utils/person-name.utils';
 import { DB } from '../../db';
 import * as schema from '../../db/schema';
-import { authorAliases, authorPenNames, authors } from '../../db/schema';
+import { authorAliases, authorPenNames, authors, bookAuthors } from '../../db/schema';
 
 type Db = NodePgDatabase<typeof schema>;
 
@@ -32,12 +32,18 @@ export class AuthorAliasesRepository {
     return row ?? null;
   }
 
-  /** Authors whose own name has this person-name key, so adding it as an alias can fold them in. */
-  async findAuthorIdsByNameKey(nameKey: string): Promise<{ id: number; name: string }[]> {
+  /**
+   * Authors whose own name has this person-name key, so adding it as an alias can fold them in.
+   * Several can share a key ("J.H. Markert" and an older, empty "J. H. Markert"), so the one with
+   * the most books comes first, then the exact spelling asked for, then the newest.
+   */
+  async findAuthorIdsByNameKey(nameKey: string, preferredName?: string): Promise<{ id: number; name: string }[]> {
+    const bookCount = sql<number>`(SELECT count(*) FROM ${bookAuthors} ba WHERE ba.author_id = ${authors.id})`;
     return this.db
       .select({ id: authors.id, name: authors.name })
       .from(authors)
-      .where(eq(normalizePersonNameKeySql(authors.name), nameKey));
+      .where(eq(normalizePersonNameKeySql(authors.name), nameKey))
+      .orderBy(desc(bookCount), desc(sql`${authors.name} = ${preferredName ?? ''}`), desc(authors.id));
   }
 
   async add(authorId: number, name: string, nameKey: string): Promise<void> {

@@ -48,7 +48,7 @@ export class AuthorAliasesService {
     const startedAt = Date.now();
     this.logger.log(`[${event}] [start] authorId=${authorId} userId=${user.id} kind=${kind} - adding another name`);
     try {
-      const owners = await this.aliasesRepo.findAuthorIdsByNameKey(nameKey);
+      const owners = await this.aliasesRepo.findAuthorIdsByNameKey(nameKey, name);
       if (owners.some((owner) => owner.id === authorId)) throw new BadRequestException("That is already this author's name");
       const spelling = await this.aliasesRepo.findByKey(nameKey);
       if (spelling && (kind !== 'spelling' || spelling.authorId !== authorId)) {
