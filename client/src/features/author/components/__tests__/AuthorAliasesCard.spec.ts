@@ -6,6 +6,7 @@ import AuthorAliasesCard from '../AuthorAliasesCard.vue'
 
 const mocks = vi.hoisted(() => ({
   addAuthorName: vi.fn<(authorId: number, name: string, kind: AuthorNameKind) => Promise<AddAuthorNameResult>>(),
+  fetchAuthorNames: vi.fn<(authorId: number) => Promise<AuthorNames>>(),
   removeAuthorSpelling: vi.fn<(authorId: number, aliasId: number) => Promise<AuthorNames>>(),
   unlinkAuthorPenName: vi.fn<(authorId: number, otherId: number) => Promise<AuthorNames>>(),
 }))
@@ -85,5 +86,34 @@ describe('AuthorAliasesCard', () => {
     await flushPromises()
     expect(mocks.unlinkAuthorPenName).toHaveBeenCalledWith(12, 40)
     expect(wrapper.emitted('changed')).toHaveLength(1)
+  })
+
+  it('says who else shares a pen name', () => {
+    const wrapper = mount(AuthorAliasesCard, {
+      props: {
+        authorId: 12,
+        authorName: 'Christina Hobbs',
+        names: { ...names, penNames: [{ id: 40, name: 'Christina Lauren', bookCount: 6, sharedWith: [{ id: 51, name: 'Lauren Billings' }] }] },
+        canEdit: false,
+      },
+    })
+    expect(wrapper.get('[data-testid="pen-name-shared-40"]').text()).toContain('shared with Lauren Billings')
+  })
+
+  it('adds a co-author to a pen name and stays on this page', async () => {
+    const shared = { ...names, penNames: [{ id: 40, name: 'A. Deborah Baker', bookCount: 2, sharedWith: [{ id: 51, name: 'Someone Else' }] }] }
+    mocks.addAuthorName.mockResolvedValue({ names, mergedAuthorCount: 0, affectedBookCount: 0, openAuthorId: 51 })
+    mocks.fetchAuthorNames.mockResolvedValue(shared)
+    const wrapper = mountCard()
+    await wrapper.get('[aria-label="Add a co-author of A. Deborah Baker"]').trigger('click')
+    const form = wrapper.get('[data-testid="co-author-form"]')
+    await form.get('[data-test="name-input"]').setValue('Someone Else')
+    await form.trigger('submit')
+    await flushPromises()
+    expect(mocks.addAuthorName).toHaveBeenCalledWith(40, 'Someone Else', 'mainName')
+    expect(mocks.fetchAuthorNames).toHaveBeenCalledWith(12)
+    expect(wrapper.emitted('update:names')?.at(-1)).toEqual([shared])
+    expect(wrapper.emitted('open')).toBeUndefined()
+    expect(wrapper.find('[data-testid="co-author-form"]').exists()).toBe(false)
   })
 })
