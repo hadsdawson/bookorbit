@@ -6,7 +6,7 @@ import {
   type NewReleaseFormat,
   type NewReleaseRetentionDays,
 } from '@bookorbit/types';
-import { IsIn, IsOptional, ValidateIf } from 'class-validator';
+import { IsIn, IsOptional, Matches, ValidateIf } from 'class-validator';
 
 export class UpdateNewReleasesSettingsDto {
   /** How long a book stays listed after it comes out. */
@@ -26,4 +26,16 @@ export class UpdateNewReleasesServerSettingsDto {
 
   @IsIn(NEW_RELEASE_DELIVERIES)
   defaultDelivery!: NewReleaseDelivery;
+
+  /** Fork: a two-letter language code, or "any". Optional so older clients still save. */
+  @IsOptional()
+  @Matches(/^([a-z]{2}|any)$/)
+  language!: string;
+}
+
+/** Fork: `hidden=true` lists hidden books too, within the same listing window. */
+export class NewReleasesOverviewQueryDto {
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  hidden?: string;
 }

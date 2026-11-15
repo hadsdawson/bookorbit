@@ -73,6 +73,8 @@ export function useNewReleases() {
   const overview = ref<NewReleasesOverview | null>(null)
   const loading = ref(false)
   const failed = ref(false)
+  /** Fork: list hidden books too, still within the listing window. */
+  const showHidden = ref(false)
 
   const groups = computed(() => groupByMonth(overview.value?.items ?? []))
   const followTotal = computed(() => (overview.value ? overview.value.followCounts.author + overview.value.followCounts.series : 0))
@@ -84,7 +86,7 @@ export function useNewReleases() {
   async function load(): Promise<void> {
     loading.value = true
     try {
-      overview.value = await getNewReleases()
+      overview.value = await getNewReleases({ includeHidden: showHidden.value })
       failed.value = false
     } catch {
       failed.value = true
@@ -95,7 +97,13 @@ export function useNewReleases() {
 
   async function hide(item: NewReleaseItem): Promise<void> {
     await setNewReleaseHidden(item.id, true)
-    if (overview.value) overview.value = { ...overview.value, items: overview.value.items.filter((entry) => entry.id !== item.id) }
+    if (!overview.value) return
+    overview.value = {
+      ...overview.value,
+      items: showHidden.value
+        ? overview.value.items.map((entry) => (entry.id === item.id ? { ...entry, state: 'dismissed' as const } : entry))
+        : overview.value.items.filter((entry) => entry.id !== item.id),
+    }
   }
 
   async function unhide(item: NewReleaseItem): Promise<void> {
@@ -126,7 +134,7 @@ export function useNewReleases() {
     return requested
   }
 
-  return { overview, loading, failed, groups, followTotal, anySource, load, hide, unhide, followAll, saveSettings, request }
+  return { overview, loading, failed, showHidden, groups, followTotal, anySource, load, hide, unhide, followAll, saveSettings, request }
 }
 
 /** The Following tab: a searchable, paged list of what this user follows. */

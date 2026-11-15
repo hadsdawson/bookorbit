@@ -8,6 +8,7 @@ import {
   type NewReleaseDelivery,
   type NewReleaseFormat,
   type NewReleaseItem,
+  type NewReleaseProviderIds,
   type NewReleaseRequestFormat,
   type NewReleaseRequestResult,
   type NewReleaseRetentionDays,
@@ -18,12 +19,14 @@ import {
   type ReleaseFollowKind,
   type ReleaseFollowPage,
   Permission,
+  toRequestLanguage,
   type UpcomingReleasesWidgetData,
   type UpdateNewReleasesUserSettingsPayload,
 } from '@bookorbit/types';
 
 import type { RequestUser } from '../../common/types/request-user';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
+import { normalizePersonNameKey } from '../../common/utils/person-name.utils';
 import { AppSettingsService } from '../app-settings/app-settings.service';
 import { AuthService } from '../auth/auth.service';
 import { BookRequestService } from '../book-request/book-request.service';
@@ -36,6 +39,8 @@ import { ReleaseSourcesService, type ReleaseTarget } from './release-sources.ser
 const EVENT = 'new_releases.check';
 const DEFAULT_FORMAT_KEY = 'new_releases_default_format';
 const DEFAULT_DELIVERY_KEY = 'new_releases_default_delivery';
+const LANGUAGE_KEY = 'new_releases_language';
+const DEFAULT_LANGUAGE = 'en';
 /** A followed name is looked up again once its last look is this old. */
 const RECHECK_DAYS = 7;
 /** Names looked up per hourly run: about ten minutes of paced calls to the book sites. */
@@ -211,7 +216,7 @@ export class NewReleasesService implements OnApplicationBootstrap {
 
   // ── The list ────────────────────────────────────────────
 
-  async overview(user: RequestUser): Promise<NewReleasesOverview> {
+  async overview(user: RequestUser, options: { includeHidden?: boolean } = {}): Promise<NewReleasesOverview> {
     const [server, userSettings, followCounts, sources, lastCheckedAt, pendingChecks] = await Promise.all([
       this.serverSettings(),
       this.repository.findUserSettings(user.id),
@@ -222,7 +227,11 @@ export class NewReleasesService implements OnApplicationBootstrap {
     ]);
     const retentionDays = (userSettings?.retentionDays ?? DEFAULT_NEW_RELEASE_RETENTION_DAYS) as NewReleaseRetentionDays;
     const delivery = (userSettings?.delivery as NewReleaseDelivery | null) ?? null;
-    const rows = await this.repository.listForUser(user.id, { retentionDays }, LIST_LIMIT);
+    const rows = await this.repository.listForUser(user.id, { retentionDays }, LIST_LIMIT, {
+      includeHidden: options.includeHidden === true,
+      language: server.language === 'any' ? null : server.language,
+    });
+    const links = await this.libraryLinksFor(user, rows);
     const items: NewReleaseItem[] = rows.map((row) => ({
       id: row.id,
       title: row.title,
@@ -235,6 +244,10 @@ export class NewReleasesService implements OnApplicationBootstrap {
       releaseDate: row.releaseDate!,
       matchedFollows: row.matchedFollows,
       state: row.state,
+      authorLinks: row.authors.map((name) => ({ name, authorId: links.authors.get(normalizePersonNameKey(name) ?? '') ?? null })),
+      seriesId: row.seriesName ? (links.series.get(row.seriesName.toLowerCase()) ?? null) : null,
+      providerIds: providerIdsOf(row.sources),
+      isbn13: row.isbn13,
     }));
     return {
       items,
@@ -273,6 +286,17 @@ export class NewReleasesService implements OnApplicationBootstrap {
     };
   }
 
+  /** Fork: the library authors and series a page of releases names, for links. One query each. */
+  private async libraryLinksFor(user: RequestUser, rows: { authors: string[]; seriesName: string | null }[]) {
+    const authorKeys = [
+      ...new Set(rows.flatMap((row) => row.authors.map((name) => normalizePersonNameKey(name)).filter((key): key is string => !!key))),
+    ];
+    const seriesNames = rows.map((row) => row.seriesName).filter((name): name is string => !!name);
+    if (authorKeys.length === 0 && seriesNames.length === 0) return { authors: new Map<string, number>(), series: new Map<string, number>() };
+    const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
+    return this.repository.findLibraryLinks(authorKeys, seriesNames, libraryIds);
+  }
+
   async setState(user: RequestUser, releaseId: number, state: 'dismissed' | null): Promise<void> {
     if (!(await this.repository.releaseExists(releaseId))) throw new NotFoundException('Release not found');
     await this.repository.setUserState(user.id, releaseId, state);
@@ -291,6 +315,7 @@ export class NewReleasesService implements OnApplicationBootstrap {
 
   async updateServerSettings(settings: NewReleasesServerSettings): Promise<NewReleasesServerSettings> {
     await this.appSettings.setValue(DEFAULT_FORMAT_KEY, settings.defaultFormat);
+    if (settings.language !== undefined) await this.appSettings.setValue(LANGUAGE_KEY, settings.language);
     await this.appSettings.setValue(DEFAULT_DELIVERY_KEY, settings.defaultDelivery);
     if (settings.defaultDelivery === 'request') this.kick();
     return this.serverSettings();
@@ -388,10 +413,12 @@ export class NewReleasesService implements OnApplicationBootstrap {
   }
 
   async serverSettings(): Promise<NewReleasesServerSettings> {
-    const values = await this.appSettings.getValues([DEFAULT_FORMAT_KEY, DEFAULT_DELIVERY_KEY]);
+    const values = await this.appSettings.getValues([DEFAULT_FORMAT_KEY, DEFAULT_DELIVERY_KEY, LANGUAGE_KEY]);
     const format = values.get(DEFAULT_FORMAT_KEY);
     const delivery = values.get(DEFAULT_DELIVERY_KEY);
+    const language = values.get(LANGUAGE_KEY);
     return {
+      language: language === 'any' ? 'any' : (toRequestLanguage(language) ?? DEFAULT_LANGUAGE),
       defaultFormat: (NEW_RELEASE_FORMATS as readonly string[]).includes(format ?? '') ? (format as NewReleaseFormat) : 'both',
       defaultDelivery: (NEW_RELEASE_DELIVERIES as readonly string[]).includes(delivery ?? '') ? (delivery as NewReleaseDelivery) : 'suggest',
     };
@@ -493,4 +520,22 @@ export class NewReleasesService implements OnApplicationBootstrap {
     if (failedSources.length < attempted) await this.repository.recordCheck(target, dated);
     return dated;
   }
+}
+
+/** Fork: the page ids for a release on the sites that reported it, from what each source stored. */
+export function providerIdsOf(sources: unknown): NewReleaseProviderIds {
+  const ids: NewReleaseProviderIds = {};
+  if (!Array.isArray(sources)) return ids;
+  for (const source of sources as Partial<SourceRelease>[]) {
+    if (source.source === 'hardcover') {
+      if (source.slug && !ids.hardcover) ids.hardcover = source.slug;
+      if (source.mediaKind === 'ebook' && source.asin && !ids.amazon) ids.amazon = source.asin;
+      if (source.mediaKind === 'audiobook' && source.asin && !ids.audible) ids.audible = source.asin;
+    } else if (source.source === 'audible' && source.sourceId && !ids.audible) {
+      ids.audible = source.sourceId;
+    } else if (source.source === 'google' && source.sourceId && !ids.google) {
+      ids.google = source.sourceId;
+    }
+  }
+  return ids;
 }

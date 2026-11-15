@@ -6,6 +6,7 @@ import {
   NEW_RELEASE_DELIVERIES,
   NEW_RELEASE_FORMATS,
   Permission,
+  REQUEST_LANGUAGE_CODES,
   type NewReleaseDelivery,
   type NewReleaseFormat,
   type NewReleasesServerSettings,
@@ -37,6 +38,17 @@ async function save(next: NewReleasesServerSettings) {
 function handleFormatChange(event: Event) {
   if (!settings.value) return
   void save({ ...settings.value, defaultFormat: (event.target as HTMLSelectElement).value as NewReleaseFormat })
+}
+
+// Fork: which language listed books must be in; "any" lists every language.
+const languageOptions = computed(() => {
+  const names = new Intl.DisplayNames([navigator.language || 'en'], { type: 'language' })
+  return REQUEST_LANGUAGE_CODES.map((code) => ({ code, label: names.of(code) ?? code })).sort((a, b) => a.label.localeCompare(b.label))
+})
+
+function handleLanguageChange(event: Event) {
+  if (!settings.value) return
+  void save({ ...settings.value, language: (event.target as HTMLSelectElement).value })
 }
 
 function handleDeliveryChange(event: Event) {
@@ -82,6 +94,19 @@ onMounted(async () => {
         @change="handleDeliveryChange"
       >
         <option v-for="delivery in NEW_RELEASE_DELIVERIES" :key="delivery" :value="delivery">{{ t(`newReleases.delivery.${delivery}`) }}</option>
+      </select>
+    </SettingsRow>
+
+    <SettingsRow :label="t('newReleases.server.language')" :hint="t('newReleases.server.languageHint')" control-id="new-releases-language">
+      <select
+        id="new-releases-language"
+        :value="settings.language"
+        :disabled="saving"
+        class="h-8 w-full rounded-md border border-input bg-background px-2 text-sm text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+        @change="handleLanguageChange"
+      >
+        <option value="any">{{ t('newReleases.server.anyLanguage') }}</option>
+        <option v-for="option in languageOptions" :key="option.code" :value="option.code">{{ option.label }}</option>
       </select>
     </SettingsRow>
   </div>

@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
-import { BellRing, BookOpen, CalendarClock, CalendarDays, EyeOff, Headphones, List, Loader2, Search, UserRound, Library, X } from '@lucide/vue'
+import { BellRing, BookOpen, CalendarClock, CalendarDays, Eye, EyeOff, Headphones, List, Loader2, Search, UserRound, Library, X } from '@lucide/vue'
 import {
   NEW_RELEASE_RETENTION_DAYS,
   type NewReleaseDelivery,
@@ -18,6 +18,7 @@ import { formatDate, formatNumber, formatRelativeFromNow } from '@/i18n/formatte
 import { errorMessage } from '@/lib/api-json'
 import NewReleasesCalendar from '../components/NewReleasesCalendar.vue'
 import RequestReleaseButton from '../components/RequestReleaseButton.vue'
+import ReleaseProviderBadges from '../components/ReleaseProviderBadges.vue'
 import {
   isReleased,
   parseReleaseDate,
@@ -29,7 +30,8 @@ import {
 } from '../composables/useNewReleases'
 
 const { t } = useI18n()
-const { overview, loading, failed, groups, followTotal, anySource, load, hide, unhide, followAll, saveSettings, request } = useNewReleases()
+const { overview, loading, failed, showHidden, groups, followTotal, anySource, load, hide, unhide, followAll, saveSettings, request } =
+  useNewReleases()
 const follows = useReleaseFollowList()
 
 type Tab = 'upcoming' | 'following'
@@ -67,6 +69,16 @@ function dayLabel(value: string): string {
 function seriesLine(item: NewReleaseItem): string | null {
   if (!item.seriesName) return null
   return item.seriesIndex !== null ? t('newReleases.item.seriesNumber', { series: item.seriesName, number: item.seriesIndex }) : item.seriesName
+}
+
+// Fork: show hidden books too, and reload when that changes.
+function handleShowHiddenChange(event: Event) {
+  showHidden.value = (event.target as HTMLInputElement).checked
+  void load()
+}
+
+function handleUnhideClick(item: NewReleaseItem) {
+  void handleUnhide(item)
 }
 
 function becauseLine(item: NewReleaseItem): string {
@@ -312,7 +324,11 @@ onMounted(load)
         </section>
 
         <template v-if="tab === 'upcoming'">
-          <div class="flex justify-end">
+          <div class="flex flex-wrap items-center justify-end gap-3">
+            <label class="inline-flex items-center gap-2 text-sm text-muted-foreground" data-testid="new-releases-show-hidden">
+              <input type="checkbox" class="size-4 accent-primary" :checked="showHidden" @change="handleShowHiddenChange" />
+              {{ t('newReleases.showHidden') }}
+            </label>
             <div class="flex items-center gap-1 rounded-lg border border-border bg-muted/50 p-1">
               <button
                 type="button"
@@ -352,7 +368,7 @@ onMounted(load)
             </div>
 
             <section v-for="group in groups" :key="group.key" class="space-y-2" data-testid="new-releases-month">
-              <h2 class="sticky top-0 z-10 bg-background/95 py-1 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+              <h2 class="py-1 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                 {{ monthLabel(group.date) }}
               </h2>
               <ul class="divide-y divide-border/60 rounded-lg border border-border/70 bg-card">
@@ -385,14 +401,39 @@ onMounted(load)
                         {{ t('newReleases.item.requested') }}
                       </span>
                       <span
+                        v-if="item.state === 'dismissed'"
+                        class="inline-flex h-5 shrink-0 items-center rounded-full border border-dashed border-border px-2 text-xs font-medium text-muted-foreground"
+                      >
+                        {{ t('newReleases.item.hiddenBadge') }}
+                      </span>
+                      <span
                         v-if="isReleased(item.releaseDate)"
                         class="inline-flex h-5 shrink-0 items-center rounded-full border border-border bg-muted px-2 text-xs font-medium text-muted-foreground"
                       >
                         {{ t('newReleases.item.released') }}
                       </span>
                     </div>
-                    <p class="truncate text-xs text-muted-foreground">{{ item.authors.join(', ') }}</p>
-                    <p v-if="seriesLine(item)" class="truncate text-xs text-muted-foreground">{{ seriesLine(item) }}</p>
+                    <p class="truncate text-xs text-muted-foreground">
+                      <template v-for="(author, index) in item.authorLinks" :key="`${author.name}-${index}`">
+                        <span v-if="index > 0">, </span>
+                        <RouterLink
+                          v-if="author.authorId !== null"
+                          :to="{ name: 'author-detail', params: { id: author.authorId } }"
+                          class="text-foreground hover:underline"
+                          >{{ author.name }}</RouterLink
+                        >
+                        <span v-else>{{ author.name }}</span>
+                      </template>
+                    </p>
+                    <p v-if="seriesLine(item)" class="truncate text-xs text-muted-foreground">
+                      <RouterLink
+                        v-if="item.seriesId !== null"
+                        :to="{ name: 'series-detail', params: { seriesId: item.seriesId } }"
+                        class="text-foreground hover:underline"
+                        >{{ seriesLine(item) }}</RouterLink
+                      >
+                      <template v-else>{{ seriesLine(item) }}</template>
+                    </p>
                     <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-foreground tabular-nums">
                       <span v-if="item.ebookDate" class="inline-flex items-center gap-1">
                         <BookOpen :size="12" class="text-muted-foreground" aria-hidden="true" />
@@ -403,6 +444,7 @@ onMounted(load)
                         {{ t('newReleases.item.audiobookOn', { date: dayLabel(item.audiobookDate) }) }}
                       </span>
                     </div>
+                    <ReleaseProviderBadges :item="item" />
                     <p class="flex items-center gap-1 truncate text-xs text-muted-foreground">
                       <BellRing :size="11" class="shrink-0" aria-hidden="true" />
                       <span class="truncate">{{ becauseLine(item) }}</span>
@@ -418,6 +460,17 @@ onMounted(load)
                       @request="handleRequest"
                     />
                     <button
+                      v-if="item.state === 'dismissed'"
+                      type="button"
+                      class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                      :title="t('newReleases.item.unhide')"
+                      :aria-label="t('newReleases.item.unhideNamed', { title: item.title })"
+                      @click="handleUnhideClick(item)"
+                    >
+                      <Eye :size="15" aria-hidden="true" />
+                    </button>
+                    <button
+                      v-else
                       type="button"
                       class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                       :title="t('newReleases.item.hide')"
