@@ -53,6 +53,12 @@ export const bookRequests = pgTable(
     status: varchar('status', { length: 20 }).notNull().default('pending'),
     /** A note set by hand, apart from the workflow status; see `BOOK_REQUEST_TRACKING_STATUSES`. */
     trackingStatus: varchar('tracking_status', { length: 30 }),
+    /**
+     * Fork: 'manual' when a person set the tracking status, 'auto' when they handed it back. Null
+     * on older rows, where a status that is set was set by hand. Auto rows read their status from
+     * the release date (`effectiveTrackingStatus`) instead of `trackingStatus`.
+     */
+    trackingStatusSource: varchar('tracking_status_source', { length: 10 }),
 
     title: varchar('title', { length: 500 }).notNull(),
     subtitle: varchar('subtitle', { length: 500 }),

@@ -13,7 +13,6 @@ import type {
   BookRequestSortField,
   BookRequestStatus,
   BookRequestSubmitErrorCode,
-  BookRequestTrackingStatus,
   BookRequestTrackingStatusFilter,
   BookRequestBulkResult,
   BulkBookRequestsPayload,
@@ -24,6 +23,7 @@ import type {
   GrabFailureCode,
   RemoveBookRequestDownloadPayload,
   SelectReleaseUnitPayload,
+  BookRequestTrackingChoice,
 } from '@bookorbit/types'
 
 export type RequestScope = 'mine' | 'all'
@@ -356,7 +356,7 @@ export function useBookRequestActions(canManage: () => boolean) {
 
   const approveMany = (ids: number[]) => runBulk('/api/v1/admin/book-requests/approve', { ids })
   const dismissMany = (ids: number[]) => runBulk('/api/v1/book-requests/dismiss', { ids })
-  const setTrackingStatusMany = (ids: number[], trackingStatus: BookRequestTrackingStatus | null) =>
+  const setTrackingStatusMany = (ids: number[], trackingStatus: BookRequestTrackingChoice) =>
     runBulk('/api/v1/book-requests/tracking-status', { ids, trackingStatus })
   const cancelMany = (ids: number[]) => runBulk('/api/v1/book-requests/cancel', { ids })
   const deleteMany = (ids: number[]) => runBulk('/api/v1/admin/book-requests/delete', { ids })
@@ -393,7 +393,7 @@ export function useBookRequestActions(canManage: () => boolean) {
     deleteMany,
     /** The language the request asks for, which decides which releases can match it at all. */
     setLanguage: (id: number, language: string | null) => run(id, `/api/v1/book-requests/${id}/language`, { language }),
-    setTrackingStatus: (id: number, trackingStatus: BookRequestTrackingStatus | null) =>
+    setTrackingStatus: (id: number, trackingStatus: BookRequestTrackingChoice) =>
       run(id, `/api/v1/book-requests/${id}/tracking-status`, { trackingStatus }),
     cancelDownload: (id: number, downloadId: number, body?: RemoveBookRequestDownloadPayload) =>
       run(id, `/api/v1/book-requests/${id}/downloads/${downloadId}/cancel`, body),

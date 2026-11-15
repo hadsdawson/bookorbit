@@ -8,7 +8,7 @@ import type {
   BookRequestProgressEvent,
   BookRequestSortDirection,
   BookRequestSortField,
-  BookRequestTrackingStatus,
+  BookRequestTrackingChoice,
 } from '@bookorbit/types'
 import { formatDate, formatPercent, formatRelativeFromNow } from '@/i18n/formatters'
 import { formatBytes } from '@/lib/formatting'
@@ -67,7 +67,7 @@ const emit = defineEmits<{
   'pair-dismiss': [requests: BookRequestItem[]]
   'pair-restore': [requests: BookRequestItem[]]
   sort: [field: BookRequestSortField]
-  'set-tracking-status': [request: BookRequestItem, trackingStatus: BookRequestTrackingStatus | null]
+  'set-tracking-status': [request: BookRequestItem, trackingStatus: BookRequestTrackingChoice]
   'toggle-select': [request: BookRequestItem]
   'toggle-select-all': []
 }>()
@@ -396,7 +396,7 @@ function canEditTracking(request: BookRequestItem): boolean {
   return request.userId === props.currentUserId || (props.canSelfFulfil && request.fulfillerUserId === props.currentUserId)
 }
 
-function handleSetTrackingStatus(request: BookRequestItem, trackingStatus: BookRequestTrackingStatus | null) {
+function handleSetTrackingStatus(request: BookRequestItem, trackingStatus: BookRequestTrackingChoice) {
   emit('set-tracking-status', request, trackingStatus)
 }
 

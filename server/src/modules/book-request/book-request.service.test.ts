@@ -1133,13 +1133,13 @@ describe('BookRequestService.setTrackingStatus', () => {
   it('lets the owner set a tracking status', async () => {
     const { service, repo } = makeService();
     await service.setTrackingStatus(10, 'not_yet_released', user());
-    expect(repo.update).toHaveBeenCalledWith(10, { trackingStatus: 'not_yet_released' });
+    expect(repo.update).toHaveBeenCalledWith(10, { trackingStatus: 'not_yet_released', trackingStatusSource: 'manual' });
   });
 
   it('clears the tracking status', async () => {
     const { service, repo } = makeService({ repo: { findById: vi.fn().mockResolvedValue(joined({ trackingStatus: 'missing' })) } });
     await service.setTrackingStatus(10, null, user());
-    expect(repo.update).toHaveBeenCalledWith(10, { trackingStatus: null });
+    expect(repo.update).toHaveBeenCalledWith(10, { trackingStatus: null, trackingStatusSource: 'manual' });
   });
 
   it('writes nothing when the value is unchanged', async () => {
@@ -1152,7 +1152,7 @@ describe('BookRequestService.setTrackingStatus', () => {
   it.each(['pending', 'available', 'failed', 'rejected'])('can be set while %s', async (status) => {
     const { service, repo } = makeService({ repo: { findById: vi.fn().mockResolvedValue(joined({ status })) } });
     await service.setTrackingStatus(10, 'format_not_available', user());
-    expect(repo.update).toHaveBeenCalledWith(10, { trackingStatus: 'format_not_available' });
+    expect(repo.update).toHaveBeenCalledWith(10, { trackingStatus: 'format_not_available', trackingStatusSource: 'manual' });
   });
 
   it('refuses a stranger', async () => {
@@ -1163,7 +1163,25 @@ describe('BookRequestService.setTrackingStatus', () => {
   it('lets an approver set it on someone else request', async () => {
     const { service, repo } = makeService({ repo: { findById: vi.fn().mockResolvedValue(joined({ userId: 2 })) } });
     await service.setTrackingStatus(10, 'missing', moderator());
-    expect(repo.update).toHaveBeenCalledWith(10, { trackingStatus: 'missing' });
+    expect(repo.update).toHaveBeenCalledWith(10, { trackingStatus: 'missing', trackingStatusSource: 'manual' });
+  });
+
+  it('hands a hand-set status back to the release date', async () => {
+    const { service, repo } = makeService({ repo: { findById: vi.fn().mockResolvedValue(joined({ trackingStatus: 'missing' })) } });
+    await service.setTrackingStatus(10, 'auto', user());
+    expect(repo.update).toHaveBeenCalledWith(10, { trackingStatus: null, trackingStatusSource: 'auto' });
+  });
+
+  it('writes nothing when an automatic status is asked to stay automatic', async () => {
+    const { service, repo } = makeService();
+    await service.setTrackingStatus(10, 'auto', user());
+    expect(repo.update).not.toHaveBeenCalled();
+  });
+
+  it('keeps a hand-cleared status as a choice, so the date rule does not fill it in', async () => {
+    const { service, repo } = makeService();
+    await service.setTrackingStatus(10, null, user());
+    expect(repo.update).toHaveBeenCalledWith(10, { trackingStatus: null, trackingStatusSource: 'manual' });
   });
 
   it('reports a missing request as not found', async () => {

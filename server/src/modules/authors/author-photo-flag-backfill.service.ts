@@ -30,6 +30,10 @@ export class AuthorPhotoFlagBackfillService implements OnApplicationBootstrap {
     const startedAt = Date.now();
 
     try {
+      const clearedBios = await this.authorsRepo.clearEditDataDescriptions();
+      if (clearedBios > 0) {
+        this.logger.log(`[author.description_cleanup] [end] cleared=${clearedBios} - removed Goodreads "edit data" placeholder biographies`);
+      }
       const idsWithImage = await this.authorImageStorage.listAuthorIdsWithStoredImage();
       const { marked, cleared } = await this.authorsRepo.reconcileHasPhoto(idsWithImage);
       if (marked === 0 && cleared === 0) return;

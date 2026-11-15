@@ -42,6 +42,27 @@ export const MAX_TORRENT_FILE_BYTES = 2 * 1024 * 1024;
 export const BOOK_REQUEST_TRACKING_STATUSES = ["format_not_available", "not_yet_released", "missing"] as const;
 export type BookRequestTrackingStatus = (typeof BOOK_REQUEST_TRACKING_STATUSES)[number];
 
+/** Fork: a tracking choice from the list, where "auto" hands the status back to the release date. */
+export type BookRequestTrackingChoice = BookRequestTrackingStatus | null | "auto";
+
+/** Fork: requests whose tracking status no longer means anything, so the automatic one is empty. */
+export const TRACKING_SETTLED_STATUSES = ["available", "cancelled", "rejected"] as const;
+
+/**
+ * Fork: the tracking status the release date implies. No full release date reads as the format not
+ * being available; a future one as not yet released; a past one as missing. `today` is YYYY-MM-DD.
+ */
+export function autoTrackingStatus(status: string, publishedDate: string | null, today: string): BookRequestTrackingStatus | null {
+  if ((TRACKING_SETTLED_STATUSES as readonly string[]).includes(status)) return null;
+  if (!publishedDate) return "format_not_available";
+  return publishedDate > today ? "not_yet_released" : "missing";
+}
+
+/** Fork: whether a person set this request's tracking status (older rows: any status that is set). */
+export function isTrackingManual(source: string | null, trackingStatus: string | null): boolean {
+  return source === "manual" || (source === null && trackingStatus !== null);
+}
+
 /** The list filter's extra value for "no tracking status set". */
 export const BOOK_REQUEST_TRACKING_STATUS_NONE = "none" as const;
 export type BookRequestTrackingStatusFilter = BookRequestTrackingStatus | typeof BOOK_REQUEST_TRACKING_STATUS_NONE;
@@ -450,8 +471,10 @@ export interface BookRequestItem extends BookRequestWorkSnapshot {
   /** A retired medium only on a request made before it was retired; see `LegacyBookRequestMediaKind`. */
   mediaKind: StoredBookRequestMediaKind;
   status: BookRequestStatus;
-  /** Set by hand; see `BOOK_REQUEST_TRACKING_STATUSES`. Null when nobody has set one. */
+  /** Set by hand, or (Fork) worked out from the release date when `trackingStatusAuto`. */
   trackingStatus: BookRequestTrackingStatus | null;
+  /** Fork: true when the status follows the release date rather than a choice someone made. */
+  trackingStatusAuto: boolean;
   preferredFormats: string[];
   note: string | null;
   targetLibraryId: number | null;

@@ -5,7 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { BookPlus, Rows3, Rows4, X } from '@lucide/vue'
 import { BOOK_REQUEST_MEDIA_KINDS, BOOK_REQUEST_STATUSES, BOOK_REQUEST_TRACKING_STATUSES, Permission } from '@bookorbit/types'
-import type { BookRequestBulkResult, BookRequestItem, BookRequestSortField, BookRequestStatus, BookRequestTrackingStatus } from '@bookorbit/types'
+import type { BookRequestBulkResult, BookRequestItem, BookRequestSortField, BookRequestStatus, BookRequestTrackingChoice } from '@bookorbit/types'
 import PageTitleRow from '@/components/page-header/PageTitleRow.vue'
 import { Button } from '@/components/ui/button'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
@@ -361,12 +361,12 @@ async function restoreRequest(request: BookRequestItem) {
 }
 
 /** Quiet on success beyond a toast: the select already shows the new value. */
-async function setTrackingStatus(request: BookRequestItem, trackingStatus: BookRequestTrackingStatus | null) {
+async function setTrackingStatus(request: BookRequestItem, trackingStatus: BookRequestTrackingChoice) {
   const outcome = await actions.setTrackingStatus(request.id, trackingStatus)
   if (applyUpdate(outcome, 'bookRequests.errors.trackingStatusChangeFailed')) toast.success(t('bookRequests.toasts.trackingStatusChanged'))
 }
 
-function handleSetTrackingStatus(request: BookRequestItem, trackingStatus: BookRequestTrackingStatus | null) {
+function handleSetTrackingStatus(request: BookRequestItem, trackingStatus: BookRequestTrackingChoice) {
   void setTrackingStatus(request, trackingStatus)
 }
 
@@ -617,7 +617,7 @@ function handleTrackSelected(event: Event) {
   const value = select.value
   select.value = ''
   if (value === '') return
-  const trackingStatus = value === 'none' ? null : (value as BookRequestTrackingStatus)
+  const trackingStatus: BookRequestTrackingChoice = value === 'none' ? null : (value as BookRequestTrackingChoice)
   void runBulk(
     trackableSelection.value,
     (ids) => actions.setTrackingStatusMany(ids, trackingStatus),
@@ -903,6 +903,7 @@ function goToNextPage() {
               {{ t(`bookRequests.trackingStatus.${trackingStatus}`) }}
             </option>
             <option value="none">{{ t('bookRequests.trackingStatus.none') }}</option>
+            <option value="auto">{{ t('bookRequests.trackingStatus.auto') }}</option>
           </select>
           <Button
             v-if="cancellableSelection.length > 0"

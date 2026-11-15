@@ -10783,7 +10783,9 @@
       "none": "None",
       "format_not_available": "Format Not Available",
       "not_yet_released": "Not Yet Released",
-      "missing": "Missing"
+      "missing": "Missing",
+      "auto": "Automatic (from release date)",
+      "autoWith": "{status} (automatic)"
     },
     "columns": {
       "button": "Columns",

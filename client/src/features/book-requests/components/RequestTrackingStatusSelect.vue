@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ChevronDown } from '@lucide/vue'
 import { BOOK_REQUEST_TRACKING_STATUSES } from '@bookorbit/types'
-import type { BookRequestItem, BookRequestTrackingStatus } from '@bookorbit/types'
+import type { BookRequestItem, BookRequestTrackingStatus, BookRequestTrackingChoice } from '@bookorbit/types'
 
 /**
  * The hand-set tracking status on one request. A select when the viewer may change it, plain text
@@ -16,7 +16,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  change: [request: BookRequestItem, trackingStatus: BookRequestTrackingStatus | null]
+  change: [request: BookRequestItem, trackingStatus: BookRequestTrackingChoice]
 }>()
 
 const { t } = useI18n()
@@ -44,9 +44,17 @@ const ink = computed(() => (props.request.trackingStatus ? INKS[props.request.tr
 const label = computed(() => t(`bookRequests.trackingStatus.${props.request.trackingStatus ?? 'none'}`))
 const mediaLabel = computed(() => t(`bookRequests.mediaKind.${props.request.mediaKind}`))
 
+// Fork: "auto" follows the release date; any other pick is kept as the person's choice.
+const selectValue = computed(() => (props.request.trackingStatusAuto ? 'auto' : (props.request.trackingStatus ?? '')))
+const autoLabel = computed(() =>
+  t('bookRequests.trackingStatus.autoWith', {
+    status: t(`bookRequests.trackingStatus.${props.request.trackingStatusAuto ? (props.request.trackingStatus ?? 'none') : 'none'}`),
+  }),
+)
+
 function handleChange(event: Event) {
   const value = (event.target as HTMLSelectElement).value
-  emit('change', props.request, value === '' ? null : (value as BookRequestTrackingStatus))
+  emit('change', props.request, value === '' ? null : (value as BookRequestTrackingChoice))
 }
 </script>
 
@@ -54,13 +62,16 @@ function handleChange(event: Event) {
   <span v-if="editable" class="relative inline-flex max-w-full min-w-0 items-center">
     <span class="pointer-events-none absolute start-2 size-1.5 rounded-full bg-current" :class="ink" aria-hidden="true" />
     <select
-      :value="request.trackingStatus ?? ''"
+      :value="selectValue"
       :disabled="busy"
       :aria-label="t('bookRequests.table.trackingLabel', { title: `${request.title} (${mediaLabel})` })"
       class="field-sizing-content h-[22px] max-w-full min-w-0 cursor-pointer appearance-none truncate rounded-full border ps-5 pe-6 text-xs font-medium focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-default disabled:opacity-60"
       :class="tone"
       @change="handleChange"
     >
+      <option value="auto" class="bg-popover text-popover-foreground">
+        {{ request.trackingStatusAuto ? autoLabel : t('bookRequests.trackingStatus.auto') }}
+      </option>
       <option value="" class="bg-popover text-popover-foreground">{{ t('bookRequests.trackingStatus.none') }}</option>
       <option v-for="status in BOOK_REQUEST_TRACKING_STATUSES" :key="status" :value="status" class="bg-popover text-popover-foreground">
         {{ t(`bookRequests.trackingStatus.${status}`) }}
