@@ -679,7 +679,11 @@ function rowDismissed(row: BookRequestItem): boolean {
                     <span class="truncate">{{ releasedLabel(half) }}</span>
                   </div>
                 </div>
-                <template v-else>{{ releasedLabel(request) }}</template>
+                <div v-else class="flex min-w-0 items-center gap-1.5">
+                  <component :is="mediaIcon(request)" :size="13" :class="mediaColor(request)" class="shrink-0" aria-hidden="true" />
+                  <span class="sr-only">{{ mediaLabel(request) }}</span>
+                  <span class="truncate">{{ releasedLabel(request) }}</span>
+                </div>
               </td>
 
               <td v-else-if="column === 'requester'" class="truncate px-3 text-muted-foreground" :class="isCompact ? 'py-1.5' : 'py-2.5'">
@@ -720,6 +724,8 @@ function rowDismissed(row: BookRequestItem): boolean {
                   plus a second pill, so the label moves into the tooltip and the screen-reader text.
                 -->
                   <div class="inline-flex items-center gap-1.5">
+                    <component :is="mediaIcon(request)" :size="13" :class="mediaColor(request)" class="shrink-0" aria-hidden="true" />
+                    <span class="sr-only">{{ mediaLabel(request) }}</span>
                     <RequestStatusBadge :status="statusFor(request)" />
                     <span v-if="request.selfServe" class="inline-flex text-muted-foreground" :title="t('bookRequests.selfServeBadgeHint')">
                       <Zap :size="12" aria-hidden="true" />
@@ -748,13 +754,15 @@ function rowDismissed(row: BookRequestItem): boolean {
                     </template>
                   </div>
                 </div>
-                <RequestTrackingStatusSelect
-                  v-else-if="showsTracking(request)"
-                  :request="request"
-                  :editable="canEditTracking(request)"
-                  :busy="busyIds.has(request.id)"
-                  @change="handleSetTrackingStatus"
-                />
+                <div v-else-if="showsTracking(request)" class="flex min-w-0 items-center gap-1.5">
+                  <component :is="mediaIcon(request)" :size="13" :class="mediaColor(request)" class="shrink-0" aria-hidden="true" />
+                  <RequestTrackingStatusSelect
+                    :request="request"
+                    :editable="canEditTracking(request)"
+                    :busy="busyIds.has(request.id)"
+                    @change="handleSetTrackingStatus"
+                  />
+                </div>
               </td>
 
               <td v-else-if="column === 'outcome'" class="overflow-hidden px-3 text-xs" :class="isCompact ? 'py-1.5' : 'py-2.5'">
