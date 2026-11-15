@@ -1,6 +1,7 @@
 import { api } from '@/lib/api'
 import type {
   AuthorsPage,
+  AuthorLink,
   AuthorBooksPage,
   AuthorDetail,
   AuthorMetadataCandidate,
@@ -415,5 +416,33 @@ export async function refreshAuthorMetadata(authorId: number): Promise<AuthorMet
     method: 'POST',
   })
   if (!res.ok) throw new Error('Failed to refresh author metadata')
+  return res.json()
+}
+
+export async function fetchAuthorLinks(authorId: number): Promise<AuthorLink[]> {
+  const res = await api(`/api/v1/authors/${authorId}/links`)
+  if (!res.ok) throw new Error('Failed to load linked authors')
+  return res.json()
+}
+
+export async function linkAuthor(authorId: number, otherAuthorId: number): Promise<AuthorLink[]> {
+  const res = await api(`/api/v1/authors/${authorId}/links`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ authorId: otherAuthorId }),
+  })
+  if (!res.ok) {
+    const payload = await res.json().catch(() => null)
+    throw new Error(extractErrorMessage(payload, 'Failed to link authors'))
+  }
+  return res.json()
+}
+
+export async function unlinkAuthor(authorId: number, linkedAuthorId: number): Promise<AuthorLink[]> {
+  const res = await api(`/api/v1/authors/${authorId}/links/${linkedAuthorId}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const payload = await res.json().catch(() => null)
+    throw new Error(extractErrorMessage(payload, 'Failed to unlink authors'))
+  }
   return res.json()
 }

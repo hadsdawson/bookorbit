@@ -6435,6 +6435,20 @@
         "mergeFailed": "Failed to merge authors",
         "deleteSuccess": "Deleted author; affected {books} books",
         "deleteFailed": "Failed to delete author"
+      },
+      "links": {
+        "heading": "Linked authors",
+        "none": "None yet",
+        "add": "Link author",
+        "hint": "Names the same person writes under. A book credited to any of them is credited to all of them, including books already in your library.",
+        "searchPlaceholder": "Search authors to link",
+        "searching": "Searching...",
+        "noMatches": "No other authors match",
+        "unlink": "Unlink {name}",
+        "linked": "Authors linked",
+        "unlinked": "Author unlinked",
+        "linkFailed": "Could not link authors",
+        "unlinkFailed": "Could not unlink authors"
       }
     },
     "portrait": {

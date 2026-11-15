@@ -223,6 +223,10 @@ export abstract class JunctionEntityStrategy implements EntityStrategy {
     return { affectedBookIds };
   }
 
+  protected tidyName(name: string): string {
+    return name.trim();
+  }
+
   async rename(input: RenameInput): Promise<StrategyRenameResult> {
     const entityId = input.entityId as number;
     await this.assertMutationScope([entityId], input.libraryIds);
@@ -230,7 +234,7 @@ export abstract class JunctionEntityStrategy implements EntityStrategy {
     if (!entity) throw new NotFoundException(`${this.entityType} not found`);
 
     const oldName = (entity as any).name as string;
-    const trimmed = input.newName.trim();
+    const trimmed = this.tidyName(input.newName);
     if (!trimmed) throw new BadRequestException('Name cannot be empty');
 
     const [existing] = await this.db.select({ id: this.entityIdCol }).from(this.entityTable).where(eq(this.nameCol, trimmed)).limit(1);
@@ -279,7 +283,7 @@ export abstract class JunctionEntityStrategy implements EntityStrategy {
 
     await this.db.transaction(async (tx) => {
       for (const name of input.newNames) {
-        const trimmed = name.trim();
+        const trimmed = this.tidyName(name);
         const [existing] = await tx.select({ id: this.entityIdCol }).from(this.entityTable).where(eq(this.nameCol, trimmed)).limit(1);
         if (existing) {
           newEntities.push({ id: (existing as any).id, name: trimmed });

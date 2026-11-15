@@ -16,12 +16,8 @@ import { isFileDerivedChapterSource } from '../../common/utils/audiobook-chapter
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
 import { inNameOrder } from '../../common/utils/insert-lock-order.utils';
 import { isKnownPlaceholderCover } from '../../common/utils/placeholder-cover.utils';
-import {
-  chooseCanonicalMetadataTextRow,
-  normalizeMetadataText,
-  normalizeMetadataTextKey,
-  normalizeMetadataTextKeySql,
-} from '../../common/utils/metadata-text-normalize.utils';
+import { chooseCanonicalMetadataTextRow, normalizeMetadataText } from '../../common/utils/metadata-text-normalize.utils';
+import { normalizePersonName, normalizePersonNameKey, normalizePersonNameKeySql } from '../../common/utils/person-name.utils';
 import { normalizePublishedDate, publishedYearFromDateKey } from '../../common/utils/published-date.utils';
 import { boundProviderId } from '../../common/utils/provider-id.utils';
 import { SeriesIdentityService } from '../../common/services/series-identity.service';
@@ -34,7 +30,7 @@ import { BookMetadataLockService } from '../book-metadata-lock/book-metadata-loc
 import { ComicMetadataRepository } from './comic-metadata.repository';
 import { MetadataScoreService } from '../metadata-score/metadata-score.service';
 import { NarratorService } from '../narrator/narrator.service';
-import { authors, bookAuthors, bookGenres, bookMetadata, bookTags, genres, tags } from '../../db/schema';
+import { authorLinks, authors, bookAuthors, bookGenres, bookMetadata, bookTags, genres, tags } from '../../db/schema';
 import {
   type AudiobookChapter,
   type ComicMetadataFields,
@@ -71,7 +67,7 @@ const AUDIO_DURATION_PROBE_CONCURRENCY = 4;
 
 /** A fetched cover and how the provider's stated shape fits the slot it is meant for. */
 export type CoverDownloadChoice = { url: string; fit?: 'match' | 'unknown' | 'mismatch' };
-const NORMALIZED_AUTHOR_NAME_SQL = normalizeMetadataTextKeySql(authors.name);
+const NORMALIZED_AUTHOR_NAME_SQL = normalizePersonNameKeySql(authors.name);
 
 function normalizePublishedYear(year: number | null | undefined): number | null | undefined {
   if (year === undefined) return undefined;
@@ -242,7 +238,7 @@ export class MetadataService {
         .innerJoin(authors, eq(authors.id, bookAuthors.authorId))
         .where(eq(bookAuthors.bookId, bookId))
         .orderBy(bookAuthors.displayOrder);
-      const key = (names: (string | null)[]) => names.map((name) => normalizeMetadataTextKey(name)).join('\u0000');
+      const key = (names: (string | null)[]) => names.map((name) => normalizePersonNameKey(name)).join('\u0000');
       if (key(decided.authors) !== key(currentAuthors.map((author) => author.name))) update.authors = decided.authors;
     }
     if (Object.keys(update).length === 0) return 'unchanged';
@@ -757,14 +753,14 @@ export class MetadataService {
   ): Promise<number[]> {
     const normalized = parsedAuthors
       .map((author) => ({
-        name: normalizeMetadataText(author.name),
-        sortName: normalizeMetadataText(author.sortName),
+        name: normalizePersonName(author.name),
+        sortName: normalizePersonName(author.sortName),
       }))
       .filter((author): author is { name: string; sortName: string | null } => author.name !== null);
 
     const seen = new Set<string>();
     const unique = normalized.filter((author) => {
-      const key = normalizeMetadataTextKey(author.name);
+      const key = normalizePersonNameKey(author.name);
       if (!key) return false;
       if (seen.has(key)) return false;
       seen.add(key);
@@ -850,7 +846,7 @@ export class MetadataService {
     );
 
     const missingAuthors = uniqueAuthors.filter((author) => {
-      const key = normalizeMetadataTextKey(author.name);
+      const key = normalizePersonNameKey(author.name);
       return key ? !authorByNameKey.has(key) : false;
     });
 
@@ -861,7 +857,7 @@ export class MetadataService {
         .onConflictDoNothing()
         .returning({ id: authors.id, name: authors.name });
       for (const row of insertedAuthors) {
-        const key = normalizeMetadataTextKey(row.name);
+        const key = normalizePersonNameKey(row.name);
         if (key) authorByNameKey.set(key, { id: row.id });
       }
     }
@@ -869,15 +865,21 @@ export class MetadataService {
     await this.addExistingAuthorsByNormalizedName(
       executor,
       authorByNameKey,
-      uniqueAuthors.filter((author) => !authorByNameKey.has(normalizeMetadataTextKey(author.name) ?? '')).map((author) => author.name),
+      uniqueAuthors.filter((author) => !authorByNameKey.has(normalizePersonNameKey(author.name) ?? '')).map((author) => author.name),
     );
 
     const links = uniqueAuthors.flatMap((author, index) => {
-      const key = normalizeMetadataTextKey(author.name);
+      const key = normalizePersonNameKey(author.name);
       const match = key ? authorByNameKey.get(key) : undefined;
       if (!match) return [];
       return [{ bookId, authorId: match.id, displayOrder: index }];
     });
+
+    const linkedAuthorIds = await this.findLinkedAuthorIds(
+      executor,
+      links.map((link) => link.authorId),
+    );
+    links.push(...linkedAuthorIds.map((authorId, index) => ({ bookId, authorId, displayOrder: links.length + index })));
 
     if (links.length > 0) {
       await executor.insert(bookAuthors).values(links).onConflictDoNothing();
@@ -888,12 +890,29 @@ export class MetadataService {
     return links.map((link) => link.authorId);
   }
 
+  /** Fork: the other names, in linked-author groups, of the authors a book is being credited to. */
+  private async findLinkedAuthorIds(executor: RelationMutationExecutor, authorIds: number[]): Promise<number[]> {
+    if (authorIds.length === 0) return [];
+    const ids = sql.join(
+      authorIds.map((id) => sql`${id}`),
+      sql`, `,
+    );
+    const { rows } = await executor.execute<{ authorId: number }>(sql`
+      SELECT DISTINCT linked.author_id AS "authorId"
+      FROM ${authorLinks} mine
+      JOIN ${authorLinks} linked ON linked.group_id = mine.group_id
+      WHERE mine.author_id IN (${ids}) AND linked.author_id NOT IN (${ids})
+      ORDER BY linked.author_id
+    `);
+    return rows.map((row) => Number(row.authorId));
+  }
+
   private async addExistingAuthorsByNormalizedName(
     executor: RelationMutationExecutor,
     authorByNameKey: Map<string, { id: number }>,
     names: string[],
   ): Promise<void> {
-    const keys = [...new Set(names.map((name) => normalizeMetadataTextKey(name)).filter((key): key is string => key !== null))].filter(
+    const keys = [...new Set(names.map((name) => normalizePersonNameKey(name)).filter((key): key is string => key !== null))].filter(
       (key) => !authorByNameKey.has(key),
     );
     if (keys.length === 0) return;
@@ -905,8 +924,8 @@ export class MetadataService {
 
     const desiredNameByKey = new Map<string, string>();
     for (const name of names) {
-      const key = normalizeMetadataTextKey(name);
-      const displayName = normalizeMetadataText(name);
+      const key = normalizePersonNameKey(name);
+      const displayName = normalizePersonName(name);
       if (key && displayName && !desiredNameByKey.has(key)) {
         desiredNameByKey.set(key, displayName);
       }
@@ -914,7 +933,7 @@ export class MetadataService {
 
     const rowsByKey = new Map<string, typeof existingAuthors>();
     for (const row of existingAuthors) {
-      const key = normalizeMetadataTextKey(row.normalizedName) ?? normalizeMetadataTextKey(row.name);
+      const key = normalizePersonNameKey(row.normalizedName) ?? normalizePersonNameKey(row.name);
       if (!key || authorByNameKey.has(key)) continue;
       const rows = rowsByKey.get(key) ?? [];
       rows.push(row);
@@ -927,7 +946,7 @@ export class MetadataService {
       const match = chooseCanonicalMetadataTextRow(rows, { desiredName });
       if (!match) continue;
 
-      const canonicalName = normalizeMetadataText(match.name);
+      const canonicalName = normalizePersonName(match.name);
       if (canonicalName && match.name !== canonicalName && !rows.some((row) => row.id !== match.id && row.name === canonicalName)) {
         await executor.update(authors).set({ name: canonicalName }).where(eq(authors.id, match.id));
         canonicalizedAuthorIds.push(match.id);

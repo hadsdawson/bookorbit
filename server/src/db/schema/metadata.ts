@@ -268,6 +268,18 @@ export const bookAuthors = pgTable(
   ],
 );
 
+/** Fork: names one person writes under. A book credited to any of them is credited to all of them. */
+export const authorLinks = pgTable(
+  'author_links',
+  {
+    authorId: integer('author_id')
+      .primaryKey()
+      .references(() => authors.id, { onDelete: 'cascade' }),
+    groupId: integer('group_id').notNull(),
+  },
+  (t) => [index('author_links_group_id_idx').on(t.groupId)],
+);
+
 export const authorEnrichmentQueue = pgTable(
   'author_enrichment_queue',
   {

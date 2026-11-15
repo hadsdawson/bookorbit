@@ -24,6 +24,12 @@ export type AuthorLetterCount = {
   count: number;
 };
 
+/** Fork: another name the same person writes under. */
+export type AuthorLink = {
+  id: number;
+  name: string;
+};
+
 export type AuthorDetail = AuthorSummary & {
   description: string | null;
   birthDate: string | null;
