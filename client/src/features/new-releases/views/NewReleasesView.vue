@@ -419,7 +419,7 @@ onMounted(load)
                         <RouterLink
                           v-if="author.authorId !== null"
                           :to="{ name: 'author-detail', params: { id: author.authorId } }"
-                          class="text-foreground/80 hover:text-foreground hover:underline"
+                          class="text-foreground hover:underline"
                           >{{ author.name }}</RouterLink
                         >
                         <span v-else>{{ author.name }}</span>
@@ -429,7 +429,7 @@ onMounted(load)
                       <RouterLink
                         v-if="item.seriesId !== null"
                         :to="{ name: 'series-detail', params: { seriesId: item.seriesId } }"
-                        class="text-foreground/80 hover:text-foreground hover:underline"
+                        class="text-foreground hover:underline"
                         >{{ seriesLine(item) }}</RouterLink
                       >
                       <template v-else>{{ seriesLine(item) }}</template>
