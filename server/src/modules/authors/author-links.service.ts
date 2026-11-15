@@ -48,6 +48,34 @@ export class AuthorLinksService {
     return this.visibleLinks(authorId, await this.libraryIds(user));
   }
 
+  /** Links every given author into one group, from a selection on the authors list. */
+  async linkMany(user: RequestUser, authorIds: number[]): Promise<{ linkedAuthorIds: number[]; booksCredited: number }> {
+    const ids = [...new Set(authorIds)];
+    if (ids.length < 2) throw new BadRequestException('Select at least two authors to link');
+    await this.assertMutable(user, ids);
+
+    const event = 'author.link_many';
+    const startedAt = Date.now();
+    this.logger.log(`[${event}] [start] userId=${user.id} authorCount=${ids.length} - linking authors`);
+    try {
+      const [first, ...others] = ids;
+      let members: number[] = [];
+      for (const other of others) members = await this.linksRepo.link(first!, other);
+      const creditedBookIds = await this.linksRepo.creditGroupOnBooks(members);
+      this.logger.log(
+        `[${event}] [end] userId=${user.id} durationMs=${Date.now() - startedAt} groupSize=${members.length} booksCredited=${creditedBookIds.length} - authors linked`,
+      );
+      return { linkedAuthorIds: members, booksCredited: creditedBookIds.length };
+    } catch (err) {
+      const errorClass = err instanceof Error ? err.name : 'Error';
+      const message = sanitizeLogValue(err instanceof Error ? err.message : String(err));
+      this.logger.error(
+        `[${event}] [fail] userId=${user.id} durationMs=${Date.now() - startedAt} errorClass=${errorClass} error="${message}" - linking authors failed`,
+      );
+      throw err;
+    }
+  }
+
   async unlink(user: RequestUser, authorId: number, linkedId: number): Promise<AuthorLink[]> {
     await this.assertMutable(user, [authorId, linkedId]);
     if (!(await this.linksRepo.unlink(authorId, linkedId))) throw new NotFoundException('Authors are not linked');

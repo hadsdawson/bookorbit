@@ -3,7 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatNumber } from '@/i18n/formatters'
 import { useRoute, useRouter } from 'vue-router'
-import { CheckCheck, RefreshCcw, Trash2, X } from '@lucide/vue'
+import { CheckCheck, Link2, RefreshCcw, Trash2, X } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 
 import SelectionActionBar from '@/components/SelectionActionBar.vue'
@@ -22,7 +22,7 @@ import { useScrollRestoreOnActivate } from '@/features/book/composables/useScrol
 import { useLibraries } from '@/features/library/composables/useLibraries'
 import { useLibraryPermissions } from '@/features/library/composables/useLibraryPermissions'
 import JumpRail from '@/features/book/components/JumpRail.vue'
-import { bulkRefreshAuthorsMetadata, deleteAuthors, refreshAuthorMetadata } from '../api/author'
+import { bulkRefreshAuthorsMetadata, deleteAuthors, linkAuthorsTogether, refreshAuthorMetadata } from '../api/author'
 import AuthorConfirmDialog from '../components/AuthorConfirmDialog.vue'
 import AuthorIndexRow from '../components/AuthorIndexRow.vue'
 import AuthorTile from '../components/AuthorTile.vue'
@@ -68,6 +68,8 @@ const bulkDeleting = ref(false)
 const deletingAuthorId = ref<number | null>(null)
 const confirmingBulkDelete = ref(false)
 const confirmingBulkRefresh = ref(false)
+const confirmingBulkLink = ref(false)
+const bulkLinking = ref(false)
 const bulkRefreshIgnoreCache = ref(false)
 const bulkRefreshConfirmButton = ref<HTMLButtonElement | null>(null)
 
@@ -437,6 +439,34 @@ function cancelDeleteAuthors() {
   pendingDeleteIds.value = []
 }
 
+// Fork: link the selected authors as names one person writes under.
+function startBulkLinkConfirm() {
+  if (selectedCount.value < 2 || bulkLinking.value || !canRefreshMetadata.value) return
+  confirmingBulkLink.value = true
+}
+
+function cancelBulkLinkConfirm() {
+  confirmingBulkLink.value = false
+}
+
+async function confirmBulkLink() {
+  const ids = [...selectedIds.value]
+  confirmingBulkLink.value = false
+  if (ids.length < 2 || bulkLinking.value) return
+
+  bulkLinking.value = true
+  try {
+    const result = await linkAuthorsTogether(ids)
+    exitSelectionMode()
+    await load(true)
+    toast.success(t('author.list.toast.linkSuccess', { count: result.linkedAuthorIds.length, books: result.booksCredited }))
+  } catch (actionError) {
+    toast.error(actionError instanceof Error ? actionError.message : t('author.list.toast.linkFailed'))
+  } finally {
+    bulkLinking.value = false
+  }
+}
+
 function startBulkDeleteConfirm() {
   confirmingBulkDelete.value = true
 }
@@ -543,6 +573,7 @@ watch(
     if (!mode || count === 0) {
       confirmingBulkDelete.value = false
       confirmingBulkRefresh.value = false
+      confirmingBulkLink.value = false
     }
   },
   { flush: 'post' },
@@ -795,7 +826,32 @@ defineOptions({ name: 'AuthorsView' })
 
     <SelectionActionBar :visible="selectionMode" :count="selectedCount" @exit="exitSelectionMode">
       <template #content>
-        <template v-if="confirmingBulkRefresh">
+        <template v-if="confirmingBulkLink">
+          <span class="whitespace-nowrap px-3 text-sm font-semibold text-foreground" data-testid="author-bulk-link-confirm">
+            {{ t('author.list.selection.confirmLinkCount', { count: selectedCount }) }}
+          </span>
+
+          <div class="mx-1 h-5 w-px shrink-0 bg-border" />
+
+          <button
+            type="button"
+            class="h-8 rounded-full px-3 text-sm font-medium text-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+            data-testid="author-bulk-link-confirm-action"
+            @click="confirmBulkLink"
+          >
+            {{ t('author.list.selection.linkAction') }}
+          </button>
+
+          <button
+            type="button"
+            class="h-8 rounded-full px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            @click="cancelBulkLinkConfirm"
+          >
+            {{ t('common.cancel') }}
+          </button>
+        </template>
+
+        <template v-else-if="confirmingBulkRefresh">
           <span class="whitespace-nowrap px-3 text-sm font-semibold text-foreground" data-testid="author-bulk-refresh-confirm">
             {{ t('author.list.selection.confirmRefreshCount', { count: selectedCount }) }}
           </span>
@@ -865,6 +921,22 @@ defineOptions({ name: 'AuthorsView' })
             <TooltipContent side="top">
               {{ bulkRefreshing ? t('author.list.selection.refreshingMetadata') : t('author.list.selection.refreshMetadata') }}
             </TooltipContent>
+          </Tooltip>
+
+          <Tooltip v-if="canRefreshMetadata">
+            <TooltipTrigger as-child>
+              <button
+                :disabled="selectedCount < 2 || bulkLinking"
+                :aria-label="t('author.list.selection.linkAuthors')"
+                class="flex size-9 items-center justify-center rounded-full transition-colors"
+                :class="selectedCount >= 2 ? 'text-foreground hover:bg-muted' : 'cursor-not-allowed text-muted-foreground'"
+                data-testid="author-bulk-link"
+                @click="startBulkLinkConfirm"
+              >
+                <Link2 :size="17" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">{{ t('author.list.selection.linkAuthors') }}</TooltipContent>
           </Tooltip>
 
           <Tooltip v-if="canDeleteAuthors">
