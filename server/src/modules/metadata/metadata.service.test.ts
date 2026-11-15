@@ -1434,8 +1434,41 @@ describe('MetadataService', () => {
     expect(db.update).toHaveBeenCalledWith(authors);
     expect(updateSet).toHaveBeenCalledWith({ name: 'Known Author' });
     expect(updateWhere).toHaveBeenCalledTimes(1);
-    expect(db.execute).toHaveBeenCalledTimes(2);
+    // Sort-name refreshes plus the linked-author lookup.
+    expect(db.execute).toHaveBeenCalledTimes(3);
     expect(insertedBookAuthors).toEqual([{ bookId: 6, authorId: 9, displayOrder: 0 }]);
+  });
+
+  it('replaceAuthors also credits the linked names of an author', async () => {
+    const { db } = makeDb();
+    const service = makeService(db);
+    const insertedBookAuthors: Array<{ bookId: number; authorId: number; displayOrder: number }> = [];
+
+    db.select.mockImplementation(() => ({
+      from: () => ({
+        where: () => Promise.resolve([{ id: 9, name: 'A.M. Woody', normalizedName: 'a.m. woody' }]),
+      }),
+    }));
+    db.execute.mockImplementation(() => Promise.resolve({ rows: [{ authorId: 12 }] }));
+    db.insert.mockImplementation((table: unknown) => {
+      if (table === bookAuthors) {
+        return {
+          values: (rows: Array<{ bookId: number; authorId: number; displayOrder: number }>) => {
+            insertedBookAuthors.push(...rows);
+            return { onConflictDoNothing: () => Promise.resolve(undefined) };
+          },
+        };
+      }
+      return { values: () => ({ onConflictDoNothing: () => ({ returning: () => Promise.resolve([]) }) }) };
+    });
+
+    const ids = await service.replaceAuthors(6, [{ name: 'A.M. Woody', sortName: null }]);
+
+    expect(insertedBookAuthors).toEqual([
+      { bookId: 6, authorId: 9, displayOrder: 0 },
+      { bookId: 6, authorId: 12, displayOrder: 1 },
+    ]);
+    expect(ids).toEqual([9, 12]);
   });
 
   it('replaceAuthors prefers an existing clean author row over a legacy whitespace variant', async () => {
