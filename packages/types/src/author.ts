@@ -84,6 +84,12 @@ export type AuthorDetail = AuthorSummary & {
   metadataProviderPinned: boolean;
 };
 
+/** Fork: the authors before and after one in the Authors list, as its sort and filters order it. */
+export type AuthorNeighbors = {
+  previous: { id: number; name: string } | null;
+  next: { id: number; name: string } | null;
+};
+
 export type AuthorsPage = {
   items: AuthorSummary[];
   total: number;

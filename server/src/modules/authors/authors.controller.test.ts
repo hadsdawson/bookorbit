@@ -84,6 +84,7 @@ function makeReply() {
 function makeController() {
   const authorsService = {
     findAll: vi.fn(),
+    findNeighbors: vi.fn(),
     listMetadataProviders: vi.fn(),
     searchMetadata: vi.fn(),
     streamMetadata: vi.fn(),
@@ -156,6 +157,16 @@ describe('AuthorsController', () => {
     expect(authorsService.findAll).toHaveBeenCalledWith(user, { page: 0 });
     expect(authorsService.findOne).toHaveBeenCalledWith(user, 2);
     expect(authorsService.findBooks).toHaveBeenCalledWith(user, 2, { page: 0 });
+  });
+
+  it('delegates the previous and next author lookup with the list filters', async () => {
+    const { controller, authorsService } = makeController();
+    const user = makeUser();
+    const neighbors = { previous: { id: 1, name: 'Alpha' }, next: null };
+    authorsService.findNeighbors.mockResolvedValue(neighbors);
+
+    await expect(controller.findNeighbors(user, 2, { sort: 'bookCount', order: 'desc', minBookCount: 2 })).resolves.toEqual(neighbors);
+    expect(authorsService.findNeighbors).toHaveBeenCalledWith(user, 2, { sort: 'bookCount', order: 'desc', minBookCount: 2 });
   });
 
   it('delegates other-name endpoints to AuthorAliasesService', async () => {

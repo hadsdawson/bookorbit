@@ -6491,7 +6491,13 @@
         "title": "Open which author?",
         "description": "{name} is a pen name shared by more than one author."
       },
-      "penNameRedirect": "Opening the author behind this pen name..."
+      "penNameRedirect": "Opening the author behind this pen name...",
+      "neighbors": {
+        "previous": "Previous author",
+        "next": "Next author",
+        "previousNamed": "Previous author: {name}",
+        "nextNamed": "Next author: {name}"
+      }
     },
     "portrait": {
       "fromTheirBook": "Cover of one of their books; no portrait on file"

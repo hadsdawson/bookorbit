@@ -225,6 +225,12 @@ export class AuthorsController {
     return this.authorsService.findOne(user, id);
   }
 
+  /** Fork: the previous and next author in the Authors list, under the list's own sort and filters. */
+  @Get(':id/neighbors')
+  findNeighbors(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number, @Query() dto: ListAuthorsDto) {
+    return this.authorsService.findNeighbors(user, id, dto);
+  }
+
   @Get(':id/books')
   findBooks(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number, @Query() dto: ListAuthorBooksDto) {
     return this.authorsService.findBooks(user, id, dto);

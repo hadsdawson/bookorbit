@@ -4,10 +4,10 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatNumber } from '@/i18n/formatters'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowUpDown, ChevronDown, ChevronLeft, ImageMinus, Layers, LayoutGrid, Link, List, Upload } from '@lucide/vue'
+import { ArrowLeft, ArrowRight, ArrowUpDown, ChevronDown, ChevronLeft, ImageMinus, Layers, LayoutGrid, Link, List, Upload } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 
-import type { AuthorDetail, AuthorNames, AuthorSummary, BookCard } from '@bookorbit/types'
+import type { AuthorDetail, AuthorNames, AuthorNeighbors, AuthorSummary, BookCard } from '@bookorbit/types'
 import VirtualBookGrid from '@/features/book/components/VirtualBookGrid.vue'
 import BookListRow from '@/features/book/components/BookListRow.vue'
 import DeleteBookDialog from '@/features/book/components/DeleteBookDialog.vue'
@@ -31,6 +31,7 @@ import {
   deleteAuthorImage,
   deleteAuthors,
   fetchAuthorNames,
+  fetchAuthorNeighbors,
   fetchAuthors,
   mergeAuthors,
   MAX_AUTHOR_IMAGE_BYTES,
@@ -40,6 +41,7 @@ import {
   uploadAuthorImageFromUrl,
 } from '../api/author'
 import { useAuthorBooks } from '../composables/useAuthorBooks'
+import { authorListParamsFromQuery } from '../lib/author-list-route'
 import { useAuthorDetail } from '../composables/useAuthorDetail'
 import { useAuthorMetadataPreview } from '../composables/useAuthorMetadataPreview'
 import EntityNotFound from '@/components/EntityNotFound.vue'
@@ -289,6 +291,39 @@ watch(
   },
   { deep: true },
 )
+
+// Fork: steps to the author before or after this one in the Authors list it was opened from,
+// under that list's sort and filters (the plain A-Z list when opened from anywhere else).
+const neighbors = ref<AuthorNeighbors>({ previous: null, next: null })
+const listQuery = computed(() => {
+  const from = typeof route.query.from === 'string' ? route.query.from : ''
+  if (!from.startsWith('/authors')) return {}
+  return Object.fromEntries(new URL(from, window.location.origin).searchParams.entries())
+})
+
+async function loadNeighbors() {
+  const id = authorId.value
+  if (!id || Number.isNaN(id)) return
+  try {
+    const result = await fetchAuthorNeighbors(id, authorListParamsFromQuery(listQuery.value))
+    if (id === authorId.value) neighbors.value = result
+  } catch {
+    if (id === authorId.value) neighbors.value = { previous: null, next: null }
+  }
+}
+
+function openNeighbor(id: number) {
+  if (mainRef.value) mainRef.value.scrollTop = 0
+  void router.push({ name: 'author-detail', params: { id }, query: route.query.from ? { from: route.query.from } : {} })
+}
+
+function goToPreviousAuthor() {
+  if (neighbors.value.previous) openNeighbor(neighbors.value.previous.id)
+}
+
+function goToNextAuthor() {
+  if (neighbors.value.next) openNeighbor(neighbors.value.next.id)
+}
 
 function goBack() {
   const from = typeof route.query.from === 'string' ? route.query.from : ''
@@ -591,6 +626,7 @@ async function handleMatchUpdated(updated: AuthorDetail) {
 
 onMounted(async () => {
   void loadNames()
+  void loadNeighbors()
   await fetchLibraries()
   await Promise.all([loadAuthor(), loadBooks(true)])
 
@@ -613,7 +649,9 @@ onUnmounted(() => {
 })
 
 watch(authorId, () => {
+  neighbors.value = { previous: null, next: null }
   void loadNames()
+  void loadNeighbors()
   selectedMergeIds.value = []
   mergeCandidates.value = []
   mergeQuery.value = ''
@@ -657,6 +695,36 @@ defineOptions({ name: 'AuthorDetailView' })
           <ChevronLeft :size="14" />
           {{ t('common.back') }}
         </button>
+        <div v-if="!isPenName && (neighbors.previous || neighbors.next)" class="ml-auto flex items-center gap-1.5" data-testid="author-neighbors">
+          <button
+            type="button"
+            class="inline-flex h-8 max-w-[11rem] items-center gap-1 rounded-md border border-input px-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+            :disabled="!neighbors.previous"
+            :title="neighbors.previous ? t('author.detail.neighbors.previousNamed', { name: neighbors.previous.name }) : ''"
+            :aria-label="
+              neighbors.previous
+                ? t('author.detail.neighbors.previousNamed', { name: neighbors.previous.name })
+                : t('author.detail.neighbors.previous')
+            "
+            data-testid="author-previous"
+            @click="goToPreviousAuthor"
+          >
+            <ArrowLeft :size="14" class="shrink-0" />
+            <span class="hidden truncate sm:inline">{{ neighbors.previous?.name ?? t('author.detail.neighbors.previous') }}</span>
+          </button>
+          <button
+            type="button"
+            class="inline-flex h-8 max-w-[11rem] items-center gap-1 rounded-md border border-input px-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+            :disabled="!neighbors.next"
+            :title="neighbors.next ? t('author.detail.neighbors.nextNamed', { name: neighbors.next.name }) : ''"
+            :aria-label="neighbors.next ? t('author.detail.neighbors.nextNamed', { name: neighbors.next.name }) : t('author.detail.neighbors.next')"
+            data-testid="author-next"
+            @click="goToNextAuthor"
+          >
+            <span class="hidden truncate sm:inline">{{ neighbors.next?.name ?? t('author.detail.neighbors.next') }}</span>
+            <ArrowRight :size="14" class="shrink-0" />
+          </button>
+        </div>
       </div>
 
       <div v-if="authorNotFound">

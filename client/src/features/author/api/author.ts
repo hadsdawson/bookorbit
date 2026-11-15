@@ -4,6 +4,7 @@ import type {
   AddAuthorNameResult,
   AuthorNameKind,
   AuthorNames,
+  AuthorNeighbors,
   AuthorBooksPage,
   AuthorDetail,
   AuthorMetadataCandidate,
@@ -128,6 +129,17 @@ function toQuery(params: Record<string, string | number | (string | number)[] | 
   }
   const query = search.toString()
   return query ? `?${query}` : ''
+}
+
+/** Fork: the authors before and after this one in the Authors list, under the list's sort and filters. */
+export async function fetchAuthorNeighbors(
+  authorId: number,
+  params: AuthorFilterParams & { sort: AuthorListSort; order: SortDirection },
+): Promise<AuthorNeighbors> {
+  const query = toQuery({ sort: params.sort, order: params.order, ...authorFilterQuery(params) })
+  const res = await api(`/api/v1/authors/${authorId}/neighbors${query}`)
+  if (!res.ok) throw new Error('Failed to load the previous and next author')
+  return res.json()
 }
 
 export async function fetchAuthors(params: ListAuthorsParams): Promise<AuthorsPage> {
