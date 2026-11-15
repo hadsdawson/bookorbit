@@ -16502,7 +16502,9 @@
       "deliveryHint": "Suggest lists them to request by hand. Request files the request as soon as a date is confirmed, following each person's usual approval rules.",
       "saved": "New Releases defaults saved",
       "language": "Language",
-      "languageHint": "Only list books in this language. A book a source says is in another language is left off; one with no stated language is kept. Books already found are re-checked on the next weekly check.",
+      "languageHint": "Only list books in this language. A book the sources list only in other languages is left off. Books already found are re-checked on the next weekly check.",
+      "languageStrict": "Hide books with no stated language",
+      "languageStrictHint": "Also leave off books no source says are in this language. This may hide a few real books with thin details.",
       "anyLanguage": "Any language"
     },
     "showHidden": "Show hidden"

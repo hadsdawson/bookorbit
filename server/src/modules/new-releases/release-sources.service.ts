@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { toRequestLanguage, type NewReleaseSourceStatus, type ReleaseFollowKind } from '@bookorbit/types';
+import { languageSubtagOf, toRequestLanguage, type NewReleaseSourceStatus, type ReleaseFollowKind } from '@bookorbit/types';
 
 import { toBearerAuthorization } from '../../common/utils/bearer-token.utils';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
@@ -142,10 +142,17 @@ function sameName(candidate: string | null | undefined, key: string): boolean {
   return !!candidate && nameKey(candidate) === key;
 }
 
-/** Fork: the language the editions state, when they agree on one. */
-function editionLanguage(editions: NonNullable<HardcoverUpcomingBook['editions']>): string | null {
-  const codes = new Set(editions.map((edition) => toRequestLanguage(edition.language?.code2)).filter((code): code is string => !!code));
-  return codes.size === 1 ? [...codes][0]! : null;
+/** Fork: the languages the editions state. One is the edition's language; several are kept so the list can still match one. */
+function editionLanguages(editions: NonNullable<HardcoverUpcomingBook['editions']>): Pick<SourceRelease, 'language' | 'languages'> {
+  const codes = [...new Set(editions.map((edition) => toRequestLanguage(edition.language?.code2)).filter((code): code is string => !!code))].sort();
+  if (codes.length === 0) return { language: null };
+  if (codes.length === 1) return { language: codes[0]! };
+  return { language: null, languages: codes };
+}
+
+/** Fork: Audible names the language ("german"), which is not a code. */
+function audibleLanguage(value: string | null | undefined): string | null {
+  return toRequestLanguage(languageSubtagOf(value));
 }
 
 export function mapHardcoverBook(book: HardcoverUpcomingBook): SourceRelease[] {
@@ -172,7 +179,7 @@ export function mapHardcoverBook(book: HardcoverUpcomingBook): SourceRelease[] {
       sourceId: `${book.id}:ebook`,
       mediaKind: 'ebook',
       asin: ebook.find((edition) => edition.asin)?.asin ?? null,
-      language: editionLanguage(ebook),
+      ...editionLanguages(ebook),
       // The book's own date is its first edition's, which for a new book is the ebook or print one.
       date: earliest(ebook.map((edition) => edition.release_date)) ?? book.release_date ?? null,
     },
@@ -184,7 +191,7 @@ export function mapHardcoverBook(book: HardcoverUpcomingBook): SourceRelease[] {
       sourceId: `${book.id}:audiobook`,
       mediaKind: 'audiobook',
       asin: audio.find((edition) => edition.asin)?.asin ?? null,
-      language: editionLanguage(audio),
+      ...editionLanguages(audio),
       date: audioDate,
     });
   }
@@ -205,7 +212,7 @@ export function mapAudibleProduct(product: AudibleUpcomingProduct): SourceReleas
     isbn13: null,
     asin: product.asin,
     date: product.release_date ?? null,
-    language: toRequestLanguage(product.language),
+    language: audibleLanguage(product.language),
   };
 }
 

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, count, eq, ilike, inArray, sql } from 'drizzle-orm';
+import { and, asc, count, eq, ilike, inArray, sql, type SQL } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { ACTIVE_BOOK_REQUEST_STATUSES, type ReleaseFollowKind } from '@bookorbit/types';
 
@@ -34,6 +34,19 @@ export type ReleaseListWindow = { retentionDays: number } | { onDate: string };
 /** Escapes the LIKE wildcards in what a person typed, so "100%" searches for itself. */
 function likePattern(value: string): string {
   return `%${value.replace(/[\\%_]/g, (match) => `\\${match}`)}%`;
+}
+
+/**
+ * Fork: which listed books are in the language asked for. A source that states only other languages
+ * keeps a book off; a book no source states a language for is kept, unless `strict` asks for proof.
+ */
+export function releaseLanguageCondition(language: string | null, strict: boolean): SQL {
+  if (!language) return sql`TRUE`;
+  const statesOne = sql`(src->>'language' IS NOT NULL OR jsonb_array_length(COALESCE(src->'languages', '[]'::jsonb)) > 0)`;
+  const matches = sql`(COALESCE(src->>'language' = ${language}, false) OR COALESCE(src->'languages', '[]'::jsonb) @> to_jsonb(${language}::text))`;
+  const noneOther = sql`NOT EXISTS (SELECT 1 FROM jsonb_array_elements(r.sources) src WHERE ${statesOne} AND NOT ${matches})`;
+  if (!strict) return noneOther;
+  return sql`(${noneOther} AND EXISTS (SELECT 1 FROM jsonb_array_elements(r.sources) src WHERE ${matches}))`;
 }
 
 @Injectable()
@@ -335,15 +348,9 @@ export class NewReleasesRepository {
     userId: number,
     window: ReleaseListWindow,
     limit: number,
-    options: { includeHidden?: boolean; language?: string | null } = {},
+    options: { includeHidden?: boolean; language?: string | null; strictLanguage?: boolean } = {},
   ): Promise<ListedReleaseRow[]> {
-    // Fork: a source that states another language than the one asked for keeps the book off the list.
-    const languageOk = options.language
-      ? sql`NOT EXISTS (
-          SELECT 1 FROM jsonb_array_elements(r.sources) src
-          WHERE src->>'language' IS NOT NULL AND src->>'language' <> ${options.language}
-        )`
-      : sql`TRUE`;
+    const languageOk = releaseLanguageCondition(options.language ?? null, options.strictLanguage === true);
     const hiddenOk = options.includeHidden ? sql`TRUE` : sql`(st.state IS NULL OR st.state <> 'dismissed')`;
     const inWindow =
       'onDate' in window
@@ -508,7 +515,12 @@ export class NewReleasesRepository {
    * Only active users who hold New Releases access (or are administrators) are asked for. Bounded,
    * soonest first, so a large backlog is worked through over several runs.
    */
-  async findPendingAutoRequests(defaultDelivery: string, limit: number): Promise<{ userId: number; releaseId: number }[]> {
+  async findPendingAutoRequests(
+    defaultDelivery: string,
+    limit: number,
+    language: { language: string | null; strict: boolean } = { language: null, strict: false },
+  ): Promise<{ userId: number; releaseId: number }[]> {
+    const languageOk = releaseLanguageCondition(language.language, language.strict);
     const result = await this.db.execute<{ user_id: number; release_id: number }>(sql`
       SELECT DISTINCT ON (r.release_date, r.id, u.id) u.id AS user_id, r.id AS release_id
       FROM upcoming_releases r
@@ -521,6 +533,7 @@ export class NewReleasesRepository {
         AND r.owned_book_id IS NULL
         AND st.state IS NULL
         AND COALESCE(us.delivery, ${defaultDelivery}) = 'request'
+        AND ${languageOk}
         AND (u.is_superuser OR EXISTS (
           SELECT 1 FROM user_permissions p WHERE p.user_id = u.id AND p.permission_name = 'new_releases_access'
         ))

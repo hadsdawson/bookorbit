@@ -59,6 +59,8 @@ export interface NewReleasesServerSettings {
   defaultDelivery: NewReleaseDelivery;
   /** Fork: only list books in this language (two-letter code), or "any". */
   language: string;
+  /** Fork: also leave off books no source states a language for. */
+  languageStrict: boolean;
 }
 
 export interface NewReleasesUserSettings {

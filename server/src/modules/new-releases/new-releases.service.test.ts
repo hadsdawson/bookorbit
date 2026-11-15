@@ -227,7 +227,7 @@ describe('NewReleasesService', () => {
     submit.mockResolvedValueOnce({} as never).mockRejectedValueOnce(new Error('format locked'));
 
     await expect(service.autoRequest(1_000)).resolves.toEqual({ filed: 1, failed: 1 });
-    expect(repository.findPendingAutoRequests).toHaveBeenCalledWith('request', 100);
+    expect(repository.findPendingAutoRequests).toHaveBeenCalledWith('request', 100, { language: 'en', strict: false });
     expect(repository.setRequested).toHaveBeenCalledTimes(1);
 
     submit.mockClear();
@@ -252,8 +252,19 @@ describe('NewReleasesService', () => {
 
     const result = await service.upcomingTuesday({ ...user, isSuperuser: false, permissions: ['new_releases_access'] } as never, '2026-11-13');
 
-    expect(repository.listForUser).toHaveBeenCalledWith(3, { onDate: '2026-11-17' }, 12);
+    expect(repository.listForUser).toHaveBeenCalledWith(3, { onDate: '2026-11-17' }, 12, { language: 'en', strictLanguage: false });
     expect(result).toEqual({ date: '2026-11-17', total: 14, items: [expect.objectContaining({ id: 8, formats: ['ebook'] })] });
+  });
+
+  it('applies the strict language setting to the list and to automatic requests', async () => {
+    appValues.set('new_releases_language', 'en');
+    appValues.set('new_releases_language_strict', 'true');
+    await service.autoRequest(1_000);
+    expect(repository.findPendingAutoRequests).toHaveBeenCalledWith('request', 100, { language: 'en', strict: true });
+
+    appValues.set('new_releases_language', 'any');
+    await service.autoRequest(2_000);
+    expect(repository.findPendingAutoRequests).toHaveBeenLastCalledWith('request', 100, { language: null, strict: false });
   });
 
   it('gives no widget data to someone without New Releases access', async () => {

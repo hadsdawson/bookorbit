@@ -30,6 +30,8 @@ export interface SourceRelease {
   date: string | null;
   /** Fork: the language the source states for this edition, as a two-letter code, when it says. */
   language?: string | null;
+  /** Fork: every language the source lists editions in, when it lists more than one. */
+  languages?: string[] | null;
   /** Fork: the book's page id on the source, where its link needs more than `sourceId` (Hardcover's slug). */
   slug?: string | null;
 }

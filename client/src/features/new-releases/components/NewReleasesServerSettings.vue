@@ -13,6 +13,7 @@ import {
 } from '@bookorbit/types'
 
 import { usePermissions } from '@/features/auth/composables/usePermissions'
+import ToggleSwitch from '@/components/ui/ToggleSwitch.vue'
 import SettingsRow from '@/features/settings/components/SettingsRow.vue'
 import { errorMessage } from '@/lib/api-json'
 import { getNewReleasesServerSettings, saveNewReleasesServerSettings } from '../api/new-releases'
@@ -49,6 +50,11 @@ const languageOptions = computed(() => {
 function handleLanguageChange(event: Event) {
   if (!settings.value) return
   void save({ ...settings.value, language: (event.target as HTMLSelectElement).value })
+}
+
+function handleLanguageStrictChange(value: boolean) {
+  if (!settings.value) return
+  void save({ ...settings.value, languageStrict: value })
 }
 
 function handleDeliveryChange(event: Event) {
@@ -108,6 +114,20 @@ onMounted(async () => {
         <option value="any">{{ t('newReleases.server.anyLanguage') }}</option>
         <option v-for="option in languageOptions" :key="option.code" :value="option.code">{{ option.label }}</option>
       </select>
+    </SettingsRow>
+
+    <SettingsRow
+      v-if="settings.language !== 'any'"
+      :label="t('newReleases.server.languageStrict')"
+      :hint="t('newReleases.server.languageStrictHint')"
+      control-id="new-releases-language-strict"
+    >
+      <ToggleSwitch
+        id="new-releases-language-strict"
+        :model-value="settings.languageStrict"
+        :disabled="saving"
+        @update:model-value="handleLanguageStrictChange"
+      />
     </SettingsRow>
   </div>
 </template>
