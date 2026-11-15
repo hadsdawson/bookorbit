@@ -28,6 +28,7 @@ const emit = defineEmits<{
   open: [BookDockFile]
   discard: [BookDockFile]
   retry: [BookDockFile]
+  unmerge: [BookDockFile]
   upload: []
   keyboardActive: [boolean]
 }>()
@@ -153,6 +154,9 @@ function onDiscard(file: BookDockFile) {
 function onRetry(file: BookDockFile) {
   emit('retry', file)
 }
+function onUnmerge(file: BookDockFile) {
+  emit('unmerge', file)
+}
 function onUpload() {
   emit('upload')
 }
@@ -210,6 +214,7 @@ function onUpload() {
         @open="onOpen"
         @discard="onDiscard"
         @retry="onRetry"
+        @unmerge="onUnmerge"
       />
     </template>
   </div>

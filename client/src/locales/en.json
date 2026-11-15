@@ -9900,6 +9900,16 @@
         "invalid_format": "Bad format",
         "error": "Would fail"
       },
+      "merged": {
+        "badge": "Merged: {formats}",
+        "badgeTitle": "These files are filed together as one book",
+        "heading": "{count} merged files",
+        "main": "Primary",
+        "hint": "The book takes its details from the primary file. Filing it files the others into the same book.",
+        "unmerge": "Unmerge",
+        "unmerged": "Unmerged. The files are separate again.",
+        "unmergeFailed": "Could not unmerge those files"
+      },
       "unit": {
         "fileCount": "{count, plural, one {# file} other {# files}}",
         "filesHeading": "{count, plural, one {File in this entry} other {# files in this entry}}",
@@ -9913,14 +9923,16 @@
     },
     "combine": {
       "action": "Merge",
-      "actionHint": "File the selected files as one book, such as an ebook and its audiobook",
+      "actionHint": "Merge the selected files into one book, such as an ebook and its audiobook",
       "title": "Merge {count} files into one book",
-      "instructions": "The primary file is filed as the book. The other files are added to the same book folder as more formats, for example the audiobook of the same book.",
+      "instructions": "Merge keeps the files together as one item in Book Dock, so you can finish its details and file it later. Merge and file now files them straight away. Either way, the primary file becomes the book and the others are added to the same book folder as more formats, for example the audiobook of the same book.",
       "primaryLabel": "Primary file",
       "primaryHint": "The book takes its title, authors and other details from the primary file: {title}",
       "folder": "Folder",
       "libraryNote": "Merging needs a library that keeps each book in its own folder.",
       "submit": "Merge",
+      "submitAndFile": "Merge and file now",
+      "held": "Merged. File it when its details are ready.",
       "resultTitle": "Files merged",
       "done": "{count, plural, one {# file filed} other {All # files filed as one book}}",
       "partial": "{done} of {total} files filed",

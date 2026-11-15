@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, notInArray, or, sql, sum, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, ne, notInArray, or, sql, sum, type SQL } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import type { ContentFilterRules } from '@bookorbit/types';
@@ -61,6 +61,11 @@ function needsReviewCondition(): SQL {
     eq(bookDockFiles.status, 'ready'),
     or(isNull(bookDockFiles.targetLibraryId), isNull(bookDockFiles.targetFolderId), lt(bookDockFiles.confidence, NEEDS_REVIEW_CONFIDENCE_BELOW)),
   ) as SQL;
+}
+
+/** Fork: files merged under another are filed with it and shown only through it. */
+function shownInListCondition(): SQL {
+  return or(isNull(bookDockFiles.mergedIntoId), eq(bookDockFiles.mergedIntoId, bookDockFiles.id))!;
 }
 
 export interface ListOptions {
@@ -474,7 +479,52 @@ export class BookDockRepository {
     const updated = await this.db
       .update(bookDockFiles)
       .set({ targetLibraryId, targetFolderId })
-      .where(inArray(bookDockFiles.id, ids))
+      .where(or(inArray(bookDockFiles.id, ids), inArray(bookDockFiles.mergedIntoId, ids)))
+      .returning({ id: bookDockFiles.id });
+    return updated.length;
+  }
+
+  /** Fork: the other files merged under each of these main files, which the list does not show. */
+  async findMergedMembers(primaryIds: number[]): Promise<Map<number, BookDockFileRow[]>> {
+    const byPrimary = new Map<number, BookDockFileRow[]>();
+    if (primaryIds.length === 0) return byPrimary;
+    const rows = await this.db
+      .select()
+      .from(bookDockFiles)
+      .where(and(inArray(bookDockFiles.mergedIntoId, primaryIds), ne(bookDockFiles.id, bookDockFiles.mergedIntoId)))
+      .orderBy(asc(bookDockFiles.id));
+    for (const row of rows) {
+      const list = byPrimary.get(row.mergedIntoId!) ?? [];
+      list.push(row);
+      byPrimary.set(row.mergedIntoId!, list);
+    }
+    return byPrimary;
+  }
+
+  /**
+   * Fork: holds these files together under the main one. Files already merged elsewhere are moved,
+   * and the main file's destination is given to the rest so the group is filed to one place.
+   */
+  async setMergeGroup(primaryId: number, fileIds: number[]): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      const [primary] = await tx.select().from(bookDockFiles).where(eq(bookDockFiles.id, primaryId)).limit(1);
+      if (!primary) return;
+      await tx
+        .update(bookDockFiles)
+        .set({
+          mergedIntoId: primaryId,
+          ...(primary.targetLibraryId !== null ? { targetLibraryId: primary.targetLibraryId, targetFolderId: primary.targetFolderId } : {}),
+        })
+        .where(or(inArray(bookDockFiles.id, fileIds), inArray(bookDockFiles.mergedIntoId, fileIds)));
+    });
+  }
+
+  /** Fork: lets every file merged under this one stand on its own again. */
+  async clearMergeGroup(primaryId: number): Promise<number> {
+    const updated = await this.db
+      .update(bookDockFiles)
+      .set({ mergedIntoId: null })
+      .where(eq(bookDockFiles.mergedIntoId, primaryId))
       .returning({ id: bookDockFiles.id });
     return updated.length;
   }
@@ -483,7 +533,10 @@ export class BookDockRepository {
     userId?: number,
     canManageAll?: boolean,
   ): Promise<{ pending: number; working: number; ready: number; error: number; needsReview: number; readyToFile: number; total: number }> {
-    const visibilityCondition = userId !== undefined ? this.buildVisibilityCondition(userId, canManageAll ?? true) : undefined;
+    const visibilityCondition = and(
+      shownInListCondition(),
+      userId !== undefined ? this.buildVisibilityCondition(userId, canManageAll ?? true) : undefined,
+    );
 
     // A filtered aggregate keeps this to one round trip: only the 'ready' group can
     // contribute, since needing review presupposes the file is otherwise done.
@@ -556,7 +609,7 @@ export class BookDockRepository {
     needsReview?: boolean,
     readyToFile?: boolean,
   ): SQL[] {
-    const conditions: SQL[] = [];
+    const conditions: SQL[] = [shownInListCondition()];
     if (status === 'pending') {
       conditions.push(inArray(bookDockFiles.status, ['pending', 'extracting', 'fetching']));
     } else if (status) {

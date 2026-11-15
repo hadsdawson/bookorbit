@@ -41,7 +41,7 @@ function sentBody(): Record<string, unknown> {
 }
 
 function combineButton(wrapper: ReturnType<typeof mountDialog>) {
-  return wrapper.findAll('button').find((button) => button.text().trim() === 'Merge')!
+  return wrapper.get('[data-testid="book-dock-combine-file-now"]')
 }
 
 describe('BookDockCombineDialog', () => {
@@ -105,5 +105,32 @@ describe('BookDockCombineDialog', () => {
     await combineButton(wrapper).trigger('click')
     await flushPromises()
     expect(wrapper.get('[role="alert"]').text()).toContain('keeps each book in its own folder')
+  })
+
+  it('keeps the merged files in Book Dock by default instead of filing them (fork)', async () => {
+    apiMock.mockResolvedValue({ ok: true, json: async () => ({ primaryFileId: 2, fileIds: [2, 1] }) } as Response)
+    const wrapper = mountDialog([file(1, 'Book A.m4b'), file(2, 'Book A.epub')])
+    const hold = wrapper.get('[data-testid="book-dock-combine-hold"]')
+    expect(hold.text()).toBe('Merge')
+    await hold.trigger('click')
+    await flushPromises()
+
+    expect(apiMock).toHaveBeenCalledWith('/api/v1/book-dock/merge', expect.objectContaining({ method: 'POST' }))
+    expect(sentBody()).toEqual({ fileIds: [1, 2], primaryFileId: 2, defaultLibraryId: 1, defaultFolderId: 2 })
+    expect(wrapper.emitted('merged')).toHaveLength(1)
+    expect(wrapper.emitted('combined')).toBeUndefined()
+  })
+
+  it('shows why holding the files failed', async () => {
+    apiMock.mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ message: 'Some of those files are no longer in Book Dock' }),
+    } as Response)
+    const wrapper = mountDialog([file(1, 'Book A.m4b'), file(2, 'Book A.epub')])
+    await wrapper.get('[data-testid="book-dock-combine-hold"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[role="alert"]').text()).toContain('no longer in Book Dock')
+    expect(wrapper.emitted('merged')).toBeUndefined()
   })
 })

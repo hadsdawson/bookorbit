@@ -145,4 +145,23 @@ describe('BookDockFileRow with a multi-file unit', () => {
     expect(list.findAll('button')).toHaveLength(0)
     expect(list.findAll('input')).toHaveLength(0)
   })
+
+  describe('merged in Book Dock (fork)', () => {
+    const merged = { mergedFiles: [{ id: 7, fileName: 'Book A.m4b', fileSize: 2048, format: 'm4b' }], fileName: 'Book A.epub', format: 'epub' }
+
+    it('marks a merged item with the formats it holds', () => {
+      const wrapper = mountUnitRow(merged)
+      expect(wrapper.get('[data-testid="book-dock-merged-badge"]').text()).toBe('Merged: EPUB + M4B')
+      expect(mountUnitRow().find('[data-testid="book-dock-merged-badge"]').exists()).toBe(false)
+    })
+
+    it('lists the merged files and asks to unmerge them', async () => {
+      const wrapper = mountUnitRow(merged, true)
+      const section = wrapper.get('[data-testid="book-dock-merged-files"]')
+      expect(section.text()).toContain('Book A.epub')
+      expect(section.text()).toContain('Book A.m4b')
+      await wrapper.get('[data-testid="book-dock-unmerge"]').trigger('click')
+      expect(wrapper.emitted('unmerge')?.[0]?.[0]).toEqual(expect.objectContaining({ id: 1 }))
+    })
+  })
 })

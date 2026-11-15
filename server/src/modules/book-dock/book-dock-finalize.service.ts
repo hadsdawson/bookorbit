@@ -73,6 +73,7 @@ import { UploadValidatorService } from '../upload/upload-validator.service';
 import { inspectEpubMediaOverlayFields } from '../reader/epub/epub-media-overlay-capability';
 import { isAbsMetadataFile } from './abs-metadata-import';
 import { BookDockPathsService, removeLeftoverFolders } from './book-dock-paths.service';
+import { isMerged, isMergePrimary } from './book-dock-merge';
 import { BookDockRepository } from './book-dock.repository';
 import { BookDockEventsService, BOOK_DOCK_FILE_INGESTED } from './book-dock-events.service';
 import { BookDockGateway } from './book-dock.gateway';
@@ -344,6 +345,9 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
     const results: BookDockFinalizeFileResult[] = [];
     let succeeded = 0;
     let failed = 0;
+    // Fork: files merged in Book Dock are filed into the book their main file becomes. Read before
+    // filing, because filing the main file removes it and with it the link to the others.
+    const mergedMembers = new Map<number, BookDockFileRow[]>();
 
     if (selectAll) {
       let afterId: number | undefined;
@@ -360,6 +364,7 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
           canManageAll,
         });
         if (rows.length === 0) break;
+        await this.collectMergedMembers(rows, mergedMembers);
 
         const prepared = await this.prepareFinalizeBatch(rows, defaultLibraryId, defaultFolderId, overrideMap, userId, isSuperuser, requester);
         for (const analysis of prepared.analyses) {
@@ -375,6 +380,7 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
       for (let i = 0; i < ids.length; i += BATCH_SIZE) {
         const batch = ids.slice(i, i + BATCH_SIZE);
         const rows = await this.repo.findByIds(batch, userId, canManageAll);
+        await this.collectMergedMembers(rows, mergedMembers);
         const prepared = await this.prepareFinalizeBatch(rows, defaultLibraryId, defaultFolderId, overrideMap, userId, isSuperuser, requester);
         const analysisById = new Map(prepared.analyses.map((analysis) => [analysis.fileId, analysis]));
 
@@ -397,6 +403,22 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
           else failed++;
         }
       }
+    }
+
+    for (const [primaryId, members] of mergedMembers) {
+      const bookId = results.find((result) => result.fileId === primaryId && result.success)?.bookId;
+      if (bookId === undefined || members.length === 0) continue;
+      const joinOverrides = new Map<number, FinalizeOverrideEntry>(members.map((member) => [member.id, { requestedJoinBookId: bookId }]));
+      const prepared = await this.prepareFinalizeBatch(members, defaultLibraryId, defaultFolderId, joinOverrides, userId, isSuperuser, requester);
+      for (const analysis of prepared.analyses) {
+        const result = await this.finalizePreparedCandidate(analysis, prepared.existingDestinations);
+        results.push(result);
+        if (result.success) succeeded++;
+        else failed++;
+      }
+      this.logger.log(
+        `[book_dock.finalize_merged] [end] primaryFileId=${primaryId} bookId=${bookId} files=${members.length} - merged files filed into the same book`,
+      );
     }
 
     this.emitChange();
@@ -1137,6 +1159,8 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
     // Another module put this row here and runs its own checks before filing it. Racing it would
     // either file the wrong book into the right library or file it before those checks ran.
     if (row.autoFinalizeSuppressed) return;
+    // Fork: a merged item waits for a person to finish its details and file it.
+    if (isMerged(row)) return;
     if (!shouldAutoFinalize(row, settings.metadataMode, settings.threshold)) return;
 
     const { metadata: autoFinalizeMetadata, lookedUpCoverUrl } = separateLookedUpCover(
@@ -1237,7 +1261,7 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
       if (rows.length === 0) break;
 
       for (const row of rows) {
-        if (row.autoFinalizeSuppressed) continue;
+        if (row.autoFinalizeSuppressed || isMerged(row)) continue;
         if (shouldAutoFinalize(row, settings.metadataMode, settings.threshold) && this.autoFinalizeQueue.enqueue(row.id)) {
           queued++;
         }
@@ -1639,6 +1663,17 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
 
   private emitChange(): void {
     this.gateway.emitChanged();
+  }
+
+  /** Fork: tells open Book Dock pages the list changed, for changes made outside filing. */
+  announceChange(): void {
+    this.emitChange();
+  }
+
+  private async collectMergedMembers(rows: BookDockFileRow[], into: Map<number, BookDockFileRow[]>): Promise<void> {
+    const primaries = rows.filter(isMergePrimary).map((row) => row.id);
+    if (primaries.length === 0) return;
+    for (const [primaryId, members] of await this.repo.findMergedMembers(primaries)) into.set(primaryId, members);
   }
 }
 

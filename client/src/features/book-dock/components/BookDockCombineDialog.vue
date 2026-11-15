@@ -17,6 +17,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
   combined: []
+  merged: []
 }>()
 
 const destination = useBookDestination({ defaultToFirstLibrary: true })
@@ -57,6 +58,8 @@ const primaryTitle = computed(() => {
 const needsDestination = computed(() => props.files.some((file) => file.id === primaryFileId.value && file.targetFolderId == null))
 const primaryReason = computed(() => (pickedPrimaryId.value === null ? t('bookDock.combine.primaryByPriority') : ''))
 const canSubmit = computed(() => props.files.length >= 2 && !loading.value && (!needsDestination.value || hasDestination.value))
+// Fork: holding the files in Book Dock needs no destination yet; it can be set before filing.
+const canHold = computed(() => props.files.length >= 2 && !loading.value)
 
 onMounted(() => {
   void fetchLibraries()
@@ -66,27 +69,47 @@ function choosePrimary(fileId: number) {
   pickedPrimaryId.value = fileId
 }
 
+function requestBody() {
+  return JSON.stringify({
+    fileIds: props.files.map((file) => file.id),
+    primaryFileId: primaryFileId.value,
+    ...(needsDestination.value && libraryId.value != null && folderId.value != null
+      ? { defaultLibraryId: libraryId.value, defaultFolderId: folderId.value }
+      : {}),
+  })
+}
+
+async function readError(res: Response): Promise<string> {
+  const body = await res.json().catch(() => null)
+  return (body as { message?: string } | null)?.message ?? t('bookDock.errorStatus', { status: res.status })
+}
+
+/** Fork: keeps the merged files together in Book Dock, to be filed once their details are right. */
+async function submitHold() {
+  if (!canHold.value) return
+  loading.value = true
+  error.value = null
+  try {
+    const res = await api('/api/v1/book-dock/merge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: requestBody() })
+    if (res.ok) emit('merged')
+    else error.value = await readError(res)
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : t('bookDock.combine.failed')
+  } finally {
+    loading.value = false
+  }
+}
+
 async function submit() {
   if (!canSubmit.value) return
   loading.value = true
   error.value = null
   try {
-    const res = await api('/api/v1/book-dock/combine', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fileIds: props.files.map((file) => file.id),
-        primaryFileId: primaryFileId.value,
-        ...(needsDestination.value && libraryId.value != null && folderId.value != null
-          ? { defaultLibraryId: libraryId.value, defaultFolderId: folderId.value }
-          : {}),
-      }),
-    })
+    const res = await api('/api/v1/book-dock/combine', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: requestBody() })
     if (res.ok) {
       result.value = await res.json()
     } else {
-      const body = await res.json().catch(() => null)
-      error.value = (body as { message?: string } | null)?.message ?? t('bookDock.errorStatus', { status: res.status })
+      error.value = await readError(res)
     }
   } catch (e) {
     error.value = e instanceof Error ? e.message : t('bookDock.combine.failed')
@@ -176,9 +199,19 @@ function goToBook(bookId: number) {
             </button>
             <button
               type="button"
-              class="flex items-center gap-1.5 h-8 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
+              class="h-8 px-4 rounded-lg border border-input text-sm text-foreground transition-all hover:bg-muted disabled:opacity-50"
               :disabled="!canSubmit"
+              data-testid="book-dock-combine-file-now"
               @click="submit"
+            >
+              {{ t('bookDock.combine.submitAndFile') }}
+            </button>
+            <button
+              type="button"
+              class="flex items-center gap-1.5 h-8 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
+              :disabled="!canHold"
+              data-testid="book-dock-combine-hold"
+              @click="submitHold"
             >
               <Loader2 v-if="loading" class="size-3.5 animate-spin" />
               <Combine v-else class="size-3.5" />

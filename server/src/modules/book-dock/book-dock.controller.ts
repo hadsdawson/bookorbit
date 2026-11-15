@@ -375,6 +375,22 @@ export class BookDockController {
     return this.combineService.combine(dto, user, this.canManageAll(user));
   }
 
+  /** Fork: holds several docked files together as one item, to be filed later as one book. */
+  @Post('merge')
+  @RequirePermission(Permission.BookDockAccess, Permission.LibraryUpload)
+  @HttpCode(HttpStatus.OK)
+  merge(@CurrentUser() user: RequestUser, @Body() dto: CombineBookDockDto) {
+    return this.combineService.merge(dto, user, this.canManageAll(user));
+  }
+
+  /** Fork: splits a merged item back into its separate files. */
+  @Post('files/:id/unmerge')
+  @RequirePermission(Permission.BookDockAccess, Permission.LibraryUpload)
+  @HttpCode(HttpStatus.OK)
+  unmerge(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
+    return this.combineService.unmerge(id, user, this.canManageAll(user));
+  }
+
   @Post('rescan')
   @RequirePermission(Permission.ManageBookDock)
   @HttpCode(HttpStatus.NO_CONTENT)

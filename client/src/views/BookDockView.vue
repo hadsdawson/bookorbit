@@ -13,7 +13,8 @@ import { useBookDockSummary } from '@/features/book-dock/composables/useBookDock
 import { useBookDockStatistics } from '@/features/book-dock/composables/useBookDockStatistics'
 import { useBookDockUpload, SUPPORTED_FORMATS, SUPPORTED_FORMATS_ACCEPT } from '@/features/book-dock/composables/useBookDockUpload'
 import { useBookDockConflicts } from '@/features/book-dock/composables/useBookDockConflicts'
-import { refetchBookDockMetadata } from '@/features/book-dock/api/book-dock.api'
+import { refetchBookDockMetadata, unmergeBookDockFile } from '@/features/book-dock/api/book-dock.api'
+import { toast } from 'vue-sonner'
 import BookDockActionCluster from '@/features/book-dock/components/BookDockActionCluster.vue'
 import BookDockUploadFailures from '@/features/book-dock/components/BookDockUploadFailures.vue'
 import BookDockFilterBar from '@/features/book-dock/components/BookDockFilterBar.vue'
@@ -223,6 +224,15 @@ async function handleRowRetry(file: BookDockFile) {
   if (await refetchBookDockMetadata(file.id)) refresh()
 }
 
+async function handleRowUnmerge(file: BookDockFile) {
+  if (await unmergeBookDockFile(file.id)) {
+    toast.success(t('bookDock.layout.merged.unmerged'))
+    refresh()
+  } else {
+    toast.error(t('bookDock.layout.merged.unmergeFailed'))
+  }
+}
+
 function openDestinationForFile(file: BookDockFile) {
   clearSelection()
   toggleSelect(file.id)
@@ -382,6 +392,13 @@ function closeCombine() {
 function onCombined() {
   showCombineDialog.value = false
   onFinalized()
+}
+
+function onMergedInDock() {
+  showCombineDialog.value = false
+  clearSelection()
+  toast.success(t('bookDock.combine.held'))
+  refresh()
 }
 
 function openBulkEdit() {
@@ -701,6 +718,7 @@ onUnmounted(() => {
             @open="openSheet"
             @discard="handleRowDiscard"
             @retry="handleRowRetry"
+            @unmerge="handleRowUnmerge"
             @upload="triggerUpload"
             @keyboard-active="onKeyboardActive"
           />
@@ -722,7 +740,7 @@ onUnmounted(() => {
       @finalized="onFinalized"
     />
 
-    <BookDockCombineDialog v-if="showCombineDialog" :files="combineFiles" @close="closeCombine" @combined="onCombined" />
+    <BookDockCombineDialog v-if="showCombineDialog" :files="combineFiles" @close="closeCombine" @combined="onCombined" @merged="onMergedInDock" />
 
     <BookDockBulkEditDialog
       v-if="showBulkEditDialog"

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { extname } from 'path';
 import { DEFAULT_FORMAT_PRIORITY, pickByFormatPriority } from '@bookorbit/types';
 import type { BookDockCombineResult, BookDockFinalizeFileResult } from '@bookorbit/types';
@@ -136,6 +136,46 @@ export class BookDockCombineService {
       `[book_dock.combine] [end] userId=${user.id} primaryFileId=${primaryFileId} bookId=${bookId} durationMs=${Date.now() - startedAt} succeeded=${succeeded} failed=${results.length - succeeded} - docked files combined`,
     );
     return { total: results.length, succeeded, failed: results.length - succeeded, results, bookId, primaryFileId };
+  }
+
+  /**
+   * Fork: holds docked files together as one item without filing them. The list then shows only
+   * the main file; its details are the book's, and filing it files the rest into the same book.
+   * Merging an item that is already merged takes in all its files.
+   */
+  async merge(dto: CombineBookDockDto, user: RequestUser, canManageAll: boolean): Promise<{ primaryFileId: number; fileIds: number[] }> {
+    const startedAt = Date.now();
+    const fileIds = [...new Set(dto.fileIds)];
+    if (fileIds.length < 2) throw new BadRequestException('Pick at least two files to merge');
+    const rows = await this.repo.findByIds(fileIds, user.id, canManageAll);
+    if (rows.length !== fileIds.length) throw new BadRequestException('Some of those files are no longer in Book Dock');
+
+    const primaryFileId = await this.pickPrimary(dto.primaryFileId, rows, dto.defaultLibraryId);
+    if (dto.defaultLibraryId !== undefined && dto.defaultFolderId !== undefined) {
+      const primary = rows.find((row) => row.id === primaryFileId);
+      if (primary && primary.targetFolderId === null) {
+        await this.repo.update(primaryFileId, { targetLibraryId: dto.defaultLibraryId, targetFolderId: dto.defaultFolderId });
+      }
+    }
+    await this.repo.setMergeGroup(primaryFileId, fileIds);
+    const members = (await this.repo.findMergedMembers([primaryFileId])).get(primaryFileId) ?? [];
+    this.finalizeService.announceChange();
+    this.logger.log(
+      `[book_dock.merge] [end] userId=${user.id} primaryFileId=${primaryFileId} durationMs=${Date.now() - startedAt} files=${members.length + 1} - docked files merged, held in Book Dock`,
+    );
+    return { primaryFileId, fileIds: [primaryFileId, ...members.map((member) => member.id)] };
+  }
+
+  /** Fork: splits a merged item back into its separate files, all still in Book Dock. */
+  async unmerge(fileId: number, user: RequestUser, canManageAll: boolean): Promise<{ fileIds: number[] }> {
+    const [row] = await this.repo.findByIds([fileId], user.id, canManageAll);
+    if (!row) throw new NotFoundException('Book Dock file not found');
+    const primaryId = row.mergedIntoId ?? row.id;
+    const members = (await this.repo.findMergedMembers([primaryId])).get(primaryId) ?? [];
+    await this.repo.clearMergeGroup(primaryId);
+    this.finalizeService.announceChange();
+    this.logger.log(`[book_dock.unmerge] [end] userId=${user.id} primaryFileId=${primaryId} files=${members.length + 1} - merged item split`);
+    return { fileIds: [primaryId, ...members.map((member) => member.id)] };
   }
 
   /**
