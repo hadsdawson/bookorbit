@@ -136,12 +136,45 @@ export class NewReleasesService implements OnApplicationBootstrap {
       seriesId: input.kind === 'series' ? (input.seriesId ?? null) : null,
     };
     const row = await this.repository.insertFollow(user.id, follow);
+    if (input.kind === 'author') await this.followLinkedNames(user.id);
     this.kick();
     return toFollow(row);
   }
 
+  /** Fork: unfollowing an author unfollows the other names they go by too, or following one would bring it back. */
   async unfollow(user: RequestUser, id: number): Promise<void> {
+    const row = await this.repository.findFollowById(user.id, id);
+    if (!row) throw new NotFoundException('Follow not found');
+    if (row.kind === 'author') {
+      const linked = await this.repository.findLinkedAuthorNames({ userId: user.id, followId: id }, false);
+      const keys = [...new Set(linked.map((entry) => nameKey(entry.name)).filter(Boolean))];
+      await this.repository.deleteAuthorFollowsByKeys(
+        user.id,
+        keys.filter((key) => key !== row.nameKey),
+      );
+    }
     if (!(await this.repository.deleteFollow(user.id, id))) throw new NotFoundException('Follow not found');
+  }
+
+  /**
+   * Fork: follows the pen names, the people behind them and the other spellings of authors already
+   * followed, so a book out under any of their names is found. Names linked after the follow are
+   * picked up here too: it runs on a follow, on opening New Releases and before each check.
+   */
+  async followLinkedNames(userId?: number): Promise<number> {
+    const linked = await this.repository.findLinkedAuthorNames(userId === undefined ? {} : { userId }, true);
+    const byUser = new Map<number, FollowInput[]>();
+    for (const entry of linked) {
+      const key = nameKey(entry.name);
+      if (!key) continue;
+      const inputs = byUser.get(entry.userId) ?? [];
+      inputs.push({ kind: 'author', name: entry.name, nameKey: key, authorHint: null, authorId: entry.authorId, seriesId: null });
+      byUser.set(entry.userId, inputs);
+    }
+    let added = 0;
+    for (const [id, inputs] of byUser) added += await this.repository.insertFollowsIfMissing(id, inputs);
+    if (added > 0) this.logger.log(`[new_releases.follow_linked_names] [end] userId=${userId ?? 'all'} added=${added} - other names followed`);
+    return added;
   }
 
   async findFollow(user: RequestUser, kind: ReleaseFollowKind, name: string): Promise<ReleaseFollow | null> {
@@ -217,6 +250,7 @@ export class NewReleasesService implements OnApplicationBootstrap {
   // ── The list ────────────────────────────────────────────
 
   async overview(user: RequestUser, options: { includeHidden?: boolean } = {}): Promise<NewReleasesOverview> {
+    if ((await this.followLinkedNames(user.id)) > 0) this.kick();
     const [server, userSettings, followCounts, sources, lastCheckedAt, pendingChecks] = await Promise.all([
       this.serverSettings(),
       this.repository.findUserSettings(user.id),
@@ -457,6 +491,7 @@ export class NewReleasesService implements OnApplicationBootstrap {
 
   private async checkDue(limit: number): Promise<void> {
     const startedAt = Date.now();
+    await this.followLinkedNames();
     const sourceStatus = await this.sources.status();
     const anySource = sourceStatus.hardcover || sourceStatus.audible || sourceStatus.google;
     const targets = anySource ? await this.repository.findDueTargets(RECHECK_DAYS, limit) : [];

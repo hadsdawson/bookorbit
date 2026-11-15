@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, ref, type Ref } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
-import type { AuthorDetail, BookCard } from '@bookorbit/types'
+import type { AuthorDetail, AuthorNames, BookCard } from '@bookorbit/types'
 import AuthorDetailView from './AuthorDetailView.vue'
-import { deleteAuthorImage, refreshAuthorMetadata, updateAuthor, uploadAuthorImage } from '../api/author'
+import { deleteAuthorImage, fetchAuthorNames, refreshAuthorMetadata, updateAuthor, uploadAuthorImage } from '../api/author'
 import { i18n } from '@/i18n'
 
 class MockIntersectionObserver {
@@ -16,6 +16,7 @@ class MockIntersectionObserver {
 const mocks = vi.hoisted(() => ({
   route: { params: { id: '7' }, query: {} as Record<string, unknown> },
   routerPush: vi.fn<(to: unknown) => Promise<void>>(),
+  routerReplace: vi.fn<(to: unknown) => Promise<void>>(),
   routerBack: vi.fn<() => void>(),
   fetchLibraries: vi.fn<() => Promise<void>>(),
   loadAuthor: vi.fn<() => Promise<void>>(),
@@ -43,7 +44,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('vue-router', () => ({
   useRoute: () => mocks.route,
-  useRouter: () => ({ push: mocks.routerPush, back: mocks.routerBack }),
+  useRouter: () => ({ push: mocks.routerPush, replace: mocks.routerReplace, back: mocks.routerBack }),
 }))
 
 vi.mock('vue-sonner', () => ({
@@ -90,6 +91,7 @@ vi.mock('../api/author', () => ({
   deleteAuthorImage: vi.fn<(authorId: number) => Promise<AuthorDetail>>(),
   deleteAuthors: vi.fn<(payload: { authorIds: number[] }) => Promise<{ affectedBookCount: number }>>(),
   fetchAuthors: vi.fn<() => Promise<unknown>>(),
+  fetchAuthorNames: vi.fn<(authorId: number) => Promise<AuthorNames>>(),
   mergeAuthors: vi.fn<() => Promise<unknown>>(),
   refreshAuthorMetadata: vi.fn<(authorId: number) => Promise<AuthorDetail>>(),
   updateAuthor: vi.fn<() => Promise<AuthorDetail>>(),
@@ -227,6 +229,17 @@ async function mountView() {
           template: '<div />',
         },
         DeleteBookDialog: DeleteBookDialogStub,
+        AuthorPenNameBooks: {
+          name: 'AuthorPenNameBooks',
+          props: ['penName'],
+          template: '<div data-test="pen-name-books">{{ penName.name }}</div>',
+        },
+        AuthorPenNameChooser: {
+          name: 'AuthorPenNameChooser',
+          props: ['open', 'penName', 'people'],
+          emits: ['choose', 'cancel'],
+          template: '<div data-test="pen-name-chooser" :data-open="String(open)" />',
+        },
         EntityNotFound: true,
         VirtualBookGrid: VirtualBookGridStub,
       },
@@ -242,6 +255,8 @@ describe('AuthorDetailView', () => {
     mocks.route.params = { id: '7' }
     mocks.route.query = {}
     mocks.routerPush.mockResolvedValue()
+    mocks.routerReplace.mockResolvedValue()
+    vi.mocked(fetchAuthorNames).mockResolvedValue({ spellings: [], penNames: [], penNameOf: [] })
     mocks.fetchLibraries.mockResolvedValue()
     mocks.loadAuthor.mockResolvedValue()
     mocks.loadBooks.mockResolvedValue()
@@ -541,5 +556,47 @@ describe('AuthorDetailView', () => {
 
     dialog = wrapper.getComponent(DeleteBookDialogStub)
     expect(dialog.props('open')).toBe(false)
+  })
+
+  describe('pen names (fork)', () => {
+    it('opens the person behind a pen name, at its section', async () => {
+      vi.mocked(fetchAuthorNames).mockResolvedValue({ spellings: [], penNames: [], penNameOf: [{ id: 12, name: 'Seanan McGuire', bookCount: 4 }] })
+      const wrapper = await mountView()
+      expect(mocks.routerReplace).toHaveBeenCalledWith(expect.objectContaining({ name: 'author-detail', params: { id: 12 }, hash: '#pen-name-7' }))
+      expect(wrapper.find('[data-test="author-header"]').exists()).toBe(false)
+    })
+
+    it('asks which person to open when a pen name is shared', async () => {
+      vi.mocked(fetchAuthorNames).mockResolvedValue({
+        spellings: [],
+        penNames: [],
+        penNameOf: [
+          { id: 20, name: 'Daniel Abraham', bookCount: 3 },
+          { id: 21, name: 'Ty Franck', bookCount: 1 },
+        ],
+      })
+      const wrapper = await mountView()
+      const chooser = wrapper.getComponent({ name: 'AuthorPenNameChooser' })
+      expect(chooser.props('open')).toBe(true)
+      expect(mocks.routerReplace).not.toHaveBeenCalled()
+      chooser.vm.$emit('choose', 21)
+      await flushPromises()
+      expect(mocks.routerReplace).toHaveBeenCalledWith(expect.objectContaining({ params: { id: 21 }, hash: '#pen-name-7' }))
+    })
+
+    it("lists each pen name's books in its own section under the person's books", async () => {
+      vi.mocked(fetchAuthorNames).mockResolvedValue({
+        spellings: [],
+        penNames: [
+          { id: 40, name: 'A. Deborah Baker', bookCount: 2 },
+          { id: 41, name: 'Mira Grant', bookCount: 5 },
+        ],
+        penNameOf: [],
+      })
+      const wrapper = await mountView()
+      expect(wrapper.findAll('[data-test="pen-name-books"]').map((section) => section.text())).toEqual(['A. Deborah Baker', 'Mira Grant'])
+      expect(wrapper.text()).toContain('Author')
+      expect(wrapper.getComponent({ name: 'AuthorPenNameChooser' }).props('open')).toBe(false)
+    })
   })
 })

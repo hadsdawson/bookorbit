@@ -171,4 +171,18 @@ describe('AuthorTile', () => {
 
     expect(wrapper.emitted('open')?.[0]).toEqual([1])
   })
+
+  it('shows how many other names an author goes by on hover (fork)', () => {
+    expect(mountTile().find('[data-testid="author-tile-alias-count"]').exists()).toBe(false)
+    expect(
+      mountTile({ author: author({ otherNameCount: 1 }) })
+        .get('[data-testid="author-tile-alias-count"]')
+        .text(),
+    ).toBe('1 alias')
+    expect(
+      mountTile({ author: author({ otherNameCount: 3 }) })
+        .get('[data-testid="author-tile-alias-count"]')
+        .text(),
+    ).toBe('3 aliases')
+  })
 })

@@ -1,8 +1,9 @@
 import { api } from '@/lib/api'
 import type {
   AuthorsPage,
-  AuthorAlias,
-  AuthorAliasesResult,
+  AddAuthorNameResult,
+  AuthorNameKind,
+  AuthorNames,
   AuthorBooksPage,
   AuthorDetail,
   AuthorMetadataCandidate,
@@ -420,30 +421,41 @@ export async function refreshAuthorMetadata(authorId: number): Promise<AuthorMet
   return res.json()
 }
 
-export async function fetchAuthorAliases(authorId: number): Promise<AuthorAlias[]> {
-  const res = await api(`/api/v1/authors/${authorId}/aliases`)
-  if (!res.ok) throw new Error('Failed to load alternate names')
+/** Fork: every other name an author goes by: pen names, the people behind a pen name, other spellings. */
+export async function fetchAuthorNames(authorId: number): Promise<AuthorNames> {
+  const res = await api(`/api/v1/authors/${authorId}/names`)
+  if (!res.ok) throw new Error('Failed to load other names')
   return res.json()
 }
 
-export async function addAuthorAlias(authorId: number, name: string): Promise<AuthorAliasesResult> {
-  const res = await api(`/api/v1/authors/${authorId}/aliases`, {
+export async function addAuthorName(authorId: number, name: string, kind: AuthorNameKind): Promise<AddAuthorNameResult> {
+  const res = await api(`/api/v1/authors/${authorId}/names`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, kind }),
   })
   if (!res.ok) {
     const payload = await res.json().catch(() => null)
-    throw new Error(extractErrorMessage(payload, 'Failed to add alternate name'))
+    throw new Error(extractErrorMessage(payload, 'Failed to add the name'))
   }
   return res.json()
 }
 
-export async function removeAuthorAlias(authorId: number, aliasId: number): Promise<AuthorAlias[]> {
+export async function removeAuthorSpelling(authorId: number, aliasId: number): Promise<AuthorNames> {
   const res = await api(`/api/v1/authors/${authorId}/aliases/${aliasId}`, { method: 'DELETE' })
   if (!res.ok) {
     const payload = await res.json().catch(() => null)
-    throw new Error(extractErrorMessage(payload, 'Failed to remove alternate name'))
+    throw new Error(extractErrorMessage(payload, 'Failed to remove the spelling'))
+  }
+  return res.json()
+}
+
+/** Unties a pen name from a person; both keep their own books. */
+export async function unlinkAuthorPenName(authorId: number, otherAuthorId: number): Promise<AuthorNames> {
+  const res = await api(`/api/v1/authors/${authorId}/pen-names/${otherAuthorId}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const payload = await res.json().catch(() => null)
+    throw new Error(extractErrorMessage(payload, 'Failed to untie the pen name'))
   }
   return res.json()
 }

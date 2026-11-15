@@ -8,7 +8,7 @@ import { accentInsensitiveIlike, buildSearchPattern } from '../../common/utils/a
 import { DB } from '../../db';
 import { refreshPrimaryAuthorSortNamesForAuthors, refreshPrimaryAuthorSortNamesForBooks } from '../../db/book-author-sort-key';
 import * as schema from '../../db/schema';
-import { authorAliases, authors, bookAuthors, bookMetadata, books } from '../../db/schema';
+import { authorAliases, authorPenNames, authors, bookAuthors, bookMetadata, books } from '../../db/schema';
 import { normalizePersonName, normalizePersonNameKey } from '../../common/utils/person-name.utils';
 import { AuthorBookSort } from './dto/list-author-books.dto';
 import { AuthorListSort, SortDirection } from './dto/list-authors.dto';
@@ -27,6 +27,7 @@ type AuthorSummaryRow = {
 /** The list query alone resolves a cover fallback; detail and enrichment do not need one. */
 export type AuthorListItemRow = AuthorSummaryRow & {
   coverBookId: number | null;
+  otherNameCount: number;
 };
 
 export type AuthorLetterCountRow = {
@@ -82,6 +83,7 @@ export class AuthorsRepository {
     minBookCount?: number;
     contentFilters?: ContentFilterRules;
   }): Promise<{ items: AuthorListItemRow[]; total: number; page: number; size: number }> {
+    const members = this.authorMembers();
     const where = this.buildAuthorWhere({
       q: params.q,
       libraryIds: params.libraryIds,
@@ -122,9 +124,11 @@ export class AuthorsRepository {
         bookCount: sql<number>`count(distinct ${books.id})::int`,
         lastAddedAt: lastAddedExpr,
         coverBookId: this.coverBookIdExpr(params.libraryIds),
+        otherNameCount: sql<number>`((SELECT count(*) FROM ${authorPenNames} pn WHERE pn.author_id = ${authors.id}) + (SELECT count(*) FROM ${authorAliases} al WHERE al.author_id = ${authors.id}))::int`,
       })
       .from(authors)
-      .innerJoin(bookAuthors, eq(bookAuthors.authorId, authors.id))
+      .innerJoin(members, eq(members.ownerId, authors.id))
+      .innerJoin(bookAuthors, eq(bookAuthors.authorId, members.memberId))
       .innerJoin(books, eq(books.id, bookAuthors.bookId))
       .where(where)
       .groupBy(authors.id, authors.name, authors.sortName, authors.description)
@@ -142,7 +146,8 @@ export class AuthorsRepository {
             this.db
               .select({ id: authors.id })
               .from(authors)
-              .innerJoin(bookAuthors, eq(bookAuthors.authorId, authors.id))
+              .innerJoin(members, eq(members.ownerId, authors.id))
+              .innerJoin(bookAuthors, eq(bookAuthors.authorId, members.memberId))
               .innerJoin(books, eq(books.id, bookAuthors.bookId))
               .where(where)
               .groupBy(authors.id)
@@ -152,7 +157,8 @@ export class AuthorsRepository {
       : this.db
           .select({ total: sql<number>`count(distinct ${authors.id})::int` })
           .from(authors)
-          .innerJoin(bookAuthors, eq(bookAuthors.authorId, authors.id))
+          .innerJoin(members, eq(members.ownerId, authors.id))
+          .innerJoin(bookAuthors, eq(bookAuthors.authorId, members.memberId))
           .innerJoin(books, eq(books.id, bookAuthors.bookId))
           .where(where);
 
@@ -164,9 +170,12 @@ export class AuthorsRepository {
   async countAuthors(params: { libraryIds: number[]; contentFilters?: ContentFilterRules }): Promise<number> {
     if (params.libraryIds.length === 0) return 0;
 
+    const members = this.authorMembers();
     const [row] = await this.db
-      .select({ total: sql<number>`count(distinct ${bookAuthors.authorId})::int` })
-      .from(bookAuthors)
+      .select({ total: sql<number>`count(distinct ${authors.id})::int` })
+      .from(authors)
+      .innerJoin(members, eq(members.ownerId, authors.id))
+      .innerJoin(bookAuthors, eq(bookAuthors.authorId, members.memberId))
       .innerJoin(books, eq(books.id, bookAuthors.bookId))
       .where(this.buildAuthorWhere({ libraryIds: params.libraryIds, contentFilters: params.contentFilters }));
 
@@ -177,6 +186,7 @@ export class AuthorsRepository {
     if (libraryIds.length === 0) return null;
 
     const filterClauses = contentFilters ? buildContentFilterClauses(contentFilters, this.db) : [];
+    const members = this.authorMembers();
 
     const [row] = await this.db
       .select({
@@ -198,7 +208,8 @@ export class AuthorsRepository {
         lastAddedAt: max(books.addedAt),
       })
       .from(authors)
-      .innerJoin(bookAuthors, eq(bookAuthors.authorId, authors.id))
+      .innerJoin(members, eq(members.ownerId, authors.id))
+      .innerJoin(bookAuthors, eq(bookAuthors.authorId, members.memberId))
       .innerJoin(books, eq(books.id, bookAuthors.bookId))
       .where(and(eq(authors.id, authorId), inArray(books.libraryId, libraryIds), ...filterClauses))
       .groupBy(
@@ -375,10 +386,12 @@ export class AuthorsRepository {
 
   async findVisibleAuthorIds(authorIds: number[], libraryIds: number[]): Promise<number[]> {
     if (authorIds.length === 0 || libraryIds.length === 0) return [];
+    const members = this.authorMembers();
     const rows = await this.db
       .selectDistinct({ id: authors.id })
       .from(authors)
-      .innerJoin(bookAuthors, eq(bookAuthors.authorId, authors.id))
+      .innerJoin(members, eq(members.ownerId, authors.id))
+      .innerJoin(bookAuthors, eq(bookAuthors.authorId, members.memberId))
       .innerJoin(books, eq(books.id, bookAuthors.bookId))
       .where(and(inArray(authors.id, authorIds), inArray(books.libraryId, libraryIds)));
     return rows.map((row) => row.id);
@@ -462,6 +475,20 @@ export class AuthorsRepository {
           .onConflictDoUpdate({ target: authorAliases.nameKey, set: { authorId: targetAuthorId } });
       }
 
+      // Fork: pen-name links follow the merged authors to the target.
+      const links = await tx
+        .select({ penNameAuthorId: authorPenNames.penNameAuthorId, authorId: authorPenNames.authorId })
+        .from(authorPenNames)
+        .where(or(inArray(authorPenNames.penNameAuthorId, sourceAuthorIds), inArray(authorPenNames.authorId, sourceAuthorIds)));
+      const sourceSet = new Set(sourceAuthorIds);
+      const moved = links
+        .map((link) => ({
+          penNameAuthorId: sourceSet.has(link.penNameAuthorId) ? targetAuthorId : link.penNameAuthorId,
+          authorId: sourceSet.has(link.authorId) ? targetAuthorId : link.authorId,
+        }))
+        .filter((link) => link.penNameAuthorId !== link.authorId);
+      if (moved.length > 0) await tx.insert(authorPenNames).values(moved).onConflictDoNothing();
+
       await tx.delete(authors).where(inArray(authors.id, sourceAuthorIds));
       await refreshPrimaryAuthorSortNamesForBooks(
         tx,
@@ -500,7 +527,7 @@ export class AuthorsRepository {
       FROM ${bookAuthors} cba
       JOIN ${books} cb ON cb.id = cba.book_id
       JOIN ${bookMetadata} cm ON cm.book_id = cb.id
-      WHERE cba.author_id = ${authors.id}
+      WHERE (cba.author_id = ${authors.id} OR cba.author_id IN (SELECT cpn.pen_name_author_id FROM ${authorPenNames} cpn WHERE cpn.author_id = ${authors.id}))
         AND cb.library_id IN (${sql.join(
           libraryIds.map((id) => sql`${id}`),
           sql`, `,
@@ -540,10 +567,12 @@ export class AuthorsRepository {
     });
     const having = params.minBookCount !== undefined ? sql`count(distinct ${books.id}) >= ${params.minBookCount}` : undefined;
 
+    const members = this.authorMembers();
     const perAuthor = this.db
       .select({ letter: this.letterBucketExpr(params.sort).as('letter') })
       .from(authors)
-      .innerJoin(bookAuthors, eq(bookAuthors.authorId, authors.id))
+      .innerJoin(members, eq(members.ownerId, authors.id))
+      .innerJoin(bookAuthors, eq(bookAuthors.authorId, members.memberId))
       .innerJoin(books, eq(books.id, bookAuthors.bookId))
       .where(where)
       .groupBy(authors.id, authors.sortName, authors.name)
@@ -599,6 +628,25 @@ export class AuthorsRepository {
     return { marked: marked.length, cleared: cleared.length };
   }
 
+  /**
+   * Fork: each author with the pen names they wrote under, so a person's books and counts take in
+   * the books credited to their pen names. Every author is its own member.
+   */
+  private authorMembers() {
+    return this.db
+      .select({ ownerId: sql<number>`${authors.id}`.as('owner_id'), memberId: sql<number>`${authors.id}`.as('member_id') })
+      .from(authors)
+      .unionAll(
+        this.db
+          .select({
+            ownerId: sql<number>`${authorPenNames.authorId}`.as('owner_id'),
+            memberId: sql<number>`${authorPenNames.penNameAuthorId}`.as('member_id'),
+          })
+          .from(authorPenNames),
+      )
+      .as('author_members');
+  }
+
   private buildAuthorWhere(params: {
     q?: string;
     libraryIds: number[];
@@ -607,13 +655,24 @@ export class AuthorsRepository {
     addedWithinDays?: number;
     contentFilters?: ContentFilterRules;
   }): SQL {
-    const clauses: SQL[] = [inArray(books.libraryId, params.libraryIds)];
+    // Fork: a pen name is listed under the person who wrote under it, never on its own.
+    const clauses: SQL[] = [
+      inArray(books.libraryId, params.libraryIds),
+      sql`NOT EXISTS (SELECT 1 FROM ${authorPenNames} own_pn WHERE own_pn.pen_name_author_id = ${authors.id})`,
+    ];
     if (params.contentFilters) {
       clauses.push(...buildContentFilterClauses(params.contentFilters, this.db));
     }
     const query = params.q?.trim();
     if (query) {
-      clauses.push(accentInsensitiveIlike(authors.name, buildSearchPattern(query)));
+      const pattern = buildSearchPattern(query);
+      clauses.push(
+        or(
+          accentInsensitiveIlike(authors.name, pattern),
+          sql`EXISTS (SELECT 1 FROM ${authorPenNames} q_pn JOIN ${authors} q_pa ON q_pa.id = q_pn.pen_name_author_id WHERE q_pn.author_id = ${authors.id} AND ${accentInsensitiveIlike(sql`q_pa.name`, pattern)})`,
+          sql`EXISTS (SELECT 1 FROM ${authorAliases} q_al WHERE q_al.author_id = ${authors.id} AND ${accentInsensitiveIlike(sql`q_al.name`, pattern)})`,
+        )!,
+      );
     }
     if (params.hasPhoto !== undefined) {
       clauses.push(eq(authors.hasPhoto, params.hasPhoto));

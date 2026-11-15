@@ -350,21 +350,21 @@ export class AuthorsController {
     return this.authorsService.unpinMetadataMatch(user, id);
   }
 
-  @Get(':id/aliases')
-  findAliases(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
-    return this.authorAliasesService.list(user, id);
+  @Get(':id/names')
+  findNames(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
+    return this.authorAliasesService.names(user, id);
   }
 
-  @Post(':id/aliases')
+  @Post(':id/names')
   @RequirePermission(Permission.LibraryEditMetadata)
   @Auditable({
     action: AuditAction.AuthorUpdate,
     resource: AuditResource.Author,
     getResourceId: (req) => parseInt(req.params['id'], 10),
-    description: (req) => `Added an alternate name to author #${req.params['id']}`,
+    description: (req) => `Added another name to author #${req.params['id']}`,
   })
-  addAlias(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number, @Body() dto: AddAuthorAliasDto) {
-    return this.authorAliasesService.add(user, id, dto.name);
+  addName(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number, @Body() dto: AddAuthorAliasDto) {
+    return this.authorAliasesService.addName(user, id, dto.name, dto.kind ?? 'spelling');
   }
 
   @Delete(':id/aliases/:aliasId')
@@ -376,7 +376,19 @@ export class AuthorsController {
     description: (req) => `Removed alternate name #${req.params['aliasId']} from author #${req.params['id']}`,
   })
   removeAlias(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number, @Param('aliasId', ParseIntPipe) aliasId: number) {
-    return this.authorAliasesService.remove(user, id, aliasId);
+    return this.authorAliasesService.removeSpelling(user, id, aliasId);
+  }
+
+  @Delete(':id/pen-names/:otherId')
+  @RequirePermission(Permission.LibraryEditMetadata)
+  @Auditable({
+    action: AuditAction.AuthorUpdate,
+    resource: AuditResource.Author,
+    getResourceId: (req) => parseInt(req.params['id'], 10),
+    description: (req) => `Untied pen name link between author #${req.params['id']} and author #${req.params['otherId']}`,
+  })
+  unlinkPenName(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number, @Param('otherId', ParseIntPipe) otherId: number) {
+    return this.authorAliasesService.unlinkPenName(user, id, otherId);
   }
 
   @Patch(':id')

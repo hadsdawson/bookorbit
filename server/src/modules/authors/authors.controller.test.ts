@@ -119,9 +119,10 @@ function makeController() {
     countEligibleLinkedAuthors: vi.fn(),
   };
   const authorAliasesService = {
-    list: vi.fn(),
-    add: vi.fn(),
-    remove: vi.fn(),
+    names: vi.fn(),
+    addName: vi.fn(),
+    removeSpelling: vi.fn(),
+    unlinkPenName: vi.fn(),
   };
 
   const controller = new AuthorsController(
@@ -157,20 +158,25 @@ describe('AuthorsController', () => {
     expect(authorsService.findBooks).toHaveBeenCalledWith(user, 2, { page: 0 });
   });
 
-  it('delegates alternate-name endpoints to AuthorAliasesService', async () => {
+  it('delegates other-name endpoints to AuthorAliasesService', async () => {
     const { controller, authorAliasesService } = makeController();
     const user = makeUser();
-    authorAliasesService.list.mockResolvedValue([{ id: 3, name: 'A.M. Woody' }]);
-    authorAliasesService.add.mockResolvedValue({ aliases: [{ id: 3, name: 'A.M. Woody' }], mergedAuthorCount: 1, affectedBookCount: 4 });
-    authorAliasesService.remove.mockResolvedValue([]);
+    const names = { spellings: [{ id: 3, name: 'A.M. Woody' }], penNames: [], penNameOf: [] };
+    authorAliasesService.names.mockResolvedValue(names);
+    authorAliasesService.addName.mockResolvedValue({ names, mergedAuthorCount: 1, affectedBookCount: 4, openAuthorId: null });
+    authorAliasesService.removeSpelling.mockResolvedValue(names);
+    authorAliasesService.unlinkPenName.mockResolvedValue(names);
 
-    await expect(controller.findAliases(user, 12)).resolves.toEqual([{ id: 3, name: 'A.M. Woody' }]);
-    await expect(controller.addAlias(user, 12, { name: 'A.M. Woody' })).resolves.toEqual(expect.objectContaining({ mergedAuthorCount: 1 }));
-    await expect(controller.removeAlias(user, 12, 3)).resolves.toEqual([]);
+    await expect(controller.findNames(user, 12)).resolves.toEqual(names);
+    await expect(controller.addName(user, 12, { name: 'A.M. Woody' })).resolves.toEqual(expect.objectContaining({ mergedAuthorCount: 1 }));
+    await controller.addName(user, 12, { name: 'A. Deborah Baker', kind: 'penName' });
+    await expect(controller.removeAlias(user, 12, 3)).resolves.toEqual(names);
+    await expect(controller.unlinkPenName(user, 12, 40)).resolves.toEqual(names);
 
-    expect(authorAliasesService.list).toHaveBeenCalledWith(user, 12);
-    expect(authorAliasesService.add).toHaveBeenCalledWith(user, 12, 'A.M. Woody');
-    expect(authorAliasesService.remove).toHaveBeenCalledWith(user, 12, 3);
+    expect(authorAliasesService.addName).toHaveBeenCalledWith(user, 12, 'A.M. Woody', 'spelling');
+    expect(authorAliasesService.addName).toHaveBeenCalledWith(user, 12, 'A. Deborah Baker', 'penName');
+    expect(authorAliasesService.removeSpelling).toHaveBeenCalledWith(user, 12, 3);
+    expect(authorAliasesService.unlinkPenName).toHaveBeenCalledWith(user, 12, 40);
   });
 
   it('returns metadata provider lists/searches and maps metadata stream events', async () => {

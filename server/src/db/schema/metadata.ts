@@ -286,6 +286,24 @@ export const authorAliases = pgTable(
   (t) => [index('author_aliases_author_id_idx').on(t.authorId)],
 );
 
+/**
+ * Fork: a pen name is an author of its own, so books keep the name printed on them, tied to the
+ * person (or people) who wrote under it. A pen name is never itself a person with pen names.
+ */
+export const authorPenNames = pgTable(
+  'author_pen_names',
+  {
+    penNameAuthorId: integer('pen_name_author_id')
+      .notNull()
+      .references(() => authors.id, { onDelete: 'cascade' }),
+    authorId: integer('author_id')
+      .notNull()
+      .references(() => authors.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.penNameAuthorId, t.authorId] }), index('author_pen_names_author_id_idx').on(t.authorId)],
+);
+
 export const authorEnrichmentQueue = pgTable(
   'author_enrichment_queue',
   {

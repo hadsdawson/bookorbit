@@ -843,6 +843,7 @@ export class AuthorsService {
     bookCount: number;
     lastAddedAt: Date | null;
     coverBookId?: number | null;
+    otherNameCount?: number;
   }): AuthorSummary {
     return {
       id: row.id,
@@ -852,6 +853,7 @@ export class AuthorsService {
       bookCount: row.bookCount,
       lastAddedAt: row.lastAddedAt ? row.lastAddedAt.toISOString() : null,
       coverBookId: row.coverBookId ?? null,
+      ...(row.otherNameCount ? { otherNameCount: row.otherNameCount } : {}),
     };
   }
 

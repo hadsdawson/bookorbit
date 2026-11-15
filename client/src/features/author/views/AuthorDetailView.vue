@@ -7,7 +7,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ArrowUpDown, ChevronDown, ChevronLeft, ImageMinus, Layers, LayoutGrid, Link, List, Upload } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 
-import type { AuthorDetail, AuthorSummary, BookCard } from '@bookorbit/types'
+import type { AuthorDetail, AuthorNames, AuthorSummary, BookCard } from '@bookorbit/types'
 import VirtualBookGrid from '@/features/book/components/VirtualBookGrid.vue'
 import BookListRow from '@/features/book/components/BookListRow.vue'
 import DeleteBookDialog from '@/features/book/components/DeleteBookDialog.vue'
@@ -24,10 +24,13 @@ import AuthorConfirmDialog from '../components/AuthorConfirmDialog.vue'
 import AuthorFactsFields from '../components/AuthorFactsFields.vue'
 import AuthorMatchSheet from '../components/AuthorMatchSheet.vue'
 import AuthorAliasesCard from '../components/AuthorAliasesCard.vue'
+import AuthorPenNameBooks from '../components/AuthorPenNameBooks.vue'
+import AuthorPenNameChooser from '../components/AuthorPenNameChooser.vue'
 import { authorFactsDraft, authorFactsPayload, sameFactsDraft, type AuthorFactsDraft, type AuthorFactsField } from '../lib/author-facts'
 import {
   deleteAuthorImage,
   deleteAuthors,
+  fetchAuthorNames,
   fetchAuthors,
   mergeAuthors,
   MAX_AUTHOR_IMAGE_BYTES,
@@ -109,11 +112,53 @@ const {
 
 const canUpdate = computed(() => hasPermissionInAnyLibrary('library_edit_metadata', 'editor'))
 
-// Fork: adding a name another author used folds that author in, so the books and counts change.
-const aliasesCard = ref<InstanceType<typeof AuthorAliasesCard> | null>(null)
+// Fork: the other names this author goes by. A pen name has no page of its own: its page sends the
+// reader on to the person behind it, or asks which one when the pen name is shared.
+const emptyNames: AuthorNames = { spellings: [], penNames: [], penNameOf: [] }
+const names = ref<AuthorNames>(emptyNames)
+const namesLoadedFor = ref<number | null>(null)
+const isPenName = computed(() => namesLoadedFor.value === authorId.value && names.value.penNameOf.length > 0)
+const chooserOpen = computed(() => isPenName.value && names.value.penNameOf.length > 1)
+const hasPenNames = computed(() => names.value.penNames.length > 0)
 
+async function loadNames() {
+  const id = authorId.value
+  if (!id || Number.isNaN(id)) return
+  try {
+    const result = await fetchAuthorNames(id)
+    if (id !== authorId.value) return
+    names.value = result
+  } catch {
+    if (id !== authorId.value) return
+    names.value = emptyNames
+  }
+  namesLoadedFor.value = id
+  if (names.value.penNameOf.length === 1) openPenNameOwner(names.value.penNameOf[0]!.id)
+}
+
+function openPenNameOwner(ownerId: number) {
+  void router.replace({ name: 'author-detail', params: { id: ownerId }, query: route.query, hash: `#pen-name-${authorId.value}` })
+}
+
+function handleChoosePenNameOwner(ownerId: number) {
+  openPenNameOwner(ownerId)
+}
+
+function handleCancelPenNameChooser() {
+  goBack()
+}
+
+function handleNamesUpdate(next: AuthorNames) {
+  names.value = next
+}
+
+// Adding a spelling another author used folds that author in, and pen names change the counts.
 function handleAliasesChanged() {
   void Promise.all([loadAuthor(), loadBooks(true)])
+}
+
+function handleOpenAuthor(id: number) {
+  void router.push({ name: 'author-detail', params: { id } })
 }
 const canMerge = computed(() => isSuperuser.value)
 const canDelete = computed(() => isSuperuser.value)
@@ -440,7 +485,7 @@ async function runMerge() {
     mergeOpen.value = false
 
     await loadBooks(true)
-    void aliasesCard.value?.load()
+    void loadNames()
     toast.success(t('author.detail.toast.mergeSuccess', { count: result.mergedAuthorIds.length, books: result.affectedBookCount }))
   } catch (error) {
     toast.error(error instanceof Error ? error.message : t('author.detail.toast.mergeFailed'))
@@ -545,6 +590,7 @@ async function handleMatchUpdated(updated: AuthorDetail) {
 }
 
 onMounted(async () => {
+  void loadNames()
   await fetchLibraries()
   await Promise.all([loadAuthor(), loadBooks(true)])
 
@@ -567,6 +613,7 @@ onUnmounted(() => {
 })
 
 watch(authorId, () => {
+  void loadNames()
   selectedMergeIds.value = []
   mergeCandidates.value = []
   mergeQuery.value = ''
@@ -616,6 +663,10 @@ defineOptions({ name: 'AuthorDetailView' })
         <EntityNotFound :entity="t('author.detail.entityName')" />
       </div>
 
+      <div v-else-if="isPenName" class="mb-4 rounded-lg border border-border/70 bg-card/60 p-4 text-sm text-muted-foreground">
+        {{ t('author.detail.penNameRedirect') }}
+      </div>
+
       <template v-else>
         <div v-if="authorError" class="mb-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
           {{ authorError }}
@@ -646,7 +697,16 @@ defineOptions({ name: 'AuthorDetailView' })
           @delete="confirmDeleteOpen = true"
         />
         <AuthorMatchSheet v-if="author && matchSheetOpen && canUpdate" :author="author" @close="closeMatchSheet" @updated="handleMatchUpdated" />
-        <AuthorAliasesCard v-if="author" ref="aliasesCard" :author-id="author.id" :can-edit="canUpdate" @changed="handleAliasesChanged" />
+        <AuthorAliasesCard
+          v-if="author"
+          :author-id="author.id"
+          :author-name="author.name"
+          :names="names"
+          :can-edit="canUpdate"
+          @update:names="handleNamesUpdate"
+          @changed="handleAliasesChanged"
+          @open="handleOpenAuthor"
+        />
 
         <div v-if="metadataPreviewError" class="mt-3 rounded-md border border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
           {{ t('author.detail.previewError') }}
@@ -768,7 +828,7 @@ defineOptions({ name: 'AuthorDetailView' })
 
         <section class="mt-4 rounded-lg border border-border/70 bg-card/60 p-3">
           <div class="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <h2 class="text-sm font-semibold text-foreground">{{ t('author.detail.books.heading') }}</h2>
+            <h2 class="text-sm font-semibold text-foreground">{{ hasPenNames && author ? author.name : t('author.detail.books.heading') }}</h2>
             <div class="w-full space-y-2 sm:hidden">
               <div class="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-2">
                 <div class="relative min-w-0">
@@ -914,7 +974,10 @@ defineOptions({ name: 'AuthorDetailView' })
             {{ booksError }}
           </div>
 
-          <div v-if="!loadingBooks && books.length === 0" class="flex flex-col items-center justify-center gap-2 py-16 text-center">
+          <p v-if="!loadingBooks && books.length === 0 && hasPenNames" class="text-xs text-muted-foreground">
+            {{ t('author.detail.penNameSection.noOwnBooks', { name: author?.name ?? '' }) }}
+          </p>
+          <div v-else-if="!loadingBooks && books.length === 0" class="flex flex-col items-center justify-center gap-2 py-16 text-center">
             <p class="text-sm font-medium text-foreground">{{ t('author.detail.books.empty.title') }}</p>
             <p class="text-xs text-muted-foreground">{{ t('author.detail.books.empty.hint') }}</p>
           </div>
@@ -938,6 +1001,20 @@ defineOptions({ name: 'AuthorDetailView' })
               t('author.detail.books.allLoaded', { total: formatNumber(bookTotal) })
             }}</span>
           </div>
+
+          <AuthorPenNameBooks
+            v-for="penName in names.penNames"
+            :key="penName.id"
+            :pen-name="penName"
+            :view-mode="authorBooksViewMode"
+            :cover-size="authorBookCoverSize"
+            :grid-gap="authorBookGridGap"
+            :sort="sort"
+            :order="order"
+            :library-id="libraryId"
+            :collapse-series="collapseSeries"
+            @action="handleBookAction"
+          />
         </section>
       </template>
     </main>
@@ -961,6 +1038,14 @@ defineOptions({ name: 'AuthorDetailView' })
       :loading="merging"
       @confirm="runMerge"
       @cancel="confirmMergeOpen = false"
+    />
+
+    <AuthorPenNameChooser
+      :open="chooserOpen"
+      :pen-name="author?.name ?? ''"
+      :people="names.penNameOf"
+      @choose="handleChoosePenNameOwner"
+      @cancel="handleCancelPenNameChooser"
     />
 
     <DeleteBookDialog :open="deleteBookId !== null" :deleting="deletingBook" @confirm="confirmDelete" @cancel="cancelDelete" />

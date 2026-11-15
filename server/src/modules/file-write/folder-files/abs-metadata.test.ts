@@ -82,6 +82,14 @@ describe('buildAbsMetadata', () => {
     expect(json.asin).toBe('B00B7NPRY8');
   });
 
+  it('adds the other names each author goes by only when there are any', () => {
+    expect(buildAbsMetadata(SOURCE)).not.toHaveProperty('authorsAlsoKnownAs');
+    expect(buildAbsMetadata({ ...SOURCE, authorsAlsoKnownAs: {} })).not.toHaveProperty('authorsAlsoKnownAs');
+    const json = buildAbsMetadata({ ...SOURCE, authorsAlsoKnownAs: { 'A. Deborah Baker': ['Seanan McGuire'] } });
+    expect(json.authorsAlsoKnownAs).toEqual({ 'A. Deborah Baker': ['Seanan McGuire'] });
+    expect(Object.keys(json).at(-1)).toBe('authorsAlsoKnownAs');
+  });
+
   it('keeps a half-numbered series entry and ends the last chapter at its start without a duration', () => {
     const json = buildAbsMetadata({ ...SOURCE, seriesIndex: '2.5', durationSeconds: null });
     expect(json.series).toEqual(['Discworld #2.5']);

@@ -1,15 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { normalizePersonNameKeySql } from '../../common/utils/person-name.utils';
 import { DB } from '../../db';
 import * as schema from '../../db/schema';
-import { authorAliases, authors } from '../../db/schema';
+import { authorAliases, authorPenNames, authors } from '../../db/schema';
 
 type Db = NodePgDatabase<typeof schema>;
 
-/** Fork: alternate names (pen names, spellings) that resolve to one author. */
+/** Fork: other names an author goes by: spellings that resolve to them, and pen names linked to them. */
 @Injectable()
 export class AuthorAliasesRepository {
   constructor(@Inject(DB) private readonly db: Db) {}
@@ -53,5 +53,69 @@ export class AuthorAliasesRepository {
       .where(and(eq(authorAliases.id, aliasId), eq(authorAliases.authorId, authorId)))
       .returning({ id: authorAliases.id });
     return removed.length > 0;
+  }
+
+  /** Pen names this person wrote under, with the books under each the viewer can see. */
+  listPenNames(authorId: number, libraryIds: number[]): Promise<{ id: number; name: string; bookCount: number }[]> {
+    return this.linkedNames(sql`pn.author_id = ${authorId}`, sql`pn.pen_name_author_id`, libraryIds);
+  }
+
+  /** The person or people behind a pen name. */
+  listPenNameOf(authorId: number, libraryIds: number[]): Promise<{ id: number; name: string; bookCount: number }[]> {
+    return this.linkedNames(sql`pn.pen_name_author_id = ${authorId}`, sql`pn.author_id`, libraryIds);
+  }
+
+  async isPenName(authorId: number): Promise<boolean> {
+    const [row] = await this.db
+      .select({ id: authorPenNames.authorId })
+      .from(authorPenNames)
+      .where(eq(authorPenNames.penNameAuthorId, authorId))
+      .limit(1);
+    return !!row;
+  }
+
+  async hasPenNames(authorId: number): Promise<boolean> {
+    const [row] = await this.db
+      .select({ id: authorPenNames.penNameAuthorId })
+      .from(authorPenNames)
+      .where(eq(authorPenNames.authorId, authorId))
+      .limit(1);
+    return !!row;
+  }
+
+  async linkPenName(penNameAuthorId: number, authorId: number): Promise<void> {
+    await this.db.insert(authorPenNames).values({ penNameAuthorId, authorId }).onConflictDoNothing();
+  }
+
+  async unlinkPenName(penNameAuthorId: number, authorId: number): Promise<boolean> {
+    const removed = await this.db
+      .delete(authorPenNames)
+      .where(and(eq(authorPenNames.penNameAuthorId, penNameAuthorId), eq(authorPenNames.authorId, authorId)))
+      .returning({ id: authorPenNames.authorId });
+    return removed.length > 0;
+  }
+
+  /** An author with no books yet, so a name can be linked before any book carries it. */
+  async createAuthor(name: string): Promise<{ id: number; name: string }> {
+    const [row] = await this.db.insert(authors).values({ name }).returning({ id: authors.id, name: authors.name });
+    return row!;
+  }
+
+  private async linkedNames(
+    where: ReturnType<typeof sql>,
+    linkedId: ReturnType<typeof sql>,
+    libraryIds: number[],
+  ): Promise<{ id: number; name: string; bookCount: number }[]> {
+    const { rows } = await this.db.execute<{ id: number; name: string; book_count: number }>(sql`
+      SELECT a.id, a.name, count(DISTINCT b.id)::int AS book_count
+      FROM ${authorPenNames} pn
+      JOIN ${authors} a ON a.id = ${linkedId}
+      LEFT JOIN book_authors ba ON ba.author_id = a.id
+      LEFT JOIN books b ON b.id = ba.book_id AND b.library_id = ANY(${sql.param(libraryIds)}::int[])
+      WHERE ${where}
+      GROUP BY a.id, a.name
+      ORDER BY a.name
+    `);
+    return rows.map((row) => ({ id: Number(row.id), name: row.name, bookCount: Number(row.book_count) }));
   }
 }

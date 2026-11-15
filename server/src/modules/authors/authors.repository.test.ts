@@ -12,7 +12,14 @@ vi.mock('drizzle-orm', () => ({
   max: vi.fn((value: unknown) => ({ op: 'max', value })),
   or: vi.fn((...clauses: unknown[]) => ({ op: 'or', clauses })),
   sql: Object.assign(
-    vi.fn((strings: TemplateStringsArray, ...values: unknown[]) => ({ op: 'sql', text: strings.join(''), values })),
+    vi.fn((strings: TemplateStringsArray, ...values: unknown[]) => ({
+      op: 'sql',
+      text: strings.join(''),
+      values,
+      as(alias: string) {
+        return { ...this, alias };
+      },
+    })),
     {
       join: vi.fn((chunks: unknown[], separator: unknown) => ({ op: 'sql.join', chunks, separator })),
       raw: vi.fn((value: string) => ({ op: 'sql.raw', value })),
@@ -36,8 +43,10 @@ function makeDb() {
     orderBy: vi.fn(),
     limit: vi.fn(),
     offset: vi.fn(),
+    unionAll: vi.fn(),
   };
   selectBuilder.from.mockReturnValue(selectBuilder);
+  selectBuilder.unionAll.mockReturnValue(selectBuilder);
   selectBuilder.where.mockReturnValue(selectBuilder);
   selectBuilder.innerJoin.mockReturnValue(selectBuilder);
   selectBuilder.leftJoin.mockReturnValue(selectBuilder);
@@ -249,7 +258,10 @@ describe('AuthorsRepository', () => {
 
   it('findPage uses grouped subquery count when minBookCount is provided', async () => {
     const { db, selectBuilder } = makeDb();
+    // The first two build the pen-name membership subquery.
     selectBuilder.from
+      .mockReturnValueOnce(selectBuilder)
+      .mockReturnValueOnce(selectBuilder)
       .mockReturnValueOnce(selectBuilder)
       .mockReturnValueOnce(selectBuilder)
       .mockResolvedValueOnce([{ total: '2' }]);

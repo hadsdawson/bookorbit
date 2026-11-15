@@ -64,6 +64,7 @@ const secondaryLine = computed(() => {
   const parts: string[] = []
   if (showSortName.value && props.author.sortName) parts.push(props.author.sortName)
   parts.push(t('author.index.bookCount', { count: props.author.bookCount }))
+  if (props.author.otherNameCount) parts.push(t('author.index.aliasCount', { count: props.author.otherNameCount }))
   if (lastAdded.value) parts.push(lastAdded.value)
   return parts.join(' · ')
 })
