@@ -81,6 +81,16 @@ const {
 
 const { summary, fetchSummary, subscribe, onBookDockChange, socketConnected } = useBookDockSummary()
 const { statistics, fetchStatistics } = useBookDockStatistics()
+// Fork: a merged item is one book but several files, so the format counts are told apart from it.
+const booksAndFilesLabel = computed(() => {
+  const stats = statistics.value
+  if (!stats || stats.itemCount === undefined || stats.fileCount === undefined) return ''
+  if (stats.itemCount === stats.fileCount) return t('bookDock.layout.statistics.books', { count: stats.itemCount })
+  return t('bookDock.layout.statistics.booksAndFiles', { books: stats.itemCount, files: stats.fileCount })
+})
+const showStatistics = computed(
+  () => !!statistics.value && (statistics.value.byFormat.length > 1 || statistics.value.itemCount !== statistics.value.fileCount),
+)
 const { addFiles, isUploading } = useBookDockUpload()
 const { isDemoRestrictedAccount, hasPermission } = usePermissions()
 const { conflicts, scheduleConflicts, cancelConflicts } = useBookDockConflicts()
@@ -645,7 +655,14 @@ onUnmounted(() => {
         <BookDockUploadFailures />
 
         <!-- Statistics bar -->
-        <div v-if="statistics && statistics.byFormat.length > 1" class="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
+        <div
+          v-if="statistics && showStatistics"
+          class="flex items-center gap-3 flex-wrap text-xs text-muted-foreground"
+          data-testid="book-dock-statistics"
+        >
+          <span v-if="booksAndFilesLabel" class="font-medium text-foreground tabular-nums" data-testid="book-dock-books-and-files">{{
+            booksAndFilesLabel
+          }}</span>
           <span
             v-for="f in statistics.byFormat"
             :key="f.format"

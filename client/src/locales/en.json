@@ -9905,6 +9905,10 @@
         "invalid_format": "Bad format",
         "error": "Would fail"
       },
+      "statistics": {
+        "books": "{count, plural, one {# book} other {# books}}",
+        "booksAndFiles": "{books, plural, one {# book} other {# books}} · {files, plural, one {# file} other {# files}}"
+      },
       "merged": {
         "badge": "Merged: {formats}",
         "badgeTitle": "These files are filed together as one book",

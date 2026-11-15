@@ -574,8 +574,12 @@ export class BookDockRepository {
   ): Promise<{
     totalSizeBytes: number;
     byFormat: { format: string; count: number; sizeBytes: number }[];
+    itemCount: number;
+    fileCount: number;
   }> {
     const visibilityCondition = userId !== undefined ? this.buildVisibilityCondition(userId, canManageAll ?? true) : undefined;
+    // Fork: a merged item is one book in the list but several files, so both are counted.
+    const [items] = await this.db.select({ total: count() }).from(bookDockFiles).where(and(shownInListCondition(), visibilityCondition));
     const rows = await this.db
       .select({
         format: bookDockFiles.format,
@@ -593,7 +597,8 @@ export class BookDockRepository {
       return { format: r.format ?? 'unknown', count: Number(r.cnt), sizeBytes };
     });
 
-    return { totalSizeBytes, byFormat };
+    const fileCount = byFormat.reduce((total, entry) => total + entry.count, 0);
+    return { totalSizeBytes, byFormat, itemCount: Number(items?.total ?? 0), fileCount };
   }
 
   private buildVisibilityCondition(userId: number, canManageAll: boolean): SQL | undefined {

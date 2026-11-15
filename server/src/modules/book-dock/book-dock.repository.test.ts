@@ -178,6 +178,8 @@ describe('BookDockRepository', () => {
 
   it('getStatistics normalizes null formats and aggregates total size', async () => {
     const { db, selectBuilder } = makeDb();
+    // The first query counts list items, where files merged together count once.
+    selectBuilder.where.mockResolvedValueOnce([{ total: 2 }]);
     selectBuilder.groupBy.mockResolvedValue([
       { format: 'epub', cnt: '2', totalSize: '2000' },
       { format: null, cnt: '1', totalSize: null },
@@ -190,6 +192,8 @@ describe('BookDockRepository', () => {
         { format: 'epub', count: 2, sizeBytes: 2000 },
         { format: 'unknown', count: 1, sizeBytes: 0 },
       ],
+      itemCount: 2,
+      fileCount: 3,
     });
   });
 
