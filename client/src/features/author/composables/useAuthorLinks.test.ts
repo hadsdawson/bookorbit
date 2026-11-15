@@ -2,10 +2,10 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { nextTick, ref } from 'vue'
 
 vi.mock('../api/author', () => ({
-  fetchAuthorLinks: vi.fn(),
-  fetchAuthors: vi.fn(),
-  linkAuthor: vi.fn(),
-  unlinkAuthor: vi.fn(),
+  fetchAuthorLinks: vi.fn<typeof import('../api/author').fetchAuthorLinks>(),
+  fetchAuthors: vi.fn<typeof import('../api/author').fetchAuthors>(),
+  linkAuthor: vi.fn<typeof import('../api/author').linkAuthor>(),
+  unlinkAuthor: vi.fn<typeof import('../api/author').unlinkAuthor>(),
 }))
 
 import { fetchAuthorLinks, fetchAuthors, linkAuthor, unlinkAuthor } from '../api/author'
