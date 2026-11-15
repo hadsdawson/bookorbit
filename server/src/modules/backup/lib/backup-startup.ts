@@ -11,7 +11,9 @@ import { runPendingRestore } from './backup-restore';
 /**
  * Fork only. Runs in the migration script before any migration: first a restore someone asked for
  * from Settings, then, when this start brings database changes, a safety backup of the database as
- * it was. A failed safety backup is logged loudly but does not stop BookOrbit from starting.
+ * it was. Covers and other files are left to the scheduled backups: an update does not change them,
+ * and copying them kept the app closed for many minutes on a large library. A failed safety backup
+ * is logged loudly but does not stop BookOrbit from starting.
  */
 export async function runBackupStartup(
   pool: Pool,
@@ -49,7 +51,7 @@ export async function runBackupStartup(
 
   const startedAt = Date.now();
   log(
-    `[backup.pre_update] [start] pendingMigrations=${pending} - backing up before the update changes the database; the app opens once this finishes, so do not restart it`,
+    `[backup.pre_update] [start] pendingMigrations=${pending} databaseOnly=true - backing up the database before the update changes it; the app opens once this finishes, so do not restart it`,
   );
   try {
     const backup = await createBackup({
@@ -59,10 +61,13 @@ export async function runBackupStartup(
       kind: 'pre-update',
       appVersion,
       migrationHashes: ledgerHashes,
+      databaseOnly: true,
       onProgress: (progress) => log(formatBackupProgress('backup.pre_update', progress)),
     });
     await pruneBackups(backupDir, await listBackups(backupDir), settings.keep);
-    log(`[backup.pre_update] [end] durationMs=${Date.now() - startedAt} backup=${backup.name} size=${backup.size} - backed up before the update`);
+    log(
+      `[backup.pre_update] [end] durationMs=${Date.now() - startedAt} backup=${backup.name} size=${backup.size} - database backed up before the update`,
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const refuse = settings.requireBeforeUpdate && env.BACKUP_SKIP_PRE_UPDATE?.trim().toLowerCase() !== 'true';

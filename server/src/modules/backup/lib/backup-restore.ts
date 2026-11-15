@@ -11,6 +11,7 @@ import {
   extractDataDirs,
   extractEntry,
   isBackupFileName,
+  isDatabaseOnly,
   readManifest,
   replaceDatabaseFromDump,
   runPgTool,
@@ -125,6 +126,8 @@ export async function runPendingRestore(context: RestoreContext): Promise<Restor
       kind: 'pre-restore',
       appVersion: context.appVersion,
       migrationHashes: context.ledgerHashes,
+      // A backup without files leaves the data folders alone, so there is nothing of theirs to save first.
+      databaseOnly: isDatabaseOnly(manifest),
       onProgress: (progress) => context.log(formatBackupProgress('backup.restore_safety', progress)),
     });
     safetyBackup = safety.name;

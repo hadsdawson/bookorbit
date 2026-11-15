@@ -46,8 +46,16 @@ watch(
 )
 
 function kindLabel(backup: BackupInfo): string {
-  return t(`settings.backups.kinds.${backup.kind}`)
+  const kind = t(`settings.backups.kinds.${backup.kind}`)
+  return backup.databaseOnly ? t('settings.backups.databaseOnlyKind', { kind }) : kind
 }
+
+const restoreDescription = computed(() => {
+  const target = restoreTarget.value
+  if (!target) return ''
+  const key = target.databaseOnly ? 'settings.backups.restoreBodyDatabaseOnly' : 'settings.backups.restoreBody'
+  return t(key, { date: formatDateTime(new Date(target.createdAt)) })
+})
 
 function handleFrequencyChange(event: Event) {
   if (form.value) form.value.frequency = (event.target as HTMLSelectElement).value as BackupFrequency
@@ -351,7 +359,7 @@ async function handleConfirmDelete() {
   <ConfirmDialog
     :open="restoreTarget !== null"
     :title="t('settings.backups.restoreTitle')"
-    :description="restoreTarget ? t('settings.backups.restoreBody', { date: formatDateTime(new Date(restoreTarget.createdAt)) }) : ''"
+    :description="restoreDescription"
     :confirm-label="t('settings.backups.restoreConfirm')"
     confirmation-phrase="RESTORE"
     :busy="busy === 'restore'"

@@ -8,6 +8,8 @@ export interface BackupInfo {
   createdAt: string;
   size: number;
   appVersion: string;
+  /** True when the backup holds the database but no covers, photos or other files; restoring it leaves those as they are. */
+  databaseOnly?: boolean;
 }
 
 export const BACKUP_FREQUENCIES = ["off", "daily", "weekly"] as const;

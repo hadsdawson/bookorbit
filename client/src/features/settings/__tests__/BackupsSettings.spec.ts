@@ -62,6 +62,18 @@ describe('BackupsSettings', () => {
     expect(text).not.toContain('inside BookOrbit')
   })
 
+  it('marks a database-only backup and says a restore leaves covers alone', async () => {
+    const preUpdate = { ...BACKUP, name: 'bookorbit-backup-20261115T133740Z-pre-update.zip', kind: 'pre-update' as const, databaseOnly: true }
+    apiMock.mockResolvedValueOnce(json(overview({ backups: [preUpdate] })))
+    mount(BackupsSettings, { attachTo: document.body })
+    await flushPromises()
+    expect(document.body.textContent).toContain('Before update, database only')
+
+    buttonWith('Restore').click()
+    await flushPromises()
+    expect(document.body.textContent).toContain('This backup holds the database only')
+  })
+
   it('warns when backups sit inside the app data folder', async () => {
     apiMock.mockResolvedValueOnce(json(overview({ location: '/data/backups', locationInsideAppData: true })))
     mount(BackupsSettings, { attachTo: document.body })

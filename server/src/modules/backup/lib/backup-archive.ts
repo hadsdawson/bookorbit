@@ -44,6 +44,8 @@ export interface CreateBackupOptions {
   kind: BackupKind;
   appVersion: string;
   migrationHashes: string[];
+  /** Leave the covers, photos and other files out. They are most of the time a backup takes, and a database update does not change them. */
+  databaseOnly?: boolean;
   now?: Date;
   onProgress?: (progress: BackupProgress) => void;
   progressIntervalMs?: number;
@@ -209,7 +211,7 @@ export async function createBackup(options: CreateBackupOptions): Promise<Backup
     const dumpBytes = (await stat(dumpPath)).size;
     report({ step: 'database', phase: 'end', durationMs: Date.now() - databaseStartedAt, bytes: dumpBytes });
 
-    const dataDirs = BACKED_UP_DATA_DIRS.filter((dir) => isDirectory(join(options.appDataPath, dir)));
+    const dataDirs = options.databaseOnly ? [] : BACKED_UP_DATA_DIRS.filter((dir) => isDirectory(join(options.appDataPath, dir)));
     const manifest: BackupManifest = {
       format: BACKUP_FORMAT,
       formatVersion: BACKUP_FORMAT_VERSION,
@@ -221,7 +223,7 @@ export async function createBackup(options: CreateBackupOptions): Promise<Backup
     };
 
     const filesStartedAt = Date.now();
-    report({ step: 'files', phase: 'start', dirs: dataDirs });
+    if (!options.databaseOnly) report({ step: 'files', phase: 'start', dirs: dataDirs });
     const found = await countFiles(dataDirs.map((dir) => join(options.appDataPath, dir)));
     const archive = new ZipArchive({ zlib: { level: 6 } });
     const copied = { files: 0, bytes: 0 };
@@ -255,10 +257,12 @@ export async function createBackup(options: CreateBackupOptions): Promise<Backup
     }
     await archive.finalize();
     await done;
-    report({ step: 'files', phase: 'end', durationMs: Date.now() - filesStartedAt, files: copied.files, bytes: copied.bytes });
+    if (!options.databaseOnly) {
+      report({ step: 'files', phase: 'end', durationMs: Date.now() - filesStartedAt, files: copied.files, bytes: copied.bytes });
+    }
     await rename(partialPath, finalPath);
     const size = (await stat(finalPath)).size;
-    return { name, kind: options.kind, createdAt: manifest.createdAt, size, appVersion: options.appVersion };
+    return { name, kind: options.kind, createdAt: manifest.createdAt, size, appVersion: options.appVersion, ...databaseOnlyFlag(manifest) };
   } catch (error) {
     await rm(partialPath, { force: true });
     throw error;
@@ -292,12 +296,27 @@ export async function listBackups(backupDir: string): Promise<BackupInfo[]> {
     const path = join(backupDir, name);
     try {
       const manifest = await readManifest(path);
-      backups.push({ name, kind: manifest.kind, createdAt: manifest.createdAt, size: (await stat(path)).size, appVersion: manifest.appVersion });
+      backups.push({
+        name,
+        kind: manifest.kind,
+        createdAt: manifest.createdAt,
+        size: (await stat(path)).size,
+        appVersion: manifest.appVersion,
+        ...databaseOnlyFlag(manifest),
+      });
     } catch {
       // An unreadable file is not offered for restore; it stays on disk for someone to look at.
     }
   }
   return backups.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export function isDatabaseOnly(manifest: Pick<BackupManifest, 'dataDirs'>): boolean {
+  return !Array.isArray(manifest.dataDirs) || manifest.dataDirs.length === 0;
+}
+
+function databaseOnlyFlag(manifest: Pick<BackupManifest, 'dataDirs'>): { databaseOnly?: true } {
+  return isDatabaseOnly(manifest) ? { databaseOnly: true } : {};
 }
 
 /** Only our own names, so a path from a request can never reach outside the backup folder. */

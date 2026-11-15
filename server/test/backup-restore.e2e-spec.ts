@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { Client, Pool } from 'pg';
+import * as unzipper from 'unzipper';
 
 import { createBackup, listBackups } from '../src/modules/backup/lib/backup-archive';
 import { DatabaseLostError, RESTORE_RESULT, requestRestore, runPendingRestore, swapDataDirs } from '../src/modules/backup/lib/backup-restore';
@@ -95,9 +96,42 @@ describe('Backup restore (e2e)', { timeout: 120_000 }, () => {
     expect(await titles()).toEqual(['Before']);
     expect((await pool.query(`SELECT to_regclass('public.added_later')::text AS name`)).rows[0].name).toBeNull();
     expect(await readFile(join(appDataPath, 'covers', 'cover.txt'), 'utf8')).toBe('before');
-    expect((await listBackups(backupDir)).some((backup) => backup.kind === 'pre-restore')).toBe(true);
+    const safety = (await listBackups(backupDir)).find((backup) => backup.kind === 'pre-restore');
+    expect(safety).toBeDefined();
+    expect(safety?.databaseOnly).toBeUndefined();
     expect(existsSync(join(appDataPath, '.restore-previous'))).toBe(false);
     expect(existsSync(join(appDataPath, '.restore-incoming'))).toBe(false);
+  });
+
+  it('backs up only the database before an update, and restoring that leaves the data folders alone', async () => {
+    await pool.query(`CREATE TABLE app_settings (key text PRIMARY KEY, value text NOT NULL)`);
+    const logs = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    try {
+      await runBackupStartup(pool, [{ hash: 'm1' }, { hash: 'm2' }], {
+        DATABASE_URL: databaseUrl,
+        APP_DATA_PATH: appDataPath,
+        BACKUP_PATH: backupDir,
+      });
+      expect(logs.mock.calls.some(([line]) => String(line).includes('step=files'))).toBe(false);
+    } finally {
+      logs.mockRestore();
+    }
+    const [preUpdate] = await listBackups(backupDir);
+    expect(preUpdate).toMatchObject({ kind: 'pre-update', databaseOnly: true });
+    const entries = (await unzipper.Open.file(join(backupDir, preUpdate.name))).files.map((file) => file.path);
+    expect(entries.sort()).toEqual(['database.dump', 'manifest.json']);
+
+    await pool.query(`INSERT INTO books (title) VALUES ('After')`);
+    await writeFile(join(appDataPath, 'covers', 'cover.txt'), 'after');
+    await requestRestore(backupDir, preUpdate.name);
+
+    const result = await runPendingRestore(context());
+
+    expect(result).toMatchObject({ name: preUpdate.name, ok: true });
+    expect(await titles()).toEqual(['Before']);
+    expect(await readFile(join(appDataPath, 'covers', 'cover.txt'), 'utf8')).toBe('after');
+    const safety = (await listBackups(backupDir)).find((backup) => backup.kind === 'pre-restore');
+    expect(safety).toMatchObject({ databaseOnly: true });
   });
 
   it('leaves the database exactly as it was when the backup cannot be loaded', async () => {
