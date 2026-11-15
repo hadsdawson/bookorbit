@@ -6,7 +6,7 @@ import {
   type NewReleaseFormat,
   type NewReleaseRetentionDays,
 } from '@bookorbit/types';
-import { IsIn, IsOptional, Matches, ValidateIf } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, Matches, ValidateIf } from 'class-validator';
 
 export class UpdateNewReleasesSettingsDto {
   /** How long a book stays listed after it comes out. */
@@ -31,6 +31,11 @@ export class UpdateNewReleasesServerSettingsDto {
   @IsOptional()
   @Matches(/^([a-z]{2}|any)$/)
   language!: string;
+
+  /** Fork: hide books no source states a language for. Optional so older clients still save. */
+  @IsOptional()
+  @IsBoolean()
+  languageStrict!: boolean;
 }
 
 /** Fork: `hidden=true` lists hidden books too, within the same listing window. */

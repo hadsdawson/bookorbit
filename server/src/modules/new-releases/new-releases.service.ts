@@ -40,6 +40,7 @@ const EVENT = 'new_releases.check';
 const DEFAULT_FORMAT_KEY = 'new_releases_default_format';
 const DEFAULT_DELIVERY_KEY = 'new_releases_default_delivery';
 const LANGUAGE_KEY = 'new_releases_language';
+const LANGUAGE_STRICT_KEY = 'new_releases_language_strict';
 const DEFAULT_LANGUAGE = 'en';
 /** A followed name is looked up again once its last look is this old. */
 const RECHECK_DAYS = 7;
@@ -88,6 +89,12 @@ function toFollow(row: ReleaseFollowRow): ReleaseFollow {
     seriesId: row.seriesId,
     createdAt: row.createdAt.toISOString(),
   };
+}
+
+/** Fork: the list's language filter as the server settings set it; "any" turns it off. */
+function languageFilterOf(server: NewReleasesServerSettings): { language: string | null; strictLanguage: boolean } {
+  if (server.language === 'any') return { language: null, strictLanguage: false };
+  return { language: server.language, strictLanguage: server.languageStrict };
 }
 
 /**
@@ -229,7 +236,7 @@ export class NewReleasesService implements OnApplicationBootstrap {
     const delivery = (userSettings?.delivery as NewReleaseDelivery | null) ?? null;
     const rows = await this.repository.listForUser(user.id, { retentionDays }, LIST_LIMIT, {
       includeHidden: options.includeHidden === true,
-      language: server.language === 'any' ? null : server.language,
+      ...languageFilterOf(server),
     });
     const links = await this.libraryLinksFor(user, rows);
     const items: NewReleaseItem[] = rows.map((row) => ({
@@ -269,7 +276,8 @@ export class NewReleasesService implements OnApplicationBootstrap {
   async upcomingTuesday(user: RequestUser, today: string): Promise<UpcomingReleasesWidgetData | null> {
     if (!user.isSuperuser && !user.permissions.includes(Permission.NewReleasesAccess)) return null;
     const date = comingTuesday(today);
-    const rows = await this.repository.listForUser(user.id, { onDate: date }, WIDGET_LIMIT);
+    const server = await this.serverSettings();
+    const rows = await this.repository.listForUser(user.id, { onDate: date }, WIDGET_LIMIT, languageFilterOf(server));
     return {
       date,
       total: rows[0]?.totalCount ?? 0,
@@ -316,6 +324,7 @@ export class NewReleasesService implements OnApplicationBootstrap {
   async updateServerSettings(settings: NewReleasesServerSettings): Promise<NewReleasesServerSettings> {
     await this.appSettings.setValue(DEFAULT_FORMAT_KEY, settings.defaultFormat);
     if (settings.language !== undefined) await this.appSettings.setValue(LANGUAGE_KEY, settings.language);
+    if (settings.languageStrict !== undefined) await this.appSettings.setValue(LANGUAGE_STRICT_KEY, String(settings.languageStrict));
     await this.appSettings.setValue(DEFAULT_DELIVERY_KEY, settings.defaultDelivery);
     if (settings.defaultDelivery === 'request') this.kick();
     return this.serverSettings();
@@ -377,7 +386,11 @@ export class NewReleasesService implements OnApplicationBootstrap {
    */
   async autoRequest(now: number = Date.now()): Promise<{ filed: number; failed: number }> {
     const server = await this.serverSettings();
-    const pending = await this.repository.findPendingAutoRequests(server.defaultDelivery, AUTO_REQUESTS_PER_RUN);
+    const filter = languageFilterOf(server);
+    const pending = await this.repository.findPendingAutoRequests(server.defaultDelivery, AUTO_REQUESTS_PER_RUN, {
+      language: filter.language,
+      strict: filter.strictLanguage,
+    });
     let filed = 0;
     let failed = 0;
     const users = new Map<number, RequestUser | null>();
@@ -413,12 +426,13 @@ export class NewReleasesService implements OnApplicationBootstrap {
   }
 
   async serverSettings(): Promise<NewReleasesServerSettings> {
-    const values = await this.appSettings.getValues([DEFAULT_FORMAT_KEY, DEFAULT_DELIVERY_KEY, LANGUAGE_KEY]);
+    const values = await this.appSettings.getValues([DEFAULT_FORMAT_KEY, DEFAULT_DELIVERY_KEY, LANGUAGE_KEY, LANGUAGE_STRICT_KEY]);
     const format = values.get(DEFAULT_FORMAT_KEY);
     const delivery = values.get(DEFAULT_DELIVERY_KEY);
     const language = values.get(LANGUAGE_KEY);
     return {
       language: language === 'any' ? 'any' : (toRequestLanguage(language) ?? DEFAULT_LANGUAGE),
+      languageStrict: values.get(LANGUAGE_STRICT_KEY) === 'true',
       defaultFormat: (NEW_RELEASE_FORMATS as readonly string[]).includes(format ?? '') ? (format as NewReleaseFormat) : 'both',
       defaultDelivery: (NEW_RELEASE_DELIVERIES as readonly string[]).includes(delivery ?? '') ? (delivery as NewReleaseDelivery) : 'suggest',
     };

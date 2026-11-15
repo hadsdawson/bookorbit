@@ -45,7 +45,7 @@ function overview(overrides: Partial<NewReleasesOverview> = {}): NewReleasesOver
     ],
     followCounts: { author: 2, series: 1 },
     sources: { hardcover: true, audible: true, google: false },
-    server: { defaultFormat: 'both', defaultDelivery: 'suggest', language: 'en' },
+    server: { defaultFormat: 'both', defaultDelivery: 'suggest', language: 'en', languageStrict: false },
     user: { delivery: null, retentionDays: 30 },
     effectiveDelivery: 'suggest',
     lastCheckedAt: null,

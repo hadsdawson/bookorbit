@@ -20,7 +20,9 @@ import NewReleasesServerSettings from '../components/NewReleasesServerSettings.v
 describe('NewReleasesServerSettings', () => {
   beforeEach(() => {
     mocks.allowed = true
-    mocks.getNewReleasesServerSettings.mockReset().mockResolvedValue({ defaultFormat: 'both', defaultDelivery: 'suggest', language: 'en' })
+    mocks.getNewReleasesServerSettings
+      .mockReset()
+      .mockResolvedValue({ defaultFormat: 'both', defaultDelivery: 'suggest', language: 'en', languageStrict: false })
     mocks.saveNewReleasesServerSettings.mockReset().mockImplementation(async (settings) => settings)
   })
 
@@ -29,13 +31,44 @@ describe('NewReleasesServerSettings', () => {
     await flushPromises()
     await wrapper.get('#new-releases-default-format').setValue('audiobook')
     await flushPromises()
-    expect(mocks.saveNewReleasesServerSettings).toHaveBeenCalledWith({ defaultFormat: 'audiobook', defaultDelivery: 'suggest', language: 'en' })
+    expect(mocks.saveNewReleasesServerSettings).toHaveBeenCalledWith({
+      defaultFormat: 'audiobook',
+      defaultDelivery: 'suggest',
+      language: 'en',
+      languageStrict: false,
+    })
     await wrapper.get('#new-releases-default-delivery').setValue('request')
     await flushPromises()
-    expect(mocks.saveNewReleasesServerSettings).toHaveBeenLastCalledWith({ defaultFormat: 'audiobook', defaultDelivery: 'request', language: 'en' })
+    expect(mocks.saveNewReleasesServerSettings).toHaveBeenLastCalledWith({
+      defaultFormat: 'audiobook',
+      defaultDelivery: 'request',
+      language: 'en',
+      languageStrict: false,
+    })
     await wrapper.get('#new-releases-language').setValue('any')
     await flushPromises()
-    expect(mocks.saveNewReleasesServerSettings).toHaveBeenLastCalledWith({ defaultFormat: 'audiobook', defaultDelivery: 'request', language: 'any' })
+    expect(mocks.saveNewReleasesServerSettings).toHaveBeenLastCalledWith({
+      defaultFormat: 'audiobook',
+      defaultDelivery: 'request',
+      language: 'any',
+      languageStrict: false,
+    })
+  })
+
+  it('saves the strict language setting, and hides it when any language is allowed', async () => {
+    const wrapper = mount(NewReleasesServerSettings)
+    await flushPromises()
+    await wrapper.get('#new-releases-language-strict').trigger('click')
+    await flushPromises()
+    expect(mocks.saveNewReleasesServerSettings).toHaveBeenLastCalledWith({
+      defaultFormat: 'both',
+      defaultDelivery: 'suggest',
+      language: 'en',
+      languageStrict: true,
+    })
+    await wrapper.get('#new-releases-language').setValue('any')
+    await flushPromises()
+    expect(wrapper.find('#new-releases-language-strict').exists()).toBe(false)
   })
 
   it('stays hidden from people who cannot manage requests', async () => {
