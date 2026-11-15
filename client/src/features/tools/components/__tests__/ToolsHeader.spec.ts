@@ -5,9 +5,10 @@ import { i18n } from '@/i18n'
 import ToolsHeader from '../ToolsHeader.vue'
 
 const granted = vi.hoisted(() => new Set<string>())
+const superuser = vi.hoisted(() => ({ value: false }))
 
 vi.mock('@/features/auth/composables/usePermissions', () => ({
-  usePermissions: () => ({ hasPermission: (name: string) => granted.has(name) }),
+  usePermissions: () => ({ hasPermission: (name: string) => granted.has(name), isSuperuser: superuser }),
 }))
 
 vi.mock('vue-router', () => ({
@@ -24,6 +25,7 @@ function sectionLabels(): string[] {
 describe('ToolsHeader', () => {
   beforeEach(() => {
     granted.clear()
+    superuser.value = false
   })
 
   it('offers Duplicate Books to a user who may only merge books, without Missing Resources', () => {
@@ -38,5 +40,12 @@ describe('ToolsHeader', () => {
     const t = i18n.global.t
 
     expect(sectionLabels()).toEqual([t('tools.header.duplicateBooks'), t('tools.header.missingResources')])
+  })
+
+  it('offers the Recycle Bin to a superuser only', () => {
+    superuser.value = true
+    const t = i18n.global.t
+
+    expect(sectionLabels()).toEqual([t('tools.header.recycleBin')])
   })
 })

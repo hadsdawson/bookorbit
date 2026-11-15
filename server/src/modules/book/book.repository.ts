@@ -2160,6 +2160,24 @@ export class BookRepository {
       .where(inArray(books.id, bookIds));
   }
 
+  /** What the recycle bin needs to file deleted books: each file with its library folder and the book's title. */
+  async findRecycleBinFilesByBookIds(
+    bookIds: number[],
+  ): Promise<{ bookId: number; absolutePath: string; libraryFolderPath: string; title: string | null }[]> {
+    if (bookIds.length === 0) return [];
+    return this.db
+      .select({
+        bookId: bookFiles.bookId,
+        absolutePath: bookFiles.absolutePath,
+        libraryFolderPath: libraryFolders.path,
+        title: bookMetadata.title,
+      })
+      .from(bookFiles)
+      .innerJoin(libraryFolders, eq(libraryFolders.id, bookFiles.libraryFolderId))
+      .leftJoin(bookMetadata, eq(bookMetadata.bookId, bookFiles.bookId))
+      .where(inArray(bookFiles.bookId, bookIds));
+  }
+
   async findRecommendationTitlesByBookIds(bookIds: number[]): Promise<UnscopedBookRecommendation[]> {
     if (bookIds.length === 0) return [];
 

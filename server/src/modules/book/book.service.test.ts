@@ -139,6 +139,7 @@ function makeService(
     findDeletionAuditBooksByIds: vi.fn(),
     findPrimaryFilesByBookIds: vi.fn(),
     findAllFilesByBookIds: vi.fn(),
+    findRecycleBinFilesByBookIds: vi.fn(),
     findCoverSourceFilesByBookIds: vi.fn().mockResolvedValue([]),
     findTagsByBookIds: vi.fn(),
     findAuthorsByBookIds: vi.fn(),
@@ -3221,6 +3222,58 @@ describe('BookService', () => {
       expect(bookRepo.findAllFilesByBookIds).toHaveBeenCalledWith([3]);
       expect(bookRepo.deleteByIdsAndInvalidateScanState).toHaveBeenCalledWith([3]);
       expect(mockRm).toHaveBeenCalledTimes(2);
+    });
+
+    describe('with the recycle bin on', () => {
+      function withRecycleBin(recycle = vi.fn().mockResolvedValue(undefined)) {
+        const made = makeService();
+        const recycleBin = { isEnabled: vi.fn().mockResolvedValue(true), recycle };
+        (made.service as unknown as { recycleBin: unknown }).recycleBin = recycleBin;
+        made.bookRepo.findLibraryIdsByBookIds.mockResolvedValue([
+          { id: 3, libraryId: 7 },
+          { id: 4, libraryId: 7 },
+        ]);
+        made.bookRepo.findDeletionAuditBooksByIds.mockResolvedValue([{ id: 3, title: 'Dune' }]);
+        made.bookRepo.findAllFilesByBookIds.mockResolvedValue([
+          { bookId: 3, absolutePath: '/lib/Dune/dune.epub', format: 'epub' },
+          { bookId: 3, absolutePath: '/lib/Dune/dune.m4b', format: 'm4b' },
+          { bookId: 4, absolutePath: '/lib/Emma/emma.epub', format: 'epub' },
+        ]);
+        made.bookRepo.findRecycleBinFilesByBookIds.mockResolvedValue([
+          { bookId: 3, absolutePath: '/lib/Dune/dune.epub', libraryFolderPath: '/lib', title: 'Dune' },
+          { bookId: 3, absolutePath: '/lib/Dune/dune.m4b', libraryFolderPath: '/lib', title: 'Dune' },
+          { bookId: 4, absolutePath: '/lib/Emma/emma.epub', libraryFolderPath: '/lib', title: null },
+        ]);
+        made.bookRepo.deleteByIdsAndInvalidateScanState.mockResolvedValue(undefined);
+        mockRm.mockResolvedValue(undefined);
+        return { ...made, recycleBin };
+      }
+
+      it('moves each book to the bin as one entry instead of deleting its files', async () => {
+        const { service, bookRepo, recycleBin } = withRecycleBin();
+
+        await service.deleteBooks([3, 4], makeUser());
+
+        expect(recycleBin.recycle).toHaveBeenCalledTimes(2);
+        expect(recycleBin.recycle).toHaveBeenCalledWith('/lib', {
+          kind: 'book',
+          title: 'Dune',
+          deletedBy: 'Tester',
+          absolutePaths: ['/lib/Dune/dune.epub', '/lib/Dune/dune.m4b'],
+        });
+        expect(mockRm).not.toHaveBeenCalledWith('/lib/Dune/dune.epub', { force: true });
+        expect(bookRepo.deleteByIdsAndInvalidateScanState).toHaveBeenCalledWith([3, 4]);
+      });
+
+      it('keeps the records and deletes nothing when a book cannot be moved to the bin', async () => {
+        const recycle = vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('EACCES'));
+        const { service, bookRepo } = withRecycleBin(recycle);
+
+        await expect(service.deleteBooks([3, 4], makeUser())).rejects.toBeInstanceOf(InternalServerErrorException);
+
+        expect(bookRepo.deleteByIdsAndInvalidateScanState).not.toHaveBeenCalled();
+        expect(mockRm).not.toHaveBeenCalled();
+      });
     });
 
     it('returns an empty deletion without filesystem or database work', async () => {
@@ -6950,6 +7003,32 @@ describe('BookService', () => {
   });
 
   describe('deleteFile', () => {
+    it('moves the file to the recycle bin instead of deleting it when the bin is on', async () => {
+      const { service, bookRepo, libraryService } = makeService();
+      const file = { absolutePath: '/lib/Dune/dune.epub', bookId: 10, libraryId: 1, libraryFolderPath: '/lib' };
+      bookRepo.findFileById = vi.fn().mockResolvedValue(file);
+      libraryService.checkLibraryAccess = vi.fn().mockResolvedValue(true);
+      vi.mocked(rm).mockClear();
+      bookRepo.findDeletionAuditBooksByIds.mockResolvedValue([{ id: 10, title: 'Dune' }]);
+      bookRepo.deleteBookFile = vi.fn().mockResolvedValue(undefined);
+      bookRepo.findFilesForBook = vi.fn().mockResolvedValue([]);
+      bookRepo.findBookBase = vi.fn().mockResolvedValue({ id: 10, primaryFileId: 100 });
+      bookRepo.updateBookPrimaryFile = vi.fn().mockResolvedValue(undefined);
+      const recycleBin = { isEnabled: vi.fn().mockResolvedValue(true), recycle: vi.fn().mockResolvedValue(undefined) };
+      (service as unknown as { recycleBin: unknown }).recycleBin = recycleBin;
+
+      await service.deleteFile(100, makeUser());
+
+      expect(recycleBin.recycle).toHaveBeenCalledWith('/lib', {
+        kind: 'file',
+        title: 'Dune',
+        deletedBy: 'Tester',
+        absolutePaths: ['/lib/Dune/dune.epub'],
+      });
+      expect(rm).not.toHaveBeenCalled();
+      expect(bookRepo.deleteBookFile).toHaveBeenCalledWith(100);
+    });
+
     it('deletes file on disk and updates db and marks missing if last file', async () => {
       const { service, bookRepo, libraryService } = makeService();
       const user = makeUser({ id: 1 });

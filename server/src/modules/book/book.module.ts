@@ -17,6 +17,7 @@ import { MetadataScoreModule } from '../metadata-score/metadata-score.module';
 import { NarratorModule } from '../narrator/narrator.module';
 import { UserBookNoteModule } from '../user-book-note/user-book-note.module';
 import { PositionConverterModule } from '../position-converter/position-converter.module';
+import { RecycleBinModule } from '../recycle-bin/recycle-bin.module';
 import { UserBookStatusModule } from '../user-book-status/user-book-status.module';
 import { AudiobookEbookProgressSyncService } from './audiobook-ebook-progress-sync.service';
 import { DeliveryArtifactRepository } from './delivery-artifact.repository';
@@ -56,6 +57,7 @@ import { ReadingProgressService } from './reading-progress.service';
     UserBookStatusModule,
     AchievementModule,
     PositionConverterModule,
+    RecycleBinModule,
   ],
   controllers: [BookController, ReadingAttemptController, ReadingProgressController],
   providers: [

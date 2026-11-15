@@ -739,6 +739,12 @@ export const routes: RouteRecordRaw[] = [
             meta: { title: () => t('titles.communityRatings') },
           },
           {
+            path: 'recycle-bin',
+            name: 'tools-recycle-bin',
+            component: () => import('@/features/tools/recycle-bin/views/RecycleBinView.vue'),
+            meta: { title: () => t('titles.recycleBin') },
+          },
+          {
             path: ':pathMatch(.*)*',
             redirect: { name: 'tools-entity-manager' },
           },
