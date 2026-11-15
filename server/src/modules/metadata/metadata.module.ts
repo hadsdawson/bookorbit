@@ -14,6 +14,7 @@ import { CoverSlotReconciler } from './cover-slot-reconciler.service';
 import { MetadataExtractionService } from './metadata-extraction.service';
 import { MetadataEventsService } from './metadata-events.service';
 import { MetadataService } from './metadata.service';
+import { PersonNameBackfillRepository } from './person-name-backfill.repository';
 import { PersonNameBackfillService } from './person-name-backfill.service';
 
 @Module({
@@ -31,6 +32,7 @@ import { PersonNameBackfillService } from './person-name-backfill.service';
     RegexMetadataService,
     MetadataService,
     PersonNameBackfillService,
+    PersonNameBackfillRepository,
     MetadataExtractionService,
     MetadataEventsService,
     ComicMetadataRepository,
