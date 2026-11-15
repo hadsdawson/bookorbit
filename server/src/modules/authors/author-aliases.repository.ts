@@ -62,8 +62,23 @@ export class AuthorAliasesRepository {
   }
 
   /** Pen names this person wrote under, with the books under each the viewer can see. */
-  listPenNames(authorId: number, libraryIds: number[]): Promise<{ id: number; name: string; bookCount: number }[]> {
-    return this.linkedNames(sql`pn.author_id = ${authorId}`, sql`pn.pen_name_author_id`, libraryIds);
+  async listPenNames(
+    authorId: number,
+    libraryIds: number[],
+  ): Promise<{ id: number; name: string; bookCount: number; sharedWith: { id: number; name: string }[] }[]> {
+    const penNames = await this.linkedNames(sql`pn.author_id = ${authorId}`, sql`pn.pen_name_author_id`, libraryIds);
+    if (penNames.length === 0) return [];
+    // Fork: the other people a shared pen name belongs to, so the page can say who shares it.
+    const { rows } = await this.db.execute<{ pen_name_author_id: number; id: number; name: string }>(sql`
+      SELECT pn.pen_name_author_id, a.id, a.name
+      FROM ${authorPenNames} pn JOIN ${authors} a ON a.id = pn.author_id
+      WHERE pn.pen_name_author_id = ANY(${sql.param(penNames.map((penName) => penName.id))}::int[]) AND pn.author_id <> ${authorId}
+      ORDER BY a.name
+    `);
+    return penNames.map((penName) => ({
+      ...penName,
+      sharedWith: rows.filter((row) => Number(row.pen_name_author_id) === penName.id).map((row) => ({ id: Number(row.id), name: row.name })),
+    }));
   }
 
   /** The person or people behind a pen name. */

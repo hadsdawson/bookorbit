@@ -48,8 +48,8 @@ export type AuthorNameKind = (typeof AUTHOR_NAME_KINDS)[number];
 export type AuthorNames = {
   /** Other spellings: books credited to one are credited to the author. */
   spellings: AuthorAlias[];
-  /** Pen names this person wrote under; books keep the pen name. */
-  penNames: AuthorNameLink[];
+  /** Pen names this person wrote under; books keep the pen name. `sharedWith` lists the other people behind one. */
+  penNames: (AuthorNameLink & { sharedWith?: { id: number; name: string }[] })[];
   /** For a pen name, the person or people who wrote under it. */
   penNameOf: AuthorNameLink[];
 };

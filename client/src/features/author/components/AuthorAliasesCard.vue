@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Plus, Tags, X } from '@lucide/vue'
+import { Plus, Tags, UserPlus, X } from '@lucide/vue'
 import { toast } from 'vue-sonner'
-import { AUTHOR_NAME_KINDS, type AuthorNameKind, type AuthorNames } from '@bookorbit/types'
+import { AUTHOR_NAME_KINDS, type AuthorNameKind, type AuthorNameLink, type AuthorNames } from '@bookorbit/types'
 
 import InputWithSuggestions from '@/components/ui/InputWithSuggestions.vue'
 import { useAuthorSearch } from '@/features/book/composables/useAuthorSearch'
-import { addAuthorName, removeAuthorSpelling, unlinkAuthorPenName } from '../api/author'
+import { addAuthorName, fetchAuthorNames, removeAuthorSpelling, unlinkAuthorPenName } from '../api/author'
 
 const props = defineProps<{ authorId: number; authorName: string; names: AuthorNames; canEdit: boolean }>()
 const emit = defineEmits<{ 'update:names': [names: AuthorNames]; changed: []; open: [authorId: number] }>()
@@ -61,6 +61,43 @@ async function submitName() {
     } else {
       toast.success(t('author.detail.aliases.added'))
     }
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : t('author.detail.aliases.addFailed'))
+  } finally {
+    busy.value = false
+  }
+}
+
+// Fork: another person behind one of this author's pen names, for pen names written by two people.
+const coAuthorFor = ref<AuthorNameLink | null>(null)
+const coAuthorDraft = ref<string | null>('')
+
+function sharedWithLine(penName: AuthorNames['penNames'][number]): string {
+  const others = penName.sharedWith ?? []
+  return others.length > 0 ? t('author.detail.aliases.sharedWith', { names: others.map((other) => other.name).join(', ') }) : ''
+}
+
+function openCoAuthor(penName: AuthorNameLink) {
+  coAuthorFor.value = coAuthorFor.value?.id === penName.id ? null : penName
+  coAuthorDraft.value = ''
+}
+
+function closeCoAuthor() {
+  coAuthorFor.value = null
+  coAuthorDraft.value = ''
+}
+
+async function submitCoAuthor() {
+  const penName = coAuthorFor.value
+  const name = coAuthorDraft.value?.trim() ?? ''
+  if (!penName || !name || busy.value) return
+  busy.value = true
+  try {
+    await addAuthorName(penName.id, name, 'mainName')
+    setNames(await fetchAuthorNames(props.authorId))
+    closeCoAuthor()
+    emit('changed')
+    toast.success(t('author.detail.aliases.coAuthorAdded', { penName: penName.name, name }))
   } catch (error) {
     toast.error(error instanceof Error ? error.message : t('author.detail.aliases.addFailed'))
   } finally {
@@ -132,6 +169,21 @@ watch(
       >
         <a :href="`#pen-name-${penName.id}`" class="hover:underline">{{ penName.name }}</a>
         <span class="text-xs text-muted-foreground">{{ t('author.index.bookCount', { count: penName.bookCount }) }}</span>
+        <span v-if="sharedWithLine(penName)" class="text-xs text-muted-foreground" :data-testid="`pen-name-shared-${penName.id}`">
+          · {{ sharedWithLine(penName) }}
+        </span>
+        <button
+          v-if="canEdit"
+          type="button"
+          class="inline-flex size-5 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+          :disabled="busy"
+          :aria-label="t('author.detail.aliases.addCoAuthor', { name: penName.name })"
+          :title="t('author.detail.aliases.addCoAuthor', { name: penName.name })"
+          :aria-expanded="coAuthorFor?.id === penName.id"
+          @click="openCoAuthor(penName)"
+        >
+          <UserPlus :size="12" />
+        </button>
         <button
           v-if="canEdit"
           type="button"
@@ -145,6 +197,30 @@ watch(
         </button>
       </span>
     </div>
+
+    <form v-if="coAuthorFor && canEdit" class="mt-2 flex flex-col gap-2" data-testid="co-author-form" @submit.prevent="submitCoAuthor">
+      <p class="text-[11px] text-muted-foreground">{{ t('author.detail.aliases.coAuthorHint', { penName: coAuthorFor.name, name: authorName }) }}</p>
+      <div class="flex flex-wrap items-center gap-2">
+        <InputWithSuggestions
+          v-model="coAuthorDraft"
+          :search-fn="searchSuggestions"
+          :placeholder="t('author.detail.aliases.coAuthorPlaceholder')"
+          :disabled="busy"
+          :maxlength="500"
+          class="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-2.5 text-sm"
+        />
+        <button type="button" class="h-9 rounded-md px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground" @click="closeCoAuthor">
+          {{ t('common.cancel') }}
+        </button>
+        <button
+          type="submit"
+          :disabled="busy || !coAuthorDraft?.trim()"
+          class="h-9 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground disabled:opacity-60"
+        >
+          {{ t('author.detail.aliases.save') }}
+        </button>
+      </div>
+    </form>
 
     <div v-if="names.spellings.length > 0" class="mt-2 flex flex-wrap items-center gap-2" data-testid="author-spellings">
       <span class="text-[11px] text-muted-foreground">{{ t('author.detail.aliases.spellingsLabel') }}</span>
