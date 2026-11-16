@@ -15869,7 +15869,8 @@
     "communityRatings": "Community Ratings",
     "recycleBin": "Recycle Bin",
     "readingHistory": "Reading History",
-    "newReleases": "New Releases"
+    "newReleases": "New Releases",
+    "conversions": "Conversions"
   },
   "tts": {
     "readerControls": {
@@ -16567,5 +16568,59 @@
       "anyLanguage": "Any language"
     },
     "showHidden": "Show hidden"
+  },
+  "conversions": {
+    "title": "Conversions",
+    "description": "Audiobooks dropped in the Convert folder are turned into M4B files and moved to the Book Dock. The originals go to the recycle bin.",
+    "folderTitle": "Convert folder",
+    "folderHint": "Copy an audiobook file, or a folder holding one book, into this folder on your server. It is picked up once it stops changing.",
+    "listTitle": "Recent conversions",
+    "none": "Nothing has been converted yet.",
+    "off": "Conversions are turned off.",
+    "offHint": "Ask an administrator to turn them on in the Book Dock settings.",
+    "offHintManage": "Turn them on in the Book Dock settings.",
+    "openSettings": "Open Book Dock settings",
+    "retry": "Try again",
+    "progress": "{percent}%",
+    "landed": "In the Book Dock as {name}",
+    "footnote": "Conversions run one book per processor core at the lowest priority, so other apps on your server come first. This list starts over when BookOrbit restarts.",
+    "status": {
+      "queued": "Waiting its turn",
+      "converting": "Converting",
+      "done": "Done",
+      "failed": "Failed",
+      "waiting": "Not supported yet",
+      "skipped": "Nothing to convert"
+    },
+    "method": {
+      "copy": "Audio copied as-is, no change in quality",
+      "encode": "Re-encoded at {kbps} kbps to match the original",
+      "move": "Already an M4B, moved as-is"
+    },
+    "reasons": {
+      "no_audio": "No MP3, M4A or M4B file was found.",
+      "several_files": "This folder holds several audio files. Joining them into one M4B comes in a later update, so it was left as it is.",
+      "stopped": "Stopped because conversions were turned off. The original was not touched.",
+      "original_kept": "Converted, but the original could not be removed and is still in the Convert folder.",
+      "failed": "The conversion failed. The original was not touched."
+    },
+    "settings": {
+      "title": "Audio conversions",
+      "enabled": "Convert audiobooks to M4B",
+      "enabledHint": "On: files in the Convert folder are converted to M4B and moved here. A Conversions tab shows their progress.",
+      "disabledHint": "Off: nothing is watched or converted, and the Conversions tab is hidden.",
+      "concurrency": "Books converting at once",
+      "concurrencyHint": "Each book uses one processor core, at the lowest priority so other apps come first.",
+      "concurrencyOption": "{count, plural, one {# book} other {# books}}",
+      "folder": "Convert folder",
+      "folderHint": "Drop audiobooks here. Finished M4B files appear in the Book Dock and the originals go to the recycle bin.",
+      "changePathPrefix": "To use a different folder, set",
+      "changePathSuffix": "in your .env file or container settings and restart BookOrbit."
+    },
+    "errors": {
+      "load": "Could not load conversions.",
+      "save": "Could not save the conversion settings.",
+      "retry": "Could not start the conversion again."
+    }
   }
 }

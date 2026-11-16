@@ -56,6 +56,8 @@ export function parseRecycleBinSettings(raw: string | null | undefined): Recycle
 export class RecycleBinService {
   private readonly logger = new Logger(RecycleBinService.name);
   private purging = false;
+  /** Folders outside the libraries that keep a bin too, such as the Convert folder. */
+  private readonly extraFolders = new Map<string, RecycleBinFolder>();
 
   constructor(
     private readonly repo: RecycleBinRepository,
@@ -70,6 +72,11 @@ export class RecycleBinService {
     const next: RecycleBinSettings = { enabled: settings.enabled, keepDays: settings.keepDays };
     await this.appSettings.setValue(RECYCLE_BIN_SETTINGS_KEY, JSON.stringify(next));
     return next;
+  }
+
+  /** Lists, restores and expires the bin kept in a folder that is not a library folder. */
+  registerFolder(folder: RecycleBinFolder): void {
+    this.extraFolders.set(folder.path, folder);
   }
 
   async isEnabled(): Promise<boolean> {
@@ -179,10 +186,10 @@ export class RecycleBinService {
     return { removed, failed: results.length - removed };
   }
 
-  /** Each library folder once, even when two libraries share it. */
+  /** Each library folder once, even when two libraries share it, then any registered extra folder. */
   private async folders(): Promise<RecycleBinFolder[]> {
     const byPath = new Map<string, RecycleBinFolder>();
-    for (const folder of await this.repo.findLibraryFolders()) {
+    for (const folder of [...(await this.repo.findLibraryFolders()), ...this.extraFolders.values()]) {
       if (!byPath.has(folder.path)) byPath.set(folder.path, folder);
     }
     return [...byPath.values()];

@@ -37,10 +37,12 @@ export const storageConfig = registerAs('storage', () => {
   const appDataPath = resolve(process.env.APP_DATA_PATH ?? '/data');
   const bookDockPath = process.env.BOOK_DOCK_PATH?.trim();
   const libraryBrowseRoot = process.env.LIBRARY_BROWSE_ROOT?.trim();
+  const convertPath = process.env.CONVERT_PATH?.trim();
 
   return {
     appDataPath,
     bookDockPath: resolve(bookDockPath || join(appDataPath, 'book-dock')),
+    convertPath: resolve(convertPath || join(appDataPath, 'convert')),
     libraryBrowseRoot: resolve(libraryBrowseRoot || '/'),
   };
 });
