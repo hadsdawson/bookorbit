@@ -14,3 +14,9 @@ export function tookSeconds(startedAt: string | null, finishedAt: string | null)
   const ms = Date.parse(finishedAt) - Date.parse(startedAt)
   return Number.isFinite(ms) && ms >= 0 ? ms / 1000 : null
 }
+
+/** A book's length split for display, rounded to the second. */
+export function lengthParts(ms: number): { hours: number; minutes: number; seconds: number } {
+  const total = Math.max(0, Math.round(ms / 1000))
+  return { hours: Math.floor(total / 3600), minutes: Math.floor((total % 3600) / 60), seconds: total % 60 }
+}

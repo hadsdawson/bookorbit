@@ -124,7 +124,17 @@ describe('ConversionService', () => {
     await service.updateSettings({ enabled: true, concurrency: 1, speed: 'low' });
 
     const job = await waitForJob('Book.mp3', ['done', 'failed']);
-    expect(job).toMatchObject({ status: 'done', method: 'encode', bitrate: 128_000, outputName: 'Book.m4b', progress: 100, reason: null });
+    expect(job).toMatchObject({
+      status: 'done',
+      method: 'encode',
+      bitrate: 128_000,
+      outputName: 'Book.m4b',
+      progress: 100,
+      reason: null,
+      phase: null,
+    });
+    expect(job.originalDurationMs).toBeCloseTo(3_000, -2);
+    expect(Math.abs(job.checkedDurationMs! - job.originalDurationMs!)).toBeLessThanOrEqual(2_000);
     expect(await readdir(dockRoot)).toEqual(['Book.m4b']);
     const { stdout } = await execFile(ffprobePath, [
       '-v',
@@ -268,5 +278,41 @@ describe('ConversionService', () => {
     await makeAudio(join(convertRoot, 'Normal.m4a'), ['-c:a', 'aac', '-b:a', '64k']);
     await waitForJob('Normal.m4a', ['done']);
     expect(vi.mocked(runFfmpeg).mock.lastCall?.[2]).toMatchObject({ lowPriority: false });
+  });
+
+  it('keeps the original and fails when the finished M4B reads through shorter than the original', async () => {
+    await mkdir(convertRoot, { recursive: true });
+    await makeAudio(join(convertRoot, 'Short.m4a'), ['-c:a', 'aac', '-b:a', '64k']);
+    const actual = vi.mocked(runFfmpeg).getMockImplementation()!;
+    vi.mocked(runFfmpeg)
+      .mockImplementationOnce(actual)
+      .mockImplementationOnce((_binary, _args, options) => {
+        options?.onProgress?.({ outTimeUs: 300_000, totalSize: Number.NaN });
+        return Promise.resolve();
+      });
+    settings.set(CONVERSION_SETTINGS_KEY, JSON.stringify({ enabled: true, concurrency: 1, speed: 'low' }));
+    await service.onApplicationBootstrap();
+
+    const job = await waitForJob('Short.m4a', ['done', 'failed']);
+    expect(job).toMatchObject({
+      status: 'failed',
+      reason: 'length_mismatch',
+      detail: expect.stringContaining('plays for 0:00:00 but the original plays for 0:00:03'),
+    });
+    expect(await readdir(convertRoot)).toContain('Short.m4a');
+    await expect(readdir(dockRoot)).rejects.toThrow();
+  });
+
+  it('measures an MP3 that does not state its length by reading it through', async () => {
+    await mkdir(convertRoot, { recursive: true });
+    await makeAudio(join(convertRoot, 'NoHeader.mp3'), ['-c:a', 'libmp3lame', '-b:a', '64k', '-write_xing', '0']);
+    settings.set(CONVERSION_SETTINGS_KEY, JSON.stringify({ enabled: true, concurrency: 1, speed: 'low' }));
+    await service.onApplicationBootstrap();
+
+    const job = await waitForJob('NoHeader.mp3', ['done', 'failed']);
+    expect(job.status).toBe('done');
+    expect(job.originalDurationMs).toBeCloseTo(3_000, -2);
+    const readThroughs = vi.mocked(runFfmpeg).mock.calls.filter(([, args]) => args.includes('null'));
+    expect(readThroughs.length).toBeGreaterThanOrEqual(2);
   });
 });
