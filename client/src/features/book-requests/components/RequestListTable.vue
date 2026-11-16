@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
+import CopyTextButton from './CopyTextButton.vue'
 import { useI18n } from 'vue-i18n'
 import { ArrowDown, ArrowUp, ChevronsUpDown, ExternalLink, EyeOff, GripVertical, TriangleAlert, Zap } from '@lucide/vue'
 import { isGrabbableBookRequestStatus } from '@bookorbit/types'
@@ -643,8 +644,12 @@ function rowDismissed(row: BookRequestItem): boolean {
                         <ExternalLink :size="14" aria-hidden="true" />
                         <span class="sr-only">{{ t('book.actions.bookDetails') }}</span>
                       </RouterLink>
+                      <CopyTextButton :text="request.title" :label="t('bookRequests.copy.title')" />
                     </div>
-                    <span v-if="authorLine(request)" class="block truncate text-xs text-muted-foreground">{{ authorLine(request) }}</span>
+                    <div v-if="authorLine(request)" class="flex min-w-0 items-center gap-1">
+                      <span class="block min-w-0 truncate text-xs text-muted-foreground">{{ authorLine(request) }}</span>
+                      <CopyTextButton :text="authorLine(request)" :label="t('bookRequests.copy.author')" :size="12" />
+                    </div>
                   </div>
                 </div>
               </td>
@@ -928,8 +933,12 @@ function rowDismissed(row: BookRequestItem): boolean {
                 <ExternalLink :size="14" aria-hidden="true" />
                 <span class="sr-only">{{ t('book.actions.bookDetails') }}</span>
               </RouterLink>
+              <CopyTextButton :text="request.title" :label="t('bookRequests.copy.title')" />
             </div>
-            <p v-if="authorLine(request)" class="truncate text-xs text-muted-foreground">{{ authorLine(request) }}</p>
+            <div v-if="authorLine(request)" class="flex min-w-0 items-center gap-1">
+              <p class="min-w-0 truncate text-xs text-muted-foreground">{{ authorLine(request) }}</p>
+              <CopyTextButton :text="authorLine(request)" :label="t('bookRequests.copy.author')" :size="12" />
+            </div>
             <p class="text-xs text-muted-foreground tabular-nums">
               {{ t('bookRequests.card.releasedOn', { date: releasedLabel(request) }) }}
             </p>

@@ -10876,6 +10876,12 @@
       "actions": "Actions",
       "move": "Move the {column} column",
       "moveHint": "Drag to move this column, or use the arrow keys"
+    },
+    "copy": {
+      "title": "Copy title",
+      "author": "Copy author",
+      "copied": "Copied",
+      "failed": "Could not copy to the clipboard."
     }
   },
   "collection": {
