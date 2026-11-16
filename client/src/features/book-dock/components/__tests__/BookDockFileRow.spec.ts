@@ -164,4 +164,16 @@ describe('BookDockFileRow with a multi-file unit', () => {
       expect(wrapper.emitted('unmerge')?.[0]?.[0]).toEqual(expect.objectContaining({ id: 1 }))
     })
   })
+
+  it('fork: lets a stuck file be tried again from its row', () => {
+    const wrapper = mountUnitRow({ status: 'extracting', processing: 'stuck' })
+    const retry = wrapper.get('[data-testid="book-dock-row-retry"]')
+    expect(retry.attributes('disabled')).toBeUndefined()
+    expect(retry.attributes('aria-label')).toBe('Try again')
+  })
+
+  it('fork: keeps retry off while a file is being worked on', () => {
+    const wrapper = mountUnitRow({ status: 'fetching', processing: 'running' })
+    expect(wrapper.get('[data-testid="book-dock-row-retry"]').attributes('disabled')).toBeDefined()
+  })
 })

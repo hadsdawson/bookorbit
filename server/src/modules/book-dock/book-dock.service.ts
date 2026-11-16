@@ -3,7 +3,7 @@ import { unlink } from 'fs/promises';
 import { eq, inArray } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import type { BookDockFile, BookDockFilesPage, BookDockMetadata, BookDockSummary, BookDockUnitFile } from '@bookorbit/types';
+import type { BookDockFile, BookDockFilesPage, BookDockMetadata, BookDockProcessing, BookDockSummary, BookDockUnitFile } from '@bookorbit/types';
 import { DB } from '../../db';
 import * as schema from '../../db/schema';
 import { libraries, libraryFolders } from '../../db/schema';
@@ -51,7 +51,7 @@ export class BookDockService {
     const merged = primaries.length > 0 ? await this.repo.findMergedMembers(primaries) : new Map<number, BookDockFileRow[]>();
 
     return {
-      items: items.map((row) => toDto(row, unitFiles.get(row.id) ?? [], merged.get(row.id) ?? [])),
+      items: items.map((row) => toDto(row, unitFiles.get(row.id) ?? [], merged.get(row.id) ?? [], this.processingOf(row))),
       total,
       page: query.page,
       size: query.limit,
@@ -61,7 +61,7 @@ export class BookDockService {
   async getFile(id: number, userId: number, canManageAll: boolean, options: { readAlong?: boolean } = {}): Promise<BookDockFile> {
     const row = await this.findFileForUser(id, userId, canManageAll);
     const merged = isMergePrimary(row) ? ((await this.repo.findMergedMembers([row.id])).get(row.id) ?? []) : [];
-    const dto = toDto(row, await this.repo.findUnitFiles(row.id), merged);
+    const dto = toDto(row, await this.repo.findUnitFiles(row.id), merged, this.processingOf(row));
     if (!options.readAlong || row.format?.toLowerCase() !== 'epub') return dto;
     const startedAt = Date.now();
     const { mediaOverlayAvailable } = await inspectEpubMediaOverlayFields(row.absolutePath, row.format, (err) => {
@@ -101,7 +101,7 @@ export class BookDockService {
       await this.repo.setTargetsByIds([id], updated.targetLibraryId, updated.targetFolderId);
     }
     const merged = isMergePrimary(updated) ? ((await this.repo.findMergedMembers([id])).get(id) ?? []) : [];
-    return toDto(updated, [], merged);
+    return toDto(updated, [], merged, this.processingOf(updated));
   }
 
   async discardFile(id: number, userId: number, canManageAll: boolean): Promise<void> {
@@ -280,7 +280,8 @@ export class BookDockService {
         canManageAll,
       },
       (rows) => {
-        const errorRows = rows.filter((row) => row.status === 'error');
+        // Fork: a file left out of the queue (stranded) is retried the same way as a failed one.
+        const errorRows = rows.filter((row) => row.status === 'error' || this.ingestService.processingStateOf(row.id) === 'stranded');
         queued += errorRows.length;
         for (const row of errorRows) {
           void this.ingestService.retryFetch(row.id);
@@ -457,6 +458,13 @@ export class BookDockService {
     return row;
   }
 
+  /** Fork: for an unfinished file, whether it is being worked on, waiting its turn, or stuck out of line. */
+  private processingOf(row: BookDockFileRow): BookDockProcessing | null {
+    if (row.status !== 'pending' && row.status !== 'extracting' && row.status !== 'fetching') return null;
+    const state = this.ingestService.processingStateOf(row.id);
+    return state === 'running' ? 'running' : state === 'queued' ? 'waiting' : 'stuck';
+  }
+
   private startResumeBackgroundWork(): void {
     if (this.resumeWorkPromise) return;
     this.resumeWorkPromise = this.resumeBackgroundWork().finally(() => {
@@ -575,8 +583,14 @@ export class BookDockService {
   }
 }
 
-function toDto(row: BookDockFileRow, unitFiles: BookDockUnitFileRow[] = [], mergedFiles: BookDockFileRow[] = []): BookDockFile {
+function toDto(
+  row: BookDockFileRow,
+  unitFiles: BookDockUnitFileRow[] = [],
+  mergedFiles: BookDockFileRow[] = [],
+  processing: BookDockProcessing | null = null,
+): BookDockFile {
   return {
+    processing,
     id: row.id,
     fileName: row.fileName,
     fileSize: row.fileSize ? Number(row.fileSize) : null,

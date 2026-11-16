@@ -59,6 +59,7 @@ function makeService() {
   };
   const ingestService = {
     retryFetch: vi.fn(),
+    processingStateOf: vi.fn().mockReturnValue('running'),
     refetchMetadata: vi.fn(),
     pauseProcessing: vi.fn(),
     resumeProcessing: vi.fn().mockResolvedValue(undefined),
@@ -316,6 +317,36 @@ describe('BookDockService', () => {
     expect(ingestService.retryFetch).toHaveBeenCalledTimes(2);
     expect(ingestService.retryFetch).toHaveBeenCalledWith(1);
     expect(ingestService.retryFetch).toHaveBeenCalledWith(3);
+  });
+
+  it('fork: bulkRetryFetch also puts stranded unfinished files back in line', async () => {
+    const { service, repo, ingestService } = makeService();
+    repo.findByIds.mockResolvedValue([row({ id: 1, status: 'extracting' }), row({ id: 2, status: 'pending' })]);
+    ingestService.processingStateOf.mockImplementation((id: number) => (id === 1 ? 'stranded' : 'queued'));
+
+    const result = await service.bulkRetryFetch([1, 2]);
+
+    expect(result).toEqual({ total: 2, queued: 1 });
+    expect(ingestService.retryFetch).toHaveBeenCalledWith(1);
+    expect(ingestService.retryFetch).not.toHaveBeenCalledWith(2);
+  });
+
+  it('fork: tells the page whether each unfinished file is running, waiting or stuck', async () => {
+    const { service, repo, ingestService } = makeService();
+    repo.findAll.mockResolvedValue({
+      items: [
+        row({ id: 1, status: 'fetching' }),
+        row({ id: 2, status: 'pending' }),
+        row({ id: 3, status: 'extracting' }),
+        row({ id: 4, status: 'ready' }),
+      ],
+      total: 4,
+    });
+    ingestService.processingStateOf.mockImplementation((id: number) => (id === 1 ? 'running' : id === 2 ? 'queued' : 'stranded'));
+
+    const result = await service.listFiles({ page: 1, limit: 20, sort: 'createdAt', order: 'desc', userId: 1, canManageAll: true });
+
+    expect(result.items.map((item) => item.processing)).toEqual(['running', 'waiting', 'stuck', null]);
   });
 
   it('refetchMetadata enforces ownership and queues an eligible file', async () => {

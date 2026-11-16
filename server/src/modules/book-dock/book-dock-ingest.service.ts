@@ -28,12 +28,14 @@ import { BookDockGateway } from './book-dock.gateway';
 import { mergeFormatLookups, type MediumLookup } from './book-dock-both-formats';
 import { normalizeBookDockMetadata, normalizeBookDockMetadataSources } from './book-dock-metadata.utils';
 import { BookDockProcessingStateService } from './book-dock-processing-state.service';
-import { BookDockWorkQueue, type BookDockWorkPriority } from './book-dock-work-queue';
+import { BookDockJobTimeoutError, BookDockWorkQueue, type BookDockQueueState, type BookDockWorkPriority } from './book-dock-work-queue';
 
 const METADATA_QUEUE_CONCURRENCY = 1;
 const METADATA_QUEUE_DRAIN_DELAY_MS = 250;
 const METADATA_QUEUE_INTER_BOOK_DELAY_MIN_MS = 500;
 const METADATA_QUEUE_INTER_BOOK_DELAY_MAX_MS = 1_000;
+/** Fork: reading a book and looking it up takes seconds to a few minutes; past this it is treated as hung. */
+const METADATA_QUEUE_JOB_TIMEOUT_MS = 20 * 60_000;
 const REQUEUE_BATCH_SIZE = 500;
 const PROCESSABLE_METADATA_STATUSES = new Set(['pending', 'extracting', 'fetching']);
 
@@ -67,6 +69,7 @@ export class BookDockIngestService implements OnApplicationBootstrap, OnModuleDe
         pendingOrder: 'priority-desc',
         drainDelayMs: METADATA_QUEUE_DRAIN_DELAY_MS,
         interJobDelayMs: { minMs: METADATA_QUEUE_INTER_BOOK_DELAY_MIN_MS, maxMs: METADATA_QUEUE_INTER_BOOK_DELAY_MAX_MS },
+        jobTimeoutMs: METADATA_QUEUE_JOB_TIMEOUT_MS,
       },
     );
   }
@@ -76,7 +79,34 @@ export class BookDockIngestService implements OnApplicationBootstrap, OnModuleDe
     this.bookDockPath = await realpath(this.bookDockPath);
     if (await this.processingState.isPaused()) {
       this.metadataQueue.pause();
+      return;
     }
+    // Fork: the queue lives in memory, so a restart (every update does one) would otherwise leave
+    // anything that was waiting or mid-way marked as working with nothing left to finish it.
+    this.requeueOnStartup().catch((err: unknown) => this.logStartupRequeueFailure(err));
+  }
+
+  /** Fork: where a still-unfinished file stands: being worked on, waiting its turn, or left out of line. */
+  processingStateOf(fileId: number): BookDockQueueState | 'stranded' {
+    const state = this.metadataQueue.stateOf(fileId);
+    if (state) return state;
+    return this.metadataQueue.isPaused() || this.processingState.getCachedPaused() ? 'queued' : 'stranded';
+  }
+
+  private async requeueOnStartup(): Promise<void> {
+    const startedAt = Date.now();
+    const queued = await this.requeueProcessableFiles();
+    this.logger.log(
+      `[book_dock.startup_requeue] [end] durationMs=${Date.now() - startedAt} queued=${queued} - unfinished Book Dock files queued again`,
+    );
+  }
+
+  private logStartupRequeueFailure(err: unknown): void {
+    const errorClass = err instanceof Error ? err.name : 'Error';
+    const errorMessage = sanitizeLogValue(err instanceof Error ? err.message : String(err));
+    this.logger.warn(
+      `[book_dock.startup_requeue] [fail] errorClass=${errorClass} error="${errorMessage}" - unfinished Book Dock files could not be queued again`,
+    );
   }
 
   onModuleDestroy(): void {
@@ -120,13 +150,23 @@ export class BookDockIngestService implements OnApplicationBootstrap, OnModuleDe
 
   async retryFetch(fileId: number): Promise<void> {
     const row = await this.repo.findById(fileId);
-    if (!row || row.status !== 'error' || !row.format) return;
+    if (!row || !row.format) return;
+    // Fork: an unfinished file nothing is going to pick up goes back in line as it is.
+    if (PROCESSABLE_METADATA_STATUSES.has(row.status)) {
+      if (this.processingStateOf(fileId) === 'stranded') this.requeueExistingIfProcessable(row);
+      return;
+    }
+    if (row.status !== 'error') return;
     await this.repo.update(fileId, { status: 'pending', errorMessage: null });
     this.extractMetadataAsync(fileId, row.format, metadataQueuePriority(row));
   }
 
   async refetchMetadata(fileId: number): Promise<boolean> {
     const row = await this.repo.findById(fileId);
+    // Fork: a stuck file is put back in line where it was, the same as Try again in bulk.
+    if (row && PROCESSABLE_METADATA_STATUSES.has(row.status) && this.processingStateOf(fileId) === 'stranded') {
+      return this.requeueExistingIfProcessable(row);
+    }
     if (!row || (row.status !== 'ready' && row.status !== 'error')) return false;
 
     const format = resolveSupportedFormat(row);
@@ -346,6 +386,23 @@ export class BookDockIngestService implements OnApplicationBootstrap, OnModuleDe
     this.logger.warn(
       `[book_dock.metadata_queue] [fail] fileId=${fileId} errorClass=${errorClass} error="${errorMessage}" - metadata queue job failed`,
     );
+    if (err instanceof BookDockJobTimeoutError) void this.markTimedOut(fileId, err);
+  }
+
+  /** Fork: a hung file shows as failed with a reason, so Try again can pick it up. */
+  private async markTimedOut(fileId: number, err: BookDockJobTimeoutError): Promise<void> {
+    try {
+      const row = await this.repo.findById(fileId);
+      if (!row || !PROCESSABLE_METADATA_STATUSES.has(row.status)) return;
+      await this.repo.update(fileId, { status: 'error', errorMessage: `${err.message} reading or looking up this book. Try again.` });
+      this.emitChange();
+    } catch (updateErr) {
+      const errorClass = updateErr instanceof Error ? updateErr.name : 'Error';
+      const errorMessage = sanitizeLogValue(updateErr instanceof Error ? updateErr.message : String(updateErr));
+      this.logger.warn(
+        `[book_dock.job_timeout] [fail] fileId=${fileId} errorClass=${errorClass} error="${errorMessage}" - hung file could not be marked failed`,
+      );
+    }
   }
 
   /**
