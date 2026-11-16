@@ -315,4 +315,77 @@ describe('ConversionService', () => {
     const readThroughs = vi.mocked(runFfmpeg).mock.calls.filter(([, args]) => args.includes('null'));
     expect(readThroughs.length).toBeGreaterThanOrEqual(2);
   });
+
+  it('carries narrator, year, genre, description and series from the first track onto a joined book', async () => {
+    const tracks = join(convertRoot, 'Tagged Book');
+    await mkdir(tracks, { recursive: true });
+    const bookTagArgs = [
+      '-metadata',
+      'album=Lean Mean Thirteen',
+      '-metadata',
+      'album_artist=Janet Evanovich',
+      '-metadata',
+      'composer=Lorelei King',
+      '-metadata',
+      'date=2007',
+      '-metadata',
+      'genre=Mystery',
+      '-metadata',
+      'comment=A description',
+      '-metadata',
+      'SERIES=Stephanie Plum',
+      '-metadata',
+      'SERIES-PART=13',
+    ];
+    await makeAudio(join(tracks, '01 - One.mp3'), ['-c:a', 'libmp3lame', '-metadata', 'title=One', '-metadata', 'track=1', ...bookTagArgs]);
+    await makeAudio(join(tracks, '02 - Two.mp3'), ['-c:a', 'libmp3lame', '-metadata', 'title=Two', '-metadata', 'track=2', ...bookTagArgs]);
+    settings.set(CONVERSION_SETTINGS_KEY, JSON.stringify({ enabled: true, concurrency: 1, speed: 'low' }));
+    await service.onApplicationBootstrap();
+
+    await waitForJob('Tagged Book', ['done']);
+    const m4b = join(dockRoot, 'Tagged Book', 'Tagged Book.m4b');
+    const { stdout } = await execFile(ffprobePath, ['-v', 'error', '-show_entries', 'format_tags', '-of', 'json', m4b]);
+    const tags = Object.fromEntries(
+      Object.entries((JSON.parse(stdout) as { format: { tags: Record<string, string> } }).format.tags).map(([key, value]) => [
+        key.toLowerCase(),
+        value,
+      ]),
+    );
+    expect(tags).toMatchObject({
+      title: 'Lean Mean Thirteen',
+      album: 'Lean Mean Thirteen',
+      album_artist: 'Janet Evanovich',
+      composer: 'Lorelei King',
+      date: '2007',
+      genre: 'Mystery',
+      comment: 'A description',
+      series: 'Stephanie Plum',
+      'series-part': '13',
+    });
+    expect(tags.track).toBeUndefined();
+  });
+
+  it("keeps an MP3 book's series when converting it on its own", async () => {
+    await mkdir(convertRoot, { recursive: true });
+    await makeAudio(join(convertRoot, 'Single.mp3'), [
+      '-c:a',
+      'libmp3lame',
+      '-metadata',
+      'SERIES=Stephanie Plum',
+      '-metadata',
+      'composer=Lorelei King',
+    ]);
+    settings.set(CONVERSION_SETTINGS_KEY, JSON.stringify({ enabled: true, concurrency: 1, speed: 'low' }));
+    await service.onApplicationBootstrap();
+
+    await waitForJob('Single.mp3', ['done']);
+    const { stdout } = await execFile(ffprobePath, ['-v', 'error', '-show_entries', 'format_tags', '-of', 'json', join(dockRoot, 'Single.m4b')]);
+    const tags = Object.fromEntries(
+      Object.entries((JSON.parse(stdout) as { format: { tags: Record<string, string> } }).format.tags).map(([key, value]) => [
+        key.toLowerCase(),
+        value,
+      ]),
+    );
+    expect(tags).toMatchObject({ series: 'Stephanie Plum', composer: 'Lorelei King' });
+  });
 });

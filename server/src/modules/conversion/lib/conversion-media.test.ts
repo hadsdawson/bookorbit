@@ -1,4 +1,5 @@
 import {
+  bookTags,
   buildConcatList,
   buildFfmetadata,
   buildFfmpegArgs,
@@ -25,6 +26,7 @@ describe('conversion media', () => {
     bitrate: 128_000,
     hasCover: true,
     tags: {},
+    allTags: {},
     estimated: false,
   };
 
@@ -56,6 +58,7 @@ describe('conversion media', () => {
       bitrate: 64_000,
       hasCover: true,
       tags: {},
+      allTags: {},
       estimated: false,
     });
   });
@@ -159,5 +162,42 @@ describe('conversion media', () => {
     expect(encode).toContain('[0:a:0][1:a:0]concat=n=2:v=0:a=1[audio]');
     expect(encode.join(' ')).toContain('-map_metadata 2 -map_chapters 2');
     expect(encode).not.toContain('attached_pic');
+  });
+
+  it('keeps book-level tags, sorts out the ones FFmpeg cannot write, and drops per-track ones', () => {
+    const tags = bookTags(
+      {
+        title: 'Chapter 2',
+        track: '2/30',
+        album: 'Lean Mean Thirteen',
+        album_artist: 'Janet Evanovich',
+        composer: 'Lorelei King',
+        date: '2007',
+        genre: 'Mystery',
+        comment: 'A description',
+        series: 'Stephanie Plum',
+        'SERIES-PART': '13',
+        encoder: 'Lavf60',
+        iTunSMPB: '00000000 00000210',
+        'lyrics-eng': 'words',
+      },
+      new Set(['title', 'album', 'album_artist', 'composer', 'date', 'genre', 'comment']),
+    );
+    expect(tags.native).toEqual({
+      album: 'Lean Mean Thirteen',
+      album_artist: 'Janet Evanovich',
+      composer: 'Lorelei King',
+      date: '2007',
+      genre: 'Mystery',
+      comment: 'A description',
+    });
+    expect(tags.freeform).toEqual([
+      { name: 'SERIES', value: 'Stephanie Plum' },
+      { name: 'SERIES-PART', value: '13' },
+    ]);
+  });
+
+  it('writes any tag into the metadata file', () => {
+    expect(buildFfmetadata({ composer: 'Lorelei King', title: 'Book' }, [])).toBe(';FFMETADATA1\ncomposer=Lorelei King\ntitle=Book\n');
   });
 });

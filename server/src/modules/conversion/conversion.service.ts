@@ -21,9 +21,11 @@ import { waitForWatcherReady } from '../../common/utils/fs-watch.utils';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
 import { AppSettingsService } from '../app-settings/app-settings.service';
 import { runFfmpeg } from '../file-write/formats/audio/ffmpeg-runner';
+import { MP4_NATIVE_TAG_KEYS, writeMp4FreeformTags, type Mp4FreeformTag } from '../file-write/formats/audio/mp4-freeform-tags';
 import { RecycleBinService } from '../recycle-bin/recycle-bin.service';
 import {
   JOIN_TRACKS_MAX,
+  bookTags,
   buildConcatList,
   buildFfmetadata,
   buildFfmpegArgs,
@@ -414,9 +416,13 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
 
     const first = tracks[0].probe.tags;
     const bookTitle = first.album ?? basename(unit.path);
+    // The first track's book-level tags (author, narrator, year, genre, description, series) carry
+    // over; its own title and track number give way to the book title and the chapters.
+    const tags = bookTags(tracks[0].probe.allTags, MP4_NATIVE_TAG_KEYS);
+    const globalTags = { ...tags.native, title: bookTitle, album: tags.native.album ?? bookTitle };
     const metadataFile = join(workDir, 'metadata.txt');
     const concatList = join(workDir, 'tracks.txt');
-    await writeFile(metadataFile, buildFfmetadata({ title: bookTitle, album: bookTitle, artist: first.artist }, trackChapters(tracks)));
+    await writeFile(metadataFile, buildFfmetadata(globalTags, trackChapters(tracks)));
     await writeFile(concatList, buildConcatList(unit.audioFiles));
 
     const durationMs = totalDurationMs(tracks);
@@ -442,6 +448,7 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
       await run(false);
     }
     job.progress = 100;
+    await this.addFreeformTags(job, output, tags.freeform, null);
     await this.verify(job, output, durationMs, tracks.length);
     return { plan, output };
   }
@@ -487,6 +494,23 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
       await run(false);
     }
     job.progress = 100;
+    // An MP4 source's own freeform atoms are copied as they are; an MP3's extra tags are rebuilt from its tag list.
+    const fromMp4 = MP4_EXTENSIONS.has(extname(source).toLowerCase());
+    await this.addFreeformTags(job, output, fromMp4 ? [] : bookTags(probe.allTags, MP4_NATIVE_TAG_KEYS).freeform, fromMp4 ? source : null);
+  }
+
+  /**
+   * Writes tags such as series into the M4B as iTunes freeform atoms, which FFmpeg cannot write. A
+   * failure here costs only those tags, so the conversion carries on.
+   */
+  private async addFreeformTags(job: TrackedJob, output: string, tags: Mp4FreeformTag[], carryOverFrom: string | null): Promise<void> {
+    if (tags.length === 0 && !carryOverFrom) return;
+    const startedAt = Date.now();
+    try {
+      await writeMp4FreeformTags(output, tags, carryOverFrom ? { carryOverFrom } : {});
+    } catch (err) {
+      this.logFail('conversion.freeform_tags', startedAt, err, `jobId=${job.id} tags=${tags.length}`, 'extra tags could not be written');
+    }
   }
 
   /**
@@ -635,6 +659,7 @@ function toPublicJob(job: TrackedJob): ConversionJob {
 }
 
 const SPEED_WARMUP_MS = 5_000;
+const MP4_EXTENSIONS = new Set(['.m4a', '.m4b', '.mp4']);
 
 class LengthMismatchError extends Error {
   constructor(

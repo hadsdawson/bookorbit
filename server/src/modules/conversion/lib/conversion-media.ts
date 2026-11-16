@@ -37,6 +37,8 @@ export interface AudioProbe {
   bitrate: number | null;
   hasCover: boolean;
   tags: AudioTags;
+  /** Every file-level tag as ffprobe reports it, keys in their original case. */
+  allTags: Record<string, string>;
   /** The file does not state its length, so ffprobe guessed it from the bitrate (common for MP3s). */
   estimated: boolean;
 }
@@ -97,6 +99,7 @@ export function parseProbe(output: FfprobeOutput): AudioProbe {
     bitrate,
     hasCover: streams.some((stream) => stream.codec_type === 'video' && stream.disposition?.attached_pic === 1),
     tags: readTags(output.format?.tags),
+    allTags: Object.fromEntries(Object.entries(output.format?.tags ?? {}).filter(([, value]) => typeof value === 'string' && value.trim())),
     estimated: false,
   };
 }
@@ -134,8 +137,6 @@ export function buildFfmpegArgs(input: string, output: string, plan: ConversionP
     '-map_chapters',
     '0',
     ...audio,
-    '-movflags',
-    '+faststart',
     '-f',
     'mp4',
     output,
@@ -231,11 +232,11 @@ export function totalDurationMs(tracks: Track[]): number {
 }
 
 /** FFmpeg's metadata file format, with its special characters escaped. */
-export function buildFfmetadata(tags: AudioTags, chapters: Chapter[]): string {
+export function buildFfmetadata(tags: Record<string, string>, chapters: Chapter[]): string {
   const lines = [';FFMETADATA1'];
-  if (tags.title) lines.push(`title=${escapeMetadata(tags.title)}`);
-  if (tags.album) lines.push(`album=${escapeMetadata(tags.album)}`);
-  if (tags.artist) lines.push(`artist=${escapeMetadata(tags.artist)}`);
+  for (const [key, value] of Object.entries(tags)) {
+    if (value) lines.push(`${escapeMetadata(key)}=${escapeMetadata(value)}`);
+  }
   for (const chapter of chapters) {
     lines.push('[CHAPTER]', 'TIMEBASE=1/1000', `START=${chapter.startMs}`, `END=${chapter.endMs}`, `title=${escapeMetadata(chapter.title)}`);
   }
@@ -296,10 +297,63 @@ export function buildJoinArgs(inputs: JoinInputs, output: string, plan: Conversi
     String(metadataIndex),
     '-map_chapters',
     String(metadataIndex),
-    '-movflags',
-    '+faststart',
     '-f',
     'mp4',
     output,
   ];
+}
+
+/**
+ * Tags that describe one track or the file itself rather than the book, so they are not carried
+ * onto an M4B. `iTunSMPB` holds a track's encoder delay, which would trim the joined audio wrongly.
+ */
+const PER_FILE_TAGS = new Set([
+  'title',
+  'track',
+  'tracknumber',
+  'tracktotal',
+  'totaltracks',
+  'disc',
+  'discnumber',
+  'disctotal',
+  'totaldiscs',
+  'tlen',
+  'itunsmpb',
+  'itunnorm',
+  'encoder',
+  'encoded_by',
+  'encoding_tool',
+  'major_brand',
+  'minor_version',
+  'compatible_brands',
+  'creation_time',
+  'handler_name',
+  'vendor_id',
+  'gapless_playback',
+]);
+
+export interface BookTags {
+  /** Tags an M4B stores in its standard iTunes atoms, which FFmpeg writes. */
+  native: Record<string, string>;
+  /** Everything else, such as series, which only survives as iTunes freeform atoms. */
+  freeform: { name: string; value: string }[];
+}
+
+/**
+ * Splits a source's tags into those FFmpeg writes into the M4B and those that must be added as
+ * freeform atoms afterwards, dropping per-track and technical ones. `nativeKeys` is the set of
+ * tag names FFmpeg's MP4 writer understands.
+ */
+export function bookTags(all: Record<string, string>, nativeKeys: ReadonlySet<string>): BookTags {
+  const native: Record<string, string> = {};
+  const freeform: { name: string; value: string }[] = [];
+  for (const [key, raw] of Object.entries(all)) {
+    const value = raw.trim();
+    const lower = key.toLowerCase();
+    if (!value || PER_FILE_TAGS.has(lower) || lower.startsWith('lyrics') || lower.startsWith('id3v2_priv')) continue;
+    if (nativeKeys.has(lower)) native[lower] = value;
+    // Upper case, as BookOrbit's own tag writer names freeform atoms.
+    else freeform.push({ name: key.toUpperCase(), value });
+  }
+  return { native, freeform };
 }
