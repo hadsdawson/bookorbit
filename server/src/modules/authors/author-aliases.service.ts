@@ -49,7 +49,7 @@ export class AuthorAliasesService {
     this.logger.log(`[${event}] [start] authorId=${authorId} userId=${user.id} kind=${kind} - adding another name`);
     try {
       const owners = await this.aliasesRepo.findAuthorIdsByNameKey(nameKey, name);
-      if (owners.some((owner) => owner.id === authorId)) throw new BadRequestException("That is already this author's name");
+      if (owners.some((owner) => owner.id === authorId)) throw new BadRequestException(sameNameMessage(rawName, name));
       const spelling = await this.aliasesRepo.findByKey(nameKey);
       if (spelling && (kind !== 'spelling' || spelling.authorId !== authorId)) {
         throw new ConflictException(`That name is already another spelling of ${spelling.authorName}`);
@@ -149,4 +149,10 @@ export class AuthorAliasesService {
       throw new ForbiddenException('Insufficient library access to edit this author');
     }
   }
+}
+
+function sameNameMessage(rawName: string, name: string): string {
+  const typed = rawName.trim().replace(/\s+/g, ' ');
+  if (typed === name) return "That is already this author's name";
+  return `${typed} is already counted as ${name}, so books under either spelling show up here`;
 }
