@@ -159,4 +159,13 @@ describe('AuthorAliasesService', () => {
     ctx.aliasesRepo.findByKey.mockResolvedValueOnce({ id: 7, authorId: 30, authorName: 'Someone Else' });
     await expect(ctx.service.addName(editor, 12, 'Pen Name', 'penName')).rejects.toBeInstanceOf(ConflictException);
   });
+
+  it('explains that spaced initials already count as the same name', async () => {
+    ctx.aliasesRepo.findAuthorIdsByNameKey.mockResolvedValueOnce([{ id: 12, name: 'A.A. Vacharat' }]);
+
+    await expect(ctx.service.addName(editor, 12, 'A. A. Vacharat', 'spelling')).rejects.toThrow(
+      'A. A. Vacharat is already counted as A.A. Vacharat, so books under either spelling show up here',
+    );
+    expect(ctx.aliasesRepo.add).not.toHaveBeenCalled();
+  });
 });
