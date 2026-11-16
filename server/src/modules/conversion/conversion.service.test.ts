@@ -276,6 +276,9 @@ describe('ConversionService', () => {
 
     await service.updateSettings({ enabled: true, concurrency: 1, speed: 'high' });
     await makeAudio(join(convertRoot, 'Normal.m4a'), ['-c:a', 'aac', '-b:a', '64k']);
+    // Handed over directly: whether the folder watcher reports the new file within the test's time
+    // depends on how busy the machine is, and the watcher is not what this test is about.
+    await (service as unknown as { consider: (path: string) => Promise<void> }).consider(join(convertRoot, 'Normal.m4a'));
     await waitForJob('Normal.m4a', ['done']);
     expect(vi.mocked(runFfmpeg).mock.lastCall?.[2]).toMatchObject({ lowPriority: false });
   });
