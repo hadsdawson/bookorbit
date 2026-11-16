@@ -1,4 +1,5 @@
 import { spawn } from 'child_process';
+import { setPriority } from 'os';
 
 const FFMPEG_STALL_MIN_MS = 120_000;
 /**
@@ -29,6 +30,15 @@ export class FfmpegStalledError extends Error {
   }
 }
 
+export interface RunFfmpegOptions {
+  /** Called with how far into the input FFmpeg has written, in microseconds. */
+  onProgress?: (outTimeUs: number) => void;
+  /** Runs FFmpeg at the lowest processor and disk priority, so other work on the server comes first. */
+  lowPriority?: boolean;
+  /** Stops FFmpeg; the run then rejects with an `AbortError`. */
+  signal?: AbortSignal;
+}
+
 /**
  * Runs FFmpeg to completion, stopping it only once it stops making progress.
  *
@@ -36,11 +46,19 @@ export class FfmpegStalledError extends Error {
  * steadily, and a wall-clock limit failed those writes. A failed run rejects with the error shape
  * `execFile` gives, so callers reading `Command failed:` and `stderr` see no difference.
  */
-export function runFfmpeg(binary: string, args: string[]): Promise<void> {
+export function runFfmpeg(binary: string, args: string[], options: RunFfmpegOptions = {}): Promise<void> {
   const fullArgs = ['-progress', 'pipe:1', ...args];
 
   return new Promise((resolve, reject) => {
     const child = spawn(binary, fullArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
+    if (options.lowPriority && child.pid !== undefined) lowerPriority(child.pid);
+    let aborted = false;
+    const onAbort = (): void => {
+      aborted = true;
+      child.kill('SIGTERM');
+    };
+    if (options.signal?.aborted) onAbort();
+    else options.signal?.addEventListener('abort', onAbort, { once: true });
     const lastProgress = new Map<string, string>();
     let partialLine = '';
     let stderr = '';
@@ -62,6 +80,7 @@ export function runFfmpeg(binary: string, args: string[]): Promise<void> {
       settled = true;
       clearTimeout(stallTimer);
       clearTimeout(killTimer);
+      options.signal?.removeEventListener('abort', onAbort);
       if (error) reject(error);
       else resolve();
     }
@@ -71,6 +90,8 @@ export function runFfmpeg(binary: string, args: string[]): Promise<void> {
       const lines = (partialLine + chunk).split('\n');
       partialLine = lines.pop() ?? '';
       if (!advanced(lines, lastProgress) || stalled) return;
+      const outTimeUs = Number(lastProgress.get('out_time_us'));
+      if (options.onProgress && Number.isFinite(outTimeUs)) options.onProgress(outTimeUs);
       clearTimeout(stallTimer);
       windowMs = stallWindowMs(Number(lastProgress.get('total_size')));
       stallTimer = setTimeout(stop, windowMs);
@@ -83,11 +104,26 @@ export function runFfmpeg(binary: string, args: string[]): Promise<void> {
 
     child.on('error', (error) => finish(error));
     child.on('close', (code, signal) => {
-      if (stalled) finish(new FfmpegStalledError(windowMs, signal));
+      if (aborted) finish(Object.assign(new Error('The conversion was stopped'), { name: 'AbortError' }));
+      else if (stalled) finish(new FfmpegStalledError(windowMs, signal));
       else if (code === 0) finish();
       else finish(commandFailed([binary, ...fullArgs].join(' '), code, signal, stderr));
     });
   });
+}
+
+const LOWEST_NICENESS = 19;
+
+function lowerPriority(pid: number): void {
+  try {
+    setPriority(pid, LOWEST_NICENESS);
+  } catch {
+    // the conversion still runs, only at normal priority
+  }
+  // Best-effort class at its lowest level, not the idle class: under steady disk use from other
+  // apps an idle-class write can wait long enough for the stall guard to stop the conversion.
+  const ionice = spawn('ionice', ['-c', '2', '-n', '7', '-p', String(pid)], { stdio: 'ignore' });
+  ionice.on('error', () => {});
 }
 
 function stallWindowMs(bytesWritten: number): number {

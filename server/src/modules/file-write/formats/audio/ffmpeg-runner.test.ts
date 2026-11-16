@@ -225,4 +225,37 @@ describe('runFfmpeg', () => {
     vi.advanceTimersByTime(600_000);
     expect(child.kill).not.toHaveBeenCalled();
   });
+
+  it('reports how far the output has got', async () => {
+    const onProgress = vi.fn();
+    const run = runFfmpeg('ffmpeg', [], { onProgress });
+    child.stdout.emit('data', 'total_size=100\nout_time_us=1500000\nprogress=continue\n');
+    child.exit(0);
+
+    await expect(run).resolves.toBeUndefined();
+    expect(onProgress).toHaveBeenCalledWith(1_500_000);
+  });
+
+  it('stops FFmpeg when the caller aborts and rejects with an AbortError', async () => {
+    const controller = new AbortController();
+    const run = runFfmpeg('ffmpeg', [], { signal: controller.signal });
+    controller.abort();
+    expect(child.kill).toHaveBeenCalledWith('SIGTERM');
+    child.exit(null, 'SIGTERM');
+
+    await expect(run).rejects.toMatchObject({ name: 'AbortError' });
+  });
+
+  it('lowers the disk priority of a low-priority run', async () => {
+    const ionice = new FakeChild();
+    mocks.spawn
+      .mockReset()
+      .mockReturnValueOnce(Object.assign(child, { pid: 4242 }))
+      .mockReturnValueOnce(ionice);
+    const run = runFfmpeg('ffmpeg', [], { lowPriority: true });
+    child.exit(0);
+
+    await expect(run).resolves.toBeUndefined();
+    expect(mocks.spawn).toHaveBeenLastCalledWith('ionice', ['-c', '2', '-n', '7', '-p', '4242'], { stdio: 'ignore' });
+  });
 });

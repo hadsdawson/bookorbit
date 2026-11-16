@@ -99,6 +99,7 @@ import { BookDuplicatesModule } from './modules/book-duplicates/book-duplicates.
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 import { BackupModule } from './modules/backup/backup.module';
 import { RecycleBinModule } from './modules/recycle-bin/recycle-bin.module';
+import { ConversionModule } from './modules/conversion/conversion.module';
 import { CommunityRatingsRefreshModule } from './modules/community-ratings-refresh/community-ratings-refresh.module';
 import { NewReleasesModule } from './modules/new-releases/new-releases.module';
 import { BookLinkModule } from './modules/book-link/book-link.module';
@@ -226,6 +227,7 @@ import { StoryEditsModule } from './modules/story-edits/story-edits.module';
     MaintenanceModule,
     BackupModule,
     RecycleBinModule,
+    ConversionModule,
     CommunityRatingsRefreshModule,
     NewReleasesModule,
     BookMoveModule,

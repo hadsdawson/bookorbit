@@ -24,6 +24,17 @@ vi.mock('vue-router', async (importOriginal) => {
   }
 })
 
+vi.mock('@/features/conversions/composables/useConversionStatus', async () => {
+  const { ref } = await import('vue')
+  return {
+    useConversionStatus: () => ({
+      enabled: ref(false),
+      load: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+      setEnabled: vi.fn<(value: boolean) => void>(),
+    }),
+  }
+})
+
 vi.mock('@/features/auth/composables/usePermissions', () => ({
   usePermissions: () => ({ hasPermission: (name: string) => mocks.permissions.has(name) }),
 }))
@@ -34,6 +45,7 @@ function makeContext(
     showBookRequests: boolean
     achievementsEnabled: boolean
     bookDockTotal: number
+    conversionsEnabled: boolean
     outstandingRequestTotal: number
     outstandingRequestLabel: string
     browseCounts: BrowseCounts | null
@@ -45,6 +57,7 @@ function makeContext(
     showBookRequests: overrides.showBookRequests,
     achievementsEnabled: overrides.achievementsEnabled,
     bookDockTotal: overrides.bookDockTotal ?? 0,
+    conversionsEnabled: overrides.conversionsEnabled,
     outstandingRequestTotal: overrides.outstandingRequestTotal ?? 0,
     outstandingRequestLabel: overrides.outstandingRequestLabel ?? '',
     browseCounts: overrides.browseCounts ?? null,
@@ -74,10 +87,16 @@ describe('sidebar nav registry', () => {
     expect(allowedIds(makeContext())).toEqual(['dashboard', 'statistics', 'reading-history', 'achievements', 'authors', 'series', 'annotations'])
   })
 
-  it('places Dashboard, Book Dock, Requests, New Releases and Tools in the primary zone, above the entity sections', () => {
+  it('places Dashboard, Book Dock, Conversions, Requests, New Releases and Tools in the primary zone, above the entity sections', () => {
     const primary = SIDEBAR_NAV_REGISTRY.filter((candidate) => candidate.zone === 'primary').map((candidate) => candidate.id)
 
-    expect(primary).toEqual(['dashboard', 'book-dock', 'book-requests', 'new-releases', 'tools'])
+    expect(primary).toEqual(['dashboard', 'book-dock', 'conversions', 'book-requests', 'new-releases', 'tools'])
+  })
+
+  it('shows Conversions only to Book Dock users while conversions are turned on', () => {
+    expect(allowedIds(makeContext({ permissions: [Permission.BookDockAccess], conversionsEnabled: true }))).toContain('conversions')
+    expect(allowedIds(makeContext({ permissions: [Permission.BookDockAccess], conversionsEnabled: false }))).not.toContain('conversions')
+    expect(allowedIds(makeContext({ conversionsEnabled: true }))).not.toContain('conversions')
   })
 
   it('offers New Releases only to people with that access', () => {

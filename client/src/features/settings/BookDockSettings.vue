@@ -6,6 +6,7 @@ import { toast } from 'vue-sonner'
 import type { BookDockAutoFinalizeMetadataMode, BookDockSettings, UpdateBookDockSettingsRequest } from '@bookorbit/types'
 import ToggleSwitch from '@/components/ui/ToggleSwitch.vue'
 import SettingsPageHeader from './SettingsPageHeader.vue'
+import ConversionSettingsCard from '@/features/conversions/components/ConversionSettingsCard.vue'
 import { api } from '@/lib/api'
 import { useLibraries } from '@/features/library/composables/useLibraries'
 
@@ -291,5 +292,7 @@ async function onMetadataModeChange(event: Event) {
         </div>
       </div>
     </section>
+
+    <ConversionSettingsCard />
   </div>
 </template>

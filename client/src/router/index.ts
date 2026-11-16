@@ -558,6 +558,12 @@ export const routes: RouteRecordRaw[] = [
         component: () => import('@/views/BookDockView.vue'),
         meta: { titleRow: true, title: () => t('titles.bookDock') },
       },
+      {
+        path: '/conversions',
+        name: 'conversions',
+        component: () => import('@/features/conversions/views/ConversionsView.vue'),
+        meta: { title: () => t('titles.conversions') },
+      },
       // A request opens as a drawer over the list rather than as its own page, but it keeps its
       // own URL: these are children so a hard load of /requests/:id renders the list underneath.
       {
