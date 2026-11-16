@@ -233,7 +233,7 @@ describe('runFfmpeg', () => {
     child.exit(0);
 
     await expect(run).resolves.toBeUndefined();
-    expect(onProgress).toHaveBeenCalledWith(1_500_000);
+    expect(onProgress).toHaveBeenCalledWith({ outTimeUs: 1_500_000, totalSize: 100 });
   });
 
   it('stops FFmpeg when the caller aborts and rejects with an AbortError', async () => {

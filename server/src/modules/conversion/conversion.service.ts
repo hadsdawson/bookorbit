@@ -2,7 +2,7 @@ import { Injectable, Logger, NotFoundException, OnApplicationBootstrap, OnModule
 import { ConfigService } from '@nestjs/config';
 import { watch, type FSWatcher } from 'chokidar';
 import { randomUUID } from 'crypto';
-import { copyFile, cp, mkdir, readdir, realpath, rename, rm } from 'fs/promises';
+import { copyFile, cp, mkdir, readdir, realpath, rename, rm, stat, writeFile } from 'fs/promises';
 import { basename, dirname, extname, join, relative, sep } from 'path';
 import {
   CONVERSION_CONCURRENCY_MAX,
@@ -15,18 +15,34 @@ import {
 } from '@bookorbit/types';
 
 import { isCrossDeviceError, pathExists, removeEmptyDirs } from '../../common/utils/file-move.utils';
-import { waitForDirectoryStability, waitForStability } from '../../common/utils/fs-stability.utils';
 import { waitForWatcherReady } from '../../common/utils/fs-watch.utils';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
 import { AppSettingsService } from '../app-settings/app-settings.service';
 import { runFfmpeg } from '../file-write/formats/audio/ffmpeg-runner';
 import { RecycleBinService } from '../recycle-bin/recycle-bin.service';
-import { buildFfmpegArgs, planConversion, probeAudio, sameLength, type AudioProbe, type ConversionPlan } from './lib/conversion-media';
+import {
+  JOIN_TRACKS_MAX,
+  buildConcatList,
+  buildFfmetadata,
+  buildFfmpegArgs,
+  buildJoinArgs,
+  planConversion,
+  planJoin,
+  probeAudio,
+  sameLength,
+  totalDurationMs,
+  trackChapters,
+  type AudioProbe,
+  type ConversionPlan,
+  type Track,
+} from './lib/conversion-media';
 import { isHidden, readUnit, type ConversionUnit } from './lib/conversion-unit';
 
 export const CONVERSION_SETTINGS_KEY = 'conversion_settings';
 /** Inside the Convert folder, so a finished M4B usually reaches the Book Dock with one rename. */
 export const CONVERSION_WORK_DIR = '.bookorbit-converting';
+/** Inside the Convert folder and hidden, so nothing is converted until a whole upload is in. */
+export const CONVERSION_UPLOAD_DIR = '.bookorbit-uploading';
 const RECYCLE_BIN_LABEL = 'Convert folder';
 const DEBOUNCE_MS = 2_000;
 const FINISHED_JOBS_KEPT = 100;
@@ -76,6 +92,11 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
   private watcher: FSWatcher | null = null;
   private running = 0;
   private stopping = false;
+  /** Items being waited on until they stop changing; true means another change came in meanwhile. */
+  private readonly settling = new Map<string, boolean>();
+  /** How long an item must go unchanged before it counts as fully copied in. */
+  protected settleQuietMs = 15_000;
+  protected settlePollMs = 5_000;
 
   constructor(
     private readonly config: ConfigService,
@@ -115,6 +136,10 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
     return settings;
   }
 
+  activeCount(): number {
+    return [...this.jobs.values()].filter((job) => job.status === 'queued' || job.status === 'converting').length;
+  }
+
   async isEnabled(): Promise<boolean> {
     return (await this.getSettings()).enabled;
   }
@@ -139,6 +164,8 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
     try {
       await mkdir(this.convertRoot, { recursive: true });
       await rm(join(this.convertRoot, CONVERSION_WORK_DIR), { recursive: true, force: true });
+      // Uploads cut off by a restart or by turning conversions off are never finished.
+      await rm(join(this.convertRoot, CONVERSION_UPLOAD_DIR), { recursive: true, force: true });
       this.watcher = watch(this.convertRoot, {
         ignoreInitial: true,
         followSymlinks: false,
@@ -200,25 +227,54 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
     return join(this.convertRoot, rel.split(sep)[0]);
   }
 
+  /**
+   * Waits until the item stops changing, then queues it once. A copy over the network fires change
+   * events for minutes; every one of them lands here, but only the first waits and the rest just
+   * tell it to keep waiting, so one item never becomes two jobs.
+   */
   private async consider(path: string): Promise<void> {
-    const existing = [...this.jobs.values()].find((job) => job.sourcePath === path);
-    if (existing && (existing.status === 'queued' || existing.status === 'converting')) return;
+    if (this.settling.has(path)) {
+      this.settling.set(path, true);
+      return;
+    }
+    this.settling.set(path, false);
+    try {
+      const existing = [...this.jobs.values()].find((job) => job.sourcePath === path);
+      if (existing && (existing.status === 'queued' || existing.status === 'converting')) return;
 
-    const unit = await readUnit(path);
-    if (!unit) return;
-    if (unit.isDirectory) await waitForDirectoryStability(path);
-    else await waitForStability(path);
-    if (this.stopping) return;
+      let signature: string | null;
+      do {
+        this.settling.set(path, false);
+        signature = await this.settle(path);
+      } while (signature !== null && this.settling.get(path) && !this.stopping);
+      if (signature === null || this.stopping) return;
 
-    const settled = await readUnit(path);
-    if (!settled) return;
-    const reusable = existing && existing.status !== 'done' ? existing : null;
-    if (reusable && reusable.signature === settled.signature) return;
+      const current = [...this.jobs.values()].find((job) => job.sourcePath === path);
+      if (current && (current.status === 'queued' || current.status === 'converting')) return;
+      const reusable = current && current.status !== 'done' ? current : null;
+      if (reusable && reusable.signature === signature) return;
 
-    const job = reusable ?? this.newJob(path);
-    job.signature = settled.signature;
-    this.queue(job);
-    this.pump();
+      const job = reusable ?? this.newJob(path);
+      job.signature = signature;
+      this.queue(job);
+      this.pump();
+    } finally {
+      this.settling.delete(path);
+    }
+  }
+
+  /** The item's signature once it has gone unchanged for the quiet period, or null if it went away. */
+  private async settle(path: string): Promise<string | null> {
+    let last = await readUnit(path);
+    let quietSince = Date.now();
+    while (last && !this.stopping) {
+      if (Date.now() - quietSince >= this.settleQuietMs) return last.signature;
+      await new Promise((resolve) => setTimeout(resolve, Math.min(this.settlePollMs, this.settleQuietMs)));
+      const next = await readUnit(path);
+      if (!next || next.signature !== last.signature) quietSince = Date.now();
+      last = next;
+    }
+    return null;
   }
 
   private newJob(sourcePath: string): TrackedJob {
@@ -229,7 +285,10 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
       status: 'queued',
       method: null,
       progress: null,
+      speed: null,
+      etaSeconds: null,
       bitrate: null,
+      trackCount: null,
       reason: null,
       detail: null,
       outputName: null,
@@ -245,7 +304,16 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
   }
 
   private queue(job: TrackedJob): void {
-    Object.assign(job, { status: 'queued', progress: null, reason: null, detail: null, startedAt: null, finishedAt: null });
+    Object.assign(job, {
+      status: 'queued',
+      progress: null,
+      speed: null,
+      etaSeconds: null,
+      reason: null,
+      detail: null,
+      startedAt: null,
+      finishedAt: null,
+    });
   }
 
   private pump(): void {
@@ -274,25 +342,20 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
     }
     job.signature = unit.signature;
     if (unit.audioFiles.length === 0) return this.finish(job, 'skipped', 'no_audio');
-    if (unit.audioFiles.length > 1) return this.finish(job, 'waiting', 'several_files');
+    if (unit.audioFiles.length > JOIN_TRACKS_MAX) return this.finish(job, 'waiting', 'too_many_files');
 
     const workDir = join(this.convertRoot, CONVERSION_WORK_DIR, job.id);
     this.logger.log(`[${event}] [start] jobId=${job.id} name="${sanitizeLogValue(job.name)}" - conversion started`);
     try {
-      const source = unit.audioFiles[0];
-      const probe = await probeAudio(this.ffprobePath, source);
-      const plan = planConversion(source, probe);
-      job.method = plan.method;
-      job.bitrate = plan.bitrate;
-
       const outputDir = unit.isDirectory ? join(workDir, basename(unit.path)) : workDir;
-      const outputFile = join(outputDir, `${basename(source, extname(source))}.m4b`);
       await mkdir(outputDir, { recursive: true });
-      await this.convert(job, source, outputFile, plan, probe);
-      await this.verify(outputFile, probe);
+      const { plan, output } =
+        unit.audioFiles.length > 1 ? await this.join(job, unit, workDir, outputDir) : await this.convertOne(job, unit, outputDir);
       if (unit.isDirectory) await this.copyExtras(unit, outputDir);
+      const after = await readUnit(job.sourcePath);
+      if (!after || after.signature !== unit.signature) throw new UnitChangedError();
 
-      const landed = await this.handOff(unit.isDirectory ? outputDir : outputFile);
+      const landed = await this.handOff(unit.isDirectory ? outputDir : output);
       job.outputName = relative(this.bookDockRoot, landed);
       const removed = await this.removeOriginal(job, unit);
       this.logger.log(
@@ -300,6 +363,13 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
       );
       this.finish(job, 'done', removed ? null : 'original_kept');
     } catch (err) {
+      if (err instanceof UnitChangedError) {
+        // Still being copied in, or edited: start over once it settles, keeping the original.
+        this.logger.warn(`[${event}] [fail] jobId=${job.id} errorClass=UnitChanged - original changed while converting, starting over`);
+        this.jobs.delete(job.id);
+        void this.consider(job.sourcePath).catch(() => {});
+        return;
+      }
       this.logFail(event, startedAt, err, `jobId=${job.id}`, 'conversion failed');
       const stopped = err instanceof Error && err.name === 'AbortError';
       this.finish(job, 'failed', stopped ? 'stopped' : 'failed', stopped ? null : failureDetail(err));
@@ -309,35 +379,105 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
     }
   }
 
+  private async convertOne(job: TrackedJob, unit: ConversionUnit, outputDir: string): Promise<{ plan: ConversionPlan; output: string }> {
+    const source = unit.audioFiles[0];
+    const probe = await probeAudio(this.ffprobePath, source);
+    const plan = planConversion(source, probe);
+    job.method = plan.method;
+    job.bitrate = plan.bitrate;
+    const outputFile = join(outputDir, `${basename(source, extname(source))}.m4b`);
+    await this.convert(job, source, outputFile, plan, probe);
+    await this.verify(outputFile, probe.durationMs);
+    return { plan, output: outputFile };
+  }
+
+  /** A folder of tracks becomes one M4B with a chapter per track, named after the folder. */
+  private async join(job: TrackedJob, unit: ConversionUnit, workDir: string, outputDir: string): Promise<{ plan: ConversionPlan; output: string }> {
+    const tracks: Track[] = [];
+    for (const path of unit.audioFiles) tracks.push({ path, probe: await probeAudio(this.ffprobePath, path) });
+    const plan = planJoin(tracks);
+    job.method = plan.method;
+    job.bitrate = plan.bitrate;
+    job.trackCount = tracks.length;
+
+    const first = tracks[0].probe.tags;
+    const bookTitle = first.album ?? basename(unit.path);
+    const metadataFile = join(workDir, 'metadata.txt');
+    const concatList = join(workDir, 'tracks.txt');
+    await writeFile(metadataFile, buildFfmetadata({ title: bookTitle, album: bookTitle, artist: first.artist }, trackChapters(tracks)));
+    await writeFile(concatList, buildConcatList(unit.audioFiles));
+
+    const durationMs = totalDurationMs(tracks);
+    const output = join(outputDir, `${safeFileName(basename(unit.path))}.m4b`);
+    const cover = tracks[0].probe.hasCover ? tracks[0].path : pickCoverImage(unit.extraFiles);
+    let sourceBytes = 0;
+    for (const path of unit.audioFiles) sourceBytes += (await stat(path)).size;
+    const expectedBytes = expectedOutputBytes(plan, durationMs, sourceBytes);
+    const run = (withCover: boolean) =>
+      this.runTracked(
+        job,
+        buildJoinArgs({ tracks: unit.audioFiles, concatList, metadataFile, cover: withCover ? cover : null }, output, plan),
+        durationMs,
+        expectedBytes,
+      );
+    try {
+      await run(cover !== null);
+    } catch (err) {
+      if (cover === null || job.abort?.signal.aborted) throw err;
+      this.logger.warn(`[conversion.convert] [fail] jobId=${job.id} errorClass=CoverRejected - retrying without the cover`);
+      await run(false);
+    }
+    job.progress = 100;
+    await this.verify(output, durationMs);
+    return { plan, output };
+  }
+
+  /**
+   * Runs FFmpeg and keeps the job's progress, speed and time left current. FFmpeg reports no
+   * position for a file with cover art, so then the bytes written against the expected size stand in.
+   */
+  private async runTracked(job: TrackedJob, args: string[], durationMs: number, expectedBytes: number): Promise<void> {
+    job.abort = new AbortController();
+    const startedAt = Date.now();
+    await runFfmpeg(this.ffmpegPath, args, {
+      lowPriority: true,
+      signal: job.abort.signal,
+      onProgress: ({ outTimeUs, totalSize }) => {
+        const fraction = progressFraction(outTimeUs, totalSize, durationMs, expectedBytes);
+        if (fraction === null) return;
+        job.progress = Math.min(99, Math.round(fraction * 100));
+        const elapsedMs = Date.now() - startedAt;
+        if (elapsedMs < SPEED_WARMUP_MS || fraction <= 0) return;
+        const speed = (fraction * durationMs) / elapsedMs;
+        job.speed = Math.round(speed * 10) / 10;
+        job.etaSeconds = Math.max(0, Math.round(((1 - fraction) * durationMs) / speed / 1000));
+      },
+    });
+  }
+
   private async convert(job: TrackedJob, source: string, output: string, plan: ConversionPlan, probe: AudioProbe): Promise<void> {
     if (plan.method === 'move') {
       await copyFile(source, output);
       job.progress = 100;
       return;
     }
-    job.abort = new AbortController();
-    const options = {
-      lowPriority: true,
-      signal: job.abort.signal,
-      onProgress: (outTimeUs: number) => {
-        job.progress = Math.min(99, Math.max(0, Math.round((outTimeUs / 1000 / probe.durationMs) * 100)));
-      },
-    };
+    const expectedBytes = expectedOutputBytes(plan, probe.durationMs, (await stat(source)).size);
+    const run = (withCover: boolean) => this.runTracked(job, buildFfmpegArgs(source, output, plan, withCover), probe.durationMs, expectedBytes);
     try {
-      await runFfmpeg(this.ffmpegPath, buildFfmpegArgs(source, output, plan, probe.hasCover), options);
+      await run(probe.hasCover);
     } catch (err) {
       // Some cover formats cannot go into an M4B; the audio matters more than the picture.
-      if (!probe.hasCover || job.abort.signal.aborted) throw err;
+      if (!probe.hasCover || job.abort?.signal.aborted) throw err;
       this.logger.warn(`[conversion.convert] [fail] jobId=${job.id} errorClass=CoverRejected - retrying without the embedded cover`);
-      await runFfmpeg(this.ffmpegPath, buildFfmpegArgs(source, output, plan, false), options);
+      await run(false);
     }
     job.progress = 100;
   }
 
-  private async verify(output: string, original: AudioProbe): Promise<void> {
+  private async verify(output: string, originalMs: number): Promise<void> {
     const converted = await probeAudio(this.ffprobePath, output);
-    if (!sameLength(original.durationMs, converted.durationMs)) {
-      throw new Error(`The M4B is ${Math.round(converted.durationMs / 1000)}s long but the original is ${Math.round(original.durationMs / 1000)}s`);
+    if (!sameLength(originalMs, converted.durationMs)) {
+      throw new Error(`The M4B is ${Math.round(converted.durationMs / 1000)}s long but the original is ${Math.round(originalMs / 1000)}s`);
     }
   }
 
@@ -397,6 +537,7 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
     job.reason = reason;
     job.detail = detail;
     job.progress = status === 'done' ? 100 : null;
+    job.etaSeconds = null;
     job.finishedAt = new Date().toISOString();
   }
 
@@ -423,7 +564,10 @@ function toPublicJob(job: TrackedJob): ConversionJob {
     status: job.status,
     method: job.method,
     progress: job.progress,
+    speed: job.speed,
+    etaSeconds: job.etaSeconds,
     bitrate: job.bitrate,
+    trackCount: job.trackCount,
     reason: job.reason,
     detail: job.detail,
     outputName: job.outputName,
@@ -431,6 +575,42 @@ function toPublicJob(job: TrackedJob): ConversionJob {
     startedAt: job.startedAt,
     finishedAt: job.finishedAt,
   };
+}
+
+const SPEED_WARMUP_MS = 5_000;
+
+class UnitChangedError extends Error {
+  constructor() {
+    super('The original changed while it was being converted');
+    this.name = 'UnitChangedError';
+  }
+}
+
+/** How much of the audio is done: FFmpeg's position when it has one, else bytes written against the expected size. */
+export function progressFraction(outTimeUs: number, totalSize: number, durationMs: number, expectedBytes: number): number | null {
+  if (Number.isFinite(outTimeUs) && outTimeUs > 0 && durationMs > 0) return Math.min(1, outTimeUs / 1000 / durationMs);
+  if (Number.isFinite(totalSize) && totalSize > 0 && expectedBytes > 0) return Math.min(1, totalSize / expectedBytes);
+  return null;
+}
+
+/** A re-encode writes about bitrate x length; a copy writes about what it read. */
+export function expectedOutputBytes(plan: ConversionPlan, durationMs: number, sourceBytes: number): number {
+  return plan.method === 'encode' && plan.bitrate ? Math.round((plan.bitrate / 8) * (durationMs / 1000)) : sourceBytes;
+}
+
+const COVER_NAMES = ['cover', 'folder', 'front'];
+const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png']);
+
+/** A cover image from the folder: one named like a cover, else the first picture. */
+function pickCoverImage(files: string[]): string | null {
+  const images = files.filter((file) => IMAGE_EXTENSIONS.has(extname(file).toLowerCase()));
+  const named = images.find((file) => COVER_NAMES.includes(basename(file, extname(file)).toLowerCase()));
+  return named ?? images[0] ?? null;
+}
+
+/** A folder name is already a valid name on this disk; only path separators would break it. */
+function safeFileName(name: string): string {
+  return name.replace(/[/\\]/g, '-').trim() || 'Audiobook';
 }
 
 async function freeName(target: string): Promise<string> {
