@@ -42,6 +42,9 @@ function makeJob(overrides: Partial<ConversionJob> = {}): ConversionJob {
     etaSeconds: null,
     bitrate: 128_000,
     trackCount: null,
+    phase: 'converting',
+    originalDurationMs: 600_000,
+    checkedDurationMs: null,
     reason: null,
     detail: null,
     outputName: null,
@@ -216,5 +219,34 @@ describe('ConversionsView', () => {
     const manager = mountView()
     await flushPromises()
     expect(manager.find('[data-testid="conversion-tuning"]').exists()).toBe(true)
+  })
+
+  it('shows the length check on a finished book and the step a converting one is on', async () => {
+    api.getConversions.mockResolvedValue(
+      makeOverview([
+        makeJob({ id: 'a', name: 'Checking.mp3', phase: 'checking', progress: 40 }),
+        makeJob({ id: 'b', name: 'Measuring.mp3', phase: 'measuring', progress: 0 }),
+        makeJob({
+          id: 'c',
+          name: 'Done.mp3',
+          status: 'done',
+          phase: null,
+          checkedDurationMs: 36_134_000,
+          startedAt: '2026-11-16T18:00:00Z',
+          finishedAt: '2026-11-16T18:32:00Z',
+        }),
+      ]),
+    )
+    const wrapper = mountView()
+    await flushPromises()
+
+    const [checking, measuring] = wrapper.get('[data-testid="conversions-active"]').findAll('[data-testid="conversion-job"]')
+    expect(checking.get('[data-testid="conversion-status"]').text()).toBe('conversions.phase.checking')
+    expect(checking.find('[role="progressbar"]').exists()).toBe(true)
+    expect(measuring.get('[data-testid="conversion-timing"]').text()).toBe('conversions.time.measuring')
+    expect(measuring.find('[role="progressbar"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="conversion-length-check"]').text()).toBe(
+      'conversions.lengthChecked {"length":"conversions.time.lengthHours {\\"hours\\":\\"10\\",\\"minutes\\":\\"2\\",\\"seconds\\":\\"14\\"}"}',
+    )
   })
 })

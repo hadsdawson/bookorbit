@@ -6,7 +6,7 @@ import type { ConversionJob } from '@bookorbit/types'
 
 import { Button } from '@/components/ui/button'
 import { formatDateTime, formatNumber } from '@/i18n/formatters'
-import { durationParts, tookSeconds } from '../lib/conversion-time'
+import { durationParts, lengthParts, tookSeconds } from '../lib/conversion-time'
 
 const props = defineProps<{ job: ConversionJob; retrying: boolean; retryDisabled: boolean }>()
 const emit = defineEmits<{ retry: [ConversionJob] }>()
@@ -29,6 +29,24 @@ function spokenDuration(seconds: number): string {
   return t('conversions.time.hours', { hours: formatNumber(parts.hours), minutes: formatNumber(parts.minutes) })
 }
 
+function spokenLength(ms: number): string {
+  const parts = lengthParts(ms)
+  const values = { hours: formatNumber(parts.hours), minutes: formatNumber(parts.minutes), seconds: formatNumber(parts.seconds) }
+  return parts.hours > 0 ? t('conversions.time.lengthHours', values) : t('conversions.time.lengthMinutes', values)
+}
+
+const statusLabel = computed(() =>
+  props.job.status === 'converting' && props.job.phase ? t(`conversions.phase.${props.job.phase}`) : t(`conversions.status.${props.job.status}`),
+)
+
+const lengthCheck = computed(() =>
+  props.job.status === 'done' && props.job.checkedDurationMs !== null
+    ? t('conversions.lengthChecked', { length: spokenLength(props.job.checkedDurationMs) })
+    : null,
+)
+
+const showProgress = computed(() => props.job.status === 'converting' && props.job.phase !== 'measuring' && props.job.progress !== null)
+
 const speedLabel = computed(() => (props.job.speed ? t('conversions.time.speed', { speed: formatNumber(props.job.speed) }) : null))
 
 const method = computed(() => {
@@ -46,6 +64,7 @@ const method = computed(() => {
 const timing = computed(() => {
   const job = props.job
   if (job.status === 'converting') {
+    if (job.phase === 'measuring') return t('conversions.time.measuring')
     if (job.etaSeconds === null) return t('conversions.time.estimating')
     const left = t('conversions.time.left', { time: spokenDuration(job.etaSeconds) })
     return speedLabel.value ? `${left} · ${speedLabel.value}` : left
@@ -76,6 +95,7 @@ function handleRetry(): void {
         <p class="text-sm font-medium text-foreground wrap-break-word">{{ job.name }}</p>
         <p v-if="method" class="text-xs text-muted-foreground">{{ method }}</p>
         <p v-if="timing" class="text-xs text-muted-foreground" data-testid="conversion-timing">{{ timing }}</p>
+        <p v-if="lengthCheck" class="text-xs text-muted-foreground" data-testid="conversion-length-check">{{ lengthCheck }}</p>
         <p v-if="output" class="text-xs text-muted-foreground break-all">{{ output }}</p>
         <p v-if="reason" class="text-xs text-muted-foreground">{{ reason }}</p>
         <p v-if="job.detail" class="text-xs text-muted-foreground font-mono break-all">{{ job.detail }}</p>
@@ -83,7 +103,7 @@ function handleRetry(): void {
       </div>
       <div class="flex shrink-0 items-center gap-2">
         <span class="rounded-full px-2 py-0.5 text-xs font-medium" :class="STATUS_CLASSES[job.status]" data-testid="conversion-status">
-          {{ t(`conversions.status.${job.status}`) }}
+          {{ statusLabel }}
         </span>
         <Button
           v-if="job.status === 'failed'"
@@ -99,11 +119,11 @@ function handleRetry(): void {
         </Button>
       </div>
     </div>
-    <div v-if="job.status === 'converting' && job.progress !== null" class="flex items-center gap-2">
+    <div v-if="showProgress" class="flex items-center gap-2">
       <div
         class="h-1.5 flex-1 overflow-hidden rounded-full bg-muted"
         role="progressbar"
-        :aria-valuenow="job.progress"
+        :aria-valuenow="job.progress ?? 0"
         aria-valuemin="0"
         aria-valuemax="100"
         :aria-label="job.name"

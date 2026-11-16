@@ -35,9 +35,16 @@ export type ConversionMethod = "copy" | "encode" | "move";
 /**
  * `no_audio`: nothing to convert. `too_many_files`: more tracks than one book can be joined from.
  * `stopped`: conversions were turned off mid-way. `original_kept`: converted, but the original could
- * not be removed. `failed`: anything else, with `detail` saying what.
+ * not be removed. `length_mismatch`: the M4B, read through to the end, is not as long as the
+ * original. `failed`: anything else, with `detail` saying what.
  */
-export type ConversionReason = "no_audio" | "too_many_files" | "stopped" | "original_kept" | "failed";
+export type ConversionReason = "no_audio" | "too_many_files" | "stopped" | "original_kept" | "length_mismatch" | "failed";
+
+/**
+ * While converting: `measuring` reads an original whose length its file does not state exactly,
+ * `converting` writes the M4B, `checking` reads the finished M4B through to confirm its length.
+ */
+export type ConversionPhase = "measuring" | "converting" | "checking";
 
 export interface ConversionJob {
   id: string;
@@ -55,6 +62,12 @@ export interface ConversionJob {
   bitrate: number | null;
   /** How many tracks were joined into one M4B; null for a single file. */
   trackCount: number | null;
+  /** Which step a converting item is on. */
+  phase: ConversionPhase | null;
+  /** The original's length, once known. */
+  originalDurationMs: number | null;
+  /** The finished M4B's length as measured by reading it through, once checked. */
+  checkedDurationMs: number | null;
   /** Why an item failed, waits, was skipped, or finished with a caveat. */
   reason: ConversionReason | null;
   /** The technical cause of a failure, in English, for troubleshooting. */

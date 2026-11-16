@@ -16616,7 +16616,8 @@
       "stopped": "Stopped because conversions were turned off. The original was not touched.",
       "original_kept": "Converted, but the original could not be removed and is still in the Convert folder.",
       "failed": "The conversion failed. The original was not touched.",
-      "too_many_files": "This folder holds more than 500 audio files, too many to join into one book, so it was left as it is."
+      "too_many_files": "This folder holds more than 500 audio files, too many to join into one book, so it was left as it is.",
+      "length_mismatch": "The finished M4B is not as long as the original, so it was not kept. The original was not touched."
     },
     "settings": {
       "title": "Audio conversions",
@@ -16653,7 +16654,10 @@
       "left": "About {time} left",
       "took": "Took {time}",
       "speed": "{speed}× real time",
-      "estimating": "Working out how long this will take"
+      "estimating": "Working out how long this will take",
+      "measuring": "Measuring the original's exact length first, because its file doesn't state it",
+      "lengthHours": "{hours} h {minutes} min {seconds} s",
+      "lengthMinutes": "{minutes} min {seconds} s"
     },
     "tuning": {
       "title": "Conversion settings",
@@ -16669,6 +16673,12 @@
       "concurrency": "Books converting at once",
       "concurrencyHint": "Each book uses one processor core. More at once gets through a list sooner but doesn't speed up any one book.",
       "concurrencyOption": "{count, plural, one {# book} other {# books}}"
-    }
+    },
+    "phase": {
+      "measuring": "Measuring",
+      "converting": "Converting",
+      "checking": "Checking length"
+    },
+    "lengthChecked": "Length checked: {length}, matches the original"
   }
 }

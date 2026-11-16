@@ -28,6 +28,7 @@ import {
   buildFfmetadata,
   buildFfmpegArgs,
   buildJoinArgs,
+  buildReadThroughArgs,
   planConversion,
   planJoin,
   probeAudio,
@@ -294,6 +295,9 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
       etaSeconds: null,
       bitrate: null,
       trackCount: null,
+      phase: null,
+      originalDurationMs: null,
+      checkedDurationMs: null,
       reason: null,
       detail: null,
       outputName: null,
@@ -377,7 +381,8 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
       }
       this.logFail(event, startedAt, err, `jobId=${job.id}`, 'conversion failed');
       const stopped = err instanceof Error && err.name === 'AbortError';
-      this.finish(job, 'failed', stopped ? 'stopped' : 'failed', stopped ? null : failureDetail(err));
+      if (err instanceof LengthMismatchError) this.finish(job, 'failed', 'length_mismatch', err.message);
+      else this.finish(job, 'failed', stopped ? 'stopped' : 'failed', stopped ? null : failureDetail(err));
     } finally {
       job.abort = null;
       await rm(workDir, { recursive: true, force: true }).catch(() => {});
@@ -386,20 +391,22 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
 
   private async convertOne(job: TrackedJob, unit: ConversionUnit, outputDir: string): Promise<{ plan: ConversionPlan; output: string }> {
     const source = unit.audioFiles[0];
-    const probe = await probeAudio(this.ffprobePath, source);
+    const probe = await this.exactProbe(job, source);
+    job.originalDurationMs = probe.durationMs;
     const plan = planConversion(source, probe);
     job.method = plan.method;
     job.bitrate = plan.bitrate;
     const outputFile = join(outputDir, `${basename(source, extname(source))}.m4b`);
+    job.phase = 'converting';
     await this.convert(job, source, outputFile, plan, probe);
-    await this.verify(outputFile, probe.durationMs);
+    await this.verify(job, outputFile, probe.durationMs, 1);
     return { plan, output: outputFile };
   }
 
   /** A folder of tracks becomes one M4B with a chapter per track, named after the folder. */
   private async join(job: TrackedJob, unit: ConversionUnit, workDir: string, outputDir: string): Promise<{ plan: ConversionPlan; output: string }> {
     const tracks: Track[] = [];
-    for (const path of unit.audioFiles) tracks.push({ path, probe: await probeAudio(this.ffprobePath, path) });
+    for (const path of unit.audioFiles) tracks.push({ path, probe: await this.exactProbe(job, path) });
     const plan = planJoin(tracks);
     job.method = plan.method;
     job.bitrate = plan.bitrate;
@@ -413,6 +420,8 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
     await writeFile(concatList, buildConcatList(unit.audioFiles));
 
     const durationMs = totalDurationMs(tracks);
+    job.originalDurationMs = durationMs;
+    job.phase = 'converting';
     const output = join(outputDir, `${safeFileName(basename(unit.path))}.m4b`);
     const cover = tracks[0].probe.hasCover ? tracks[0].path : pickCoverImage(unit.extraFiles);
     let sourceBytes = 0;
@@ -433,7 +442,7 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
       await run(false);
     }
     job.progress = 100;
-    await this.verify(output, durationMs);
+    await this.verify(job, output, durationMs, tracks.length);
     return { plan, output };
   }
 
@@ -480,11 +489,49 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
     job.progress = 100;
   }
 
-  private async verify(output: string, originalMs: number): Promise<void> {
-    const converted = await probeAudio(this.ffprobePath, output);
-    if (!sameLength(originalMs, converted.durationMs)) {
-      throw new Error(`The M4B is ${Math.round(converted.durationMs / 1000)}s long but the original is ${Math.round(originalMs / 1000)}s`);
-    }
+  /**
+   * Reads the finished M4B through to the end and compares its real length with the original's.
+   * Nothing reaches the Book Dock, and no original is removed, unless this passes.
+   */
+  private async verify(job: TrackedJob, output: string, originalMs: number, trackCount: number): Promise<void> {
+    job.phase = 'checking';
+    const checkedMs = await this.readThrough(job, output, originalMs, true);
+    if (!sameLength(originalMs, checkedMs, trackCount)) throw new LengthMismatchError(originalMs, checkedMs);
+    job.checkedDurationMs = checkedMs;
+  }
+
+  /** A probe whose length is exact: an MP3 that does not state its length is read through to measure it. */
+  private async exactProbe(job: TrackedJob, path: string): Promise<AudioProbe> {
+    const probe = await probeAudio(this.ffprobePath, path);
+    if (!probe.estimated) return probe;
+    job.phase = 'measuring';
+    return { ...probe, durationMs: await this.readThrough(job, path, probe.durationMs, false), estimated: false };
+  }
+
+  /** Decodes a file's audio to the end and returns its real length. */
+  private async readThrough(job: TrackedJob, path: string, expectedMs: number, showProgress: boolean): Promise<number> {
+    job.abort = new AbortController();
+    if (showProgress) Object.assign(job, { progress: 0, speed: null, etaSeconds: null });
+    const startedAt = Date.now();
+    let lastUs = 0;
+    await runFfmpeg(this.ffmpegPath, buildReadThroughArgs(path), {
+      lowPriority: this.settings.speed !== 'high',
+      signal: job.abort.signal,
+      onProgress: ({ outTimeUs }) => {
+        if (!Number.isFinite(outTimeUs) || outTimeUs <= lastUs) return;
+        lastUs = outTimeUs;
+        if (!showProgress || expectedMs <= 0) return;
+        const fraction = Math.min(1, outTimeUs / 1000 / expectedMs);
+        job.progress = Math.min(99, Math.round(fraction * 100));
+        const elapsedMs = Date.now() - startedAt;
+        if (elapsedMs < SPEED_WARMUP_MS || fraction <= 0) return;
+        const speed = (fraction * expectedMs) / elapsedMs;
+        job.speed = Math.round(speed * 10) / 10;
+        job.etaSeconds = Math.max(0, Math.round(((1 - fraction) * expectedMs) / speed / 1000));
+      },
+    });
+    if (lastUs <= 0) throw new Error('No audio could be read from the file');
+    return Math.round(lastUs / 1000);
   }
 
   private async copyExtras(unit: ConversionUnit, outputDir: string): Promise<void> {
@@ -544,6 +591,7 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
     job.detail = detail;
     job.progress = status === 'done' ? 100 : null;
     job.etaSeconds = null;
+    job.phase = null;
     job.finishedAt = new Date().toISOString();
   }
 
@@ -574,6 +622,9 @@ function toPublicJob(job: TrackedJob): ConversionJob {
     etaSeconds: job.etaSeconds,
     bitrate: job.bitrate,
     trackCount: job.trackCount,
+    phase: job.phase,
+    originalDurationMs: job.originalDurationMs,
+    checkedDurationMs: job.checkedDurationMs,
     reason: job.reason,
     detail: job.detail,
     outputName: job.outputName,
@@ -584,6 +635,23 @@ function toPublicJob(job: TrackedJob): ConversionJob {
 }
 
 const SPEED_WARMUP_MS = 5_000;
+
+class LengthMismatchError extends Error {
+  constructor(
+    readonly originalMs: number,
+    readonly checkedMs: number,
+  ) {
+    super(`The M4B plays for ${formatClock(checkedMs)} but the original plays for ${formatClock(originalMs)}`);
+    this.name = 'LengthMismatchError';
+  }
+}
+
+/** 10:02:14 style, for the technical detail line and the log. */
+function formatClock(ms: number): string {
+  const total = Math.round(ms / 1000);
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${Math.floor(total / 3600)}:${pad(Math.floor((total % 3600) / 60))}:${pad(total % 60)}`;
+}
 
 class UnitChangedError extends Error {
   constructor() {

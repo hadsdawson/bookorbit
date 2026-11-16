@@ -3,6 +3,7 @@ import {
   buildFfmetadata,
   buildFfmpegArgs,
   buildJoinArgs,
+  buildReadThroughArgs,
   chapterNameFromFile,
   isConvertible,
   parseProbe,
@@ -16,7 +17,16 @@ import {
 } from './conversion-media';
 
 describe('conversion media', () => {
-  const mp3: AudioProbe = { durationMs: 600_000, codec: 'mp3', channels: 2, sampleRate: 44_100, bitrate: 128_000, hasCover: true, tags: {} };
+  const mp3: AudioProbe = {
+    durationMs: 600_000,
+    codec: 'mp3',
+    channels: 2,
+    sampleRate: 44_100,
+    bitrate: 128_000,
+    hasCover: true,
+    tags: {},
+    estimated: false,
+  };
 
   function track(path: string, probe: Partial<AudioProbe> = {}): Track {
     return { path, probe: { ...mp3, hasCover: false, ...probe } };
@@ -38,7 +48,16 @@ describe('conversion media', () => {
       ],
       format: { duration: '3600.5', bit_rate: '70000' },
     });
-    expect(probe).toEqual({ durationMs: 3_600_500, codec: 'mp3', channels: 1, sampleRate: null, bitrate: 64_000, hasCover: true, tags: {} });
+    expect(probe).toEqual({
+      durationMs: 3_600_500,
+      codec: 'mp3',
+      channels: 1,
+      sampleRate: null,
+      bitrate: 64_000,
+      hasCover: true,
+      tags: {},
+      estimated: false,
+    });
   });
 
   it('falls back to the file bitrate and refuses a file with no audio', () => {
@@ -69,10 +88,18 @@ describe('conversion media', () => {
     expect(buildFfmpegArgs('/c/in.m4a', '/w/out.m4b', { method: 'copy', bitrate: null }, false)).not.toContain('attached_pic');
   });
 
-  it('accepts a small difference in length only', () => {
-    expect(sameLength(600_000, 599_975)).toBe(true);
-    expect(sameLength(36_000_000, 36_150_000)).toBe(true);
-    expect(sameLength(600_000, 590_000)).toBe(false);
+  it('accepts two seconds of difference, plus a tenth of a second per joined track', () => {
+    expect(sameLength(36_000_000, 35_998_500)).toBe(true);
+    expect(sameLength(36_000_000, 35_997_000)).toBe(false);
+    expect(sameLength(36_000_000, 36_150_000)).toBe(false);
+    expect(sameLength(36_000_000, 35_994_000, 50)).toBe(true);
+    expect(sameLength(36_000_000, 35_990_000, 50)).toBe(false);
+  });
+
+  it('reads the whole first audio stream and stops on damaged audio', () => {
+    const args = buildReadThroughArgs('/w/Book.m4b');
+    expect(args).toEqual(expect.arrayContaining(['-xerror', '-map', '0:a:0', '-f', 'null', '-threads', '1']));
+    expect(args.at(-1)).toBe('-');
   });
 
   it('reads title, album and artist tags whatever their case', () => {

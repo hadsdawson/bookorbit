@@ -25,7 +25,9 @@ const BITRATE_UNKNOWN_PER_CHANNEL = 64_000;
 const BITRATE_FLOOR_PER_CHANNEL = 48_000;
 
 const DURATION_TOLERANCE_MS = 2_000;
-const DURATION_TOLERANCE_RATIO = 0.005;
+/** Each MP3 track carries a few milliseconds of encoder padding, so joined books get a little more room per track. */
+const DURATION_TOLERANCE_PER_TRACK_MS = 100;
+const ESTIMATED_DURATION_RE = /Estimating duration from bitrate/i;
 
 export interface AudioProbe {
   durationMs: number;
@@ -35,6 +37,8 @@ export interface AudioProbe {
   bitrate: number | null;
   hasCover: boolean;
   tags: AudioTags;
+  /** The file does not state its length, so ffprobe guessed it from the bitrate (common for MP3s). */
+  estimated: boolean;
 }
 
 export interface AudioTags {
@@ -68,11 +72,11 @@ export function isConvertible(path: string): boolean {
 }
 
 export async function probeAudio(ffprobePath: string, path: string): Promise<AudioProbe> {
-  const { stdout } = await execFileAsync(ffprobePath, ['-v', 'error', '-print_format', 'json', '-show_streams', '-show_format', path], {
+  const { stdout, stderr } = await execFileAsync(ffprobePath, ['-v', 'warning', '-print_format', 'json', '-show_streams', '-show_format', path], {
     timeout: PROBE_TIMEOUT_MS,
     maxBuffer: PROBE_MAX_BUFFER,
   });
-  return parseProbe(JSON.parse(stdout) as FfprobeOutput);
+  return { ...parseProbe(JSON.parse(stdout) as FfprobeOutput), estimated: ESTIMATED_DURATION_RE.test(stderr) };
 }
 
 export function parseProbe(output: FfprobeOutput): AudioProbe {
@@ -93,6 +97,7 @@ export function parseProbe(output: FfprobeOutput): AudioProbe {
     bitrate,
     hasCover: streams.some((stream) => stream.codec_type === 'video' && stream.disposition?.attached_pic === 1),
     tags: readTags(output.format?.tags),
+    estimated: false,
   };
 }
 
@@ -137,10 +142,22 @@ export function buildFfmpegArgs(input: string, output: string, plan: ConversionP
   ];
 }
 
+/** How far apart two lengths may be and still count as the same book: 2 seconds, plus a little per joined track. */
+export function allowedDifferenceMs(trackCount: number): number {
+  return DURATION_TOLERANCE_MS + DURATION_TOLERANCE_PER_TRACK_MS * Math.max(0, trackCount - 1);
+}
+
 /** The output is kept only when it holds audio of the same length as the original. */
-export function sameLength(originalMs: number, convertedMs: number): boolean {
-  const tolerance = Math.max(DURATION_TOLERANCE_MS, originalMs * DURATION_TOLERANCE_RATIO);
-  return Math.abs(originalMs - convertedMs) <= tolerance;
+export function sameLength(originalMs: number, convertedMs: number, trackCount = 1): boolean {
+  return Math.abs(originalMs - convertedMs) <= allowedDifferenceMs(trackCount);
+}
+
+/**
+ * Decodes every frame of the first audio stream and throws the output away. FFmpeg's final position
+ * is then the real length, and `-xerror` makes damaged audio fail the run instead of being skipped.
+ */
+export function buildReadThroughArgs(path: string): string[] {
+  return ['-nostdin', '-hide_banner', '-v', 'error', '-xerror', '-threads', '1', '-i', path, '-map', '0:a:0', '-f', 'null', '-'];
 }
 
 function readTags(raw: Record<string, string> | undefined): AudioTags {
