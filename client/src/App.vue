@@ -15,15 +15,15 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { resolveRouteViewKey } from '@/router/view-key'
 import LegalNotices from '@/components/legal/LegalNotices.vue'
 
-// The bottom-edge TTS player publishes its measured height, so the toaster clears it.
+// Toasts sit at the top centre so they never cover bottom-edge action buttons,
+// the audio/TTS mini players, or bulk-action bars.
 const TOASTER_OFFSET = {
-  right: '16px',
-  bottom: 'max(16px, var(--tts-mini-player-clearance, 0px))',
+  top: '16px',
 }
 const TOASTER_MOBILE_OFFSET = {
+  top: '16px',
   left: '16px',
   right: '16px',
-  bottom: 'max(16px, var(--tts-mini-player-clearance, 0px))',
 }
 
 const { isOpen } = useChangePasswordDialog()
@@ -62,6 +62,6 @@ watch(
     <LegalNotices />
     <TtsMiniPlayer />
     <MediaOverlayMiniPlayer />
-    <Toaster rich-colors position="bottom-right" :visible-toasts="5" :gap="8" :offset="TOASTER_OFFSET" :mobile-offset="TOASTER_MOBILE_OFFSET" />
+    <Toaster rich-colors position="top-center" :visible-toasts="5" :gap="8" :offset="TOASTER_OFFSET" :mobile-offset="TOASTER_MOBILE_OFFSET" />
   </TooltipProvider>
 </template>
