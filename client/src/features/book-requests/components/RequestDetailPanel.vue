@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, onMounted, ref, watch } from 'vue'
+import CopyTextButton from './CopyTextButton.vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
@@ -702,8 +703,14 @@ function dockFileMeta(file: BookDockFile): string {
           />
 
           <div class="min-w-0 flex-1 space-y-1.5">
-            <h2 class="text-lg leading-snug font-semibold tracking-tight text-foreground">{{ request.title }}</h2>
-            <p class="text-sm text-muted-foreground">{{ authorLine || t('bookRequests.detail.unknownAuthor') }}</p>
+            <div class="flex items-start gap-1.5">
+              <h2 class="min-w-0 text-lg leading-snug font-semibold tracking-tight text-foreground">{{ request.title }}</h2>
+              <CopyTextButton :text="request.title" :label="t('bookRequests.copy.title')" :size="15" class="mt-1" />
+            </div>
+            <div class="flex items-center gap-1.5">
+              <p class="min-w-0 text-sm text-muted-foreground">{{ authorLine || t('bookRequests.detail.unknownAuthor') }}</p>
+              <CopyTextButton v-if="authorLine" :text="authorLine" :label="t('bookRequests.copy.author')" />
+            </div>
 
             <div class="flex flex-wrap items-center gap-1.5 pt-1">
               <RequestStatusBadge :status="presentationStatus ?? request.status" />
