@@ -2,7 +2,6 @@
 import { useWindowSize } from '@vueuse/core'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { formatNumber } from '@/i18n/formatters'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, ArrowRight, ArrowUpDown, ChevronDown, ChevronLeft, ImageMinus, Layers, LayoutGrid, Link, List, Upload } from '@lucide/vue'
 import { toast } from 'vue-sonner'
@@ -1055,6 +1054,7 @@ defineOptions({ name: 'AuthorDetailView' })
             :books="books"
             :cover-size="authorBookCoverSize"
             :grid-gap="authorBookGridGap"
+            :virtualized="false"
             @action="handleBookAction"
             @update:book="handleBookUpdate"
           />
@@ -1065,9 +1065,6 @@ defineOptions({ name: 'AuthorDetailView' })
 
           <div ref="sentinel" class="mt-4 flex h-8 items-center justify-center">
             <span v-if="loadingBooks" class="text-xs text-muted-foreground">{{ t('common.loading') }}</span>
-            <span v-else-if="!hasMore && books.length > 0" class="text-xs text-muted-foreground">{{
-              t('author.detail.books.allLoaded', { total: formatNumber(bookTotal) })
-            }}</span>
           </div>
 
           <AuthorPenNameBooks
