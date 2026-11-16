@@ -92,26 +92,8 @@ export class AuthorsRepository {
       addedWithinDays: params.addedWithinDays,
       contentFilters: params.contentFilters,
     });
-    const bookCountExpr = sql<number>`count(distinct ${books.id})`;
     const lastAddedExpr = max(books.addedAt);
-
-    const sortNameExpr = sql`COALESCE(${authors.sortName}, ${authors.name})`;
-
-    const trimmedQuery = params.q?.trim();
-    const orderBy =
-      params.sort === 'relevance' && trimmedQuery
-        ? this.orderByDirection(searchRelevance(authors.name, trimmedQuery), params.order)
-        : params.sort === 'bookCount'
-          ? this.orderByDirection(bookCountExpr, params.order)
-          : params.sort === 'lastAddedAt'
-            ? this.orderByDirection(lastAddedExpr, params.order)
-            : params.sort === 'lastEnrichedAt'
-              ? params.order === 'asc'
-                ? sql`${authors.lastEnrichedAt} ASC NULLS LAST`
-                : sql`${authors.lastEnrichedAt} DESC NULLS LAST`
-              : params.sort === 'sortName'
-                ? this.orderByDirection(sortNameExpr, params.order)
-                : this.orderByDirection(authors.name, params.order);
+    const orderBy = this.listOrder(params.sort, params.order, params.q);
 
     const having = params.minBookCount !== undefined ? sql`count(distinct ${books.id}) >= ${params.minBookCount}` : undefined;
 
@@ -133,7 +115,7 @@ export class AuthorsRepository {
       .where(where)
       .groupBy(authors.id, authors.name, authors.sortName, authors.description)
       .having(having)
-      .orderBy(orderBy, sql`${sortNameExpr} ASC`, asc(authors.name))
+      .orderBy(...orderBy)
       .limit(params.size)
       .offset(params.page * params.size);
 
@@ -626,6 +608,86 @@ export class AuthorsRepository {
       : await this.db.update(authors).set({ hasPhoto: false }).where(eq(authors.hasPhoto, true)).returning({ id: authors.id });
 
     return { marked: marked.length, cleared: cleared.length };
+  }
+
+  /**
+   * The list's order: the sort picked, then sort name, name and id, so every author has one place
+   * and paging and stepping between authors agree.
+   */
+  private listOrder(sort: AuthorListSort, order: SortDirection, q?: string): SQL[] {
+    const sortNameExpr = sql`COALESCE(${authors.sortName}, ${authors.name})`;
+    const trimmedQuery = q?.trim();
+    const primary =
+      sort === 'relevance' && trimmedQuery
+        ? this.orderByDirection(searchRelevance(authors.name, trimmedQuery), order)
+        : sort === 'bookCount'
+          ? this.orderByDirection(sql<number>`count(distinct ${books.id})`, order)
+          : sort === 'lastAddedAt'
+            ? this.orderByDirection(sql`max(${books.addedAt})`, order)
+            : sort === 'lastEnrichedAt'
+              ? order === 'asc'
+                ? sql`${authors.lastEnrichedAt} ASC NULLS LAST`
+                : sql`${authors.lastEnrichedAt} DESC NULLS LAST`
+              : sort === 'sortName'
+                ? this.orderByDirection(sortNameExpr, order)
+                : this.orderByDirection(authors.name, order);
+    return [primary, sql`${sortNameExpr} ASC`, asc(authors.name), asc(authors.id)];
+  }
+
+  /**
+   * Fork: the authors just before and after this one in the Authors list, under the same filters
+   * and sort, for the previous and next buttons on an author page. Null where there is none, and
+   * both null when the author is not in that list.
+   */
+  async findNeighbors(
+    authorId: number,
+    params: {
+      q?: string;
+      sort: AuthorListSort;
+      order: SortDirection;
+      libraryIds: number[];
+      hasPhoto?: boolean;
+      hasSortName?: boolean;
+      addedWithinDays?: number;
+      minBookCount?: number;
+      contentFilters?: ContentFilterRules;
+    },
+  ): Promise<{ previous: { id: number; name: string } | null; next: { id: number; name: string } | null }> {
+    const none = { previous: null, next: null };
+    if (params.libraryIds.length === 0) return none;
+    const members = this.authorMembers();
+    const where = this.buildAuthorWhere({
+      q: params.q,
+      libraryIds: params.libraryIds,
+      hasPhoto: params.hasPhoto,
+      hasSortName: params.hasSortName,
+      addedWithinDays: params.addedWithinDays,
+      contentFilters: params.contentFilters,
+    });
+    const having = params.minBookCount !== undefined ? sql`count(distinct ${books.id}) >= ${params.minBookCount}` : undefined;
+    const window = sql`over (order by ${sql.join(this.listOrder(params.sort, params.order, params.q), sql`, `)})`;
+    const ranked = this.db
+      .select({
+        id: authors.id,
+        previousId: sql<number | null>`lag(${authors.id}) ${window}`.as('previous_id'),
+        previousName: sql<string | null>`lag(${authors.name}) ${window}`.as('previous_name'),
+        nextId: sql<number | null>`lead(${authors.id}) ${window}`.as('next_id'),
+        nextName: sql<string | null>`lead(${authors.name}) ${window}`.as('next_name'),
+      })
+      .from(authors)
+      .innerJoin(members, eq(members.ownerId, authors.id))
+      .innerJoin(bookAuthors, eq(bookAuthors.authorId, members.memberId))
+      .innerJoin(books, eq(books.id, bookAuthors.bookId))
+      .where(where)
+      .groupBy(authors.id, authors.name, authors.sortName, authors.description)
+      .having(having)
+      .as('ranked_authors');
+    const [row] = await this.db.select().from(ranked).where(eq(ranked.id, authorId)).limit(1);
+    if (!row) return none;
+    return {
+      previous: row.previousId !== null ? { id: Number(row.previousId), name: row.previousName ?? '' } : null,
+      next: row.nextId !== null ? { id: Number(row.nextId), name: row.nextName ?? '' } : null,
+    };
   }
 
   /**

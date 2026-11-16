@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, ref, type Ref } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
-import type { AuthorDetail, AuthorNames, BookCard } from '@bookorbit/types'
+import type { AuthorDetail, AuthorNames, AuthorNeighbors, BookCard } from '@bookorbit/types'
 import AuthorDetailView from './AuthorDetailView.vue'
-import { deleteAuthorImage, fetchAuthorNames, refreshAuthorMetadata, updateAuthor, uploadAuthorImage } from '../api/author'
+import { deleteAuthorImage, fetchAuthorNames, fetchAuthorNeighbors, refreshAuthorMetadata, updateAuthor, uploadAuthorImage } from '../api/author'
 import { i18n } from '@/i18n'
 
 class MockIntersectionObserver {
@@ -92,6 +92,7 @@ vi.mock('../api/author', () => ({
   deleteAuthors: vi.fn<(payload: { authorIds: number[] }) => Promise<{ affectedBookCount: number }>>(),
   fetchAuthors: vi.fn<() => Promise<unknown>>(),
   fetchAuthorNames: vi.fn<(authorId: number) => Promise<AuthorNames>>(),
+  fetchAuthorNeighbors: vi.fn<(authorId: number, params: unknown) => Promise<AuthorNeighbors>>(),
   mergeAuthors: vi.fn<() => Promise<unknown>>(),
   refreshAuthorMetadata: vi.fn<(authorId: number) => Promise<AuthorDetail>>(),
   updateAuthor: vi.fn<() => Promise<AuthorDetail>>(),
@@ -257,6 +258,7 @@ describe('AuthorDetailView', () => {
     mocks.routerPush.mockResolvedValue()
     mocks.routerReplace.mockResolvedValue()
     vi.mocked(fetchAuthorNames).mockResolvedValue({ spellings: [], penNames: [], penNameOf: [] })
+    vi.mocked(fetchAuthorNeighbors).mockResolvedValue({ previous: null, next: null })
     mocks.fetchLibraries.mockResolvedValue()
     mocks.loadAuthor.mockResolvedValue()
     mocks.loadBooks.mockResolvedValue()
@@ -597,6 +599,38 @@ describe('AuthorDetailView', () => {
       expect(wrapper.findAll('[data-test="pen-name-books"]').map((section) => section.text())).toEqual(['A. Deborah Baker', 'Mira Grant'])
       expect(wrapper.text()).toContain('Author')
       expect(wrapper.getComponent({ name: 'AuthorPenNameChooser' }).props('open')).toBe(false)
+    })
+  })
+
+  describe('previous and next author (fork)', () => {
+    it('steps through the Authors list it was opened from, keeping the way back to it', async () => {
+      mocks.route.query = { from: '/authors?sort=bookCount&order=desc&filter=multipleBooks' }
+      vi.mocked(fetchAuthorNeighbors).mockResolvedValue({ previous: { id: 6, name: 'Alpha' }, next: { id: 8, name: 'Charlie' } })
+      const wrapper = await mountView()
+
+      expect(fetchAuthorNeighbors).toHaveBeenCalledWith(7, expect.objectContaining({ sort: 'bookCount', order: 'desc', minBookCount: 2 }))
+      expect(wrapper.get('[data-testid="author-previous"]').text()).toBe('Alpha')
+      expect(wrapper.get('[data-testid="author-next"]').text()).toBe('Charlie')
+
+      await wrapper.get('[data-testid="author-next"]').trigger('click')
+      expect(mocks.routerPush).toHaveBeenCalledWith({
+        name: 'author-detail',
+        params: { id: 8 },
+        query: { from: '/authors?sort=bookCount&order=desc&filter=multipleBooks' },
+      })
+    })
+
+    it('uses the A-Z list when not opened from the Authors list, and disables the end it reached', async () => {
+      vi.mocked(fetchAuthorNeighbors).mockResolvedValue({ previous: null, next: { id: 8, name: 'Charlie' } })
+      const wrapper = await mountView()
+
+      expect(fetchAuthorNeighbors).toHaveBeenCalledWith(7, expect.objectContaining({ sort: 'name', order: 'asc' }))
+      expect(wrapper.get('[data-testid="author-previous"]').attributes('disabled')).toBeDefined()
+    })
+
+    it('shows no buttons when the author is not in the list', async () => {
+      const wrapper = await mountView()
+      expect(wrapper.find('[data-testid="author-neighbors"]').exists()).toBe(false)
     })
   })
 })

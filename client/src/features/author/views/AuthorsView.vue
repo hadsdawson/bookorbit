@@ -31,7 +31,8 @@ import { useAuthorSelection } from '../composables/useAuthorSelection'
 import { useAuthorsList } from '../composables/useAuthorsList'
 import { useRefreshingAuthors } from '../composables/useRefreshingAuthors'
 import { authorLetterKey, isLetterSort } from '../lib/author-identity'
-import { RECENTLY_ADDED_DAYS, type AuthorListSort, type AuthorQuickFilter, type AuthorSummary, type SortDirection } from '../types/author'
+import type { AuthorListSort, AuthorQuickFilter, AuthorSummary } from '../types/author'
+import { parseLibraryId, parseOrder, parseQuickFilter, parseSort, quickFilterParams } from '../lib/author-list-route'
 import IgnoreCacheCheckbox from '@/features/metadata-cache/components/IgnoreCacheCheckbox.vue'
 import { showCacheFallbackToast } from '@/features/metadata-cache/lib/cache-feedback'
 import { splitMetadataCacheUsage, usageFallbackProviders, type IgnoreCacheOptions } from '@/features/metadata-cache/lib/metadata-cache'
@@ -153,10 +154,11 @@ const quickFilter = computed<AuthorQuickFilter>(() => {
 })
 
 function applyQuickFilter(next: AuthorQuickFilter) {
-  hasPhoto.value = next === 'noPortrait' ? false : null
-  minBookCount.value = next === 'multipleBooks' ? 2 : null
-  addedWithinDays.value = next === 'recentlyAdded' ? RECENTLY_ADDED_DAYS : null
-  hasSortName.value = next === 'noSortName' ? false : null
+  const params = quickFilterParams(next)
+  hasPhoto.value = params.hasPhoto
+  minBookCount.value = params.minBookCount
+  addedWithinDays.value = params.addedWithinDays
+  hasSortName.value = params.hasSortName
 }
 
 const activeFilterCount = computed(() => {
@@ -245,23 +247,6 @@ function showRefreshResultToast(updated: { imageUrl?: string | null }) {
     return
   }
   toast.success(t('author.list.toast.refreshed'))
-}
-
-function parseSort(value: unknown): AuthorListSort {
-  return value === 'sortName' || value === 'bookCount' || value === 'lastAddedAt' || value === 'lastEnrichedAt' || value === 'name' ? value : 'name'
-}
-
-function parseOrder(value: unknown): SortDirection {
-  return value === 'desc' || value === 'asc' ? value : 'asc'
-}
-
-function parseLibraryId(value: unknown): number | null {
-  const raw = typeof value === 'string' ? Number(value) : NaN
-  return Number.isInteger(raw) && raw > 0 ? raw : null
-}
-
-function parseQuickFilter(value: unknown): AuthorQuickFilter {
-  return value === 'noPortrait' || value === 'multipleBooks' || value === 'recentlyAdded' || value === 'noSortName' ? value : 'all'
 }
 
 function syncRouteQuery() {

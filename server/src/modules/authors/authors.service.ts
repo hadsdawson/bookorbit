@@ -7,6 +7,7 @@ import type {
   AuthorMetadataProviderInfo,
   AuthorMetadataSearchCandidateEvent,
   AuthorSummary,
+  AuthorNeighbors,
   AuthorsPage,
   JumpBucketsResponse,
   MergeAuthorsResult,
@@ -149,6 +150,22 @@ export class AuthorsService {
       ...page,
       items: await this.withAuthorImageUrls(mapped),
     };
+  }
+
+  /** Fork: the authors before and after this one in the Authors list, for stepping between author pages. */
+  async findNeighbors(user: RequestUser, authorId: number, dto: ListAuthorsDto): Promise<AuthorNeighbors> {
+    const libraryIds = await this.resolveLibraryIds(user, dto.libraryId);
+    return this.authorsRepo.findNeighbors(authorId, {
+      q: dto.q,
+      sort: dto.sort ?? 'name',
+      order: dto.order ?? 'asc',
+      libraryIds,
+      hasPhoto: dto.hasPhoto,
+      hasSortName: dto.hasSortName,
+      addedWithinDays: dto.addedWithinDays,
+      minBookCount: dto.minBookCount,
+      contentFilters: user.isSuperuser ? undefined : user.contentFilters,
+    });
   }
 
   /**
