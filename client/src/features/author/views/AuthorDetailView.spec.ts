@@ -150,6 +150,10 @@ const VirtualBookGridStub = defineComponent({
       type: Array,
       required: true,
     },
+    virtualized: {
+      type: Boolean,
+      default: true,
+    },
   },
   emits: ['action', 'update:book'],
   template: '<div data-test="virtual-book-grid" />',
@@ -360,15 +364,20 @@ describe('AuthorDetailView', () => {
       expect(mocks.setCollapsePreference).toHaveBeenCalledWith({ authorPages: true }, false)
     })
 
-    it('counts books rather than rows in the all-loaded label', async () => {
-      // 2 collapsed rows standing for 200 books: the reader should be told about the books.
+    it('does not announce that every book has loaded (fork)', async () => {
       mocks.total = ref(2)
       mocks.bookTotal = ref(200)
       mocks.hasMore = ref(false)
 
       const wrapper = await mountView()
 
-      expect(wrapper.text()).toContain(i18n.global.t('author.detail.books.allLoaded', { total: '200' }))
+      expect(wrapper.text()).not.toContain(i18n.global.t('author.detail.books.allLoaded', { total: '200' }))
+    })
+
+    it('lays books out in a plain grid so square covers do not leave a gap above them (fork)', async () => {
+      const wrapper = await mountView()
+
+      expect(wrapper.getComponent(VirtualBookGridStub).props('virtualized')).toBe(false)
     })
   })
 
