@@ -2,14 +2,25 @@
 export const CONVERSION_CONCURRENCY_MIN = 1;
 export const CONVERSION_CONCURRENCY_MAX = 3;
 
+/**
+ * `low`: FFmpeg runs at the lowest processor and disk priority, so everything else on the server
+ * comes first. `high`: it runs at normal priority, competing on equal terms, which is faster but
+ * can slow other apps. Nothing higher is offered: the container cannot raise a priority, and a
+ * conversion should never push other apps aside.
+ */
+export const CONVERSION_SPEEDS = ["low", "high"] as const;
+export type ConversionSpeed = (typeof CONVERSION_SPEEDS)[number];
+
 export interface ConversionSettings {
   enabled: boolean;
   concurrency: number;
+  speed: ConversionSpeed;
 }
 
 export const DEFAULT_CONVERSION_SETTINGS: ConversionSettings = {
   enabled: false,
   concurrency: 1,
+  speed: "low",
 };
 
 /**

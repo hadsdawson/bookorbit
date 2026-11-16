@@ -7,9 +7,11 @@ import { basename, dirname, extname, join, relative, sep } from 'path';
 import {
   CONVERSION_CONCURRENCY_MAX,
   CONVERSION_CONCURRENCY_MIN,
+  CONVERSION_SPEEDS,
   DEFAULT_CONVERSION_SETTINGS,
   type ConversionJob,
   type ConversionOverview,
+  type ConversionSpeed,
   type ConversionReason,
   type ConversionSettings,
 } from '@bookorbit/types';
@@ -69,6 +71,7 @@ export function parseConversionSettings(raw: string | null | undefined): Convers
       Number.isInteger(concurrency) && concurrency! >= CONVERSION_CONCURRENCY_MIN && concurrency! <= CONVERSION_CONCURRENCY_MAX
         ? concurrency!
         : DEFAULT_CONVERSION_SETTINGS.concurrency,
+    speed: CONVERSION_SPEEDS.includes(value?.speed as ConversionSpeed) ? value.speed! : DEFAULT_CONVERSION_SETTINGS.speed,
   };
 }
 
@@ -129,7 +132,9 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
     await this.appSettings.setValue(CONVERSION_SETTINGS_KEY, JSON.stringify(settings));
     const wasEnabled = this.settings.enabled;
     this.settings = settings;
-    this.logger.log(`[conversion.settings] [end] enabled=${settings.enabled} concurrency=${settings.concurrency} - conversion settings saved`);
+    this.logger.log(
+      `[conversion.settings] [end] enabled=${settings.enabled} concurrency=${settings.concurrency} speed=${settings.speed} - conversion settings saved`,
+    );
     if (settings.enabled && !wasEnabled) await this.start();
     else if (!settings.enabled && wasEnabled) await this.stop();
     else this.pump();
@@ -440,7 +445,8 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
     job.abort = new AbortController();
     const startedAt = Date.now();
     await runFfmpeg(this.ffmpegPath, args, {
-      lowPriority: true,
+      // Read per run, so a change applies to the next book without a restart.
+      lowPriority: this.settings.speed !== 'high',
       signal: job.abort.signal,
       onProgress: ({ outTimeUs, totalSize }) => {
         const fraction = progressFraction(outTimeUs, totalSize, durationMs, expectedBytes);
