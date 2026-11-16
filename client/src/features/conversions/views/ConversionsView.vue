@@ -1,33 +1,25 @@
 <script setup lang="ts">
 import { computed, onActivated, onDeactivated, onMounted, onUnmounted, ref } from 'vue'
-import { FileAudio, FolderUp, Loader2, RotateCcw } from '@lucide/vue'
+import { FileAudio, FolderUp } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { Permission, type ConversionJob, type ConversionOverview } from '@bookorbit/types'
 
 import { Button } from '@/components/ui/button'
 import { usePermissions } from '@/features/auth/composables/usePermissions'
-import { formatDateTime, formatNumber } from '@/i18n/formatters'
+import { formatNumber } from '@/i18n/formatters'
 import { errorMessage } from '@/lib/api-json'
 import { getConversions, retryConversion } from '../api/conversions'
+import ConversionJobRow from '../components/ConversionJobRow.vue'
 import { useConversionStatus } from '../composables/useConversionStatus'
 import { CONVERTIBLE_ACCEPT, pickedFiles, useConversionUpload, type UploadFailure } from '../composables/useConversionUpload'
 
 const BUSY_POLL_MS = 2_000
 const IDLE_POLL_MS = 10_000
 
-const STATUS_CLASSES: Record<ConversionJob['status'], string> = {
-  queued: 'bg-muted text-muted-foreground',
-  converting: 'bg-primary/15 text-primary',
-  done: 'bg-success/15 text-success',
-  failed: 'bg-destructive/15 text-destructive',
-  waiting: 'bg-warning/15 text-warning',
-  skipped: 'bg-muted text-muted-foreground',
-}
-
 const { t } = useI18n()
 const { hasPermission } = usePermissions()
-const { setEnabled } = useConversionStatus()
+const { setEnabled, setActive } = useConversionStatus()
 const { uploading, percent: uploadPercent, fileIndex, fileCount, upload } = useConversionUpload()
 const canUpload = computed(() => hasPermission(Permission.BookDockAccess) && hasPermission(Permission.LibraryUpload))
 const filesInput = ref<HTMLInputElement | null>(null)
@@ -42,29 +34,15 @@ const enabled = computed(() => overview.value?.settings.enabled ?? false)
 const canManage = computed(() => hasPermission(Permission.ManageBookDock))
 const jobs = computed(() => overview.value?.jobs ?? [])
 const busy = computed(() => jobs.value.some((job) => job.status === 'queued' || job.status === 'converting'))
-const rows = computed(() =>
-  jobs.value.map((job) => ({
-    job,
-    statusLabel: t(`conversions.status.${job.status}`),
-    statusClass: STATUS_CLASSES[job.status],
-    method: methodLabel(job),
-    reason: job.reason ? t(`conversions.reasons.${job.reason}`) : null,
-    output: job.status === 'done' && job.outputName ? t('conversions.landed', { name: job.outputName }) : null,
-    finished: job.finishedAt ? formatDateTime(new Date(job.finishedAt)) : null,
-    progressLabel: job.progress !== null ? t('conversions.progress', { percent: formatNumber(job.progress) }) : null,
-  })),
+const ACTIVE = new Set<ConversionJob['status']>(['queued', 'converting'])
+const activeJobs = computed(() =>
+  jobs.value
+    .filter((job) => ACTIVE.has(job.status))
+    .sort((a, b) => (a.status === b.status ? a.createdAt.localeCompare(b.createdAt) : a.status === 'converting' ? -1 : 1)),
 )
-
-function methodLabel(job: ConversionJob): string | null {
-  const kbps = job.bitrate ? formatNumber(Math.round(job.bitrate / 1000)) : null
-  if (job.trackCount) {
-    const tracks = formatNumber(job.trackCount)
-    return job.method === 'encode' && kbps ? t('conversions.method.joinEncode', { tracks, kbps }) : t('conversions.method.joinCopy', { tracks })
-  }
-  if (job.method === 'encode' && kbps) return t('conversions.method.encode', { kbps })
-  if (job.method) return t(`conversions.method.${job.method}`)
-  return null
-}
+const recentJobs = computed(() =>
+  jobs.value.filter((job) => !ACTIVE.has(job.status)).sort((a, b) => (b.finishedAt ?? b.createdAt).localeCompare(a.finishedAt ?? a.createdAt)),
+)
 
 function uploadFailureMessage(failure: UploadFailure): string {
   if (failure.kind === 'tooLarge') return t('conversions.upload.tooLarge', { name: failure.name, limit: formatNumber(failure.limitMb) })
@@ -98,6 +76,7 @@ async function refresh(): Promise<void> {
   try {
     overview.value = await getConversions()
     setEnabled(overview.value.settings.enabled)
+    setActive(activeJobs.value.length)
   } catch (error) {
     toast.error(errorMessage(error, 'conversions.errors.load'))
   } finally {
@@ -217,53 +196,26 @@ onUnmounted(handleHide)
           }}</code>
         </section>
 
-        <section class="rounded-lg border border-border/70 bg-card/50 p-4">
-          <h2 class="text-sm font-semibold text-foreground">{{ t('conversions.listTitle') }}</h2>
-          <p v-if="rows.length === 0" class="mt-3 text-sm text-muted-foreground" data-testid="conversions-none">{{ t('conversions.none') }}</p>
-
+        <section class="rounded-lg border border-border/70 bg-card/50 p-4" data-testid="conversions-active">
+          <h2 class="text-sm font-semibold text-foreground">{{ t('conversions.activeTitle', { count: activeJobs.length }) }}</h2>
+          <p v-if="activeJobs.length === 0" class="mt-3 text-sm text-muted-foreground">{{ t('conversions.noneActive') }}</p>
           <ul v-else class="mt-3 divide-y divide-border/70">
-            <li v-for="row in rows" :key="row.job.id" class="space-y-1.5 py-3" data-testid="conversion-job">
-              <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div class="min-w-0 space-y-0.5">
-                  <p class="text-sm font-medium text-foreground wrap-break-word">{{ row.job.name }}</p>
-                  <p v-if="row.method" class="text-xs text-muted-foreground">{{ row.method }}</p>
-                  <p v-if="row.output" class="text-xs text-muted-foreground break-all">{{ row.output }}</p>
-                  <p v-if="row.reason" class="text-xs text-muted-foreground">{{ row.reason }}</p>
-                  <p v-if="row.job.detail" class="text-xs text-muted-foreground font-mono break-all">{{ row.job.detail }}</p>
-                  <p v-if="row.finished" class="text-xs text-muted-foreground">{{ row.finished }}</p>
-                </div>
-                <div class="flex shrink-0 items-center gap-2">
-                  <span class="rounded-full px-2 py-0.5 text-xs font-medium" :class="row.statusClass" data-testid="conversion-status">
-                    {{ row.statusLabel }}
-                  </span>
-                  <Button
-                    v-if="row.job.status === 'failed'"
-                    variant="outline"
-                    size="sm"
-                    :disabled="retrying !== null"
-                    data-testid="conversion-retry"
-                    @click="handleRetry(row.job)"
-                  >
-                    <Loader2 v-if="retrying === row.job.id" class="animate-spin" aria-hidden="true" />
-                    <RotateCcw v-else aria-hidden="true" />
-                    {{ t('conversions.retry') }}
-                  </Button>
-                </div>
-              </div>
-              <div v-if="row.job.status === 'converting' && row.job.progress !== null" class="flex items-center gap-2">
-                <div
-                  class="h-1.5 flex-1 overflow-hidden rounded-full bg-muted"
-                  role="progressbar"
-                  :aria-valuenow="row.job.progress"
-                  aria-valuemin="0"
-                  aria-valuemax="100"
-                  :aria-label="row.job.name"
-                >
-                  <div class="h-full rounded-full bg-primary transition-[width] duration-500" :style="{ width: `${row.job.progress}%` }" />
-                </div>
-                <span class="w-10 text-end text-xs tabular-nums text-muted-foreground">{{ row.progressLabel }}</span>
-              </div>
-            </li>
+            <ConversionJobRow v-for="job in activeJobs" :key="job.id" :job="job" :retrying="false" :retry-disabled="true" />
+          </ul>
+        </section>
+
+        <section class="rounded-lg border border-border/70 bg-card/50 p-4" data-testid="conversions-recent">
+          <h2 class="text-sm font-semibold text-foreground">{{ t('conversions.listTitle') }}</h2>
+          <p v-if="recentJobs.length === 0" class="mt-3 text-sm text-muted-foreground" data-testid="conversions-none">{{ t('conversions.none') }}</p>
+          <ul v-else class="mt-3 divide-y divide-border/70">
+            <ConversionJobRow
+              v-for="job in recentJobs"
+              :key="job.id"
+              :job="job"
+              :retrying="retrying === job.id"
+              :retry-disabled="retrying !== null"
+              @retry="handleRetry"
+            />
           </ul>
         </section>
 

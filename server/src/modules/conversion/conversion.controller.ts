@@ -35,7 +35,7 @@ export class ConversionController {
 
   @Get('status')
   async status(): Promise<ConversionStatus> {
-    return { enabled: await this.conversions.isEnabled() };
+    return { enabled: await this.conversions.isEnabled(), active: this.conversions.activeCount() };
   }
 
   @Get()

@@ -1,6 +1,6 @@
 import { execFile as execFileCallback } from 'child_process';
 import { createRequire } from 'module';
-import { chmod, copyFile, mkdir, mkdtemp, readdir, rm, writeFile } from 'fs/promises';
+import { appendFile, chmod, copyFile, mkdir, mkdtemp, readdir, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { promisify } from 'util';
@@ -8,12 +8,7 @@ import type { ConversionJob } from '@bookorbit/types';
 
 import { listEntryIds } from '../recycle-bin/lib/recycle-bin-store';
 import { RECYCLE_BIN_SETTINGS_KEY, RecycleBinService } from '../recycle-bin/recycle-bin.service';
-import { CONVERSION_SETTINGS_KEY, ConversionService, parseConversionSettings } from './conversion.service';
-
-vi.mock('../../common/utils/fs-stability.utils', () => ({
-  waitForStability: vi.fn(() => Promise.resolve()),
-  waitForDirectoryStability: vi.fn(() => Promise.resolve()),
-}));
+import { CONVERSION_SETTINGS_KEY, ConversionService, expectedOutputBytes, parseConversionSettings, progressFraction } from './conversion.service';
 
 const execFile = promisify(execFileCallback);
 const requireInstaller = createRequire(__filename);
@@ -45,7 +40,10 @@ describe('ConversionService', () => {
       }),
     };
     const recycleBin = new RecycleBinService({ findLibraryFolders: vi.fn().mockResolvedValue([]) } as never, appSettings as never);
-    return new ConversionService(config as never, appSettings as never, recycleBin);
+    const created = new ConversionService(config as never, appSettings as never, recycleBin);
+    // Test files are written in one go, so there is nothing to wait out.
+    Object.assign(created, { settleQuietMs: 0, settlePollMs: 0 });
+    return created;
   }
 
   async function makeAudio(path: string, codecArgs: string[]): Promise<void> {
@@ -212,5 +210,35 @@ describe('ConversionService', () => {
     expect(await readdir(convertRoot)).toContain('Broken.mp3');
     expect(service.retry(job.id).status).toBe('queued');
     await waitForJob('Broken.mp3', ['failed']);
+  });
+
+  it('waits for a file still being copied in and queues it only once', async () => {
+    Object.assign(service, { settleQuietMs: 600, settlePollMs: 100 });
+    await mkdir(convertRoot, { recursive: true });
+    const path = join(convertRoot, 'Copying.mp3');
+    await makeAudio(path, ['-c:a', 'libmp3lame']);
+    const consider = (service as unknown as { consider: (path: string) => Promise<void> }).consider.bind(service);
+
+    const first = consider(path);
+    const second = consider(path);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await appendFile(path, Buffer.alloc(0));
+    await appendFile(path, 'x');
+    await Promise.all([first, second]);
+
+    const jobs = (await service.overview()).jobs.filter((job) => job.name === 'Copying.mp3');
+    expect(jobs).toHaveLength(1);
+  });
+
+  it('reports progress from bytes written when FFmpeg gives no position', () => {
+    expect(progressFraction(30_000_000, 100, 60_000, 1_000)).toBe(0.5);
+    expect(progressFraction(Number.NaN, 250, 60_000, 1_000)).toBe(0.25);
+    expect(progressFraction(Number.NaN, Number.NaN, 60_000, 1_000)).toBeNull();
+    expect(expectedOutputBytes({ method: 'encode', bitrate: 128_000 }, 60_000, 5)).toBe(960_000);
+    expect(expectedOutputBytes({ method: 'copy', bitrate: null }, 60_000, 5)).toBe(5);
+  });
+
+  it('counts waiting and converting items for the sidebar', () => {
+    expect(service.activeCount()).toBe(0);
   });
 });

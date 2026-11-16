@@ -29,6 +29,7 @@ vi.mock('@/features/conversions/composables/useConversionStatus', async () => {
   return {
     useConversionStatus: () => ({
       enabled: ref(false),
+      active: ref(0),
       load: vi.fn<() => Promise<void>>(() => Promise.resolve()),
       setEnabled: vi.fn<(value: boolean) => void>(),
     }),
@@ -46,6 +47,7 @@ function makeContext(
     achievementsEnabled: boolean
     bookDockTotal: number
     conversionsEnabled: boolean
+    conversionsActive: number
     outstandingRequestTotal: number
     outstandingRequestLabel: string
     browseCounts: BrowseCounts | null
@@ -58,6 +60,7 @@ function makeContext(
     achievementsEnabled: overrides.achievementsEnabled,
     bookDockTotal: overrides.bookDockTotal ?? 0,
     conversionsEnabled: overrides.conversionsEnabled,
+    conversionsActive: overrides.conversionsActive,
     outstandingRequestTotal: overrides.outstandingRequestTotal ?? 0,
     outstandingRequestLabel: overrides.outstandingRequestLabel ?? '',
     browseCounts: overrides.browseCounts ?? null,
@@ -97,6 +100,11 @@ describe('sidebar nav registry', () => {
     expect(allowedIds(makeContext({ permissions: [Permission.BookDockAccess], conversionsEnabled: true }))).toContain('conversions')
     expect(allowedIds(makeContext({ permissions: [Permission.BookDockAccess], conversionsEnabled: false }))).not.toContain('conversions')
     expect(allowedIds(makeContext({ conversionsEnabled: true }))).not.toContain('conversions')
+  })
+
+  it('counts conversions underway on the Conversions row', () => {
+    expect(entry('conversions').badge?.(makeContext({ conversionsActive: 3 }))).toEqual({ value: 3, tone: 'accent' })
+    expect(entry('conversions').badge?.(makeContext({ conversionsActive: 0 }))).toBeNull()
   })
 
   it('offers New Releases only to people with that access', () => {

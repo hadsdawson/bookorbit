@@ -16634,6 +16634,17 @@
       "done": "{count, plural, one {# file uploaded.} other {# files uploaded.}} Conversion starts shortly.",
       "tooLarge": "{name} is larger than the {limit} MB upload limit. Raise the limit in Settings or copy it into the Convert folder instead.",
       "failedFile": "{name} could not be uploaded. Nothing from this upload was converted."
+    },
+    "activeTitle": "{count, plural, =0 {Active conversions} one {Active conversions (#)} other {Active conversions (#)}}",
+    "noneActive": "Nothing is converting right now.",
+    "time": {
+      "underMinute": "under a minute",
+      "minutes": "{minutes} min",
+      "hours": "{hours} h {minutes} min",
+      "left": "About {time} left",
+      "took": "Took {time}",
+      "speed": "{speed}× real time",
+      "estimating": "Working out how long this will take"
     }
   }
 }

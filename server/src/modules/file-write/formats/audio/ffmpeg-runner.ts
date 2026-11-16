@@ -31,8 +31,11 @@ export class FfmpegStalledError extends Error {
 }
 
 export interface RunFfmpegOptions {
-  /** Called with how far into the input FFmpeg has written, in microseconds. */
-  onProgress?: (outTimeUs: number) => void;
+  /**
+   * Called as output grows: how far into the input FFmpeg has written, in microseconds, and the
+   * bytes written so far. Either is NaN when FFmpeg reports N/A, as `out_time_us` is with cover art.
+   */
+  onProgress?: (progress: { outTimeUs: number; totalSize: number }) => void;
   /** Runs FFmpeg at the lowest processor and disk priority, so other work on the server comes first. */
   lowPriority?: boolean;
   /** Stops FFmpeg; the run then rejects with an `AbortError`. */
@@ -90,8 +93,7 @@ export function runFfmpeg(binary: string, args: string[], options: RunFfmpegOpti
       const lines = (partialLine + chunk).split('\n');
       partialLine = lines.pop() ?? '';
       if (!advanced(lines, lastProgress) || stalled) return;
-      const outTimeUs = Number(lastProgress.get('out_time_us'));
-      if (options.onProgress && Number.isFinite(outTimeUs)) options.onProgress(outTimeUs);
+      options.onProgress?.({ outTimeUs: Number(lastProgress.get('out_time_us')), totalSize: Number(lastProgress.get('total_size')) });
       clearTimeout(stallTimer);
       windowMs = stallWindowMs(Number(lastProgress.get('total_size')));
       stallTimer = setTimeout(stop, windowMs);

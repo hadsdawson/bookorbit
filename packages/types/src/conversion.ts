@@ -36,6 +36,10 @@ export interface ConversionJob {
   method: ConversionMethod | null;
   /** 0 to 100 while converting. */
   progress: number | null;
+  /** While converting: how many times faster than real time the audio is being processed. */
+  speed: number | null;
+  /** While converting: roughly how many seconds are left. */
+  etaSeconds: number | null;
   /** Bits per second of the audio written, when it was re-encoded. */
   bitrate: number | null;
   /** How many tracks were joined into one M4B; null for a single file. */
@@ -59,4 +63,6 @@ export interface ConversionOverview {
 
 export interface ConversionStatus {
   enabled: boolean;
+  /** Items waiting or converting, for the sidebar count. */
+  active: number;
 }

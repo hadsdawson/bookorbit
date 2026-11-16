@@ -8,7 +8,7 @@ const api = vi.hoisted(() => ({
   getConversions: vi.fn<() => Promise<ConversionOverview>>(),
   retryConversion: vi.fn<(id: string) => Promise<ConversionJob>>(),
 }))
-const status = vi.hoisted(() => ({ setEnabled: vi.fn<(value: boolean) => void>() }))
+const status = vi.hoisted(() => ({ setEnabled: vi.fn<(value: boolean) => void>(), setActive: vi.fn<(value: number) => void>() }))
 const permissions = vi.hoisted(() => ({ granted: new Set<string>() }))
 const toast = vi.hoisted(() => ({ error: vi.fn<(message: string) => void>(), success: vi.fn<(message: string) => void>() }))
 const uploads = vi.hoisted(() => ({ upload: vi.fn<(files: { file: File; path: string }[]) => Promise<unknown>>() }))
@@ -38,6 +38,8 @@ function makeJob(overrides: Partial<ConversionJob> = {}): ConversionJob {
     status: 'converting',
     method: 'encode',
     progress: 42,
+    speed: null,
+    etaSeconds: null,
     bitrate: 128_000,
     trackCount: null,
     reason: null,
@@ -172,5 +174,35 @@ describe('ConversionsView', () => {
     await flushPromises()
 
     expect(toast.error).toHaveBeenCalledWith('conversions.upload.tooLarge {"name":"Big.m4b","limit":"500"}')
+  })
+
+  it('lists converting and waiting items under Active and the rest under Recent, and counts the active ones', async () => {
+    api.getConversions.mockResolvedValue(
+      makeOverview([
+        makeJob({ id: 'a', name: 'Queued.mp3', status: 'queued', progress: null, createdAt: '2026-11-16T19:05:00Z' }),
+        makeJob({ id: 'b', name: 'Running.mp3', speed: 18.5, etaSeconds: 1_500 }),
+        makeJob({
+          id: 'c',
+          name: 'Done.mp3',
+          status: 'done',
+          progress: 100,
+          speed: 20,
+          startedAt: '2026-11-16T18:00:00Z',
+          finishedAt: '2026-11-16T18:32:00Z',
+        }),
+      ]),
+    )
+    const wrapper = mountView()
+    await flushPromises()
+
+    const active = wrapper.get('[data-testid="conversions-active"]').findAll('[data-testid="conversion-job"]')
+    expect(active.map((row) => row.text().split('\n')[0])).toEqual([expect.stringContaining('Running.mp3'), expect.stringContaining('Queued.mp3')])
+    expect(active[0].get('[data-testid="conversion-timing"]').text()).toContain('conversions.time.left')
+    const recent = wrapper.get('[data-testid="conversions-recent"]')
+    expect(recent.text()).toContain('Done.mp3')
+    expect(recent.get('[data-testid="conversion-timing"]').text()).toContain(
+      'conversions.time.took {"time":"conversions.time.minutes {\\"minutes\\":\\"32\\"}"}',
+    )
+    expect(status.setActive).toHaveBeenCalledWith(2)
   })
 })

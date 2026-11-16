@@ -34,6 +34,7 @@ interface NavContext {
   achievementsEnabled?: boolean
   bookDockTotal: number
   conversionsEnabled?: boolean
+  conversionsActive?: number
   outstandingRequestTotal: number
   outstandingRequestLabel: string
   browseCounts: BrowseCounts | null
@@ -161,6 +162,7 @@ export const SIDEBAR_NAV_REGISTRY: readonly SidebarNavEntry[] = [
     isActive: (route) => route.name === 'conversions',
     permission: 'book_dock_access',
     visible: (context) => context.conversionsEnabled === true,
+    badge: (context) => (context.conversionsActive ? { value: context.conversionsActive, tone: 'accent' } : null),
   },
   {
     id: 'book-requests',
@@ -270,7 +272,7 @@ export function useSidebarNav(getOutstandingRequestTotal: () => number = () => 0
   const { summary: bookDockSummary } = useBookDockSummary()
   const { counts: browseCounts } = useBrowseCounts()
   const { showBookRequests } = useBookRequestVisibility()
-  const { enabled: conversionsEnabled, load: loadConversionStatus } = useConversionStatus()
+  const { enabled: conversionsEnabled, active: conversionsActive, load: loadConversionStatus } = useConversionStatus()
   if (hasPermission(Permission.BookDockAccess)) void loadConversionStatus()
 
   const context = computed<NavContext>(() => {
@@ -285,6 +287,7 @@ export function useSidebarNav(getOutstandingRequestTotal: () => number = () => 0
       achievementsEnabled: user.value?.settings?.achievementPreferences?.enabled !== false,
       bookDockTotal: bookDockSummary.value.total,
       conversionsEnabled: conversionsEnabled.value,
+      conversionsActive: conversionsActive.value,
       outstandingRequestTotal,
       outstandingRequestLabel: t(outstandingRequestLabelKey, { count: outstandingRequestTotal }),
       browseCounts: browseCounts.value,
