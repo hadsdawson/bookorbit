@@ -93,6 +93,25 @@ describe('CatalogRepository', () => {
     vi.clearAllMocks();
   });
 
+  it('offers pen names and main names with no books of their own after alternate names (fork)', async () => {
+    const { repository, selectDistinctChain } = makeRepository();
+    // By name, then by alternate name, then pen-name links, in the order the queries are built.
+    selectDistinctChain.limit
+      .mockResolvedValueOnce([{ name: 'Aamna Qureshi' }])
+      .mockResolvedValueOnce([{ name: 'Seanan McGuire', alias: 'S. Qureshi' }])
+      .mockResolvedValueOnce([{ name: 'A.T. Qureshi' }, { name: 'Aamna Qureshi' }]);
+
+    await expect(repository.searchAuthors('Qureshi', filteredScope)).resolves.toEqual([
+      { name: 'Seanan McGuire', alias: 'S. Qureshi' },
+      { name: 'A.T. Qureshi' },
+      { name: 'Aamna Qureshi' },
+    ]);
+    expect(or).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'eq', right: expect.anything() }),
+      expect.objectContaining({ type: 'eq', right: expect.anything() }),
+    );
+  });
+
   it('returns no author results without building a query for a blank term', async () => {
     const { repository, db } = makeRepository();
 
