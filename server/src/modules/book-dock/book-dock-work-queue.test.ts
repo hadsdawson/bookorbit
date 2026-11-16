@@ -1,4 +1,4 @@
-import { BookDockWorkQueue } from './book-dock-work-queue';
+import { BookDockJobTimeoutError, BookDockWorkQueue } from './book-dock-work-queue';
 
 describe('BookDockWorkQueue', () => {
   it('runs queued work within the configured concurrency', async () => {
@@ -325,5 +325,50 @@ describe('BookDockWorkQueue', () => {
 
     expect(handled[0]).toBe(1);
     expect(handled.slice(1)).toEqual([3, 2]);
+  });
+
+  it('fork: says whether a file is running, queued or not held', async () => {
+    let release!: () => void;
+    const queue = new BookDockWorkQueue(
+      1,
+      (fileId) => (fileId === 1 ? new Promise<void>((resolve) => (release = resolve)) : Promise.resolve()),
+      vi.fn(),
+    );
+    queue.enqueue(1);
+    queue.enqueue(2);
+    await vi.waitFor(() => expect(queue.stateOf(1)).toBe('running'));
+    expect(queue.stateOf(2)).toBe('queued');
+    expect(queue.stateOf(3)).toBeNull();
+    release();
+    await queue.waitForIdle();
+    expect(queue.stateOf(1)).toBeNull();
+  });
+
+  it('fork: moves on from a job that holds its slot past the timeout', async () => {
+    vi.useFakeTimers();
+    try {
+      const onError = vi.fn();
+      const ran: number[] = [];
+      const queue = new BookDockWorkQueue(
+        1,
+        (fileId) => {
+          ran.push(fileId);
+          return fileId === 1 ? new Promise<void>(() => {}) : Promise.resolve();
+        },
+        onError,
+        { jobTimeoutMs: 60_000 },
+      );
+      queue.enqueue(1);
+      queue.enqueue(2);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(ran).toEqual([1]);
+
+      await vi.advanceTimersByTimeAsync(60_000);
+
+      expect(onError).toHaveBeenCalledWith(1, expect.any(BookDockJobTimeoutError));
+      expect(ran).toEqual([1, 2]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -85,8 +85,16 @@ export interface BookDockUnitFile {
   sortOrder: number | null;
 }
 
+/**
+ * Fork: where an unfinished file (pending, extracting or fetching) stands. `stuck` means nothing
+ * is going to pick it up, for example after a restart; Try again puts it back in line.
+ */
+export type BookDockProcessing = "running" | "waiting" | "stuck";
+
 export interface BookDockFile {
   id: number;
+  /** Fork: null once a file is ready or failed. */
+  processing?: BookDockProcessing | null;
   fileName: string;
   fileSize: number | null;
   format: string | null;

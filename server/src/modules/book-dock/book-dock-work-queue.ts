@@ -16,7 +16,23 @@ interface BookDockWorkQueueOptions {
   pendingOrder?: PendingOrder;
   drainDelayMs?: number;
   interJobDelayMs?: DelayRange;
+  /**
+   * Fork: how long one job may hold its slot. A job past this is reported to the error handler
+   * with a `BookDockJobTimeoutError` and the queue moves on, so one hung lookup cannot hold up
+   * every book behind it. The job itself is not cancelled and may still finish later.
+   */
+  jobTimeoutMs?: number;
 }
+
+export class BookDockJobTimeoutError extends Error {
+  constructor(readonly timeoutMs: number) {
+    super(`Took longer than ${Math.round(timeoutMs / 60_000)} minutes`);
+    this.name = 'BookDockJobTimeoutError';
+  }
+}
+
+/** Fork: where a file stands in the queue, or null when the queue does not hold it. */
+export type BookDockQueueState = 'running' | 'queued' | null;
 
 interface PendingEntry {
   fileId: number;
@@ -77,6 +93,15 @@ export class BookDockWorkQueue {
     this.resolveIdleIfNeeded();
   }
 
+  stateOf(fileId: number): BookDockQueueState {
+    if (this.running.has(fileId)) return 'running';
+    return this.queued.has(fileId) ? 'queued' : null;
+  }
+
+  isPaused(): boolean {
+    return this.paused;
+  }
+
   waitForIdle(): Promise<void> {
     if (this.isIdle()) return Promise.resolve();
     return new Promise((resolve) => this.idleResolvers.push(resolve));
@@ -106,7 +131,7 @@ export class BookDockWorkQueue {
       this.running.add(fileId);
       this.activeCount++;
 
-      void this.handler(fileId)
+      void this.withTimeout(this.handler(fileId))
         .catch((error) => this.onError(fileId, error))
         .finally(() => {
           this.running.delete(fileId);
@@ -118,6 +143,18 @@ export class BookDockWorkQueue {
     }
 
     this.resolveIdleIfNeeded();
+  }
+
+  private withTimeout(job: Promise<void>): Promise<void> {
+    const timeoutMs = this.options.jobTimeoutMs;
+    if (!timeoutMs) return job;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new BookDockJobTimeoutError(timeoutMs)), timeoutMs);
+    });
+    // A job that outlives its slot still settles later; its outcome no longer belongs to the queue.
+    job.catch(() => {});
+    return Promise.race([job, timeout]).finally(() => clearTimeout(timer));
   }
 
   private takeNextPending(): PendingEntry {

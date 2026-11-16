@@ -9954,6 +9954,18 @@
       "partial": "{done} of {total} files filed",
       "failed": "Could not merge those files",
       "primaryByPriority": "Picked by the library's format priority."
+    },
+    "processing": {
+      "waiting": "Waiting in line",
+      "reading": "Reading file",
+      "lookingUp": "Looking up details",
+      "step": "{step} · {elapsed}",
+      "underAMinute": "under a minute",
+      "minutes": "{minutes} min",
+      "stuck": "Stuck",
+      "stuckHint": "Nothing is working on this file, usually because BookOrbit restarted part-way. Use Try again to put it back in line.",
+      "slowHint": "This step usually takes seconds. If it reaches 20 minutes it is stopped and marked failed so the rest of the line can move.",
+      "tryAgain": "Try again"
     }
   },
   "bookRequests": {

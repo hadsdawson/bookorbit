@@ -562,7 +562,7 @@ onMounted(() => {
         <div class="flex-1 min-w-0">
           <p class="text-sm font-semibold truncate">{{ file.fileName }}</p>
           <div class="flex items-center gap-2 mt-0.5">
-            <BookDockStatusBadge :status="file.status" />
+            <BookDockStatusBadge :status="file.status" :processing="file.processing" :since="file.updatedAt" />
             <span class="text-xs text-muted-foreground uppercase">{{ file.format }}</span>
             <span class="text-xs text-muted-foreground">{{ formatBytes(file.fileSize) }}</span>
           </div>

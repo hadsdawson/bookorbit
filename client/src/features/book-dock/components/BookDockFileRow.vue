@@ -60,7 +60,9 @@ const confidence = computed(() => props.file.confidence)
 const hasScore = computed(() => confidence.value !== null && confidence.value !== undefined)
 const weakMatch = computed(() => hasScore.value && (confidence.value as number) < 85)
 const noMatchYet = computed(() => props.file.status === 'ready' && !hasScore.value)
-const canRefetch = computed(() => props.file.status === 'ready' || props.file.status === 'error')
+const stuck = computed(() => props.file.processing === 'stuck')
+const canRefetch = computed(() => props.file.status === 'ready' || props.file.status === 'error' || stuck.value)
+const retryLabel = computed(() => (stuck.value ? t('bookDock.processing.tryAgain') : t('bookDock.layout.row.refetch')))
 
 const edgeClass = computed(() => {
   if (props.file.status === 'error' || props.conflict) return 'border-l-red-500/60'
@@ -200,7 +202,12 @@ function onRetry() {
           {{ conflictLabel }}
         </span>
 
-        <BookDockStatusBadge v-if="props.file.status !== 'ready'" :status="props.file.status" />
+        <BookDockStatusBadge
+          v-if="props.file.status !== 'ready'"
+          :status="props.file.status"
+          :processing="props.file.processing"
+          :since="props.file.updatedAt"
+        />
 
         <span
           v-if="hasScore"
@@ -266,8 +273,8 @@ function onRetry() {
             type="button"
             data-testid="book-dock-row-retry"
             class="grid size-7 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
-            :title="t('bookDock.layout.row.refetch')"
-            :aria-label="t('bookDock.layout.row.refetch')"
+            :title="retryLabel"
+            :aria-label="retryLabel"
             :disabled="!canRefetch"
             @click="onRetry"
           >

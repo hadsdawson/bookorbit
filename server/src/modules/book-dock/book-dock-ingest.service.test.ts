@@ -3,6 +3,7 @@ import { Readable } from 'stream';
 import { mkdir, realpath, stat } from 'fs/promises';
 
 import { BookDockIngestService } from './book-dock-ingest.service';
+import { BookDockJobTimeoutError } from './book-dock-work-queue';
 import { buildSingleBookCandidate } from '../scanner/lib/walk';
 
 vi.mock('fs/promises', () => ({
@@ -136,6 +137,78 @@ describe('BookDockIngestService', () => {
     await service.onApplicationBootstrap();
 
     expect(pauseSpy).toHaveBeenCalledTimes(1);
+  });
+
+  describe('fork: unfinished files after a restart', () => {
+    const stranded = {
+      id: 5,
+      status: 'extracting',
+      format: 'm4b',
+      fileName: 'Book.m4b',
+      absolutePath: '/books/book-dock/Book/Book.m4b',
+      createdAt: new Date(),
+    };
+
+    it('queues unfinished files again when BookOrbit starts', async () => {
+      const { service, repo } = makeService();
+      vi.mocked(realpath).mockResolvedValue('/books/book-dock');
+      repo.findSelectionBatch.mockResolvedValueOnce([stranded]).mockResolvedValueOnce([]);
+      const enqueue = vi.spyOn((service as any).metadataQueue, 'enqueue').mockReturnValue(true);
+
+      await service.onApplicationBootstrap();
+      await vi.waitFor(() => expect(enqueue).toHaveBeenCalledWith(5, expect.anything()));
+      expect(repo.findSelectionBatch).toHaveBeenCalledWith(expect.objectContaining({ status: 'pending', canManageAll: true }));
+    });
+
+    it('leaves the queue alone at startup while Book Dock is paused', async () => {
+      const { service, repo, processingState } = makeService();
+      vi.mocked(realpath).mockResolvedValue('/books/book-dock');
+      processingState.isPaused.mockResolvedValue(true);
+
+      await service.onApplicationBootstrap();
+
+      expect(repo.findSelectionBatch).not.toHaveBeenCalled();
+    });
+
+    it('calls a file stranded when nothing holds it, but waiting while Book Dock is paused', () => {
+      const { service, processingState } = makeService();
+      expect(service.processingStateOf(5)).toBe('stranded');
+      processingState.getCachedPaused.mockReturnValue(true);
+      expect(service.processingStateOf(5)).toBe('queued');
+    });
+
+    it('puts a stranded file back in line on Try again without resetting it', async () => {
+      const { service, repo } = makeService();
+      repo.findById.mockResolvedValue(stranded);
+      const enqueue = vi.spyOn((service as any).metadataQueue, 'enqueue').mockReturnValue(true);
+
+      await service.retryFetch(5);
+
+      expect(enqueue).toHaveBeenCalledWith(5, expect.anything());
+      expect(repo.update).not.toHaveBeenCalled();
+    });
+
+    it('puts a stuck file back in line from its own row', async () => {
+      const { service, repo } = makeService();
+      repo.findById.mockResolvedValue(stranded);
+      const enqueue = vi.spyOn((service as any).metadataQueue, 'enqueue').mockReturnValue(true);
+
+      await expect(service.refetchMetadata(5)).resolves.toBe(true);
+      expect(enqueue).toHaveBeenCalledWith(5, expect.anything());
+    });
+
+    it('marks a file failed when it holds the queue too long', async () => {
+      const { service, repo, gateway } = makeService();
+      repo.findById.mockResolvedValue({ ...stranded, status: 'fetching' });
+      repo.update.mockResolvedValue({});
+
+      (service as any).logMetadataQueueFailure(5, new BookDockJobTimeoutError(20 * 60_000));
+
+      await vi.waitFor(() =>
+        expect(repo.update).toHaveBeenCalledWith(5, { status: 'error', errorMessage: expect.stringContaining('Took longer than 20 minutes') }),
+      );
+      expect(gateway.emitChanged).toHaveBeenCalled();
+    });
   });
 
   describe('ingestUpload', () => {
@@ -451,6 +524,8 @@ describe('BookDockIngestService', () => {
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce({ id: 5, status: 'fetching', format: 'epub' })
         .mockResolvedValueOnce({ id: 6, status: 'ready', format: null, absolutePath: '/bucket/6' });
+      // Fork: an unfinished row counts as active only while the queue holds it; one left out of line is stuck.
+      vi.spyOn((service as any).metadataQueue, 'stateOf').mockImplementation((id) => (id === 5 ? 'running' : null));
 
       await expect(service.refetchMetadata(4)).resolves.toBe(false);
       await expect(service.refetchMetadata(5)).resolves.toBe(false);
