@@ -1,6 +1,6 @@
 import type { ConversionJob, ConversionOverview, ConversionSettings, ConversionStatus } from '@bookorbit/types'
 
-import { apiJson, jsonBody } from '@/lib/api-json'
+import { apiJson, apiSend, jsonBody } from '@/lib/api-json'
 
 const BASE = '/api/v1/conversions'
 
@@ -18,4 +18,16 @@ export function saveConversionSettings(settings: ConversionSettings): Promise<Co
 
 export function retryConversion(id: string): Promise<ConversionJob> {
   return apiJson(`${BASE}/jobs/${encodeURIComponent(id)}/retry`, { method: 'POST' }, 'conversions.errors.retry')
+}
+
+export function startConversionUpload(): Promise<{ batchId: string }> {
+  return apiJson(`${BASE}/uploads`, { method: 'POST' }, 'conversions.errors.upload')
+}
+
+export function finishConversionUpload(batchId: string): Promise<{ items: number }> {
+  return apiJson(`${BASE}/uploads/${encodeURIComponent(batchId)}/finish`, { method: 'POST' }, 'conversions.errors.upload')
+}
+
+export function cancelConversionUpload(batchId: string): Promise<void> {
+  return apiSend(`${BASE}/uploads/${encodeURIComponent(batchId)}`, { method: 'DELETE' }, 'conversions.errors.upload')
 }

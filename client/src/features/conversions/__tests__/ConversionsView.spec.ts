@@ -10,10 +10,19 @@ const api = vi.hoisted(() => ({
 }))
 const status = vi.hoisted(() => ({ setEnabled: vi.fn<(value: boolean) => void>() }))
 const permissions = vi.hoisted(() => ({ granted: new Set<string>() }))
-const toast = vi.hoisted(() => ({ error: vi.fn<(message: string) => void>() }))
+const toast = vi.hoisted(() => ({ error: vi.fn<(message: string) => void>(), success: vi.fn<(message: string) => void>() }))
+const uploads = vi.hoisted(() => ({ upload: vi.fn<(files: { file: File; path: string }[]) => Promise<unknown>>() }))
 
 vi.mock('../api/conversions', () => api)
 vi.mock('../composables/useConversionStatus', () => ({ useConversionStatus: () => status }))
+vi.mock('../composables/useConversionUpload', async () => {
+  const { ref } = await import('vue')
+  return {
+    CONVERTIBLE_ACCEPT: '.mp3,.m4a,.m4b',
+    pickedFiles: (list: File[]) => Array.from(list).map((file) => ({ file, path: file.webkitRelativePath || file.name })),
+    useConversionUpload: () => ({ uploading: ref(false), percent: ref(0), fileIndex: ref(0), fileCount: ref(0), upload: uploads.upload }),
+  }
+})
 vi.mock('@/features/auth/composables/usePermissions', () => ({
   usePermissions: () => ({ hasPermission: (name: string) => permissions.granted.has(name) }),
 }))
@@ -30,6 +39,7 @@ function makeJob(overrides: Partial<ConversionJob> = {}): ConversionJob {
     method: 'encode',
     progress: 42,
     bitrate: 128_000,
+    trackCount: null,
     reason: null,
     detail: null,
     outputName: null,
@@ -115,5 +125,52 @@ describe('ConversionsView', () => {
 
     expect(wrapper.get('[data-testid="conversions-off"]').text()).toContain('conversions.offHintManage')
     expect(status.setEnabled).toHaveBeenCalledWith(false)
+  })
+
+  it('describes a joined folder of tracks', async () => {
+    api.getConversions.mockResolvedValue(makeOverview([makeJob({ trackCount: 12, bitrate: 64_000 })]))
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('conversions.method.joinEncode {"tracks":"12","kbps":"64"}')
+  })
+
+  it('offers uploads only to people who may upload, and sends the picked folder as one upload', async () => {
+    api.getConversions.mockResolvedValue(makeOverview([]))
+    const hidden = mountView()
+    await flushPromises()
+    expect(hidden.find('[data-testid="conversions-upload"]').exists()).toBe(false)
+
+    permissions.granted.add('book_dock_access')
+    permissions.granted.add('library_upload')
+    uploads.upload.mockResolvedValue(null)
+    const wrapper = mountView()
+    await flushPromises()
+
+    const track = new File(['x'], '01.mp3')
+    Object.defineProperty(track, 'webkitRelativePath', { value: 'Book/01.mp3' })
+    const input = wrapper.get('[data-testid="conversions-folder-input"]')
+    Object.defineProperty(input.element, 'files', { value: [track] })
+    await input.trigger('change')
+    await flushPromises()
+
+    expect(uploads.upload).toHaveBeenCalledWith([{ file: track, path: 'Book/01.mp3' }])
+    expect(toast.success).toHaveBeenCalled()
+  })
+
+  it('says why an upload failed', async () => {
+    permissions.granted.add('book_dock_access')
+    permissions.granted.add('library_upload')
+    api.getConversions.mockResolvedValue(makeOverview([]))
+    uploads.upload.mockResolvedValue({ kind: 'tooLarge', name: 'Big.m4b', limitMb: 500 })
+    const wrapper = mountView()
+    await flushPromises()
+
+    const input = wrapper.get('[data-testid="conversions-files-input"]')
+    Object.defineProperty(input.element, 'files', { value: [new File(['x'], 'Big.m4b')] })
+    await input.trigger('change')
+    await flushPromises()
+
+    expect(toast.error).toHaveBeenCalledWith('conversions.upload.tooLarge {"name":"Big.m4b","limit":"500"}')
   })
 })

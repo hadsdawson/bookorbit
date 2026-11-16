@@ -13,7 +13,7 @@ export const DEFAULT_CONVERSION_SETTINGS: ConversionSettings = {
 };
 
 /**
- * `waiting`: in the Convert folder but not handled by this version (a folder with several audio files).
+ * `waiting`: in the Convert folder but not converted (a folder with more tracks than can be joined).
  * `skipped`: nothing to convert (no audio file in it).
  */
 export type ConversionJobStatus = "queued" | "converting" | "done" | "failed" | "waiting" | "skipped";
@@ -22,11 +22,11 @@ export type ConversionJobStatus = "queued" | "converting" | "done" | "failed" | 
 export type ConversionMethod = "copy" | "encode" | "move";
 
 /**
- * `no_audio`: nothing to convert. `several_files`: a folder of tracks, which this version leaves alone.
+ * `no_audio`: nothing to convert. `too_many_files`: more tracks than one book can be joined from.
  * `stopped`: conversions were turned off mid-way. `original_kept`: converted, but the original could
  * not be removed. `failed`: anything else, with `detail` saying what.
  */
-export type ConversionReason = "no_audio" | "several_files" | "stopped" | "original_kept" | "failed";
+export type ConversionReason = "no_audio" | "too_many_files" | "stopped" | "original_kept" | "failed";
 
 export interface ConversionJob {
   id: string;
@@ -38,6 +38,8 @@ export interface ConversionJob {
   progress: number | null;
   /** Bits per second of the audio written, when it was re-encoded. */
   bitrate: number | null;
+  /** How many tracks were joined into one M4B; null for a single file. */
+  trackCount: number | null;
   /** Why an item failed, waits, was skipped, or finished with a caveat. */
   reason: ConversionReason | null;
   /** The technical cause of a failure, in English, for troubleshooting. */

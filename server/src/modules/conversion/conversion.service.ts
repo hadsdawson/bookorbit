@@ -2,7 +2,7 @@ import { Injectable, Logger, NotFoundException, OnApplicationBootstrap, OnModule
 import { ConfigService } from '@nestjs/config';
 import { watch, type FSWatcher } from 'chokidar';
 import { randomUUID } from 'crypto';
-import { copyFile, cp, mkdir, readdir, realpath, rename, rm } from 'fs/promises';
+import { copyFile, cp, mkdir, readdir, realpath, rename, rm, writeFile } from 'fs/promises';
 import { basename, dirname, extname, join, relative, sep } from 'path';
 import {
   CONVERSION_CONCURRENCY_MAX,
@@ -21,12 +21,29 @@ import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
 import { AppSettingsService } from '../app-settings/app-settings.service';
 import { runFfmpeg } from '../file-write/formats/audio/ffmpeg-runner';
 import { RecycleBinService } from '../recycle-bin/recycle-bin.service';
-import { buildFfmpegArgs, planConversion, probeAudio, sameLength, type AudioProbe, type ConversionPlan } from './lib/conversion-media';
+import {
+  JOIN_TRACKS_MAX,
+  buildConcatList,
+  buildFfmetadata,
+  buildFfmpegArgs,
+  buildJoinArgs,
+  planConversion,
+  planJoin,
+  probeAudio,
+  sameLength,
+  totalDurationMs,
+  trackChapters,
+  type AudioProbe,
+  type ConversionPlan,
+  type Track,
+} from './lib/conversion-media';
 import { isHidden, readUnit, type ConversionUnit } from './lib/conversion-unit';
 
 export const CONVERSION_SETTINGS_KEY = 'conversion_settings';
 /** Inside the Convert folder, so a finished M4B usually reaches the Book Dock with one rename. */
 export const CONVERSION_WORK_DIR = '.bookorbit-converting';
+/** Inside the Convert folder and hidden, so nothing is converted until a whole upload is in. */
+export const CONVERSION_UPLOAD_DIR = '.bookorbit-uploading';
 const RECYCLE_BIN_LABEL = 'Convert folder';
 const DEBOUNCE_MS = 2_000;
 const FINISHED_JOBS_KEPT = 100;
@@ -139,6 +156,8 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
     try {
       await mkdir(this.convertRoot, { recursive: true });
       await rm(join(this.convertRoot, CONVERSION_WORK_DIR), { recursive: true, force: true });
+      // Uploads cut off by a restart or by turning conversions off are never finished.
+      await rm(join(this.convertRoot, CONVERSION_UPLOAD_DIR), { recursive: true, force: true });
       this.watcher = watch(this.convertRoot, {
         ignoreInitial: true,
         followSymlinks: false,
@@ -230,6 +249,7 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
       method: null,
       progress: null,
       bitrate: null,
+      trackCount: null,
       reason: null,
       detail: null,
       outputName: null,
@@ -274,25 +294,18 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
     }
     job.signature = unit.signature;
     if (unit.audioFiles.length === 0) return this.finish(job, 'skipped', 'no_audio');
-    if (unit.audioFiles.length > 1) return this.finish(job, 'waiting', 'several_files');
+    if (unit.audioFiles.length > JOIN_TRACKS_MAX) return this.finish(job, 'waiting', 'too_many_files');
 
     const workDir = join(this.convertRoot, CONVERSION_WORK_DIR, job.id);
     this.logger.log(`[${event}] [start] jobId=${job.id} name="${sanitizeLogValue(job.name)}" - conversion started`);
     try {
-      const source = unit.audioFiles[0];
-      const probe = await probeAudio(this.ffprobePath, source);
-      const plan = planConversion(source, probe);
-      job.method = plan.method;
-      job.bitrate = plan.bitrate;
-
       const outputDir = unit.isDirectory ? join(workDir, basename(unit.path)) : workDir;
-      const outputFile = join(outputDir, `${basename(source, extname(source))}.m4b`);
       await mkdir(outputDir, { recursive: true });
-      await this.convert(job, source, outputFile, plan, probe);
-      await this.verify(outputFile, probe);
+      const { plan, output } =
+        unit.audioFiles.length > 1 ? await this.join(job, unit, workDir, outputDir) : await this.convertOne(job, unit, outputDir);
       if (unit.isDirectory) await this.copyExtras(unit, outputDir);
 
-      const landed = await this.handOff(unit.isDirectory ? outputDir : outputFile);
+      const landed = await this.handOff(unit.isDirectory ? outputDir : output);
       job.outputName = relative(this.bookDockRoot, landed);
       const removed = await this.removeOriginal(job, unit);
       this.logger.log(
@@ -309,35 +322,88 @@ export class ConversionService implements OnApplicationBootstrap, OnModuleDestro
     }
   }
 
+  private async convertOne(job: TrackedJob, unit: ConversionUnit, outputDir: string): Promise<{ plan: ConversionPlan; output: string }> {
+    const source = unit.audioFiles[0];
+    const probe = await probeAudio(this.ffprobePath, source);
+    const plan = planConversion(source, probe);
+    job.method = plan.method;
+    job.bitrate = plan.bitrate;
+    const outputFile = join(outputDir, `${basename(source, extname(source))}.m4b`);
+    await this.convert(job, source, outputFile, plan, probe);
+    await this.verify(outputFile, probe.durationMs);
+    return { plan, output: outputFile };
+  }
+
+  /** A folder of tracks becomes one M4B with a chapter per track, named after the folder. */
+  private async join(job: TrackedJob, unit: ConversionUnit, workDir: string, outputDir: string): Promise<{ plan: ConversionPlan; output: string }> {
+    const tracks: Track[] = [];
+    for (const path of unit.audioFiles) tracks.push({ path, probe: await probeAudio(this.ffprobePath, path) });
+    const plan = planJoin(tracks);
+    job.method = plan.method;
+    job.bitrate = plan.bitrate;
+    job.trackCount = tracks.length;
+
+    const first = tracks[0].probe.tags;
+    const bookTitle = first.album ?? basename(unit.path);
+    const metadataFile = join(workDir, 'metadata.txt');
+    const concatList = join(workDir, 'tracks.txt');
+    await writeFile(metadataFile, buildFfmetadata({ title: bookTitle, album: bookTitle, artist: first.artist }, trackChapters(tracks)));
+    await writeFile(concatList, buildConcatList(unit.audioFiles));
+
+    const durationMs = totalDurationMs(tracks);
+    const output = join(outputDir, `${safeFileName(basename(unit.path))}.m4b`);
+    const cover = tracks[0].probe.hasCover ? tracks[0].path : pickCoverImage(unit.extraFiles);
+    const run = (withCover: boolean) =>
+      this.runTracked(
+        job,
+        buildJoinArgs({ tracks: unit.audioFiles, concatList, metadataFile, cover: withCover ? cover : null }, output, plan),
+        durationMs,
+      );
+    try {
+      await run(cover !== null);
+    } catch (err) {
+      if (cover === null || job.abort?.signal.aborted) throw err;
+      this.logger.warn(`[conversion.convert] [fail] jobId=${job.id} errorClass=CoverRejected - retrying without the cover`);
+      await run(false);
+    }
+    job.progress = 100;
+    await this.verify(output, durationMs);
+    return { plan, output };
+  }
+
+  private async runTracked(job: TrackedJob, args: string[], durationMs: number): Promise<void> {
+    job.abort = new AbortController();
+    await runFfmpeg(this.ffmpegPath, args, {
+      lowPriority: true,
+      signal: job.abort.signal,
+      onProgress: (outTimeUs: number) => {
+        job.progress = Math.min(99, Math.max(0, Math.round((outTimeUs / 1000 / durationMs) * 100)));
+      },
+    });
+  }
+
   private async convert(job: TrackedJob, source: string, output: string, plan: ConversionPlan, probe: AudioProbe): Promise<void> {
     if (plan.method === 'move') {
       await copyFile(source, output);
       job.progress = 100;
       return;
     }
-    job.abort = new AbortController();
-    const options = {
-      lowPriority: true,
-      signal: job.abort.signal,
-      onProgress: (outTimeUs: number) => {
-        job.progress = Math.min(99, Math.max(0, Math.round((outTimeUs / 1000 / probe.durationMs) * 100)));
-      },
-    };
+    const run = (withCover: boolean) => this.runTracked(job, buildFfmpegArgs(source, output, plan, withCover), probe.durationMs);
     try {
-      await runFfmpeg(this.ffmpegPath, buildFfmpegArgs(source, output, plan, probe.hasCover), options);
+      await run(probe.hasCover);
     } catch (err) {
       // Some cover formats cannot go into an M4B; the audio matters more than the picture.
-      if (!probe.hasCover || job.abort.signal.aborted) throw err;
+      if (!probe.hasCover || job.abort?.signal.aborted) throw err;
       this.logger.warn(`[conversion.convert] [fail] jobId=${job.id} errorClass=CoverRejected - retrying without the embedded cover`);
-      await runFfmpeg(this.ffmpegPath, buildFfmpegArgs(source, output, plan, false), options);
+      await run(false);
     }
     job.progress = 100;
   }
 
-  private async verify(output: string, original: AudioProbe): Promise<void> {
+  private async verify(output: string, originalMs: number): Promise<void> {
     const converted = await probeAudio(this.ffprobePath, output);
-    if (!sameLength(original.durationMs, converted.durationMs)) {
-      throw new Error(`The M4B is ${Math.round(converted.durationMs / 1000)}s long but the original is ${Math.round(original.durationMs / 1000)}s`);
+    if (!sameLength(originalMs, converted.durationMs)) {
+      throw new Error(`The M4B is ${Math.round(converted.durationMs / 1000)}s long but the original is ${Math.round(originalMs / 1000)}s`);
     }
   }
 
@@ -424,6 +490,7 @@ function toPublicJob(job: TrackedJob): ConversionJob {
     method: job.method,
     progress: job.progress,
     bitrate: job.bitrate,
+    trackCount: job.trackCount,
     reason: job.reason,
     detail: job.detail,
     outputName: job.outputName,
@@ -431,6 +498,21 @@ function toPublicJob(job: TrackedJob): ConversionJob {
     startedAt: job.startedAt,
     finishedAt: job.finishedAt,
   };
+}
+
+const COVER_NAMES = ['cover', 'folder', 'front'];
+const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png']);
+
+/** A cover image from the folder: one named like a cover, else the first picture. */
+function pickCoverImage(files: string[]): string | null {
+  const images = files.filter((file) => IMAGE_EXTENSIONS.has(extname(file).toLowerCase()));
+  const named = images.find((file) => COVER_NAMES.includes(basename(file, extname(file)).toLowerCase()));
+  return named ?? images[0] ?? null;
+}
+
+/** A folder name is already a valid name on this disk; only path separators would break it. */
+function safeFileName(name: string): string {
+  return name.replace(/[/\\]/g, '-').trim() || 'Audiobook';
 }
 
 async function freeName(target: string): Promise<string> {

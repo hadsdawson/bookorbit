@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onActivated, onDeactivated, onMounted, onUnmounted, ref } from 'vue'
-import { Loader2, RotateCcw } from '@lucide/vue'
+import { FileAudio, FolderUp, Loader2, RotateCcw } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { Permission, type ConversionJob, type ConversionOverview } from '@bookorbit/types'
@@ -11,6 +11,7 @@ import { formatDateTime, formatNumber } from '@/i18n/formatters'
 import { errorMessage } from '@/lib/api-json'
 import { getConversions, retryConversion } from '../api/conversions'
 import { useConversionStatus } from '../composables/useConversionStatus'
+import { CONVERTIBLE_ACCEPT, pickedFiles, useConversionUpload, type UploadFailure } from '../composables/useConversionUpload'
 
 const BUSY_POLL_MS = 2_000
 const IDLE_POLL_MS = 10_000
@@ -27,6 +28,10 @@ const STATUS_CLASSES: Record<ConversionJob['status'], string> = {
 const { t } = useI18n()
 const { hasPermission } = usePermissions()
 const { setEnabled } = useConversionStatus()
+const { uploading, percent: uploadPercent, fileIndex, fileCount, upload } = useConversionUpload()
+const canUpload = computed(() => hasPermission(Permission.BookDockAccess) && hasPermission(Permission.LibraryUpload))
+const filesInput = ref<HTMLInputElement | null>(null)
+const folderInput = ref<HTMLInputElement | null>(null)
 const overview = ref<ConversionOverview | null>(null)
 const loading = ref(true)
 const retrying = ref<string | null>(null)
@@ -51,9 +56,42 @@ const rows = computed(() =>
 )
 
 function methodLabel(job: ConversionJob): string | null {
-  if (job.method === 'encode' && job.bitrate) return t('conversions.method.encode', { kbps: formatNumber(Math.round(job.bitrate / 1000)) })
+  const kbps = job.bitrate ? formatNumber(Math.round(job.bitrate / 1000)) : null
+  if (job.trackCount) {
+    const tracks = formatNumber(job.trackCount)
+    return job.method === 'encode' && kbps ? t('conversions.method.joinEncode', { tracks, kbps }) : t('conversions.method.joinCopy', { tracks })
+  }
+  if (job.method === 'encode' && kbps) return t('conversions.method.encode', { kbps })
   if (job.method) return t(`conversions.method.${job.method}`)
   return null
+}
+
+function uploadFailureMessage(failure: UploadFailure): string {
+  if (failure.kind === 'tooLarge') return t('conversions.upload.tooLarge', { name: failure.name, limit: formatNumber(failure.limitMb) })
+  return failure.name ? t('conversions.upload.failedFile', { name: failure.name }) : t('conversions.errors.upload')
+}
+
+async function handlePicked(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement
+  const files = input.files ? pickedFiles(input.files) : []
+  input.value = ''
+  if (files.length === 0) return
+  const failure = await upload(files)
+  if (failure) {
+    toast.error(uploadFailureMessage(failure))
+    return
+  }
+  toast.success(t('conversions.upload.done', { count: files.length }))
+  await refresh()
+  schedule()
+}
+
+function handleChooseFiles(): void {
+  filesInput.value?.click()
+}
+
+function handleChooseFolder(): void {
+  folderInput.value?.click()
 }
 
 async function refresh(): Promise<void> {
@@ -130,6 +168,47 @@ onUnmounted(handleHide)
       </section>
 
       <template v-else-if="overview">
+        <section v-if="canUpload" class="rounded-lg border border-border/70 bg-card/50 p-4 space-y-3" data-testid="conversions-upload">
+          <div class="space-y-1">
+            <h2 class="text-sm font-semibold text-foreground">{{ t('conversions.upload.title') }}</h2>
+            <p class="text-sm text-muted-foreground">{{ t('conversions.upload.hint') }}</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" :disabled="uploading" data-testid="conversions-upload-files" @click="handleChooseFiles">
+              <FileAudio aria-hidden="true" />
+              {{ t('conversions.upload.files') }}
+            </Button>
+            <Button variant="outline" size="sm" :disabled="uploading" data-testid="conversions-upload-folder" @click="handleChooseFolder">
+              <FolderUp aria-hidden="true" />
+              {{ t('conversions.upload.folder') }}
+            </Button>
+          </div>
+          <input
+            ref="filesInput"
+            type="file"
+            multiple
+            :accept="CONVERTIBLE_ACCEPT"
+            class="hidden"
+            data-testid="conversions-files-input"
+            @change="handlePicked"
+          />
+          <input ref="folderInput" type="file" webkitdirectory class="hidden" data-testid="conversions-folder-input" @change="handlePicked" />
+          <div v-if="uploading" class="space-y-1" role="status">
+            <p class="text-xs text-muted-foreground">
+              {{
+                t('conversions.upload.progress', {
+                  current: formatNumber(fileIndex),
+                  total: formatNumber(fileCount),
+                  percent: formatNumber(uploadPercent),
+                })
+              }}
+            </p>
+            <div class="h-1.5 overflow-hidden rounded-full bg-muted">
+              <div class="h-full rounded-full bg-primary transition-[width] duration-300" :style="{ width: `${uploadPercent}%` }" />
+            </div>
+          </div>
+        </section>
+
         <section class="rounded-lg border border-border/70 bg-card/50 p-4 space-y-2">
           <h2 class="text-sm font-semibold text-foreground">{{ t('conversions.folderTitle') }}</h2>
           <p class="text-sm text-muted-foreground">{{ t('conversions.folderHint') }}</p>

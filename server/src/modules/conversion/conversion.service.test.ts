@@ -157,19 +157,48 @@ describe('ConversionService', () => {
     expect((await readdir(convertRoot)).filter((name) => !name.startsWith('.'))).toEqual([]);
   });
 
-  it('leaves folders of several tracks and non-audio files where they are', async () => {
-    const tracks = join(convertRoot, 'Tracks');
+  it('joins a folder of MP3 tracks into one M4B with a chapter per track and the folder cover', async () => {
+    const tracks = join(convertRoot, 'Some Book');
     await mkdir(tracks, { recursive: true });
-    await makeAudio(join(tracks, '01.mp3'), ['-c:a', 'libmp3lame']);
-    await makeAudio(join(tracks, '02.mp3'), ['-c:a', 'libmp3lame']);
+    await makeAudio(join(tracks, '01 - Opening.mp3'), ['-c:a', 'libmp3lame', '-b:a', '96k']);
+    await makeAudio(join(tracks, '02 - Storm.mp3'), ['-c:a', 'libmp3lame', '-b:a', '128k']);
+    await execFile(ffmpegPath, ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=blue:s=64x64:d=1', '-frames:v', '1', join(tracks, 'cover.jpg')]);
     await writeFile(join(convertRoot, 'notes.txt'), 'hello');
     settings.set(CONVERSION_SETTINGS_KEY, JSON.stringify({ enabled: true, concurrency: 1 }));
     await service.onApplicationBootstrap();
 
-    expect(await waitForJob('Tracks', ['waiting'])).toMatchObject({ reason: 'several_files' });
+    const job = await waitForJob('Some Book', ['done', 'failed']);
+    expect(job).toMatchObject({ status: 'done', method: 'encode', bitrate: 128_000, trackCount: 2, outputName: 'Some Book' });
+    expect((await readdir(join(dockRoot, 'Some Book'))).sort()).toEqual(['Some Book.m4b', 'cover.jpg']);
+    const m4b = join(dockRoot, 'Some Book', 'Some Book.m4b');
+    const chapters = await execFile(ffprobePath, ['-v', 'error', '-show_entries', 'chapter_tags=title', '-of', 'csv=p=0', m4b]);
+    expect(chapters.stdout.trim().split('\n')).toEqual(['Opening', 'Storm']);
+    const streams = await execFile(ffprobePath, ['-v', 'error', '-show_entries', 'stream=codec_name:format=duration', '-of', 'csv=p=0', m4b]);
+    expect(streams.stdout).toContain('aac');
+    expect(streams.stdout).toContain('mjpeg');
     expect(await waitForJob('notes.txt', ['skipped'])).toMatchObject({ reason: 'no_audio' });
-    expect((await readdir(tracks)).sort()).toEqual(['01.mp3', '02.mp3']);
-    await expect(readdir(dockRoot)).rejects.toThrow();
+  });
+
+  it('joins matching M4A tracks without re-encoding them', async () => {
+    const tracks = join(convertRoot, 'Copied');
+    await mkdir(join(tracks, 'CD2'), { recursive: true });
+    await makeAudio(join(tracks, '01.m4a'), ['-c:a', 'aac', '-b:a', '64k']);
+    await makeAudio(join(tracks, 'CD2', '01.m4a'), ['-c:a', 'aac', '-b:a', '64k']);
+    settings.set(CONVERSION_SETTINGS_KEY, JSON.stringify({ enabled: true, concurrency: 1 }));
+    await service.onApplicationBootstrap();
+
+    const job = await waitForJob('Copied', ['done', 'failed']);
+    expect(job).toMatchObject({ status: 'done', method: 'copy', trackCount: 2 });
+    const { stdout } = await execFile(ffprobePath, [
+      '-v',
+      'error',
+      '-show_entries',
+      'format=duration',
+      '-of',
+      'csv=p=0',
+      join(dockRoot, 'Copied', 'Copied.m4b'),
+    ]);
+    expect(Number(stdout)).toBeCloseTo(6, 0);
   });
 
   it('fails a file that is not really audio and keeps the original for a retry', async () => {
