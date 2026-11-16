@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { describe, expect, it, vi } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
 import type { AuthorDetail } from '@bookorbit/types'
 import AuthorHeader from './AuthorHeader.vue'
 
@@ -121,5 +121,54 @@ describe('provider source and website', () => {
     const wrapper = mount(AuthorHeader, { props: { author: { ...author, website: 'https://johnreid.example' } } })
 
     expect(wrapper.findAll('a').some((link) => link.attributes('href') === 'https://johnreid.example')).toBe(true)
+  })
+})
+
+describe('biography show more (fork)', () => {
+  function mountWithBio(scrollHeight: number) {
+    const heights = vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset.testid === 'author-bio' ? scrollHeight : 0
+    })
+    const client = vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset.testid === 'author-bio' ? 120 : 0
+    })
+    const wrapper = mount(AuthorHeader, { props: { author: { ...author, description: 'A biography.' } } })
+    return { wrapper, restore: () => (heights.mockRestore(), client.mockRestore()) }
+  }
+
+  it('hides Show more when the whole biography fits', async () => {
+    const { wrapper, restore } = mountWithBio(120)
+    await flushPromises()
+    expect(wrapper.find('[data-testid="author-bio-toggle"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('No biography')
+    restore()
+  })
+
+  it('offers Show more when the biography is cut off, and Show less once open', async () => {
+    const { wrapper, restore } = mountWithBio(400)
+    await flushPromises()
+    const toggle = wrapper.get('[data-testid="author-bio-toggle"]')
+    expect(toggle.text()).toBe('Show more')
+    await toggle.trigger('click')
+    expect(wrapper.get('[data-testid="author-bio-toggle"]').text()).toBe('Show less')
+    restore()
+  })
+})
+
+describe("author's website (fork)", () => {
+  it("makes Author's Website the link itself", () => {
+    const wrapper = mount(AuthorHeader, { props: { author: { ...author, website: 'https://example.com/author' } } })
+    const link = wrapper.get('[data-testid="author-website-link"]')
+    expect(link.text()).toBe("Author's Website")
+    expect(link.attributes('href')).toBe('https://example.com/author')
+    expect(link.attributes('target')).toBe('_blank')
+    expect(wrapper.text()).not.toContain('https://example.com/author')
+  })
+
+  it('shows a website that is not a link as plain text', () => {
+    const wrapper = mount(AuthorHeader, { props: { author: { ...author, website: 'example dot com' } } })
+    expect(wrapper.find('[data-testid="author-website-link"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain("Author's Website")
+    expect(wrapper.text()).toContain('example dot com')
   })
 })

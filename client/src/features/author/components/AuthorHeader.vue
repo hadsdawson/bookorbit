@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
+import { useResizeObserver } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
 import { formatDate, formatNumber } from '@/i18n/formatters'
 import type { AuthorDetail, MetadataCandidateCacheInfo } from '@bookorbit/types'
-import { MoreHorizontal, Pencil, RefreshCcw, Trash2, UserRoundSearch, UsersRound, X } from '@lucide/vue'
+import { ExternalLink, MoreHorizontal, Pencil, RefreshCcw, Trash2, UserRoundSearch, UsersRound, X } from '@lucide/vue'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { toDisplayCoverUrl } from '@/features/book/lib/metadata-fetch'
 import MetadataCacheBadge from '@/features/metadata-cache/components/MetadataCacheBadge.vue'
@@ -103,10 +104,33 @@ const displayImageUrl = computed(() => {
 })
 const canOpenImageLightbox = computed(() => Boolean(displayImageUrl.value))
 const bioExpanded = ref(false)
+// Fork: "Show more" only when the five-line clamp actually hides text; the width the bio wraps to
+// changes with the window, so it is measured again whenever the paragraph is resized.
+const bioRef = ref<HTMLElement | null>(null)
+const bioOverflows = ref(false)
 
-watch(resolvedBio, () => {
-  bioExpanded.value = false
-})
+function measureBio() {
+  const el = bioRef.value
+  if (!el || bioExpanded.value) return
+  bioOverflows.value = el.scrollHeight > el.clientHeight + 1
+}
+
+function toggleBio() {
+  bioExpanded.value = !bioExpanded.value
+}
+
+useResizeObserver(bioRef, measureBio)
+
+watch(
+  resolvedBio,
+  async () => {
+    bioExpanded.value = false
+    bioOverflows.value = false
+    await nextTick()
+    measureBio()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -179,23 +203,27 @@ watch(resolvedBio, () => {
           </div>
 
           <div class="mt-3">
-            <p
-              v-if="resolvedBio"
-              :class="
-                bioExpanded
-                  ? 'text-sm leading-6 text-foreground'
-                  : 'text-sm leading-6 text-foreground overflow-hidden text-ellipsis [display:-webkit-box] [-webkit-line-clamp:5] [-webkit-box-orient:vertical]'
-              "
-            >
-              {{ resolvedBio }}
-            </p>
-            <button
-              v-if="resolvedBio"
-              class="mt-1 text-xs font-medium text-primary transition-colors hover:text-primary"
-              @click="bioExpanded = !bioExpanded"
-            >
-              {{ bioExpanded ? t('author.header.showLess') : t('author.header.showMore') }}
-            </button>
+            <template v-if="resolvedBio">
+              <p
+                ref="bioRef"
+                data-testid="author-bio"
+                :class="
+                  bioExpanded
+                    ? 'text-sm leading-6 text-foreground'
+                    : 'text-sm leading-6 text-foreground overflow-hidden text-ellipsis [display:-webkit-box] [-webkit-line-clamp:5] [-webkit-box-orient:vertical]'
+                "
+              >
+                {{ resolvedBio }}
+              </p>
+              <button
+                v-if="bioExpanded || bioOverflows"
+                class="mt-1 text-xs font-medium text-primary transition-colors hover:text-primary"
+                data-testid="author-bio-toggle"
+                @click="toggleBio"
+              >
+                {{ bioExpanded ? t('author.header.showLess') : t('author.header.showMore') }}
+              </button>
+            </template>
             <p v-else-if="loadingPreview" class="text-sm text-muted-foreground">{{ t('author.header.lookingUpMetadata') }}</p>
             <p v-else class="text-sm text-muted-foreground">{{ t('author.header.noBiography') }}</p>
             <p v-if="usesPreviewBio && previewProviderLabel" class="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
@@ -217,20 +245,26 @@ watch(resolvedBio, () => {
               <dt class="text-muted-foreground">{{ t('author.header.died') }}</dt>
               <dd class="text-foreground">{{ diedLabel }}</dd>
             </div>
-            <div v-if="author.website" class="flex gap-1.5 min-w-0">
-              <dt class="text-muted-foreground">{{ t('author.header.website') }}</dt>
-              <dd class="min-w-0 truncate">
+            <!-- Fork: a link reads as "Author's Website" and is itself the link; the address shows on hover. -->
+            <div v-if="author.website && websiteIsLink" class="flex min-w-0">
+              <dt class="sr-only">{{ t('author.header.authorWebsite') }}</dt>
+              <dd>
                 <a
-                  v-if="websiteIsLink"
                   :href="author.website"
+                  :title="author.website"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-foreground underline underline-offset-2"
+                  class="inline-flex items-center gap-1 text-foreground underline underline-offset-2 hover:text-primary"
+                  data-testid="author-website-link"
                 >
-                  {{ author.website }}
+                  {{ t('author.header.authorWebsite') }}
+                  <ExternalLink :size="12" aria-hidden="true" />
                 </a>
-                <span v-else class="text-foreground">{{ author.website }}</span>
               </dd>
+            </div>
+            <div v-else-if="author.website" class="flex gap-1.5 min-w-0">
+              <dt class="text-muted-foreground">{{ t('author.header.authorWebsite') }}</dt>
+              <dd class="min-w-0 truncate text-foreground">{{ author.website }}</dd>
             </div>
             <div v-if="genres.length" class="flex gap-1.5 min-w-0">
               <dt class="text-muted-foreground">{{ t('author.header.genres') }}</dt>
