@@ -53,7 +53,7 @@ function makeJob(overrides: Partial<ConversionJob> = {}): ConversionJob {
 }
 
 function makeOverview(jobs: ConversionJob[], enabled = true): ConversionOverview {
-  return { settings: { enabled, concurrency: 1 }, convertPath: '/data/convert', jobs }
+  return { settings: { enabled, concurrency: 1, speed: 'low' }, convertPath: '/data/convert', jobs }
 }
 
 function mountView() {
@@ -204,5 +204,17 @@ describe('ConversionsView', () => {
       'conversions.time.took {"time":"conversions.time.minutes {\\"minutes\\":\\"32\\"}"}',
     )
     expect(status.setActive).toHaveBeenCalledWith(2)
+  })
+
+  it('shows the speed settings to Book Dock managers only', async () => {
+    api.getConversions.mockResolvedValue(makeOverview([]))
+    const viewer = mountView()
+    await flushPromises()
+    expect(viewer.find('[data-testid="conversion-tuning"]').exists()).toBe(false)
+
+    permissions.granted.add('manage_book_dock')
+    const manager = mountView()
+    await flushPromises()
+    expect(manager.find('[data-testid="conversion-tuning"]').exists()).toBe(true)
   })
 })

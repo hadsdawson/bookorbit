@@ -6,9 +6,15 @@ import { join } from 'path';
 import { promisify } from 'util';
 import type { ConversionJob } from '@bookorbit/types';
 
+import { runFfmpeg } from '../file-write/formats/audio/ffmpeg-runner';
 import { listEntryIds } from '../recycle-bin/lib/recycle-bin-store';
 import { RECYCLE_BIN_SETTINGS_KEY, RecycleBinService } from '../recycle-bin/recycle-bin.service';
 import { CONVERSION_SETTINGS_KEY, ConversionService, expectedOutputBytes, parseConversionSettings, progressFraction } from './conversion.service';
+
+vi.mock('../file-write/formats/audio/ffmpeg-runner', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../file-write/formats/audio/ffmpeg-runner')>();
+  return { ...actual, runFfmpeg: vi.fn(actual.runFfmpeg) };
+});
 
 const execFile = promisify(execFileCallback);
 const requireInstaller = createRequire(__filename);
@@ -91,10 +97,18 @@ describe('ConversionService', () => {
   });
 
   it('reads stored settings, falling back to off and one at a time', () => {
-    expect(parseConversionSettings(null)).toEqual({ enabled: false, concurrency: 1 });
-    expect(parseConversionSettings('{"enabled":true,"concurrency":3}')).toEqual({ enabled: true, concurrency: 3 });
-    expect(parseConversionSettings('{"enabled":true,"concurrency":8}')).toEqual({ enabled: true, concurrency: 1 });
-    expect(parseConversionSettings('not json')).toEqual({ enabled: false, concurrency: 1 });
+    expect(parseConversionSettings(null)).toEqual({ enabled: false, concurrency: 1, speed: 'low' });
+    expect(parseConversionSettings('{"enabled":true,"concurrency":3,"speed":"high"}')).toEqual({
+      enabled: true,
+      concurrency: 3,
+      speed: 'high',
+    });
+    expect(parseConversionSettings('{"enabled":true,"concurrency":8,"speed":"turbo"}')).toEqual({
+      enabled: true,
+      concurrency: 1,
+      speed: 'low',
+    });
+    expect(parseConversionSettings('not json')).toEqual({ enabled: false, concurrency: 1, speed: 'low' });
   });
 
   it('does nothing while turned off', async () => {
@@ -107,7 +121,7 @@ describe('ConversionService', () => {
     await mkdir(convertRoot, { recursive: true });
     await makeAudio(join(convertRoot, 'Book.mp3'), ['-c:a', 'libmp3lame', '-b:a', '128k']);
     await service.onApplicationBootstrap();
-    await service.updateSettings({ enabled: true, concurrency: 1 });
+    await service.updateSettings({ enabled: true, concurrency: 1, speed: 'low' });
 
     const job = await waitForJob('Book.mp3', ['done', 'failed']);
     expect(job).toMatchObject({ status: 'done', method: 'encode', bitrate: 128_000, outputName: 'Book.m4b', progress: 100, reason: null });
@@ -125,7 +139,7 @@ describe('ConversionService', () => {
     expect(stdout).toContain('Test Book');
     expect((await readdir(convertRoot)).filter((name) => !name.startsWith('.'))).toEqual([]);
     expect(await listEntryIds(convertRoot)).toHaveLength(1);
-    expect(JSON.parse(settings.get(CONVERSION_SETTINGS_KEY)!)).toEqual({ enabled: true, concurrency: 1 });
+    expect(JSON.parse(settings.get(CONVERSION_SETTINGS_KEY)!)).toEqual({ enabled: true, concurrency: 1, speed: 'low' });
   });
 
   it('copies the audio of an M4A in a folder and carries the cover and metadata along', async () => {
@@ -240,5 +254,19 @@ describe('ConversionService', () => {
 
   it('counts waiting and converting items for the sidebar', () => {
     expect(service.activeCount()).toBe(0);
+  });
+
+  it('runs FFmpeg at low priority on Low speed and at normal priority on High', async () => {
+    await mkdir(convertRoot, { recursive: true });
+    await makeAudio(join(convertRoot, 'Low.m4a'), ['-c:a', 'aac', '-b:a', '64k']);
+    settings.set(CONVERSION_SETTINGS_KEY, JSON.stringify({ enabled: true, concurrency: 1, speed: 'low' }));
+    await service.onApplicationBootstrap();
+    await waitForJob('Low.m4a', ['done']);
+    expect(vi.mocked(runFfmpeg).mock.lastCall?.[2]).toMatchObject({ lowPriority: true });
+
+    await service.updateSettings({ enabled: true, concurrency: 1, speed: 'high' });
+    await makeAudio(join(convertRoot, 'Normal.m4a'), ['-c:a', 'aac', '-b:a', '64k']);
+    await waitForJob('Normal.m4a', ['done']);
+    expect(vi.mocked(runFfmpeg).mock.lastCall?.[2]).toMatchObject({ lowPriority: false });
   });
 });

@@ -33,30 +33,16 @@ describe('ConversionSettingsCard', () => {
   })
 
   it('turns conversions on and shows the tab straight away', async () => {
-    api.getConversions.mockResolvedValue({ settings: { enabled: false, concurrency: 1 }, convertPath: '/data/convert', jobs: [] })
-    api.saveConversionSettings.mockResolvedValue({ enabled: true, concurrency: 1 })
+    api.getConversions.mockResolvedValue({ settings: { enabled: false, concurrency: 1, speed: 'low' }, convertPath: '/data/convert', jobs: [] })
+    api.saveConversionSettings.mockResolvedValue({ enabled: true, concurrency: 1, speed: 'low' })
     const wrapper = mountCard()
     await flushPromises()
-    expect(wrapper.find('[data-testid="conversion-concurrency"]').exists()).toBe(false)
 
     await wrapper.get('[data-testid="conversion-enabled"]').trigger('click')
     await flushPromises()
 
-    expect(api.saveConversionSettings).toHaveBeenCalledWith({ enabled: true, concurrency: 1 })
+    expect(api.saveConversionSettings).toHaveBeenCalledWith({ enabled: true, concurrency: 1, speed: 'low' })
     expect(status.setEnabled).toHaveBeenCalledWith(true)
     expect(wrapper.get('[data-testid="conversion-path"]').text()).toBe('/data/convert')
-  })
-
-  it('offers one to three books at once', async () => {
-    api.getConversions.mockResolvedValue({ settings: { enabled: true, concurrency: 1 }, convertPath: '/data/convert', jobs: [] })
-    api.saveConversionSettings.mockResolvedValue({ enabled: true, concurrency: 3 })
-    const wrapper = mountCard()
-    await flushPromises()
-
-    const select = wrapper.get('[data-testid="conversion-concurrency"]')
-    expect(select.findAll('option').map((option) => option.attributes('value'))).toEqual(['1', '2', '3'])
-    await select.setValue('3')
-    await flushPromises()
-    expect(api.saveConversionSettings).toHaveBeenCalledWith({ enabled: true, concurrency: 3 })
   })
 })

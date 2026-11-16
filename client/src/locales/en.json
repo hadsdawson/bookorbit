@@ -16595,7 +16595,7 @@
     "retry": "Try again",
     "progress": "{percent}%",
     "landed": "In the Book Dock as {name}",
-    "footnote": "Conversions run one book per processor core at the lowest priority, so other apps on your server come first. This list starts over when BookOrbit restarts.",
+    "footnote": "This list starts over when BookOrbit restarts.",
     "status": {
       "queued": "Waiting its turn",
       "converting": "Converting",
@@ -16621,11 +16621,8 @@
     "settings": {
       "title": "Audio conversions",
       "enabled": "Convert audiobooks to M4B",
-      "enabledHint": "On: files in the Convert folder are converted to M4B and moved here. A Conversions tab shows their progress.",
+      "enabledHint": "On: files in the Convert folder are converted to M4B and moved here. The Conversions tab shows their progress and has the speed settings.",
       "disabledHint": "Off: nothing is watched or converted, and the Conversions tab is hidden.",
-      "concurrency": "Books converting at once",
-      "concurrencyHint": "Each book uses one processor core, at the lowest priority so other apps come first.",
-      "concurrencyOption": "{count, plural, one {# book} other {# books}}",
       "folder": "Convert folder",
       "folderHint": "Drop audiobooks here, or upload them from the Conversions tab. Finished M4B files appear in the Book Dock and the originals go to the recycle bin.",
       "changePathPrefix": "To use a different folder, set",
@@ -16657,6 +16654,21 @@
       "took": "Took {time}",
       "speed": "{speed}× real time",
       "estimating": "Working out how long this will take"
+    },
+    "tuning": {
+      "title": "Conversion settings",
+      "speed": "Conversion speed",
+      "speedOption": {
+        "low": "Low",
+        "high": "High"
+      },
+      "speedHint": {
+        "low": "Conversions run at the lowest priority, so Plex, downloads and everything else on your server come first. Slower, but you won't notice it.",
+        "high": "Conversions run at normal priority, sharing the processor equally with other apps. Faster, but other apps may slow down while a book converts."
+      },
+      "concurrency": "Books converting at once",
+      "concurrencyHint": "Each book uses one processor core. More at once gets through a list sooner but doesn't speed up any one book.",
+      "concurrencyOption": "{count, plural, one {# book} other {# books}}"
     }
   }
 }

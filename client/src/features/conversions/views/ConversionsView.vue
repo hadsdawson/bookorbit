@@ -3,7 +3,7 @@ import { computed, onActivated, onDeactivated, onMounted, onUnmounted, ref } fro
 import { FileAudio, FolderUp } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
-import { Permission, type ConversionJob, type ConversionOverview } from '@bookorbit/types'
+import { Permission, type ConversionJob, type ConversionOverview, type ConversionSettings } from '@bookorbit/types'
 
 import { Button } from '@/components/ui/button'
 import { usePermissions } from '@/features/auth/composables/usePermissions'
@@ -11,6 +11,7 @@ import { formatNumber } from '@/i18n/formatters'
 import { errorMessage } from '@/lib/api-json'
 import { getConversions, retryConversion } from '../api/conversions'
 import ConversionJobRow from '../components/ConversionJobRow.vue'
+import ConversionTuningCard from '../components/ConversionTuningCard.vue'
 import { useConversionStatus } from '../composables/useConversionStatus'
 import { CONVERTIBLE_ACCEPT, pickedFiles, useConversionUpload, type UploadFailure } from '../composables/useConversionUpload'
 
@@ -62,6 +63,10 @@ async function handlePicked(event: Event): Promise<void> {
   toast.success(t('conversions.upload.done', { count: files.length }))
   await refresh()
   schedule()
+}
+
+function handleSettingsSaved(settings: ConversionSettings): void {
+  if (overview.value) overview.value = { ...overview.value, settings }
 }
 
 function handleChooseFiles(): void {
@@ -187,6 +192,8 @@ onUnmounted(handleHide)
             </div>
           </div>
         </section>
+
+        <ConversionTuningCard v-if="canManage" :settings="overview.settings" @saved="handleSettingsSaved" />
 
         <section class="rounded-lg border border-border/70 bg-card/50 p-4 space-y-2">
           <h2 class="text-sm font-semibold text-foreground">{{ t('conversions.folderTitle') }}</h2>
