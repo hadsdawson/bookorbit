@@ -47,6 +47,7 @@ import {
   authors,
   bookAuthors,
   bookDockFiles,
+  bookDockUnitFiles,
   bookFiles,
   bookMetadata,
   bookRequestDedupeAliases,
@@ -602,6 +603,32 @@ export class BookRequestRepository {
       .from(bookFiles)
       .where(and(eq(bookFiles.bookId, bookId), eq(bookFiles.role, 'content')));
     const formats = new Set(rows.map((row) => row.format?.toLowerCase()).filter((format): format is string => Boolean(format)));
+    return new Set(BOOK_REQUEST_MEDIA_KINDS.filter((kind) => BOOK_REQUEST_FORMATS_BY_MEDIA_KIND[kind].some((format) => formats.has(format))));
+  }
+
+  /**
+   * Fork. Which media a Book Dock item holds, counting every file merged into it. An id for a file
+   * merged under another is read as that whole merged item, the way the dock shows it.
+   */
+  async findDockFileMediaKinds(fileId: number): Promise<Set<BookRequestMediaKind>> {
+    const [picked] = await this.db
+      .select({ id: bookDockFiles.id, mergedIntoId: bookDockFiles.mergedIntoId })
+      .from(bookDockFiles)
+      .where(eq(bookDockFiles.id, fileId))
+      .limit(1);
+    if (!picked) return new Set();
+    const unitId = picked.mergedIntoId ?? picked.id;
+    const inUnit = or(eq(bookDockFiles.id, unitId), eq(bookDockFiles.mergedIntoId, unitId));
+
+    const [dockRows, unitRows] = await Promise.all([
+      this.db.selectDistinct({ format: bookDockFiles.format }).from(bookDockFiles).where(inUnit),
+      this.db
+        .selectDistinct({ format: bookDockUnitFiles.format })
+        .from(bookDockUnitFiles)
+        .innerJoin(bookDockFiles, eq(bookDockFiles.id, bookDockUnitFiles.dockFileId))
+        .where(inUnit),
+    ]);
+    const formats = new Set([...dockRows, ...unitRows].map((row) => row.format?.toLowerCase()).filter((format): format is string => Boolean(format)));
     return new Set(BOOK_REQUEST_MEDIA_KINDS.filter((kind) => BOOK_REQUEST_FORMATS_BY_MEDIA_KIND[kind].some((format) => formats.has(format))));
   }
 

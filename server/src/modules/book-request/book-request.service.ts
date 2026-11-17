@@ -1404,6 +1404,34 @@ export class BookRequestService {
    * Later phases drive the same transition from the download pipeline.
    */
   async markFulfilled(id: number, dto: FulfillBookRequestDto, user: RequestUser): Promise<BookRequestItem> {
+    const closed = await this.closeByHand(id, dto, user);
+    if (dto.bookDockFileId != null) await this.closeCompanionFromDock(closed, dto.bookDockFileId, dto.note, user);
+    return this.getOne(id, user);
+  }
+
+  /**
+   * Fork. A Book Dock item merged from an ebook and an audiobook answers both halves of a pair, so
+   * the other half is closed against the same item rather than left waiting for a second copy.
+   * Best-effort: the half the approver asked for is already closed, and stays so if this fails.
+   */
+  private async closeCompanionFromDock(request: BookRequestRow, dockFileId: number, note: string | undefined, user: RequestUser): Promise<void> {
+    if (request.companionRequestId === null) return;
+    const companion = (await this.repo.findById(request.companionRequestId))?.request;
+    if (!companion || companion.companionRequestId !== request.id) return;
+    if (!isFulfillableBookRequestStatus(companion.status as BookRequestStatus)) return;
+    if (!(await this.repo.findDockFileMediaKinds(dockFileId)).has(companion.mediaKind as BookRequestMediaKind)) return;
+
+    const startedAt = Date.now();
+    try {
+      await this.closeByHand(companion.id, { bookDockFileId: dockFileId, note }, user);
+    } catch (error) {
+      this.logger.warn(
+        `[book_request.fulfill_companion] [fail] requestId=${companion.id} companionOf=${request.id} dockFileId=${dockFileId} durationMs=${Date.now() - startedAt} errorClass=${error instanceof Error ? error.constructor.name : typeof error} error="${sanitizeLogValue(error instanceof Error ? error.message : String(error))}" - other half of the pair left open`,
+      );
+    }
+  }
+
+  private async closeByHand(id: number, dto: FulfillBookRequestDto, user: RequestUser): Promise<BookRequestRow> {
     const joined = await this.repo.findById(id);
     if (!joined) throw new NotFoundException('Book request not found');
     if (joined.request.status === 'available') throw new BadRequestException('This request is already fulfilled');
@@ -1471,7 +1499,7 @@ export class BookRequestService {
     // Closing one half of a pair by hand still tells the other half where it belongs.
     if (dto.matchedBookId != null && (await this.companions.handOn(joined.request, dto.matchedBookId))) this.gateway.emitChanged();
 
-    return this.getOne(id, user);
+    return joined.request;
   }
 
   async checkAvailability(queries: BookRequestAvailabilityQuery[], user: RequestUser): Promise<BookRequestAvailability[]> {
