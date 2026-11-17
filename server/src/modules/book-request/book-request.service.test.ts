@@ -128,6 +128,7 @@ function makeService(
     findByIds: vi.fn().mockResolvedValue([]),
     findBookPlacement: vi.fn().mockResolvedValue(undefined),
     findBookMediaKinds: vi.fn().mockResolvedValue(new Set()),
+    findDockFileMediaKinds: vi.fn().mockResolvedValue(new Set()),
     ...overrides.repo,
   };
   const dedupe = {
@@ -1672,6 +1673,60 @@ describe('BookRequestService.markFulfilled', () => {
     const { service, repo } = makeService();
     await service.markFulfilled(10, { bookDockFileId: 5 }, approver);
     expect(repo.updateIf).toHaveBeenCalledWith(10, expect.anything(), expect.objectContaining({ status: 'available', bookDockFileId: 5 }));
+  });
+
+  describe('closing a pair from one merged Book Dock item', () => {
+    function pair(companionStatus = 'pending') {
+      const halves: Record<number, ReturnType<typeof joined>> = {
+        10: joined({ id: 10, mediaKind: 'ebook', companionRequestId: 11 }),
+        11: joined({ id: 11, mediaKind: 'audiobook', companionRequestId: 10, status: companionStatus }),
+      };
+      return vi.fn((id: number) => Promise.resolve(halves[id]));
+    }
+
+    it('closes the other half too when the item holds its format', async () => {
+      const { service, repo } = makeService({
+        repo: { findById: pair(), findDockFileMediaKinds: vi.fn().mockResolvedValue(new Set(['ebook', 'audiobook'])) },
+      });
+
+      await service.markFulfilled(10, { bookDockFileId: 5 }, approver);
+
+      expect(repo.updateIf).toHaveBeenCalledWith(10, expect.anything(), expect.objectContaining({ status: 'available', bookDockFileId: 5 }));
+      expect(repo.updateIf).toHaveBeenCalledWith(11, expect.anything(), expect.objectContaining({ status: 'available', bookDockFileId: 5 }));
+    });
+
+    it('leaves the other half open when the item holds only this format', async () => {
+      const { service, repo } = makeService({
+        repo: { findById: pair(), findDockFileMediaKinds: vi.fn().mockResolvedValue(new Set(['ebook'])) },
+      });
+
+      await service.markFulfilled(10, { bookDockFileId: 5 }, approver);
+
+      expect(repo.updateIf).toHaveBeenCalledTimes(1);
+      expect(repo.updateIf).toHaveBeenCalledWith(10, expect.anything(), expect.anything());
+    });
+
+    it('leaves an other half that was already closed or cancelled alone', async () => {
+      for (const status of ['available', 'cancelled']) {
+        const { service, repo } = makeService({
+          repo: { findById: pair(status), findDockFileMediaKinds: vi.fn().mockResolvedValue(new Set(['ebook', 'audiobook'])) },
+        });
+
+        await service.markFulfilled(10, { bookDockFileId: 5 }, approver);
+
+        expect(repo.updateIf).toHaveBeenCalledTimes(1);
+      }
+    });
+
+    it('keeps the half that was asked for closed when the other half cannot be', async () => {
+      const updateIf = vi.fn((id: number) => Promise.resolve(id === 10 ? { id } : undefined));
+      const { service, repo } = makeService({
+        repo: { findById: pair(), updateIf, findDockFileMediaKinds: vi.fn().mockResolvedValue(new Set(['ebook', 'audiobook'])) },
+      });
+
+      await expect(service.markFulfilled(10, { bookDockFileId: 5 }, approver)).resolves.toBeDefined();
+      expect(repo.updateIf).toHaveBeenCalledWith(11, expect.anything(), expect.anything());
+    });
   });
 
   it('requires something to point at', async () => {
