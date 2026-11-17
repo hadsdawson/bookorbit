@@ -21,7 +21,8 @@ const requireInstaller = createRequire(__filename);
 const ffmpegPath = (requireInstaller('@ffmpeg-installer/ffmpeg') as { path: string }).path;
 const ffprobeInstallerPath = (requireInstaller('@ffprobe-installer/ffprobe') as { path: string }).path;
 
-describe('ConversionService', () => {
+// These run real ffmpeg encodes, which can be slow on a busy CI runner with coverage on.
+describe('ConversionService', { timeout: 60_000 }, () => {
   let root: string;
   let ffprobePath: string;
   let convertRoot: string;
@@ -71,7 +72,7 @@ describe('ConversionService', () => {
   }
 
   async function waitForJob(name: string, statuses: ConversionJob['status'][]): Promise<ConversionJob> {
-    for (let attempt = 0; attempt < 200; attempt += 1) {
+    for (let attempt = 0; attempt < 550; attempt += 1) {
       const job = (await service.overview()).jobs.find((candidate) => candidate.name === name);
       if (job && statuses.includes(job.status)) return job;
       await new Promise((resolve) => setTimeout(resolve, 100));
