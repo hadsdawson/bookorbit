@@ -38,8 +38,10 @@ export const MAX_TORRENT_FILE_BYTES = 2 * 1024 * 1024;
  * A note a person sets by hand on a request, separate from the workflow status the server drives.
  * It records why a request is still waiting from the requester's side: the book is out but not in
  * this format yet, it is not out at all yet, or it was searched for and could not be found.
+ * Fork: `grabbed` is set by hand once the book has been found and is on its way; the release date
+ * never sets it.
  */
-export const BOOK_REQUEST_TRACKING_STATUSES = ["format_not_available", "not_yet_released", "missing"] as const;
+export const BOOK_REQUEST_TRACKING_STATUSES = ["format_not_available", "not_yet_released", "missing", "grabbed"] as const;
 export type BookRequestTrackingStatus = (typeof BOOK_REQUEST_TRACKING_STATUSES)[number];
 
 /** Fork: a tracking choice from the list, where "auto" hands the status back to the release date. */

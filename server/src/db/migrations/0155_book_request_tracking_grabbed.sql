@@ -1,0 +1,2 @@
+ALTER TABLE "book_requests" DROP CONSTRAINT "book_requests_tracking_status_chk";--> statement-breakpoint
+ALTER TABLE "book_requests" ADD CONSTRAINT "book_requests_tracking_status_chk" CHECK ("book_requests"."tracking_status" is null or "book_requests"."tracking_status" in ('format_not_available', 'not_yet_released', 'missing', 'grabbed'));
