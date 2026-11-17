@@ -26,6 +26,7 @@ const TONES: Record<BookRequestTrackingStatus, string> = {
   format_not_available: 'border-warning/40 bg-warning/10 text-warning',
   not_yet_released: 'border-info/40 bg-info/10 text-info',
   missing: 'border-destructive/40 bg-destructive/10 text-destructive',
+  grabbed: 'border-success/40 bg-success/10 text-success',
 }
 
 /** Unset is a dashed outline: an empty slot to fill rather than a status of its own. */
@@ -37,6 +38,7 @@ const INKS: Record<BookRequestTrackingStatus, string> = {
   format_not_available: 'text-warning',
   not_yet_released: 'text-info',
   missing: 'text-destructive',
+  grabbed: 'text-success',
 }
 
 const ink = computed(() => (props.request.trackingStatus ? INKS[props.request.trackingStatus] : 'text-muted-foreground'))

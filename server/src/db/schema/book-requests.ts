@@ -196,7 +196,7 @@ export const bookRequests = pgTable(
     ),
     check(
       'book_requests_tracking_status_chk',
-      sql`${t.trackingStatus} is null or ${t.trackingStatus} in ('format_not_available', 'not_yet_released', 'missing')`,
+      sql`${t.trackingStatus} is null or ${t.trackingStatus} in ('format_not_available', 'not_yet_released', 'missing', 'grabbed')`,
     ),
     check('book_requests_series_index_nonnegative_chk', sql`${t.seriesIndex} is null or ${t.seriesIndex} >= 0`),
   ],
