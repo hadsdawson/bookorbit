@@ -27,16 +27,21 @@ describe('permission-presets', () => {
     expect(granting.length).toBeGreaterThan(0)
   })
 
-  it('limits the standard preset to reading and device access', () => {
+  it('gives the standard preset reading, requests, email, notifications and device access', () => {
     expect(presetPermissions('standard')).toEqual([
       Permission.LibraryDownload,
+      Permission.BookRequestAccess,
+      Permission.BookRequestAutoApprove,
       Permission.KoboSync,
       Permission.KoreaderSync,
       Permission.HardcoverSync,
       Permission.ReadwiseSync,
       Permission.StorygraphSync,
       Permission.OpdsAccess,
+      Permission.EmailSend,
+      Permission.NotificationAccess,
     ])
+    expect(presetPermissions('standard')).not.toContain(Permission.ManageBookRequests)
     expect(presetPermissions('standard')).not.toContain(Permission.BookDockAccess)
     expect(presetPermissions('standard')).not.toContain(Permission.ManageBookDock)
   })

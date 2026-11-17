@@ -74,18 +74,21 @@ export function isRestrictionPermission(permissionName: string): boolean {
 }
 
 /**
- * What an ordinary reader gets. Deliberately no request capability: whether people may ask for
- * books at all is an instance-level decision an operator makes once, so it belongs on the role
- * they choose rather than on the button that fills the form in for them.
+ * What an ordinary reader gets. Fork: includes requesting books with auto-approval, sending books
+ * by email and notifications, because on this server every reader is trusted to ask for books.
  */
 const STANDARD_PRESET: Permission[] = [
   Permission.LibraryDownload,
+  Permission.BookRequestAccess,
+  Permission.BookRequestAutoApprove,
   Permission.KoboSync,
   Permission.KoreaderSync,
   Permission.HardcoverSync,
   Permission.ReadwiseSync,
   Permission.StorygraphSync,
   Permission.OpdsAccess,
+  Permission.EmailSend,
+  Permission.NotificationAccess,
 ]
 
 export type PermissionPreset = 'standard' | 'admin' | 'clear'
