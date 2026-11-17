@@ -15,16 +15,18 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { resolveRouteViewKey } from '@/router/view-key'
 import LegalNotices from '@/components/legal/LegalNotices.vue'
 
-// Toasts sit at the top centre so they never cover bottom-edge action buttons,
-// the audio/TTS mini players, or bulk-action bars.
+// Toasts sit at the bottom centre, above the TTS mini player, which publishes its measured height.
 const TOASTER_OFFSET = {
-  top: '16px',
+  bottom: 'max(16px, var(--tts-mini-player-clearance, 0px))',
 }
 const TOASTER_MOBILE_OFFSET = {
-  top: '16px',
+  bottom: 'max(16px, var(--tts-mini-player-clearance, 0px))',
   left: '16px',
   right: '16px',
 }
+// Sonner lets a toast be swiped only towards its own edge by default, which at the bottom centre
+// means down; sideways swipes are what people reach for, so they dismiss it too.
+const TOASTER_SWIPE_DIRECTIONS = ['left', 'right', 'bottom'] as const
 
 const { isOpen } = useChangePasswordDialog()
 
@@ -62,6 +64,14 @@ watch(
     <LegalNotices />
     <TtsMiniPlayer />
     <MediaOverlayMiniPlayer />
-    <Toaster rich-colors position="top-center" :visible-toasts="5" :gap="8" :offset="TOASTER_OFFSET" :mobile-offset="TOASTER_MOBILE_OFFSET" />
+    <Toaster
+      rich-colors
+      position="bottom-center"
+      :visible-toasts="5"
+      :gap="8"
+      :offset="TOASTER_OFFSET"
+      :mobile-offset="TOASTER_MOBILE_OFFSET"
+      :swipe-directions="[...TOASTER_SWIPE_DIRECTIONS]"
+    />
   </TooltipProvider>
 </template>
