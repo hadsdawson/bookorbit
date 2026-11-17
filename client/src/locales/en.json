@@ -9966,6 +9966,21 @@
       "stuckHint": "Nothing is working on this file, usually because BookOrbit restarted part-way. Use Try again to put it back in line.",
       "slowHint": "This step usually takes seconds. If it reaches 20 minutes it is stopped and marked failed so the rest of the line can move.",
       "tryAgain": "Try again"
+    },
+    "addToBook": {
+      "action": "Add to Existing Book",
+      "actionHint": "Add the selected files to a book already in a library, as more formats of it",
+      "title": "{count, plural, one {Add 1 file to an existing book} other {Add # files to an existing book}}",
+      "selectedFiles": "{count, plural, one {the selected file} other {the # selected files}}",
+      "library": "Library",
+      "noLibrary": "None of your libraries keep one book per folder, so files cannot be added to an existing book. Use File instead.",
+      "confirm": "{count, plural, one {Add 1 file to {title}?} other {Add # files to {title}?}}",
+      "confirmHint": "The files go into that book's folder and the book keeps its details.",
+      "submit": "Add to {title}",
+      "back": "Choose another book",
+      "added": "{count, plural, one {1 file added to {title}.} other {# files added to {title}.}}",
+      "partial": "{count, plural, one {1 file was added. These could not be:} other {# files were added. These could not be:}}",
+      "failed": "The files could not be added. Try again."
     }
   },
   "bookRequests": {
