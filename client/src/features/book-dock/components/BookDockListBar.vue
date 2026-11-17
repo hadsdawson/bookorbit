@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ArrowUpDown, Check, Combine, FolderPlus, Keyboard, Loader2, PenLine, RefreshCw, Trash2, Wand2, X } from '@lucide/vue'
+import { ArrowUpDown, BookPlus, Check, Combine, FolderPlus, Keyboard, Loader2, PenLine, RefreshCw, Trash2, Wand2, X } from '@lucide/vue'
 import { Permission, type BookDockSummary } from '@bookorbit/types'
 import { formatBytes } from '@/lib/formatting'
 import { formatNumber } from '@/i18n/formatters'
@@ -17,6 +17,8 @@ const props = defineProps<{
   selectionCount: number
   /** True when the selection is two or more files on this page, which is what combining needs. */
   canCombine?: boolean
+  /** Fork: true when the selection is files on this page, which adding to an existing book needs. */
+  canAddToBook?: boolean
   fetchedCount: number
   errorCount: number
   sort: SortField
@@ -30,6 +32,7 @@ const emit = defineEmits<{
   sort: [SortField]
   finalize: []
   combine: []
+  addToBook: []
   setDestination: []
   bulkEdit: []
   deselect: []
@@ -76,6 +79,10 @@ function emitSetDestination() {
 function emitBulkEdit() {
   emit('bulkEdit')
 }
+function emitAddToBook() {
+  emit('addToBook')
+}
+
 function emitCombine() {
   emit('combine')
 }
@@ -184,6 +191,17 @@ function emitRetryFetch() {
           >
             <Combine class="size-3" aria-hidden="true" />
             {{ t('bookDock.combine.action') }}
+          </button>
+          <button
+            v-if="canFinalize && canAddToBook"
+            type="button"
+            data-testid="book-dock-add-to-book"
+            :title="t('bookDock.addToBook.actionHint')"
+            class="inline-flex h-7 items-center gap-1.5 rounded-lg bg-teal-500/12 px-2.5 text-[11.5px] font-medium text-teal-700 transition-colors hover:bg-teal-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:text-teal-300"
+            @click="emitAddToBook"
+          >
+            <BookPlus class="size-3" aria-hidden="true" />
+            {{ t('bookDock.addToBook.action') }}
           </button>
           <button
             v-if="canBulkEdit"

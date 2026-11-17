@@ -21,7 +21,7 @@ const summary: BookDockSummary = {
   paused: false,
 }
 
-function mountListBar(selectionCount: number) {
+function mountListBar(selectionCount: number, extra: { canAddToBook?: boolean } = {}) {
   return shallowMount(BookDockListBar, {
     props: {
       pageCount: 2,
@@ -35,6 +35,7 @@ function mountListBar(selectionCount: number) {
       sort: 'attention',
       summary,
       keyboardActive: false,
+      ...extra,
     },
   })
 }
@@ -61,5 +62,15 @@ describe('BookDockListBar selection actions', () => {
 
     expect(wrapper.find('[data-testid="book-dock-deselect"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="book-dock-bulk-discard"]').exists()).toBe(false)
+  })
+
+  it('fork: offers Add to Existing Book for a selection made on this page', async () => {
+    expect(mountListBar(1).find('[data-testid="book-dock-add-to-book"]').exists()).toBe(false)
+    const wrapper = mountListBar(1, { canAddToBook: true })
+
+    await wrapper.get('[data-testid="book-dock-add-to-book"]').trigger('click')
+
+    expect(wrapper.get('[data-testid="book-dock-add-to-book"]').text()).toBe('Add to Existing Book')
+    expect(wrapper.emitted('addToBook')).toHaveLength(1)
   })
 })

@@ -23,6 +23,7 @@ import BookDockListBar from '@/features/book-dock/components/BookDockListBar.vue
 import BookDockFileSheet from '@/features/book-dock/components/BookDockFileSheet.vue'
 import BookDockFinalizeDialog from '@/features/book-dock/components/BookDockFinalizeDialog.vue'
 import BookDockBulkEditDialog from '@/features/book-dock/components/BookDockBulkEditDialog.vue'
+import BookDockAddToBookDialog from '@/features/book-dock/components/BookDockAddToBookDialog.vue'
 import BookDockCombineDialog from '@/features/book-dock/components/BookDockCombineDialog.vue'
 import BookDockSetDestinationDialog from '@/features/book-dock/components/BookDockSetDestinationDialog.vue'
 import BookDockDiscardDialog from '@/features/book-dock/components/BookDockDiscardDialog.vue'
@@ -102,6 +103,9 @@ const showCombineDialog = ref(false)
 
 /** Combining names its files one by one, so it only works on a selection that is all on this page. */
 const combineFiles = computed(() => (selectAll.value ? [] : items.value.filter((file) => isSelected(file.id))))
+/** Fork: adding to an existing book names its files, so it needs a selection made on this page. */
+const canAddToBook = computed(() => !selectAll.value && combineFiles.value.length > 0 && combineFiles.value.length === selectionCount.value)
+const showAddToBookDialog = ref(false)
 const canCombine = computed(
   () =>
     !selectAll.value &&
@@ -389,6 +393,19 @@ function handleProcessingStateError() {
 
 function openFinalize() {
   showFinalizeDialog.value = true
+}
+
+function openAddToBook() {
+  if (canAddToBook.value) showAddToBookDialog.value = true
+}
+
+function closeAddToBook() {
+  showAddToBookDialog.value = false
+}
+
+function onAddedToBook() {
+  showAddToBookDialog.value = false
+  onFinalized()
 }
 
 function openCombine() {
@@ -703,6 +720,7 @@ onUnmounted(() => {
             :select-all-matching="selectAll"
             :selection-count="selectionCount"
             :can-combine="canCombine"
+            :can-add-to-book="canAddToBook"
             :fetched-count="fetchedCount"
             :error-count="errorCount"
             :summary="summary"
@@ -712,6 +730,7 @@ onUnmounted(() => {
             @select-all-matching="handleSelectAllMatching"
             @sort="handleSort"
             @finalize="openFinalize"
+            @add-to-book="openAddToBook"
             @set-destination="openSetDestination"
             @bulk-edit="openBulkEdit"
             @combine="openCombine"
@@ -756,6 +775,8 @@ onUnmounted(() => {
       @close="showFinalizeDialog = false"
       @finalized="onFinalized"
     />
+
+    <BookDockAddToBookDialog v-if="showAddToBookDialog" :files="combineFiles" @close="closeAddToBook" @added="onAddedToBook" />
 
     <BookDockCombineDialog v-if="showCombineDialog" :files="combineFiles" @close="closeCombine" @combined="onCombined" @merged="onMergedInDock" />
 
