@@ -553,6 +553,9 @@ describe('BookController', () => {
       const repo = {
         countUnfinished: vi.fn().mockResolvedValue(unfinished),
         insert: vi.fn(),
+        insertWithinLimit: vi.fn((_values: unknown, max: number) =>
+          unfinished >= max ? Promise.resolve(null) : Promise.reject(new Error('unexpected insert')),
+        ),
         findById: vi.fn(),
       };
       const service = new BulkRunsService(
@@ -596,6 +599,7 @@ describe('BookController', () => {
         await expect(result).rejects.toBeInstanceOf(HttpException);
         await expect(result).rejects.toMatchObject({ status: HttpStatus.TOO_MANY_REQUESTS });
         expect(repo.insert).not.toHaveBeenCalled();
+        expect(repo.insertWithinLimit).toHaveBeenCalledWith(expect.anything(), BULK_RUN_MAX_UNFINISHED);
         expect(raw.writeHead).not.toHaveBeenCalled();
         expect(raw.write).not.toHaveBeenCalled();
       },
