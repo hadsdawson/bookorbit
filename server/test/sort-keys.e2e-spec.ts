@@ -13,7 +13,7 @@ function escapeIdentifier(identifier: string): string {
 
 /** The statements of the new migration that touch books and series, run as written. */
 function migrationStatementsFor(tables: string[]): string[] {
-  const text = readFileSync(join(__dirname, '../src/db/migrations/0146_age_ratings_and_sort_keys.sql'), 'utf8');
+  const text = readFileSync(join(__dirname, '../src/db/migrations/0165_age_ratings_and_sort_keys.sql'), 'utf8');
   return text
     .split('--> statement-breakpoint')
     .map((statement) => statement.trim())

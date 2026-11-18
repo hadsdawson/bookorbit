@@ -8,7 +8,7 @@ export type CardOverlayKey = (typeof CARD_OVERLAY_KEYS)[number];
 export const FORMAT_BADGE_STYLES = ["primary", "bubble", "underline", "pips", "seal", "dots", "kinds"] as const;
 export type FormatBadgeStyle = (typeof FORMAT_BADGE_STYLES)[number];
 
-export const GRID_CARD_LABEL_FIELDS =["hidden", "book-title", "series-title", "series-title-position", "author"] as const;
+export const GRID_CARD_LABEL_FIELDS = ["hidden", "book-title", "series-title", "series-title-position", "author"] as const;
 export type GridCardLabelField = (typeof GRID_CARD_LABEL_FIELDS)[number];
 
 export const COVER_SIZE_SCOPES = ["per-view", "synced"] as const;
@@ -91,6 +91,8 @@ export interface DisplayPreferences {
   gridCardSecondaryLabel: GridCardLabelField;
   cardInfoMode: CardInfoMode;
   thumbnailClickAction: BookThumbnailClickAction;
+  /** Jumping to a highlight opens the book in Peek mode, leaving progress and read status untouched. */
+  openHighlightsInPeek: boolean;
   /** Fork. Optional so a row stored before it existed still parses; absent means "details". */
   bookDetailsButtonAction?: BookDetailsButtonAction;
   placeholderCoverStyle: PlaceholderCoverStyle;

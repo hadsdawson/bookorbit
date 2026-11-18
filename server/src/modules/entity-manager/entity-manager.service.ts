@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 
 import type {
   BrowseEntitiesResponse,
@@ -17,6 +17,7 @@ import type {
 import type { RequestUser } from '../../common/types/request-user';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
 import { FileWriteService } from '../file-write/file-write.service';
+import { GenrePolicyService } from '../genre-policy/genre-policy.service';
 import { LibraryService } from '../library/library.service';
 import { MetadataScoreService } from '../metadata-score/metadata-score.service';
 import { EntityManagerRepository } from './entity-manager.repository';
@@ -58,6 +59,7 @@ export class EntityManagerService {
     publisherStrategy: PublisherStrategy,
     languageStrategy: LanguageStrategy,
     seriesStrategy: SeriesStrategy,
+    @Optional() private readonly genrePolicy?: GenrePolicyService,
   ) {
     this.strategies = new Map<EntityType, EntityStrategy>([
       ['author', authorStrategy],
@@ -68,6 +70,16 @@ export class EntityManagerService {
       ['language', languageStrategy],
       ['series', seriesStrategy],
     ]);
+  }
+
+  /** Fork: with the allowed-genres list on, a rename, split or merge may only leave books with listed genres. */
+  private async assertGenresAllowed(names: readonly string[]): Promise<void> {
+    if (!this.genrePolicy) return;
+    for (const name of names) {
+      if ((await this.genrePolicy.filter([name])).length === 0) {
+        throw new BadRequestException(`"${name.trim()}" is not in the allowed genres list`);
+      }
+    }
   }
 
   getStrategy(entityType: EntityType): EntityStrategy {
@@ -242,6 +254,10 @@ export class EntityManagerService {
 
     try {
       const strategy = this.getStrategy(entityType);
+      if (entityType === 'genre') {
+        const targetName = await this.repo.findGenreName(Number(targetId));
+        if (targetName) await this.assertGenresAllowed([targetName]);
+      }
       const libraryIds = await this.libraryService.findEditableLibraryIds(user);
       const result = await strategy.merge({ targetId, sourceIds, userId: user.id, libraryIds });
 
@@ -291,6 +307,7 @@ export class EntityManagerService {
 
     try {
       const strategy = this.getStrategy(entityType);
+      if (entityType === 'genre') await this.assertGenresAllowed([newName]);
       const libraryIds = await this.libraryService.findEditableLibraryIds(user);
       const result = await strategy.rename({ entityId, newName, userId: user.id, libraryIds });
 
@@ -399,6 +416,7 @@ export class EntityManagerService {
       if (newNames.length < 2) {
         throw new BadRequestException('Split requires at least 2 new names');
       }
+      if (entityType === 'genre') await this.assertGenresAllowed(newNames);
 
       const libraryIds = await this.libraryService.findEditableLibraryIds(user);
       const result = await strategy.split({ entityId, newNames, libraryIds });

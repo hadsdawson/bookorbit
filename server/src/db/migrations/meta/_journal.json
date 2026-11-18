@@ -1006,92 +1006,232 @@
     {
       "idx": 143,
       "version": "7",
-      "when": 1794336093949,
-      "tag": "0143_request_tracking_and_not_interested",
+      "when": 1794455449850,
+      "tag": "0143_add_koreader_device_names",
       "breakpoints": true
     },
     {
       "idx": 144,
       "version": "7",
-      "when": 1794410794073,
-      "tag": "0144_folder_covers_and_metadata_json",
+      "when": 1794461433776,
+      "tag": "0144_add_download_client_remove_completed",
       "breakpoints": true
     },
     {
       "idx": 145,
       "version": "7",
-      "when": 1794492310622,
-      "tag": "0145_chapters_write_on_save",
+      "when": 1794506032213,
+      "tag": "0145_add_ai",
       "breakpoints": true
     },
     {
       "idx": 146,
       "version": "7",
-      "when": 1794569604644,
-      "tag": "0146_age_ratings_and_sort_keys",
+      "when": 1794550869584,
+      "tag": "0146_sync_excluded_libraries",
       "breakpoints": true
     },
     {
       "idx": 147,
       "version": "7",
-      "when": 1794595062517,
-      "tag": "0147_new_releases",
+      "when": 1794586764768,
+      "tag": "0147_add_reading_help",
       "breakpoints": true
     },
     {
       "idx": 148,
       "version": "7",
-      "when": 1794598600658,
-      "tag": "0148_rename_on_add_file",
+      "when": 1794586786626,
+      "tag": "0148_add_ai_step_timing_effort",
       "breakpoints": true
     },
     {
       "idx": 149,
       "version": "7",
-      "when": 1794617131029,
-      "tag": "0149_remove_age_ratings",
+      "when": 1794680383126,
+      "tag": "0149_add_author_gender",
       "breakpoints": true
     },
     {
       "idx": 150,
       "version": "7",
-      "when": 1794699691120,
-      "tag": "0150_author_links",
+      "when": 1794684402120,
+      "tag": "0150_add_book_file_path_filter_index",
       "breakpoints": true
     },
     {
       "idx": 151,
       "version": "7",
-      "when": 1794703892454,
-      "tag": "0151_author_aliases",
+      "when": 1794699754181,
+      "tag": "0151_remove_book_file_path_filter_index",
       "breakpoints": true
     },
     {
       "idx": 152,
       "version": "7",
-      "when": 1794712374216,
-      "tag": "0152_request_tracking_source",
+      "when": 1794727686143,
+      "tag": "0152_add_ai_jobs_feature_finish_index",
       "breakpoints": true
     },
     {
       "idx": 153,
       "version": "7",
-      "when": 1794769366358,
-      "tag": "0153_author_pen_names",
+      "when": 1794730172585,
+      "tag": "0153_add_read_aloud_queue_order",
       "breakpoints": true
     },
     {
       "idx": 154,
       "version": "7",
-      "when": 1794774488549,
-      "tag": "0154_book_dock_merged_into",
+      "when": 1794731935058,
+      "tag": "0154_add_jobs_owned_type_indexes",
       "breakpoints": true
     },
     {
       "idx": 155,
       "version": "7",
+      "when": 1794734476052,
+      "tag": "0155_add_jobs_scan_history_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 156,
+      "version": "7",
+      "when": 1794735529136,
+      "tag": "0156_add_bulk_runs",
+      "breakpoints": true
+    },
+    {
+      "idx": 157,
+      "version": "7",
+      "when": 1794852216322,
+      "tag": "0157_add_library_docks",
+      "breakpoints": true
+    },
+    {
+      "idx": 158,
+      "version": "7",
+      "when": 1794856038964,
+      "tag": "0158_add_book_metadata_edition_id_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 159,
+      "version": "7",
+      "when": 1794899962043,
+      "tag": "0159_add_book_file_audio_timelines",
+      "breakpoints": true
+    },
+    {
+      "idx": 160,
+      "version": "7",
+      "when": 1794942724960,
+      "tag": "0160_add_normalized_name_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 161,
+      "version": "7",
+      "when": 1794947035400,
+      "tag": "0161_index_koreader_page_stats_page_start",
+      "breakpoints": true
+    },
+    {
+      "idx": 162,
+      "version": "7",
+      "when": 1794336093949,
+      "tag": "0162_request_tracking_and_not_interested",
+      "breakpoints": true
+    },
+    {
+      "idx": 163,
+      "version": "7",
+      "when": 1794410794073,
+      "tag": "0163_folder_covers_and_metadata_json",
+      "breakpoints": true
+    },
+    {
+      "idx": 164,
+      "version": "7",
+      "when": 1794492310622,
+      "tag": "0164_chapters_write_on_save",
+      "breakpoints": true
+    },
+    {
+      "idx": 165,
+      "version": "7",
+      "when": 1794569604644,
+      "tag": "0165_age_ratings_and_sort_keys",
+      "breakpoints": true
+    },
+    {
+      "idx": 166,
+      "version": "7",
+      "when": 1794595062517,
+      "tag": "0166_new_releases",
+      "breakpoints": true
+    },
+    {
+      "idx": 167,
+      "version": "7",
+      "when": 1794598600658,
+      "tag": "0167_rename_on_add_file",
+      "breakpoints": true
+    },
+    {
+      "idx": 168,
+      "version": "7",
+      "when": 1794617131029,
+      "tag": "0168_remove_age_ratings",
+      "breakpoints": true
+    },
+    {
+      "idx": 169,
+      "version": "7",
+      "when": 1794699691120,
+      "tag": "0169_author_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 170,
+      "version": "7",
+      "when": 1794703892454,
+      "tag": "0170_author_aliases",
+      "breakpoints": true
+    },
+    {
+      "idx": 171,
+      "version": "7",
+      "when": 1794712374216,
+      "tag": "0171_request_tracking_source",
+      "breakpoints": true
+    },
+    {
+      "idx": 172,
+      "version": "7",
+      "when": 1794769366358,
+      "tag": "0172_author_pen_names",
+      "breakpoints": true
+    },
+    {
+      "idx": 173,
+      "version": "7",
+      "when": 1794774488549,
+      "tag": "0173_book_dock_merged_into",
+      "breakpoints": true
+    },
+    {
+      "idx": 174,
+      "version": "7",
       "when": 1794877994675,
-      "tag": "0155_book_request_tracking_grabbed",
+      "tag": "0174_book_request_tracking_grabbed",
+      "breakpoints": true
+    },
+    {
+      "idx": 175,
+      "version": "7",
+      "when": 1795039737661,
+      "tag": "0175_person_name_key_indexes",
       "breakpoints": true
     }
   ]

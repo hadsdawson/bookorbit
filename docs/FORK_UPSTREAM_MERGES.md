@@ -7,19 +7,26 @@ so a merge usually conflicts in `server/src/db/migrations/meta/_journal.json`, a
 ## The journal
 
 `_journal.json` is the list Drizzle follows. After a merge it must hold every migration from both
-sides, exactly once:
+sides, exactly once, with upstream's first:
 
-1. Keep both sides' entries. Never drop one to make the conflict go away.
-2. Order the entries by their `when` value, oldest first.
-3. Renumber `idx` from 0 with no gaps, following that order.
-4. Leave each `tag` and each `.sql` file name as it is. Two files may share a number prefix
-   (upstream's `0146_...` and the fork's `0146_...`); that is fine, the tag is what matters.
+1. Keep upstream's entries exactly as upstream has them: same numbers, tags and order.
+2. Put the fork's own migrations after upstream's newest one, renumbered to follow it (since the
+   2026-11-18 sync they are 0162 to 0174). Rename only the `.sql` file, the matching
+   `meta/NNNN_snapshot.json` file and the entry's `idx` and `tag`. Never change a fork migration's SQL
+   or its `when`: databases record migrations by both, so a changed one would look new and run again.
+3. Renumber `idx` from 0 with no gaps.
+4. List every fork migration whose `when` is older than an upstream one in
+   `server/src/db/fork-migrations.ts`. The journal tests then check those in order among themselves
+   instead of against upstream's.
 
-`server/src/scripts/migration-journal.test.ts` checks all of this and runs with the unit tests.
+`server/src/db/migration-journal.test.ts` (upstream's) and
+`server/src/scripts/migration-journal.test.ts` (the fork's) check all of this with the unit tests.
 
 ## Snapshots
 
-Keep both sides' snapshot files. Snapshots are only read when a new migration is generated, never
+Keep upstream's snapshot files at upstream's numbers and move the fork's with their migrations. Point
+the first fork snapshot's `prevId` at upstream's newest snapshot `id`, so the chain stays unbroken.
+Snapshots are only read when a new migration is generated, never
 when BookOrbit starts, so a snapshot that is out of step cannot harm a running database. It does
 matter for the next schema change: the newest snapshot has to describe the schema with both sides'
 changes, or the next generated migration will repeat changes that were already made.

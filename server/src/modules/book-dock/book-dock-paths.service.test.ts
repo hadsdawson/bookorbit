@@ -49,4 +49,33 @@ describe('BookDockPathsService', () => {
 
     expect(await readdir(unit)).toEqual(['book-sample.epub']);
   });
+
+  it('stops at a library dock folder and leaves it in place', async () => {
+    const libraryDock = join(dock, '_libraries', 'Fantasy');
+    const unit = join(libraryDock, 'Brandon Sanderson', 'The Way of Kings');
+    await mkdir(unit, { recursive: true });
+
+    await removeLeftoverFolders(makeService(), { unitDirectory: unit, absolutePath: join(unit, 'book.m4b') });
+
+    expect(await readdir(libraryDock)).toEqual([]);
+    expect(await readdir(join(dock, '_libraries'))).toEqual(['Fantasy']);
+  });
+
+  it('keeps a library dock folder when a loose file sat directly in it', async () => {
+    const libraryDock = join(dock, '_libraries', 'Fantasy');
+    await mkdir(libraryDock, { recursive: true });
+
+    await removeLeftoverFolders(makeService(), { unitDirectory: null, absolutePath: join(libraryDock, 'book.epub') });
+
+    expect(await readdir(join(dock, '_libraries'))).toEqual(['Fantasy']);
+  });
+
+  it('never removes the _libraries folder', async () => {
+    const libraries = join(dock, '_libraries');
+    await mkdir(libraries);
+
+    await removeLeftoverFolders(makeService(), { unitDirectory: null, absolutePath: join(libraries, 'book.epub') });
+
+    expect(await readdir(dock)).toEqual(['_libraries']);
+  });
 });

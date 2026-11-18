@@ -2,17 +2,19 @@ import { Module } from '@nestjs/common';
 
 import { AppSettingsModule } from '../app-settings/app-settings.module';
 import { ChapterEditorModule } from '../chapter-editor/chapter-editor.module';
+import { JobsModule } from '../jobs/jobs.module';
 import { ChapterAutoApplySettingsController } from './chapter-auto-apply-settings.controller';
 import { ChapterAutoApplySettingsService } from './chapter-auto-apply-settings.service';
 import { LibraryModule } from '../library/library.module';
 import { ChapterHealthController } from './chapter-health.controller';
 import { ChapterHealthRepository } from './chapter-health.repository';
 import { ChapterHealthService } from './chapter-health.service';
+import { ChapterLookupJobSource } from './chapter-lookup-job-source';
 import { ChapterLookupWorker } from './chapter-lookup.worker';
 
 @Module({
-  imports: [AppSettingsModule, ChapterEditorModule, LibraryModule],
+  imports: [AppSettingsModule, ChapterEditorModule, JobsModule, LibraryModule],
   controllers: [ChapterHealthController, ChapterAutoApplySettingsController],
-  providers: [ChapterHealthRepository, ChapterHealthService, ChapterLookupWorker, ChapterAutoApplySettingsService],
+  providers: [ChapterHealthRepository, ChapterHealthService, ChapterLookupJobSource, ChapterLookupWorker, ChapterAutoApplySettingsService],
 })
 export class ChapterHealthModule {}

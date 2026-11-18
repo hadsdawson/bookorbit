@@ -67,6 +67,7 @@ const validDisplayPreferences: DisplayPreferences = {
   gridCardSecondaryLabel: 'hidden',
   cardInfoMode: 'hover-overlay',
   thumbnailClickAction: 'reader',
+  openHighlightsInPeek: false,
   bookDetailsButtonAction: 'details',
   placeholderCoverStyle: 'bauhaus',
 };

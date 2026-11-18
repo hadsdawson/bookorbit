@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 
 import { AuthorsModule } from '../authors/authors.module';
 import { FileWriteModule } from '../file-write/file-write.module';
+import { GenrePolicyModule } from '../genre-policy/genre-policy.module';
 import { LibraryModule } from '../library/library.module';
 import { MetadataScoreModule } from '../metadata-score/metadata-score.module';
 import { EntityManagerController } from './entity-manager.controller';
@@ -17,7 +18,7 @@ import { SeriesStrategy } from './strategies/series.strategy';
 import { TagStrategy } from './strategies/tag.strategy';
 
 @Module({
-  imports: [AuthorsModule, FileWriteModule, LibraryModule, MetadataScoreModule],
+  imports: [AuthorsModule, FileWriteModule, GenrePolicyModule, LibraryModule, MetadataScoreModule],
   controllers: [EntityManagerController],
   providers: [
     EntityManagerService,

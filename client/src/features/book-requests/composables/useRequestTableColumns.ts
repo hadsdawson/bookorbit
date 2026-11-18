@@ -4,55 +4,37 @@ import { computed, ref } from 'vue'
  * The request table's columns, in their default order. Only the selection checkbox sits outside
  * this list: it is how bulk actions work, so it always leads the row.
  */
-export const REQUEST_TABLE_COLUMNS = [
-  'cover',
-  'title',
-  'mediaKind',
-  'released',
-  'requester',
-  'age',
-  'state',
-  'tracking',
-  'outcome',
-  'actions',
-] as const
+export const REQUEST_TABLE_COLUMNS = ['book', 'requested', 'released', 'status', 'tracking', 'nextStep', 'actions'] as const
 export type RequestTableColumn = (typeof REQUEST_TABLE_COLUMNS)[number]
 
 /**
- * Starting widths in pixels. Title has none until it is resized: it takes whatever the other
- * columns leave, but never less than `TITLE_MIN_WIDTH`, so it cannot be squeezed to nothing.
+ * Starting widths in pixels. The book column has none: it takes whatever the others leave, and
+ * never less than `BOOK_MIN_WIDTH`, which is what keeps the table from scrolling sideways.
  */
-export const DEFAULT_COLUMN_WIDTHS: Record<RequestTableColumn, number> = {
-  cover: 56,
-  title: 280,
-  mediaKind: 72,
-  released: 112,
-  requester: 128,
-  age: 104,
-  state: 160,
-  tracking: 196,
-  outcome: 240,
-  actions: 220,
+export const DEFAULT_COLUMN_WIDTHS: Record<Exclude<RequestTableColumn, 'book'>, number> = {
+  requested: 128,
+  released: 104,
+  status: 160,
+  tracking: 168,
+  nextStep: 220,
+  actions: 176,
 }
 
-export const TITLE_MIN_WIDTH = 220
+/** The approver queue names the requester above the time, so its column starts wider. */
+export const REQUESTED_WITH_REQUESTER_WIDTH = 160
+
+export const BOOK_MIN_WIDTH = 220
 
 /** Narrower than this and a header's own label and sort arrow no longer fit. */
 export const MIN_COLUMN_WIDTH = 72
-const MAX_COLUMN_WIDTH = 800
+export const MAX_COLUMN_WIDTH = 480
 
-/** The cover column sizes the cover itself, so it runs from a thumbnail to a small poster. */
-export const COVER_MIN_WIDTH = 40
-export const COVER_MAX_WIDTH = 240
-/** Horizontal padding inside the cover cell; the cover fills the rest. */
-export const COVER_CELL_PADDING = 24
+export const SELECT_COLUMN_WIDTH = 44
 
-export const SELECT_COLUMN_WIDTH = 40
+/** The book can never be hidden: it is what the row is, and how a request is opened. */
+export const LOCKED_COLUMNS: readonly RequestTableColumn[] = ['book']
 
-/** Title can never be hidden: it is what the row is, and how a request is opened. */
-export const LOCKED_COLUMNS: readonly RequestTableColumn[] = ['title']
-
-const STORAGE_KEY = 'bookorbit.requests.columns.v1'
+const STORAGE_KEY = 'bookorbit.requests.columns.v2'
 
 interface StoredColumns {
   hidden: RequestTableColumn[]
@@ -64,9 +46,9 @@ function isColumn(value: unknown): value is RequestTableColumn {
   return typeof value === 'string' && (REQUEST_TABLE_COLUMNS as readonly string[]).includes(value)
 }
 
-function clampWidth(column: RequestTableColumn, value: number): number {
-  const [min, max] = column === 'cover' ? [COVER_MIN_WIDTH, COVER_MAX_WIDTH] : [MIN_COLUMN_WIDTH, MAX_COLUMN_WIDTH]
-  return Math.round(Math.min(max, Math.max(min, value)))
+function clampWidth(value: number, max = MAX_COLUMN_WIDTH): number {
+  const ceiling = Math.max(MIN_COLUMN_WIDTH, Math.min(MAX_COLUMN_WIDTH, max))
+  return Math.round(Math.min(ceiling, Math.max(MIN_COLUMN_WIDTH, value)))
 }
 
 /**
@@ -94,7 +76,7 @@ function readStored(): Required<StoredColumns> {
     const hidden = Array.isArray(parsed.hidden) ? parsed.hidden.filter(isColumn).filter((column) => !LOCKED_COLUMNS.includes(column)) : []
     const widths: Partial<Record<RequestTableColumn, number>> = {}
     for (const [key, value] of Object.entries(parsed.widths ?? {})) {
-      if (isColumn(key) && typeof value === 'number' && Number.isFinite(value)) widths[key] = clampWidth(key, value)
+      if (isColumn(key) && key !== 'book' && typeof value === 'number' && Number.isFinite(value)) widths[key] = clampWidth(value)
     }
     const order = completeOrder(Array.isArray(parsed.order) ? parsed.order : [])
     return { hidden, widths, order }
@@ -160,18 +142,18 @@ export function useRequestTableColumns() {
     return index !== -1 && visible[index + step] !== undefined
   }
 
-  function widthOf(column: RequestTableColumn): number {
-    return widths.value[column] ?? DEFAULT_COLUMN_WIDTHS[column]
+  /** The width a fixed column is drawn at before the table caps it; `fallback` replaces its default. */
+  function widthOf(column: Exclude<RequestTableColumn, 'book'>, fallback?: number): number {
+    return widths.value[column] ?? fallback ?? DEFAULT_COLUMN_WIDTHS[column]
   }
 
-  /** Null while the title column is still flexible. */
-  function storedWidthOf(column: RequestTableColumn): number | null {
-    return widths.value[column] ?? null
-  }
-
-  /** Applied live while dragging; `commitWidths` saves once the drag ends. */
-  function setWidth(column: RequestTableColumn, width: number): void {
-    widths.value = { ...widths.value, [column]: clampWidth(column, width) }
+  /**
+   * Applied live while dragging; `commitWidths` saves once the drag ends. `max` is how much room
+   * the table has left for this column, so a drag can never push the book below its minimum.
+   */
+  function setWidth(column: RequestTableColumn, width: number, max?: number): void {
+    if (column === 'book') return
+    widths.value = { ...widths.value, [column]: clampWidth(width, max) }
   }
 
   function resetWidth(column: RequestTableColumn): void {
@@ -202,7 +184,6 @@ export function useRequestTableColumns() {
     moveBy,
     canMove,
     widthOf,
-    storedWidthOf,
     setWidth,
     resetWidth,
     commitWidths,

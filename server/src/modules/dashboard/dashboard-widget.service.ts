@@ -9,6 +9,7 @@ import type {
   HighlightOfTheDayWidgetData,
   HighlightsWidgetData,
   LibraryOverviewWidgetData,
+  LibraryVisibilityPlace,
   LongWaitWidgetData,
   MonthlyChallengeWidgetData,
   NeglectedGemsWidgetData,
@@ -51,6 +52,7 @@ import {
   type ReaderClock,
 } from './dashboard-widget.calculations';
 import { DashboardWidgetRepository } from './dashboard-widget.repository';
+import { withoutHiddenLibraries } from '../../common/library-visibility/library-visibility';
 import { dashboardLibraryScopeCacheKey, resolveDashboardLibraryIds } from './dashboard-library-scope';
 
 const DASHBOARD_LIVE_TTL_MS = 120_000;
@@ -104,8 +106,9 @@ export class DashboardWidgetService implements OnModuleInit, OnModuleDestroy {
     return principalCacheKey(user, `${user.id}:${dashboardLibraryScopeCacheKey(libraryIds)}`);
   }
 
-  private async getLibraryIds(user: RequestUser): Promise<number[]> {
-    return resolveDashboardLibraryIds(await this.libraryService.findAccessibleLibraryIds(user), user);
+  private async getLibraryIds(user: RequestUser, place?: LibraryVisibilityPlace): Promise<number[]> {
+    const libraryIds = resolveDashboardLibraryIds(await this.libraryService.findAccessibleLibraryIds(user), user);
+    return place ? withoutHiddenLibraries(libraryIds, user, place) : libraryIds;
   }
 
   private readerClock(user: RequestUser): ReaderClock {
@@ -132,7 +135,7 @@ export class DashboardWidgetService implements OnModuleInit, OnModuleDestroy {
     const goalBooks = settings?.dashboardConfig?.readingGoal ?? null;
     const { year } = this.readerClock(user);
 
-    const accessibleLibraryIds = await this.getLibraryIds(user);
+    const accessibleLibraryIds = await this.getLibraryIds(user, 'stats');
     // Keyed by the local year alone: attempt end dates are already local days, so the zone only
     // decides which year it is.
     this.readingAttemptEvents.flushPendingChanges(user.id);
@@ -147,7 +150,7 @@ export class DashboardWidgetService implements OnModuleInit, OnModuleDestroy {
   /** The books finished this local year with the local day each was finished, most recently finished first. */
   async getFinishedThisYear(user: RequestUser, limit: number): Promise<Array<{ bookId: number; finishedOn: string }>> {
     const { year } = this.readerClock(user);
-    const accessibleLibraryIds = await this.getLibraryIds(user);
+    const accessibleLibraryIds = await this.getLibraryIds(user, 'stats');
     this.readingAttemptEvents.flushPendingChanges(user.id);
     return this.staleCache.get(this.cacheOwnerKey(user, accessibleLibraryIds), `finished-this-year-days:${year}:${limit}`, async () => {
       const contentFilters = this.getContentFilters(user);
@@ -158,7 +161,7 @@ export class DashboardWidgetService implements OnModuleInit, OnModuleDestroy {
   /** The books finished this local year, most recently finished first. */
   async getFinishedThisYearBookIds(user: RequestUser, limit: number): Promise<number[]> {
     const { year } = this.readerClock(user);
-    const accessibleLibraryIds = await this.getLibraryIds(user);
+    const accessibleLibraryIds = await this.getLibraryIds(user, 'stats');
     this.readingAttemptEvents.flushPendingChanges(user.id);
     return this.staleCache.get(this.cacheOwnerKey(user, accessibleLibraryIds), `finished-this-year:${year}:${limit}`, async () => {
       const contentFilters = this.getContentFilters(user);
@@ -167,7 +170,7 @@ export class DashboardWidgetService implements OnModuleInit, OnModuleDestroy {
   }
 
   async getCurrentlyReading(user: RequestUser): Promise<CurrentlyReadingWidgetData> {
-    const accessibleLibraryIds = await this.getLibraryIds(user);
+    const accessibleLibraryIds = await this.getLibraryIds(user, 'shelves');
     this.readingAttemptEvents.flushPendingChanges(user.id);
     return this.liveCache.get(this.cacheOwnerKey(user, accessibleLibraryIds), 'currently-reading', async () => {
       const contentFilters = this.getContentFilters(user);
@@ -176,7 +179,7 @@ export class DashboardWidgetService implements OnModuleInit, OnModuleDestroy {
   }
 
   async getReadingStreak(user: RequestUser): Promise<ReadingStreakWidgetData> {
-    const accessibleLibraryIds = await this.getLibraryIds(user);
+    const accessibleLibraryIds = await this.getLibraryIds(user, 'stats');
     const clock = this.readerClock(user);
     this.readingAttemptEvents.flushPendingChanges(user.id);
     return this.liveCache.get(this.cacheOwnerKey(user, accessibleLibraryIds), this.calendarCacheKey('reading-streak', clock), async () => {
@@ -187,7 +190,7 @@ export class DashboardWidgetService implements OnModuleInit, OnModuleDestroy {
 
   /** Minutes read per local day for the `days` days ending today, oldest first. */
   async getReadingDays(user: RequestUser, days: number): Promise<{ startDate: string; minutes: number[] }> {
-    const accessibleLibraryIds = await this.getLibraryIds(user);
+    const accessibleLibraryIds = await this.getLibraryIds(user, 'stats');
     const clock = this.readerClock(user);
     this.readingAttemptEvents.flushPendingChanges(user.id);
     return this.liveCache.get(this.cacheOwnerKey(user, accessibleLibraryIds), this.calendarCacheKey(`reading-days:${days}`, clock), async () => {
@@ -267,7 +270,7 @@ export class DashboardWidgetService implements OnModuleInit, OnModuleDestroy {
   }
 
   async getMonthlyChallenge(user: RequestUser, locale: Locale = DEFAULT_LOCALE): Promise<MonthlyChallengeWidgetData> {
-    const accessibleLibraryIds = await this.getLibraryIds(user);
+    const accessibleLibraryIds = await this.getLibraryIds(user, 'stats');
     const clock = this.readerClock(user);
     this.readingAttemptEvents.flushPendingChanges(user.id);
     // The cache holds the English result and the language is applied on the way out, so one entry
@@ -318,7 +321,7 @@ export class DashboardWidgetService implements OnModuleInit, OnModuleDestroy {
   }
 
   async getYearProjection(user: RequestUser): Promise<YearProjectionWidgetData> {
-    const accessibleLibraryIds = await this.getLibraryIds(user);
+    const accessibleLibraryIds = await this.getLibraryIds(user, 'stats');
     const clock = this.readerClock(user);
     this.readingAttemptEvents.flushPendingChanges(user.id);
     return this.staleCache.get(this.cacheOwnerKey(user, accessibleLibraryIds), this.calendarCacheKey('year-projection', clock), async () => {
@@ -362,7 +365,7 @@ export class DashboardWidgetService implements OnModuleInit, OnModuleDestroy {
   }
 
   async getReadingDna(user: RequestUser): Promise<ReadingDnaWidgetData> {
-    const accessibleLibraryIds = await this.getLibraryIds(user);
+    const accessibleLibraryIds = await this.getLibraryIds(user, 'stats');
     const clock = this.readerClock(user);
     this.readingAttemptEvents.flushPendingChanges(user.id);
     return this.staleCache.get(this.cacheOwnerKey(user, accessibleLibraryIds), this.calendarCacheKey('reading-dna', clock), async () => {
@@ -384,7 +387,7 @@ export class DashboardWidgetService implements OnModuleInit, OnModuleDestroy {
   }
 
   async getDiversityScore(user: RequestUser): Promise<DiversityScoreWidgetData> {
-    const accessibleLibraryIds = await this.getLibraryIds(user);
+    const accessibleLibraryIds = await this.getLibraryIds(user, 'stats');
     this.readingAttemptEvents.flushPendingChanges(user.id);
     return this.staleCache.get(this.cacheOwnerKey(user, accessibleLibraryIds), 'diversity-score', async () => {
       const contentFilters = this.getContentFilters(user);
@@ -401,7 +404,7 @@ export class DashboardWidgetService implements OnModuleInit, OnModuleDestroy {
   }
 
   async getReadingRhythm(user: RequestUser): Promise<ReadingRhythmWidgetData> {
-    const accessibleLibraryIds = await this.getLibraryIds(user);
+    const accessibleLibraryIds = await this.getLibraryIds(user, 'stats');
     const clock = this.readerClock(user);
     this.readingAttemptEvents.flushPendingChanges(user.id);
     return this.liveCache.get(this.cacheOwnerKey(user, accessibleLibraryIds), this.calendarCacheKey('reading-rhythm', clock), async () => {

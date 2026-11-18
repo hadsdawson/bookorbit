@@ -125,12 +125,12 @@ describe('BookDockCombineDialog', () => {
     apiMock.mockResolvedValue({
       ok: false,
       status: 400,
-      json: async () => ({ message: 'Some of those files are no longer in Book Dock' }),
+      json: async () => ({ message: 'Some of those files are no longer in Library Dock' }),
     } as Response)
     const wrapper = mountDialog([file(1, 'Book A.m4b'), file(2, 'Book A.epub')])
     await wrapper.get('[data-testid="book-dock-combine-hold"]').trigger('click')
     await flushPromises()
-    expect(wrapper.get('[role="alert"]').text()).toContain('no longer in Book Dock')
+    expect(wrapper.get('[role="alert"]').text()).toContain('no longer in Library Dock')
     expect(wrapper.emitted('merged')).toBeUndefined()
   })
 })
