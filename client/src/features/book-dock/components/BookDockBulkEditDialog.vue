@@ -10,19 +10,13 @@ import InputWithSuggestions from '@/components/ui/InputWithSuggestions.vue'
 import { useSeriesNameSearch } from '@/features/book/composables/useMetadataFieldSearch'
 import { useGenreSearch } from '@/features/book/composables/useTagSearch'
 import { useGenrePolicy } from '@/features/book/composables/useGenrePolicy'
+import type { BookDockSelectionPayload } from '../composables/useBookDockFiles'
 
 const { t } = useI18n()
+const { search: searchSeries } = useSeriesNameSearch()
 
 const props = defineProps<{
-  selectionPayload: {
-    fileIds?: number[]
-    selectAll?: boolean
-    excludedIds?: number[]
-    status?: string
-    needsReview?: boolean
-    readyToFile?: boolean
-    search?: string
-  }
+  selectionPayload: BookDockSelectionPayload
   selectionCount: number
 }>()
 
@@ -55,7 +49,6 @@ const enabledFields = reactive<Set<string>>(new Set())
 const values = reactive<Record<string, string>>({})
 const mergeArrays = ref(true)
 
-const { search: searchSeriesName } = useSeriesNameSearch()
 const { search: searchAnyGenre } = useGenreSearch()
 const { restricted: genresRestricted, load: loadGenrePolicy, acceptGenre, searchAllowed: searchAllowedGenres } = useGenrePolicy()
 const searchGenres = computed(() => (genresRestricted.value ? searchAllowedGenres : searchAnyGenre))
@@ -73,7 +66,7 @@ const genreList = computed({
   },
 })
 
-function setSeriesName(value: string | null) {
+function onSeriesNameInput(value: string | null) {
   values.seriesName = value ?? ''
 }
 
@@ -182,10 +175,10 @@ function handleClose() {
                 <InputWithSuggestions
                   v-else-if="f.key === 'seriesName'"
                   :model-value="values.seriesName ?? ''"
-                  :search-fn="searchSeriesName"
+                  :search-fn="searchSeries"
                   :disabled="!enabledFields.has(f.key)"
                   :class="FIELD_INPUT_CLASS"
-                  @update:model-value="setSeriesName"
+                  @update:model-value="onSeriesNameInput"
                 />
                 <ChipInput
                   v-else-if="f.key === 'genres'"

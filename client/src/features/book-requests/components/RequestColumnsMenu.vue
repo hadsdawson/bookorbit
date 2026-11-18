@@ -36,9 +36,9 @@ function resetColumns() {
 <template>
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
-      <Button variant="outline" size="sm">
-        <Columns3 :size="14" aria-hidden="true" />
-        {{ t('bookRequests.columns.button') }}
+      <Button variant="outline" type="button" class="hidden h-9 gap-1.5 px-2.5 xl:inline-flex" :aria-label="t('bookRequests.columns.button')">
+        <Columns3 :size="15" aria-hidden="true" />
+        <span class="max-2xl:sr-only">{{ t('bookRequests.columns.button') }}</span>
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end" class="w-56">

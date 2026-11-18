@@ -6,6 +6,8 @@ services:
     image: ${APP_IMAGE?required}
     restart: unless-stopped
     init: true
+    # Optional secrets such as EMAIL_ENCRYPTION_KEY, BOOK_REQUEST_ENCRYPTION_KEY and AI_ENCRYPTION_KEY
+    # (needed before an AI provider key can be saved) reach the app from .env through env_file.
     env_file:
       - .env
     ports:
@@ -28,7 +30,6 @@ services:
       PGID: ${PGID:-1000}
       NODE_MAX_OLD_SPACE_SIZE: ${NODE_MAX_OLD_SPACE_SIZE:-auto}
       BOOK_DOCK_PATH: ${BOOK_DOCK_PATH:-}
-      CONVERT_PATH: ${CONVERT_PATH:-}
       LIBRARY_BROWSE_ROOT: ${LIBRARY_BROWSE_ROOT:-}
       DISABLE_LOCAL_AUTH: ${DISABLE_LOCAL_AUTH:-false}
       READ_ALOUD_WORKER_URL: ${READ_ALOUD_WORKER_URL:-}
@@ -60,7 +61,7 @@ services:
   # network at http://kokoro:8880/v1, so no port is published to the host.
   kokoro:
     container_name: bookorbit-kokoro
-    image: ${KOKORO_IMAGE:-ghcr.io/remsky/kokoro-fastapi-cpu:v0.8.0}
+    image: ${KOKORO_IMAGE:-ghcr.io/remsky/kokoro-fastapi-cpu:v0.10.0}
     profiles: ["tts"]
     restart: unless-stopped
     init: true

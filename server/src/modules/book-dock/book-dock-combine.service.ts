@@ -44,7 +44,7 @@ export class BookDockCombineService {
     if (fileIds.length < 2) throw new BadRequestException('Pick at least two files to combine');
 
     const rows = await this.repo.findByIds(fileIds, user.id, canManageAll);
-    if (rows.length !== fileIds.length) throw new BadRequestException('Some of those files are no longer in Book Dock');
+    if (rows.length !== fileIds.length) throw new BadRequestException('Some of those files are no longer in Library Dock');
 
     const primaryFileId = await this.pickPrimary(dto.primaryFileId, rows, dto.defaultLibraryId);
     const others = fileIds.filter((id) => id !== primaryFileId);
@@ -148,7 +148,7 @@ export class BookDockCombineService {
     const fileIds = [...new Set(dto.fileIds)];
     if (fileIds.length < 2) throw new BadRequestException('Pick at least two files to merge');
     const rows = await this.repo.findByIds(fileIds, user.id, canManageAll);
-    if (rows.length !== fileIds.length) throw new BadRequestException('Some of those files are no longer in Book Dock');
+    if (rows.length !== fileIds.length) throw new BadRequestException('Some of those files are no longer in Library Dock');
 
     const primaryFileId = await this.pickPrimary(dto.primaryFileId, rows, dto.defaultLibraryId);
     if (dto.defaultLibraryId !== undefined && dto.defaultFolderId !== undefined) {
@@ -169,7 +169,7 @@ export class BookDockCombineService {
   /** Fork: splits a merged item back into its separate files, all still in Book Dock. */
   async unmerge(fileId: number, user: RequestUser, canManageAll: boolean): Promise<{ fileIds: number[] }> {
     const [row] = await this.repo.findByIds([fileId], user.id, canManageAll);
-    if (!row) throw new NotFoundException('Book Dock file not found');
+    if (!row) throw new NotFoundException('Library Dock file not found');
     const primaryId = row.mergedIntoId ?? row.id;
     const members = (await this.repo.findMergedMembers([primaryId])).get(primaryId) ?? [];
     await this.repo.clearMergeGroup(primaryId);

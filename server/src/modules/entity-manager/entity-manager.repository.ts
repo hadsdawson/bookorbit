@@ -13,6 +13,11 @@ type Db = NodePgDatabase<typeof schema>;
 export class EntityManagerRepository {
   constructor(@Inject(DB) private readonly db: Db) {}
 
+  async findGenreName(id: number): Promise<string | null> {
+    const [row] = await this.db.select({ name: schema.genres.name }).from(schema.genres).where(eq(schema.genres.id, id)).limit(1);
+    return row?.name ?? null;
+  }
+
   async insertDismissedPair(entityType: EntityType, idA: number, idB: number, reason: string | undefined, dismissedBy: number): Promise<void> {
     const [canonA, canonB] = idA < idB ? [idA, idB] : [idB, idA];
     await this.db

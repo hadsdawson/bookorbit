@@ -37,12 +37,10 @@ export const storageConfig = registerAs('storage', () => {
   const appDataPath = resolve(process.env.APP_DATA_PATH ?? '/data');
   const bookDockPath = process.env.BOOK_DOCK_PATH?.trim();
   const libraryBrowseRoot = process.env.LIBRARY_BROWSE_ROOT?.trim();
-  const convertPath = process.env.CONVERT_PATH?.trim();
 
   return {
     appDataPath,
     bookDockPath: resolve(bookDockPath || join(appDataPath, 'book-dock')),
-    convertPath: resolve(convertPath || join(appDataPath, 'convert')),
     libraryBrowseRoot: resolve(libraryBrowseRoot || '/'),
   };
 });
@@ -105,6 +103,19 @@ export const migrationConfig = registerAs('migration', () => ({
  */
 export const bookRequestConfig = registerAs('bookRequest', () => ({
   encryptionKey: process.env.BOOK_REQUEST_ENCRYPTION_KEY ?? '',
+}));
+
+/**
+ * Keys for AI provider connections. Like the book request key, a provider key is refused rather
+ * than stored in the clear when this is unset; connections without a key still save.
+ */
+export const aiConfig = registerAs('ai', () => ({
+  encryptionKey: process.env.AI_ENCRYPTION_KEY ?? '',
+}));
+
+/** How many bulk runs the server works through at once, across every account. */
+export const bulkRunsConfig = registerAs('bulkRuns', () => ({
+  maxConcurrent: Number(process.env.BULK_RUNS_MAX_CONCURRENT ?? 3),
 }));
 
 export const oidcRuntimeConfig = registerAs('oidcRuntime', () => ({

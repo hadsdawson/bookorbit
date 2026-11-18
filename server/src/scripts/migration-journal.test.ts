@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 
+import { previousComparableEntry } from '../db/fork-migrations';
+
 interface JournalEntry {
   idx: number;
   when: number;
@@ -34,7 +36,12 @@ describe('migration journal', () => {
   });
 
   it('keeps its entries in the order they were written, each with its own time', () => {
-    const outOfOrder = entries.filter((entry, index) => index > 0 && entry.when <= entries[index - 1]!.when).map((entry) => entry.tag);
+    const outOfOrder = entries
+      .filter((entry, index) => {
+        const previous = previousComparableEntry(entries, index);
+        return previous !== undefined && entry.when <= previous.when;
+      })
+      .map((entry) => entry.tag);
     expect(outOfOrder).toEqual([]);
   });
 });

@@ -7,8 +7,9 @@ import { sanitizeLogValue } from '../common/utils/log-sanitize.utils';
  * Fork only. Drizzle applies just the migrations newer than the newest one recorded, so a migration
  * that upstream slots in before one this database already ran is skipped for good. That happened when
  * upstream added 0141_add_api_keys ahead of 0142_torbox_download_client, which this fork had already
- * deployed along with its own 0143_request_tracking_and_not_interested. Such migrations are applied
- * here, in order, with upstream's own SQL, then recorded so Drizzle sees them as done.
+ * deployed along with its own request tracking migration, and again with upstream's 0143 to 0158, which
+ * were written before migrations this fork had already deployed. Such migrations are applied here, in
+ * order, with upstream's own SQL, then recorded so Drizzle sees them as done.
  *
  * Only migrations newer than the last one both histories shared are considered, so a database whose
  * older ledger differs for any other reason is never touched.

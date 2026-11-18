@@ -22,7 +22,7 @@ function mockStrategy(overrides: Partial<EntityStrategy> & { entityType: EntityT
   };
 }
 
-function makeService() {
+function makeService(allowedGenres?: string[]) {
   const repo = {
     getDismissedPairSet: vi.fn().mockResolvedValue(new Set<string>()),
     getInlineDismissedPairSet: vi.fn().mockResolvedValue(new Set<string>()),
@@ -34,6 +34,7 @@ function makeService() {
     deleteInlineDismissedPairsForValue: vi.fn().mockResolvedValue(undefined),
     findDismissedPairs: vi.fn().mockResolvedValue([]),
     findInlineDismissedPairs: vi.fn().mockResolvedValue([]),
+    findGenreName: vi.fn().mockResolvedValue('Mystery'),
   };
 
   const libraryService = {
@@ -76,6 +77,9 @@ function makeService() {
     publisherStrategy as any,
     languageStrategy as any,
     seriesStrategy as any,
+    allowedGenres === undefined
+      ? undefined
+      : ({ filter: vi.fn((names: string[]) => Promise.resolve(names.filter((name) => allowedGenres.includes(name)))) } as any),
   );
 
   return {
@@ -1030,6 +1034,33 @@ describe('EntityManagerService', () => {
 
       const result = await service.scanDuplicates('publisher', mockUser);
       expect(result.clusters[0]!.pairDetails[0]!.reasons).toContain('Same normalized tokens');
+    });
+  });
+
+  describe('allowed genres list', () => {
+    it('refuses to rename a genre to one that is not allowed', async () => {
+      const { service, strategies } = makeService(['Mystery']);
+      await expect(service.rename('genre', mockUser, 3, 'Whodunnit', false)).rejects.toThrow(BadRequestException);
+      expect(strategies.genre.rename).not.toHaveBeenCalled();
+    });
+
+    it('renames a genre to an allowed one', async () => {
+      const { service, strategies } = makeService(['Mystery']);
+      await service.rename('genre', mockUser, 3, 'Mystery', false);
+      expect(strategies.genre.rename).toHaveBeenCalled();
+    });
+
+    it('refuses to merge genres into one that is not allowed', async () => {
+      const { service, repo, strategies } = makeService(['Fantasy']);
+      repo.findGenreName.mockResolvedValue('Mystery');
+      await expect(service.merge('genre', mockUser, 3, [4], false)).rejects.toThrow(BadRequestException);
+      expect(strategies.genre.merge).not.toHaveBeenCalled();
+    });
+
+    it('leaves tags alone', async () => {
+      const { service, strategies } = makeService(['Mystery']);
+      await service.rename('tag', mockUser, 3, 'Anything', false);
+      expect(strategies.tag.rename).toHaveBeenCalled();
     });
   });
 });

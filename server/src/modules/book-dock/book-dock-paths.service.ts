@@ -4,6 +4,7 @@ import { realpath, rmdir } from 'fs/promises';
 import { dirname, join } from 'path';
 
 import { removeEmptyDirs } from '../../common/utils/file-move.utils';
+import { classifyDockPath } from './library-dock-paths';
 
 /** Where the Book Dock lives on disk, and tidying the folders a unit leaves behind in it. */
 @Injectable()
@@ -24,10 +25,14 @@ export class BookDockPathsService {
 
   /**
    * Removes the folder a unit came from, and any parent folders that leaves empty, up to the dock
-   * itself. A folder holding anything besides system leftovers is kept for a person to look at.
+   * it sat in: the root for Unsorted, or a library's own `_libraries/<folder>`, which outlives its
+   * files. `_libraries` itself and the reserved folders are never touched. A folder holding anything
+   * besides system leftovers is kept for a person to look at.
    */
   async removeLeftoverFolders(directory: string): Promise<void> {
-    await removeEmptyDirs(directory, await this.root());
+    const info = classifyDockPath(await this.root(), directory);
+    if (info.area !== 'unsorted' && info.area !== 'dock') return;
+    await removeEmptyDirs(directory, info.dockRoot);
   }
 }
 

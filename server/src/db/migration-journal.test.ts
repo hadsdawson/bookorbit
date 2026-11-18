@@ -2,6 +2,8 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { previousComparableEntry } from './fork-migrations';
+
 type MigrationJournalEntry = {
   idx: number;
   version: string;
@@ -34,7 +36,7 @@ describe('Drizzle migration journal', () => {
 
     for (let i = 0; i < journal.entries.length; i += 1) {
       const entry = journal.entries[i];
-      const previous = journal.entries[i - 1];
+      const previous = previousComparableEntry(journal.entries, i);
       const prefix = migrationPrefix(i);
 
       expect(entry.idx).toBe(i);

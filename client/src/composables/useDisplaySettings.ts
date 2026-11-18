@@ -64,7 +64,7 @@ const DEFAULT_BOOK_SHADOW_STRENGTH: BookShadowStrength = 'default'
 const DEFAULT_BOOK_COVER_DISPLAY_MODE: BookCoverDisplayMode = 'blurred-fit'
 const DEFAULT_BOOK_DETAIL_COVER_TINT: BookDetailCoverTint = 'off'
 const DEFAULT_SERIES_CARD_COVER_MODE: SeriesCardCoverMode = 'stack'
-const DEFAULT_BOOK_THUMBNAIL_CLICK_ACTION: BookThumbnailClickAction = 'reader'
+const DEFAULT_BOOK_THUMBNAIL_CLICK_ACTION: BookThumbnailClickAction = 'details'
 const DEFAULT_BOOK_DETAILS_BUTTON_ACTION: BookDetailsButtonAction = 'details'
 const DEFAULT_PLACEHOLDER_COVER_STYLE: PlaceholderCoverStyle = 'bauhaus'
 const DEFAULT_CARD_OVERLAYS: CardOverlayKey[] = ['progress-bar', 'format', 'rating', 'read-status', 'series-position']
@@ -204,6 +204,7 @@ const cardInfoMode = ref<CardInfoMode>(normalizeCardInfoMode(storage.get('cardIn
 const thumbnailClickAction = ref<BookThumbnailClickAction>(
   normalizeThumbnailClickAction(storage.get('thumbnailClickAction', DEFAULT_BOOK_THUMBNAIL_CLICK_ACTION)),
 )
+const openHighlightsInPeek = ref(storage.get<boolean>('openHighlightsInPeek', false) === true)
 const bookDetailsButtonAction = ref<BookDetailsButtonAction>(
   normalizeBookDetailsButtonAction(storage.get('bookDetailsButtonAction', DEFAULT_BOOK_DETAILS_BUTTON_ACTION)),
 )
@@ -238,6 +239,7 @@ watch(gridCardPrimaryLabel, (value) => storage.set('gridCardPrimaryLabel', norma
 watch(gridCardSecondaryLabel, (value) => storage.set('gridCardSecondaryLabel', normalizeGridCardLabelField(value)))
 watch(cardInfoMode, (value) => storage.set('cardInfoMode', normalizeCardInfoMode(value)))
 watch(thumbnailClickAction, (value) => storage.set('thumbnailClickAction', normalizeThumbnailClickAction(value)))
+watch(openHighlightsInPeek, (v) => storage.set('openHighlightsInPeek', v))
 watch(bookDetailsButtonAction, (value) => storage.set('bookDetailsButtonAction', normalizeBookDetailsButtonAction(value)))
 watch(placeholderCoverStyle, (value) => storage.set('placeholderCoverStyle', normalizePlaceholderCoverStyle(value)))
 
@@ -270,6 +272,7 @@ export function getDisplayPreferencesSnapshot(): DisplayPreferences {
     gridCardSecondaryLabel: normalizeGridCardLabelField(gridCardSecondaryLabel.value),
     cardInfoMode: normalizeCardInfoMode(cardInfoMode.value),
     thumbnailClickAction: normalizeThumbnailClickAction(thumbnailClickAction.value),
+    openHighlightsInPeek: openHighlightsInPeek.value === true,
     bookDetailsButtonAction: normalizeBookDetailsButtonAction(bookDetailsButtonAction.value),
     placeholderCoverStyle: normalizePlaceholderCoverStyle(placeholderCoverStyle.value),
   }
@@ -324,6 +327,7 @@ export function sanitizeDisplayPreferences(raw: unknown): Partial<DisplayPrefere
   if (BOOK_THUMBNAIL_CLICK_ACTION.includes(obj.thumbnailClickAction as BookThumbnailClickAction)) {
     out.thumbnailClickAction = obj.thumbnailClickAction as BookThumbnailClickAction
   }
+  if (typeof obj.openHighlightsInPeek === 'boolean') out.openHighlightsInPeek = obj.openHighlightsInPeek
   if (BOOK_DETAILS_BUTTON_ACTIONS.includes(obj.bookDetailsButtonAction as BookDetailsButtonAction)) {
     out.bookDetailsButtonAction = obj.bookDetailsButtonAction as BookDetailsButtonAction
   }
@@ -363,6 +367,7 @@ export function applyDisplayPreferences(raw: unknown): void {
   if (prefs.gridCardSecondaryLabel !== undefined) gridCardSecondaryLabel.value = prefs.gridCardSecondaryLabel
   if (prefs.cardInfoMode !== undefined) cardInfoMode.value = prefs.cardInfoMode
   if (prefs.thumbnailClickAction !== undefined) thumbnailClickAction.value = prefs.thumbnailClickAction
+  if (prefs.openHighlightsInPeek !== undefined) openHighlightsInPeek.value = prefs.openHighlightsInPeek
   if (prefs.bookDetailsButtonAction !== undefined) bookDetailsButtonAction.value = prefs.bookDetailsButtonAction
   if (prefs.placeholderCoverStyle !== undefined) placeholderCoverStyle.value = prefs.placeholderCoverStyle
 }
@@ -396,6 +401,7 @@ export function useDisplaySettings() {
     gridCardSecondaryLabel,
     cardInfoMode,
     thumbnailClickAction,
+    openHighlightsInPeek,
     bookDetailsButtonAction,
     placeholderCoverStyle,
   }

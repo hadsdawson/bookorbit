@@ -2,7 +2,17 @@
 import { describe, expect, it } from 'vitest'
 import { BOOK_REQUEST_STATUSES } from '@bookorbit/types'
 import type { BookRequestDownloadItem, BookRequestItem, BookRequestStatus } from '@bookorbit/types'
-import { canBulkActRequest, canTrackRequest, canCancelRequest, canDeleteRequest, canDismissRequest, cancelStopsATransfer } from '../requestActions'
+import {
+  canCancelRequest,
+  canDeleteRequest,
+  canDismissRequest,
+  canHideRequest,
+  canLeaveSubscription,
+  canPickRelease,
+  canTrackRequest,
+  canUnhideRequest,
+  cancelStopsATransfer,
+} from '../requestActions'
 
 const OWNER = 4
 const STRANGER = 9
@@ -109,38 +119,6 @@ describe('cancelStopsATransfer', () => {
   })
 })
 
-describe('canBulkActRequest', () => {
-  const manager = { userId: 1, canManage: true, canSelfFulfil: false }
-  const stranger = { userId: 99, canManage: false, canSelfFulfil: false }
-
-  it('offers a checkbox on a pending row to someone who could approve it', () => {
-    expect(canBulkActRequest(request({ status: 'pending' }), manager)).toBe(true)
-  })
-
-  it.each(['rejected', 'cancelled', 'available', 'failed'] as const)('offers a checkbox on a settled %s row to anyone', (status) => {
-    expect(canBulkActRequest(request({ status }), stranger)).toBe(true)
-  })
-
-  it('still offers a hidden settled row to a manager, who can delete it', () => {
-    expect(canBulkActRequest(request({ status: 'rejected', dismissed: true }), manager)).toBe(true)
-  })
-
-  it('offers nothing on a hidden row to someone who can only hide it', () => {
-    expect(canBulkActRequest(request({ status: 'available', dismissed: true }), stranger)).toBe(false)
-  })
-
-  it.each(['approved', 'searching', 'grabbed', 'downloading', 'importing', 'needs_review'] as const)(
-    'offers a checkbox mid-flight at %s, where tracking and cancelling apply',
-    (status) => {
-      expect(canBulkActRequest(request({ status }), manager)).toBe(true)
-    },
-  )
-
-  it('offers nothing mid-flight on somebody else request to a plain user', () => {
-    expect(canBulkActRequest(request({ status: 'approved', userId: 5 }), stranger)).toBe(false)
-  })
-})
-
 describe('canTrackRequest', () => {
   it('lets the requester track until the request is available', () => {
     expect(canTrackRequest(request({ status: 'approved', userId: 5 }), 5, false)).toBe(true)
@@ -149,5 +127,54 @@ describe('canTrackRequest', () => {
 
   it('refuses a stranger', () => {
     expect(canTrackRequest(request({ status: 'approved', userId: 5 }), 6, false)).toBe(false)
+  })
+
+  it('judges a selection entry by its ownership fields alone', () => {
+    expect(canTrackRequest({ status: 'approved', userId: OWNER, fulfillerUserId: STRANGER }, STRANGER, false, true)).toBe(true)
+    expect(canTrackRequest({ status: 'approved', userId: OWNER, fulfillerUserId: STRANGER }, STRANGER, false, false)).toBe(false)
+  })
+})
+
+describe('canPickRelease', () => {
+  it.each(['approved', 'searching', 'failed'] as const)('lets a moderator pick a release at %s', (status) => {
+    expect(canPickRelease(request({ status }), STRANGER, true, false)).toBe(true)
+  })
+
+  it('lets a self-fulfiller pick only on the requests they drive', () => {
+    expect(canPickRelease(request({ status: 'approved' }), OWNER, false, true)).toBe(true)
+    expect(canPickRelease(request({ status: 'approved' }), STRANGER, false, true)).toBe(false)
+    expect(canPickRelease(request({ status: 'approved', fulfillerUserId: STRANGER }), STRANGER, false, true)).toBe(true)
+  })
+
+  it('offers nothing to a requester without the permission, the same as the drawer', () => {
+    expect(canPickRelease(request({ status: 'approved' }), OWNER, false, false)).toBe(false)
+  })
+
+  it.each(['pending', 'downloading', 'available', 'cancelled'] as const)('offers nothing at %s', (status) => {
+    expect(canPickRelease(request({ status }), OWNER, true, true)).toBe(false)
+  })
+})
+
+describe('hiding', () => {
+  it.each(['rejected', 'cancelled', 'available', 'failed'] as const)('hides a settled %s request that is still shown', (status) => {
+    expect(canHideRequest(request({ status }))).toBe(true)
+    expect(canHideRequest(request({ status, dismissed: true }))).toBe(false)
+  })
+
+  it('brings back only what is hidden', () => {
+    expect(canUnhideRequest(request({ dismissed: true }))).toBe(true)
+    expect(canUnhideRequest(request({ dismissed: false }))).toBe(false)
+  })
+})
+
+describe('canLeaveSubscription', () => {
+  it('lets somebody who joined a request leave it', () => {
+    expect(canLeaveSubscription({ userId: OWNER, fulfillerUserId: null, subscribed: true }, STRANGER)).toBe(true)
+  })
+
+  it('never offers it to the requester, the fulfiller, or somebody who never joined', () => {
+    expect(canLeaveSubscription({ userId: OWNER, fulfillerUserId: null, subscribed: true }, OWNER)).toBe(false)
+    expect(canLeaveSubscription({ userId: OWNER, fulfillerUserId: STRANGER, subscribed: true }, STRANGER)).toBe(false)
+    expect(canLeaveSubscription({ userId: OWNER, fulfillerUserId: null, subscribed: false }, STRANGER)).toBe(false)
   })
 })
