@@ -181,6 +181,7 @@ function makeAuthor(overrides: Partial<AuthorDetail> = {}): AuthorDetail {
     name: 'Author',
     sortName: null,
     description: null,
+    gender: null,
     imageUrl: null,
     bookCount: 2,
     lastAddedAt: '2026-01-01T00:00:00.000Z',
@@ -209,6 +210,8 @@ async function mountView() {
   const wrapper = mount(AuthorDetailView, {
     global: {
       stubs: {
+        SingleSortControl: true,
+        LibraryMenuButton: true,
         AuthorHeader: {
           name: 'AuthorHeader',
           props: ['author'],

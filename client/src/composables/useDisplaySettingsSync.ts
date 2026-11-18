@@ -128,7 +128,11 @@ export function initDisplaySettingsSync(): void {
         settings.gridCardSecondaryLabel.value,
         settings.cardInfoMode.value,
         settings.thumbnailClickAction.value,
+<<<<<<< HEAD
         settings.bookDetailsButtonAction.value,
+=======
+        settings.openHighlightsInPeek.value,
+>>>>>>> upstream/main
         settings.placeholderCoverStyle.value,
       ] as const,
     () => {

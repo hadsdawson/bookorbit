@@ -10,7 +10,11 @@ import { useBookRequestVisibility } from '@/features/book-requests/composables/u
 
 const { t } = useI18n()
 
+<<<<<<< HEAD
 const { smartScopeFilterExpanded, thumbnailClickAction, bookDetailsButtonAction } = useDisplaySettings()
+=======
+const { smartScopeFilterExpanded, thumbnailClickAction, openHighlightsInPeek } = useDisplaySettings()
+>>>>>>> upstream/main
 const { prefs, setPreference } = useSeriesCollapsePreference()
 const { showBookRequests, saving: savingBookRequestVisibility, setShowBookRequests } = useBookRequestVisibility()
 
@@ -143,6 +147,17 @@ function setThumbnailClickAction(action: BookThumbnailClickAction) {
           </p>
         </div>
         <ToggleSwitch v-model="smartScopeFilterExpanded" />
+      </div>
+      <div class="flex items-center justify-between gap-3 px-4 py-3 md:px-5 md:py-3.5 bg-card">
+        <div class="min-w-0">
+          <p class="settings-label">
+            {{ t('settings.appearance.behavior.highlightPeek.label') }}
+          </p>
+          <p class="settings-hint overflow-hidden text-ellipsis whitespace-nowrap md:whitespace-normal md:overflow-visible">
+            {{ t('settings.appearance.behavior.highlightPeek.hint') }}
+          </p>
+        </div>
+        <ToggleSwitch v-model="openHighlightsInPeek" :aria-label="t('settings.appearance.behavior.highlightPeek.label')" />
       </div>
       <div class="flex items-center justify-between gap-3 px-4 py-3 md:px-5 md:py-3.5 bg-card">
         <div class="min-w-0">

@@ -1,6 +1,11 @@
 {
+<<<<<<< HEAD
   "id": "82034ff1-5816-4c2f-851f-a4153b47fe8e",
   "prevId": "5773ce41-4e2a-4a9b-a19a-1eda3408831f",
+=======
+  "id": "cd2c007e-631e-4234-ac96-8ee21fc04621",
+  "prevId": "3669b6a7-2175-482b-a9f4-c3f893641ee6",
+>>>>>>> upstream/main
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3202,6 +3207,7 @@
           "notNull": true,
           "default": true
         },
+<<<<<<< HEAD
         "file_write_folder_covers": {
           "name": "file_write_folder_covers",
           "type": "varchar(10)",
@@ -3216,6 +3222,8 @@
           "notNull": true,
           "default": false
         },
+=======
+>>>>>>> upstream/main
         "file_write_epub_enabled": {
           "name": "file_write_epub_enabled",
           "type": "boolean",
@@ -12535,7 +12543,11 @@
       "checkConstraints": {
         "user_book_status_status_chk": {
           "name": "user_book_status_status_chk",
+<<<<<<< HEAD
           "value": "\"user_book_status\".\"status\" in ('unread', 'want_to_read', 'reading', 'on_hold', 'rereading', 'read', 'skimmed', 'abandoned', 'not_interested')"
+=======
+          "value": "\"user_book_status\".\"status\" in ('unread', 'want_to_read', 'reading', 'on_hold', 'rereading', 'read', 'skimmed', 'abandoned')"
+>>>>>>> upstream/main
         },
         "user_book_status_source_chk": {
           "name": "user_book_status_source_chk",
@@ -16020,12 +16032,15 @@
           "notNull": true,
           "default": "'pending'"
         },
+<<<<<<< HEAD
         "tracking_status": {
           "name": "tracking_status",
           "type": "varchar(30)",
           "primaryKey": false,
           "notNull": false
         },
+=======
+>>>>>>> upstream/main
         "title": {
           "name": "title",
           "type": "varchar(500)",
@@ -16075,12 +16090,15 @@
           "primaryKey": false,
           "notNull": false
         },
+<<<<<<< HEAD
         "published_date": {
           "name": "published_date",
           "type": "date",
           "primaryKey": false,
           "notNull": false
         },
+=======
+>>>>>>> upstream/main
         "language": {
           "name": "language",
           "type": "varchar(20)",
@@ -16325,6 +16343,7 @@
           "method": "btree",
           "with": {}
         },
+<<<<<<< HEAD
         "book_requests_tracking_status_idx": {
           "name": "book_requests_tracking_status_idx",
           "columns": [
@@ -16340,6 +16359,8 @@
           "method": "btree",
           "with": {}
         },
+=======
+>>>>>>> upstream/main
         "book_requests_matched_book_user_idx": {
           "name": "book_requests_matched_book_user_idx",
           "columns": [
@@ -16539,10 +16560,13 @@
           "name": "book_requests_status_chk",
           "value": "\"book_requests\".\"status\" in ('pending', 'approved', 'rejected', 'cancelled', 'searching', 'grabbed', 'downloading', 'importing', 'needs_review', 'available', 'failed')"
         },
+<<<<<<< HEAD
         "book_requests_tracking_status_chk": {
           "name": "book_requests_tracking_status_chk",
           "value": "\"book_requests\".\"tracking_status\" is null or \"book_requests\".\"tracking_status\" in ('format_not_available', 'not_yet_released', 'missing')"
         },
+=======
+>>>>>>> upstream/main
         "book_requests_series_index_nonnegative_chk": {
           "name": "book_requests_series_index_nonnegative_chk",
           "value": "\"book_requests\".\"series_index\" is null or \"book_requests\".\"series_index\" >= 0"
@@ -17049,6 +17073,16 @@
           "notNull": true,
           "default": true
         },
+<<<<<<< HEAD
+=======
+        "remove_completed_downloads": {
+          "name": "remove_completed_downloads",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+>>>>>>> upstream/main
         "allow_private_address": {
           "name": "allow_private_address",
           "type": "boolean",
@@ -20413,6 +20447,62 @@
       },
       "isRLSEnabled": false
     },
+<<<<<<< HEAD
+=======
+    "public.koreader_device_names": {
+      "name": "koreader_device_names",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "device_id": {
+          "name": "device_id",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "koreader_device_names_user_id_users_id_fk": {
+          "name": "koreader_device_names_user_id_users_id_fk",
+          "tableFrom": "koreader_device_names",
+          "tableTo": "users",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "koreader_device_names_user_id_device_id_pk": {
+          "name": "koreader_device_names_user_id_device_id_pk",
+          "columns": ["user_id", "device_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+>>>>>>> upstream/main
     "public.koreader_device_progress": {
       "name": "koreader_device_progress",
       "schema": "",

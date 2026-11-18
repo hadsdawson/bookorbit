@@ -5,24 +5,23 @@ import { X, Loader2 } from '@lucide/vue'
 import { isValidSeriesIndex, type BookDockBulkEditResult, type BookDockMetadata, type IdentifierInputKind } from '@bookorbit/types'
 import { api } from '@/lib/api'
 import IdentifierInput from '@/components/ui/IdentifierInput.vue'
+<<<<<<< HEAD
 import ChipInput from '@/components/ui/ChipInput.vue'
 import InputWithSuggestions from '@/components/ui/InputWithSuggestions.vue'
 import { useSeriesNameSearch } from '@/features/book/composables/useMetadataFieldSearch'
 import { useGenreSearch } from '@/features/book/composables/useTagSearch'
 import { useGenrePolicy } from '@/features/book/composables/useGenrePolicy'
+=======
+import InputWithSuggestions from '@/components/ui/InputWithSuggestions.vue'
+import { useSeriesNameSearch } from '@/features/book/composables/useMetadataFieldSearch'
+import type { BookDockSelectionPayload } from '../composables/useBookDockFiles'
+>>>>>>> upstream/main
 
 const { t } = useI18n()
+const { search: searchSeries } = useSeriesNameSearch()
 
 const props = defineProps<{
-  selectionPayload: {
-    fileIds?: number[]
-    selectAll?: boolean
-    excludedIds?: number[]
-    status?: string
-    needsReview?: boolean
-    readyToFile?: boolean
-    search?: string
-  }
+  selectionPayload: BookDockSelectionPayload
   selectionCount: number
 }>()
 
@@ -55,6 +54,7 @@ const enabledFields = reactive<Set<string>>(new Set())
 const values = reactive<Record<string, string>>({})
 const mergeArrays = ref(true)
 
+<<<<<<< HEAD
 const { search: searchSeriesName } = useSeriesNameSearch()
 const { search: searchAnyGenre } = useGenreSearch()
 const { restricted: genresRestricted, load: loadGenrePolicy, acceptGenre, searchAllowed: searchAllowedGenres } = useGenrePolicy()
@@ -74,6 +74,9 @@ const genreList = computed({
 })
 
 function setSeriesName(value: string | null) {
+=======
+function onSeriesNameInput(value: string | null) {
+>>>>>>> upstream/main
   values.seriesName = value ?? ''
 }
 
@@ -182,6 +185,7 @@ function handleClose() {
                 <InputWithSuggestions
                   v-else-if="f.key === 'seriesName'"
                   :model-value="values.seriesName ?? ''"
+<<<<<<< HEAD
                   :search-fn="searchSeriesName"
                   :disabled="!enabledFields.has(f.key)"
                   :class="FIELD_INPUT_CLASS"
@@ -193,6 +197,12 @@ function handleClose() {
                   :search-fn="searchGenres"
                   :normalize="acceptGenre"
                   :disabled="!enabledFields.has(f.key)"
+=======
+                  :search-fn="searchSeries"
+                  :disabled="!enabledFields.has(f.key)"
+                  :class="FIELD_INPUT_CLASS"
+                  @update:model-value="onSeriesNameInput"
+>>>>>>> upstream/main
                 />
                 <input
                   v-else

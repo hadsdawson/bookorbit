@@ -1,8 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
+<<<<<<< HEAD
 import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, ne, notInArray, or, sql, sum, type SQL } from 'drizzle-orm';
+=======
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, lt, not, notInArray, or, sql, sum, type SQL } from 'drizzle-orm';
+>>>>>>> upstream/main
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
-import type { ContentFilterRules } from '@bookorbit/types';
+import type { BookDockHoldFilter, BookDockHoldReason, ContentFilterRules } from '@bookorbit/types';
 
 import { DB } from '../../db';
 import { accentInsensitiveIlike, buildSearchPattern } from '../../common/utils/accent-insensitive-search.utils';
@@ -17,6 +22,7 @@ import {
   bookMetadata,
   books,
   libraries,
+  libraryDocks,
   libraryFolders,
   type BookDockFileRow,
   type BookDockUnitFileRow,
@@ -63,9 +69,44 @@ function needsReviewCondition(): SQL {
   ) as SQL;
 }
 
+<<<<<<< HEAD
 /** Fork: files merged under another are filed with it and shown only through it. */
 function shownInListCondition(): SQL {
   return or(isNull(bookDockFiles.mergedIntoId), eq(bookDockFiles.mergedIntoId, bookDockFiles.id))!;
+=======
+/** The page's dock switcher: Unsorted, or one library dock by id. */
+export type BookDockDockFilter = number | 'unsorted';
+
+/** The page's filters beyond status and search: the dock switcher and the hold chips. */
+export interface BookDockFilter {
+  dock?: BookDockDockFilter;
+  hold?: BookDockHoldFilter;
+}
+
+/**
+ * Request downloads land in the Unsorted root, claimed by the requests module, but show under the
+ * dock of the library they are headed for (D6). Every other file shows where it arrived.
+ */
+function isRequestImport(): SQL {
+  return and(isNull(bookDockFiles.dockId), eq(bookDockFiles.autoFinalizeSuppressed, true)) as SQL;
+}
+
+export function dockFilterCondition(filter: BookDockDockFilter): SQL {
+  if (filter === 'unsorted') {
+    const headedForDock = sql`exists (select 1 from ${libraryDocks} where ${libraryDocks.libraryId} = ${bookDockFiles.targetLibraryId})`;
+    return and(isNull(bookDockFiles.dockId), not(and(isRequestImport(), headedForDock) as SQL)) as SQL;
+  }
+  const dockLibrary = sql`(select ${libraryDocks.libraryId} from ${libraryDocks} where ${libraryDocks.id} = ${filter})`;
+  return or(eq(bookDockFiles.dockId, filter), and(isRequestImport(), sql`${bookDockFiles.targetLibraryId} = ${dockLibrary}`)) as SQL;
+}
+
+/** A hold only means something on a ready file, so every hold filter reads ready files alone. */
+export function holdFilterCondition(hold: BookDockHoldFilter): SQL {
+  const ready = eq(bookDockFiles.status, 'ready');
+  if (hold === 'held') return and(ready, isNotNull(bookDockFiles.holdReason)) as SQL;
+  if (hold === 'clear') return and(ready, isNull(bookDockFiles.holdReason)) as SQL;
+  return and(ready, eq(bookDockFiles.holdReason, hold)) as SQL;
+>>>>>>> upstream/main
 }
 
 export interface ListOptions {
@@ -79,6 +120,7 @@ export interface ListOptions {
   search?: string;
   userId: number;
   canManageAll: boolean;
+  filter?: BookDockFilter;
 }
 
 export interface SelectionBatchOptions {
@@ -91,6 +133,10 @@ export interface SelectionBatchOptions {
   search?: string;
   userId: number;
   canManageAll: boolean;
+  /** Files that arrived in one dock; null for Unsorted. Absent means every dock. */
+  dockId?: number | null;
+  /** The page's dock and hold filters; a dock includes request downloads headed for it (D6). */
+  filter?: BookDockFilter;
 }
 
 /** An existing book a docked file was asked to join, and where it lives. */
@@ -109,6 +155,7 @@ export interface BookDockJoinTargetRow {
 export interface BookDockJoinCandidateRow {
   bookId: number;
   libraryId: number;
+  libraryFolderId: number;
   folderPath: string;
   /** The library folder the book is kept under. */
   libraryFolderPath: string;
@@ -120,6 +167,18 @@ export interface BookDockJoinCandidateRow {
   isbn13: string | null;
   hardcoverId: string | null;
   openLibraryId: string | null;
+  amazonId: string | null;
+  audibleId: string | null;
+  googleBooksId: string | null;
+  goodreadsId: string | null;
+}
+
+/** Edition-level ids a docked file is matched on exactly. */
+export interface EditionIdKeys {
+  amazonIds: string[];
+  audibleIds: string[];
+  googleBooksIds: string[];
+  goodreadsIds: string[];
 }
 
 /**
@@ -130,6 +189,18 @@ export interface BookDockJoinCandidateRow {
 function storedAsFile(): SQL<boolean> {
   return sql<boolean>`exists (select 1 from ${bookFiles} bf where bf.book_id = ${books.id} and bf.absolute_path = ${books.folderPath})`;
 }
+
+export interface BookDockCountsByDockRow {
+  dockId: number | null;
+  total: number;
+  working: number;
+  onHold: number;
+  ready: number;
+  error: number;
+}
+
+/** Rows updated per statement when a library or folder goes away. */
+const LIFECYCLE_BATCH_SIZE = 1000;
 
 /** However many files a batch carries, one probe never reads more than this many books. */
 export const JOIN_CANDIDATE_LIMIT = 500;
@@ -144,6 +215,7 @@ export class BookDockRepository {
     return row !== undefined;
   }
 
+<<<<<<< HEAD
   /** The only library and its only folder, or null when there is any choice to make. */
   async findSoleLibraryTarget(): Promise<{ libraryId: number; folderId: number } | null> {
     const found = await this.db.select({ id: libraries.id }).from(libraries).limit(2);
@@ -159,12 +231,95 @@ export class BookDockRepository {
       .update(bookDockFiles)
       .set({ targetLibraryId: libraryId, targetFolderId: folderId })
       .where(and(isNull(bookDockFiles.targetLibraryId), isNull(bookDockFiles.targetFolderId)))
+=======
+  /** A library's name and accepted formats, for checking a docked file fits it. */
+  /** Files still being read or fetched at or under `path`. Moving them now would pull files out from under that work. */
+  async countWorkingUnder(path: string): Promise<number> {
+    const [row] = await this.db
+      .select({ cnt: count() })
+      .from(bookDockFiles)
+      .where(
+        and(
+          inArray(bookDockFiles.status, ['pending', 'extracting', 'fetching']),
+          or(eq(bookDockFiles.absolutePath, path), sql`starts_with(${bookDockFiles.absolutePath}, ${path + '/'})`),
+        ),
+      );
+    return Number(row?.cnt ?? 0);
+  }
+
+  async findIdsByTargetLibrary(libraryId: number): Promise<number[]> {
+    const rows = await this.db.select({ id: bookDockFiles.id }).from(bookDockFiles).where(eq(bookDockFiles.targetLibraryId, libraryId));
+    return rows.map((row) => row.id);
+  }
+
+  async findIdsByTargetFolders(folderIds: number[]): Promise<number[]> {
+    if (folderIds.length === 0) return [];
+    const rows = await this.db.select({ id: bookDockFiles.id }).from(bookDockFiles).where(inArray(bookDockFiles.targetFolderId, folderIds));
+    return rows.map((row) => row.id);
+  }
+
+  /**
+   * Marks files whose library was deleted: they are Unsorted now, so a hold that named that library
+   * no longer applies. Only rows the delete actually cleared are touched.
+   */
+  async markFromDeletedLibrary(ids: number[], libraryName: string): Promise<void> {
+    for (let offset = 0; offset < ids.length; offset += LIFECYCLE_BATCH_SIZE) {
+      await this.db
+        .update(bookDockFiles)
+        .set({ formerLibraryName: libraryName, holdReason: null, holdDetail: null })
+        .where(and(inArray(bookDockFiles.id, ids.slice(offset, offset + LIFECYCLE_BATCH_SIZE)), isNull(bookDockFiles.targetLibraryId)));
+    }
+  }
+
+  /** Holds files whose library folder was removed until someone chooses another. Only rows the removal cleared are touched. */
+  /** A dock given a folder again: its files waiting on one take it, and their hold is worked out again. */
+  async fillMissingFolder(dockId: number, libraryId: number, folderId: number): Promise<number> {
+    const updated = await this.db
+      .update(bookDockFiles)
+      .set({ targetFolderId: folderId, holdReason: null })
+      .where(and(eq(bookDockFiles.dockId, dockId), eq(bookDockFiles.targetLibraryId, libraryId), isNull(bookDockFiles.targetFolderId)))
+>>>>>>> upstream/main
       .returning({ id: bookDockFiles.id });
     return updated.length;
   }
 
+<<<<<<< HEAD
+=======
+  async holdForRemovedFolder(ids: number[], libraryId: number, libraryName: string): Promise<void> {
+    for (let offset = 0; offset < ids.length; offset += LIFECYCLE_BATCH_SIZE) {
+      await this.db
+        .update(bookDockFiles)
+        .set({ holdReason: 'no_folder', holdDetail: { libraryId, libraryName } })
+        .where(
+          and(
+            inArray(bookDockFiles.id, ids.slice(offset, offset + LIFECYCLE_BATCH_SIZE)),
+            eq(bookDockFiles.targetLibraryId, libraryId),
+            isNull(bookDockFiles.targetFolderId),
+          ),
+        );
+    }
+  }
+
+  async findLibraryFormats(libraryId: number): Promise<{ name: string; allowedFormats: string[] } | undefined> {
+    const [row] = await this.db
+      .select({ name: libraries.name, allowedFormats: libraries.allowedFormats })
+      .from(libraries)
+      .where(eq(libraries.id, libraryId))
+      .limit(1);
+    return row;
+  }
+
+>>>>>>> upstream/main
   async findAll(opts: ListOptions): Promise<{ items: BookDockFileRow[]; total: number }> {
-    const conditions = this.buildSelectionConditions(opts.status, opts.search, opts.userId, opts.canManageAll, opts.needsReview, opts.readyToFile);
+    const conditions = this.buildSelectionConditions(
+      opts.status,
+      opts.search,
+      opts.userId,
+      opts.canManageAll,
+      opts.needsReview,
+      opts.readyToFile,
+      opts.filter,
+    );
 
     const where = conditions.length ? and(...conditions) : undefined;
 
@@ -307,8 +462,9 @@ export class BookDockRepository {
     canManageAll?: boolean,
     needsReview?: boolean,
     readyToFile?: boolean,
+    filter?: BookDockFilter,
   ): Promise<number[]> {
-    const conditions = this.buildSelectionConditions(status, search, userId, canManageAll ?? true, needsReview, readyToFile);
+    const conditions = this.buildSelectionConditions(status, search, userId, canManageAll ?? true, needsReview, readyToFile, filter);
     if (excludedIds?.length) conditions.push(notInArray(bookDockFiles.id, excludedIds));
     const where = conditions.length ? and(...conditions) : undefined;
     const rows = await this.db.select({ id: bookDockFiles.id }).from(bookDockFiles).where(where);
@@ -393,6 +549,33 @@ export class BookDockRepository {
     return this.findJoinCandidates(libraryIds, or(...branches)!, contentFilters);
   }
 
+  /**
+   * Present books in these libraries carrying any of these edition ids. Each branch keeps its
+   * partial index's predicate, so `bm_amazon_id_idx` and the rest serve it.
+   */
+  async findJoinCandidatesByEditionId(
+    libraryIds: number[],
+    keys: EditionIdKeys,
+    contentFilters?: ContentFilterRules,
+  ): Promise<BookDockJoinCandidateRow[]> {
+    const branch = (column: AnyPgColumn, values: string[]) => (values.length ? and(isNotNull(column), inArray(column, values)) : undefined);
+    const branches = [
+      branch(bookMetadata.amazonId, keys.amazonIds),
+      branch(bookMetadata.audibleId, keys.audibleIds),
+      branch(bookMetadata.googleBooksId, keys.googleBooksIds),
+      branch(bookMetadata.goodreadsId, keys.goodreadsIds),
+    ];
+    if (!branches.some(Boolean)) return [];
+    return this.findJoinCandidates(libraryIds, or(...branches)!, contentFilters);
+  }
+
+  /** Library names by id, for the libraries a docked file is also in. */
+  async findLibraryNames(libraryIds: number[]): Promise<Map<number, string>> {
+    if (libraryIds.length === 0) return new Map();
+    const rows = await this.db.select({ id: libraries.id, name: libraries.name }).from(libraries).where(inArray(libraries.id, libraryIds));
+    return new Map(rows.map((row) => [row.id, row.name]));
+  }
+
   /** Present books in these libraries whose `lower(title)` is one of these keys. Served by `bm_title_lower_idx`. */
   async findJoinCandidatesByTitle(
     libraryIds: number[],
@@ -441,6 +624,7 @@ export class BookDockRepository {
       .select({
         bookId: books.id,
         libraryId: books.libraryId,
+        libraryFolderId: books.libraryFolderId,
         folderPath: books.folderPath,
         libraryFolderPath: libraryFolders.path,
         storedAsFile: storedAsFile(),
@@ -450,6 +634,10 @@ export class BookDockRepository {
         isbn13: bookMetadata.isbn13,
         hardcoverId: bookMetadata.hardcoverId,
         openLibraryId: bookMetadata.openLibraryId,
+        amazonId: bookMetadata.amazonId,
+        audibleId: bookMetadata.audibleId,
+        googleBooksId: bookMetadata.googleBooksId,
+        goodreadsId: bookMetadata.goodreadsId,
       })
       .from(bookMetadata)
       .innerJoin(books, eq(books.id, bookMetadata.bookId))
@@ -467,9 +655,12 @@ export class BookDockRepository {
       options.canManageAll,
       options.needsReview,
       options.readyToFile,
+      options.filter,
     );
     if (options.excludedIds?.length) conditions.push(notInArray(bookDockFiles.id, options.excludedIds));
     if (options.afterId !== undefined) conditions.push(gt(bookDockFiles.id, options.afterId));
+    if (options.dockId !== undefined)
+      conditions.push(options.dockId === null ? isNull(bookDockFiles.dockId) : eq(bookDockFiles.dockId, options.dockId));
     const where = conditions.length ? and(...conditions) : undefined;
     return this.db.select().from(bookDockFiles).where(where).orderBy(asc(bookDockFiles.id)).limit(options.limit);
   }
@@ -478,6 +669,7 @@ export class BookDockRepository {
     if (ids.length === 0) return 0;
     const updated = await this.db
       .update(bookDockFiles)
+<<<<<<< HEAD
       .set({ targetLibraryId, targetFolderId })
       .where(or(inArray(bookDockFiles.id, ids), inArray(bookDockFiles.mergedIntoId, ids)))
       .returning({ id: bookDockFiles.id });
@@ -525,6 +717,12 @@ export class BookDockRepository {
       .update(bookDockFiles)
       .set({ mergedIntoId: null })
       .where(eq(bookDockFiles.mergedIntoId, primaryId))
+=======
+      // A new destination answers whatever the file was waiting on, "Keep both" included: that was
+      // about the book in the old library. The hold is worked out again.
+      .set({ targetLibraryId, targetFolderId, holdReason: null, holdDetail: null })
+      .where(inArray(bookDockFiles.id, ids))
+>>>>>>> upstream/main
       .returning({ id: bookDockFiles.id });
     return updated.length;
   }
@@ -566,6 +764,57 @@ export class BookDockRepository {
       result.total += n;
     }
     return result;
+  }
+
+  /**
+   * Counts per dock as the page's switcher shows them, in one grouped query: a request download
+   * counts under the dock of the library it is headed for (D6), and `dockId` null is Unsorted.
+   * `working` is everything not yet settled, the way the page's Working filter reads it.
+   */
+  async countsByDock(userId?: number, canManageAll?: boolean): Promise<BookDockCountsByDockRow[]> {
+    const visibilityCondition = userId !== undefined ? this.buildVisibilityCondition(userId, canManageAll ?? true) : undefined;
+    const shownDock = sql<number | null>`coalesce(${bookDockFiles.dockId}, ${libraryDocks.id})`;
+    const rows = await this.db
+      .select({
+        dockId: shownDock,
+        total: count(),
+        working: sql<number>`count(*) filter (where ${bookDockFiles.status} in ('pending', 'extracting', 'fetching'))`,
+        onHold: sql<number>`count(*) filter (where ${bookDockFiles.status} = 'ready' and ${bookDockFiles.holdReason} is not null)`,
+        ready: sql<number>`count(*) filter (where ${bookDockFiles.status} = 'ready' and ${bookDockFiles.holdReason} is null)`,
+        error: sql<number>`count(*) filter (where ${bookDockFiles.status} = 'error')`,
+      })
+      .from(bookDockFiles)
+      .leftJoin(libraryDocks, and(isRequestImport(), eq(libraryDocks.libraryId, bookDockFiles.targetLibraryId)))
+      .where(visibilityCondition)
+      .groupBy(shownDock);
+    return rows.map((r) => ({
+      dockId: r.dockId === null ? null : Number(r.dockId),
+      total: Number(r.total),
+      working: Number(r.working ?? 0),
+      onHold: Number(r.onHold ?? 0),
+      ready: Number(r.ready ?? 0),
+      error: Number(r.error ?? 0),
+    }));
+  }
+
+  /** Held files per dock and reason, for the reason chips. Grouped the way `countsByDock` groups. */
+  async holdCountsByDock(
+    userId?: number,
+    canManageAll?: boolean,
+  ): Promise<Array<{ dockId: number | null; reason: BookDockHoldReason; count: number }>> {
+    const visibilityCondition = userId !== undefined ? this.buildVisibilityCondition(userId, canManageAll ?? true) : undefined;
+    const shownDock = sql<number | null>`coalesce(${bookDockFiles.dockId}, ${libraryDocks.id})`;
+    const rows = await this.db
+      .select({ dockId: shownDock, reason: bookDockFiles.holdReason, count: count() })
+      .from(bookDockFiles)
+      .leftJoin(libraryDocks, and(isRequestImport(), eq(libraryDocks.libraryId, bookDockFiles.targetLibraryId)))
+      .where(and(holdFilterCondition('held'), visibilityCondition))
+      .groupBy(shownDock, bookDockFiles.holdReason);
+    return rows.map((r) => ({
+      dockId: r.dockId === null ? null : Number(r.dockId),
+      reason: r.reason as BookDockHoldReason,
+      count: Number(r.count),
+    }));
   }
 
   async getStatistics(
@@ -613,8 +862,15 @@ export class BookDockRepository {
     canManageAll?: boolean,
     needsReview?: boolean,
     readyToFile?: boolean,
+    filter?: BookDockFilter,
   ): SQL[] {
+<<<<<<< HEAD
     const conditions: SQL[] = [shownInListCondition()];
+=======
+    const conditions: SQL[] = [];
+    if (filter?.dock !== undefined) conditions.push(dockFilterCondition(filter.dock));
+    if (filter?.hold !== undefined) conditions.push(holdFilterCondition(filter.hold));
+>>>>>>> upstream/main
     if (status === 'pending') {
       conditions.push(inArray(bookDockFiles.status, ['pending', 'extracting', 'fetching']));
     } else if (status) {

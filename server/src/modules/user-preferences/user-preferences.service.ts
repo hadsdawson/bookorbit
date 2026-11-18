@@ -105,8 +105,13 @@ const DISPLAY_PREFERENCES_SCHEMA = z
     gridCardPrimaryLabel: z.enum(GRID_CARD_LABEL_FIELDS).default('hidden'),
     gridCardSecondaryLabel: z.enum(GRID_CARD_LABEL_FIELDS).default('hidden'),
     cardInfoMode: z.enum(CARD_INFO_MODES).default('hover-overlay'),
+<<<<<<< HEAD
     thumbnailClickAction: z.enum(BOOK_THUMBNAIL_CLICK_ACTION).default('reader'),
     bookDetailsButtonAction: z.enum(BOOK_DETAILS_BUTTON_ACTIONS).default('details'),
+=======
+    thumbnailClickAction: z.enum(BOOK_THUMBNAIL_CLICK_ACTION).default('details'),
+    openHighlightsInPeek: z.boolean().default(false),
+>>>>>>> upstream/main
     placeholderCoverStyle: z.enum(PLACEHOLDER_COVER_STYLES).default('bauhaus'),
   })
   .strict()

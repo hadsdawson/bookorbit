@@ -62,6 +62,22 @@ export class BookRequestController {
   }
 
   /**
+   * How many rows each view of this list holds under the same filters, so the page can label its
+   * sections without loading them. Page, sort, view and grouping are accepted and ignored: every
+   * figure is a count of grouped rows, one per view.
+   */
+  @Get('view-counts')
+  getViewCounts(@Query() query: ListBookRequestsDto, @CurrentUser() user: RequestUser) {
+    return this.service.getMineViewCounts(query, user);
+  }
+
+  /** Every request the list's filters match, in list order and bounded, for "select all matching". */
+  @Get('selection')
+  getSelection(@Query() query: ListBookRequestsDto, @CurrentUser() user: RequestUser) {
+    return this.service.selectMine(query, user);
+  }
+
+  /**
    * Counts only, for the same reason `default-destinations` is here: it is instance configuration
    * a requester has to be told about, and the indexer list it comes from is admin-only. Without
    * it a request queued against nothing looks identical to one waiting its turn.
@@ -116,11 +132,31 @@ export class BookRequestController {
     return this.service.setLanguage(id, dto.language, user);
   }
 
+<<<<<<< HEAD
   /** A note set by hand, apart from the workflow status. Logged by the service rather than audited. */
   @Post(':id/tracking-status')
   @HttpCode(HttpStatus.OK)
   setTrackingStatus(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateBookRequestTrackingStatusDto, @CurrentUser() user: RequestUser) {
     return this.service.setTrackingStatus(id, dto.trackingStatus, user);
+=======
+  /**
+   * Bulk cancellation, declared before `:id/cancel` for readability; the two paths never collide.
+   * Each request's files go only where cancelling that row alone would have taken them.
+   */
+  @Post('cancel')
+  @HttpCode(HttpStatus.OK)
+  @Auditable({
+    action: AuditAction.BookRequestCancel,
+    resource: AuditResource.BookRequest,
+    getMeta: (_req, body) => {
+      const result = body as { updated?: unknown[]; failed?: unknown[] } | null;
+      return { cancelled: result?.updated?.length ?? 0, failed: result?.failed?.length ?? 0 };
+    },
+    description: 'Cancelled a selection of book requests',
+  })
+  cancelMany(@Body() dto: BulkBookRequestsDto, @CurrentUser() user: RequestUser) {
+    return this.service.cancelMany(dto, user);
+>>>>>>> upstream/main
   }
 
   @Post(':id/cancel')
@@ -150,6 +186,16 @@ export class BookRequestController {
     @CurrentUser() user: RequestUser,
   ) {
     return this.service.cancelDownload(id, downloadId, user, dto?.deleteFiles ?? false);
+  }
+
+  /**
+   * Leaving a selection of requests somebody else made. Not audited, like leaving one; every id
+   * left comes back in `removed`.
+   */
+  @Post('leave')
+  @HttpCode(HttpStatus.OK)
+  leaveMany(@Body() dto: BulkBookRequestsDto, @CurrentUser() user: RequestUser) {
+    return this.service.leaveMany(dto, user);
   }
 
   /**
@@ -203,6 +249,13 @@ export class BookRequestController {
   @HttpCode(HttpStatus.OK)
   dismiss(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: RequestUser) {
     return this.service.dismiss(id, user);
+  }
+
+  /** Bulk un-hiding, declared before `:id/restore`; not audited, like dismissal. */
+  @Post('restore')
+  @HttpCode(HttpStatus.OK)
+  restoreMany(@Body() dto: BulkBookRequestsDto, @CurrentUser() user: RequestUser) {
+    return this.service.restoreMany(dto, user);
   }
 
   @Post(':id/restore')

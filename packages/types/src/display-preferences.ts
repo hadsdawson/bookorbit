@@ -91,7 +91,12 @@ export interface DisplayPreferences {
   gridCardSecondaryLabel: GridCardLabelField;
   cardInfoMode: CardInfoMode;
   thumbnailClickAction: BookThumbnailClickAction;
+<<<<<<< HEAD
   /** Fork. Optional so a row stored before it existed still parses; absent means "details". */
   bookDetailsButtonAction?: BookDetailsButtonAction;
+=======
+  /** Jumping to a highlight opens the book in Peek mode, leaving progress and read status untouched. */
+  openHighlightsInPeek: boolean;
+>>>>>>> upstream/main
   placeholderCoverStyle: PlaceholderCoverStyle;
 }

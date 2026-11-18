@@ -67,7 +67,11 @@ const validDisplayPreferences: DisplayPreferences = {
   gridCardSecondaryLabel: 'hidden',
   cardInfoMode: 'hover-overlay',
   thumbnailClickAction: 'reader',
+<<<<<<< HEAD
   bookDetailsButtonAction: 'details',
+=======
+  openHighlightsInPeek: false,
+>>>>>>> upstream/main
   placeholderCoverStyle: 'bauhaus',
 };
 
