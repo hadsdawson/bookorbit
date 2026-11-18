@@ -105,20 +105,4 @@ describe('RecycleBinService', () => {
     await expect(service.empty()).resolves.toEqual({ removed: 2, failed: 0 });
     expect((await service.overview()).total).toBe(0);
   });
-
-  it('lists and restores entries kept in a registered folder outside the libraries', async () => {
-    const extra = await mkdtemp(join(tmpdir(), 'bookorbit-bin-extra-'));
-    try {
-      const { service } = makeService();
-      service.registerFolder({ path: extra, libraryName: 'Convert folder' });
-      const id = await seed(extra, 'track.mp3', new Date());
-
-      const overview = await service.overview();
-      expect(overview.entries.map((entry) => [entry.id, entry.libraryName])).toContainEqual([id, 'Convert folder']);
-      await expect(service.restore(id)).resolves.toMatchObject({ restored: 1 });
-      expect(await readFile(join(extra, 'track.mp3'), 'utf8')).toBe('track.mp3');
-    } finally {
-      await rm(extra, { recursive: true, force: true });
-    }
-  });
 });

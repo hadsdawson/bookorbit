@@ -15903,8 +15903,7 @@
     "communityRatings": "Community Ratings",
     "recycleBin": "Recycle Bin",
     "readingHistory": "Reading History",
-    "newReleases": "New Releases",
-    "conversions": "Conversions"
+    "newReleases": "New Releases"
   },
   "tts": {
     "readerControls": {
@@ -16602,105 +16601,5 @@
       "anyLanguage": "Any language"
     },
     "showHidden": "Show hidden"
-  },
-  "conversions": {
-    "title": "Conversions",
-    "description": "Audiobooks you upload or drop in the Convert folder are turned into M4B files and moved to the Book Dock. A folder of tracks becomes one M4B with a chapter per track. The originals go to the recycle bin.",
-    "folderTitle": "Convert folder",
-    "folderHint": "You can also copy an audiobook file, or a folder holding one book, into this folder on your server. It is picked up once it stops changing.",
-    "listTitle": "Recent conversions",
-    "none": "Nothing has been converted yet.",
-    "off": "Conversions are turned off.",
-    "offHint": "Ask an administrator to turn them on in the Book Dock settings.",
-    "offHintManage": "Turn them on in the Book Dock settings.",
-    "openSettings": "Open Book Dock settings",
-    "retry": "Try again",
-    "progress": "{percent}%",
-    "landed": "In the Book Dock as {name}",
-    "footnote": "This list starts over when BookOrbit restarts.",
-    "status": {
-      "queued": "Waiting its turn",
-      "converting": "Converting",
-      "done": "Done",
-      "failed": "Failed",
-      "waiting": "Left as it is",
-      "skipped": "Nothing to convert"
-    },
-    "method": {
-      "copy": "Audio copied as-is, no change in quality",
-      "encode": "Re-encoded at {kbps} kbps to match the original",
-      "move": "Already an M4B, moved as-is",
-      "joinCopy": "{tracks} tracks joined into one M4B, audio copied as-is",
-      "joinEncode": "{tracks} tracks joined into one M4B, re-encoded at {kbps} kbps to match the best track"
-    },
-    "reasons": {
-      "no_audio": "No MP3, M4A or M4B file was found.",
-      "stopped": "Stopped because conversions were turned off. The original was not touched.",
-      "original_kept": "Converted, but the original could not be removed and is still in the Convert folder.",
-      "failed": "The conversion failed. The original was not touched.",
-      "too_many_files": "This folder holds more than 500 audio files, too many to join into one book, so it was left as it is.",
-      "length_mismatch": "The finished M4B is not as long as the original, so it was not kept. The original was not touched."
-    },
-    "settings": {
-      "title": "Audio conversions",
-      "enabled": "Convert audiobooks to M4B",
-      "enabledHint": "On: files in the Convert folder are converted to M4B and moved here. The Conversions tab shows their progress and has the speed settings.",
-      "disabledHint": "Off: nothing is watched or converted, and the Conversions tab is hidden.",
-      "folder": "Convert folder",
-      "folderHint": "Drop audiobooks here, or upload them from the Conversions tab. Finished M4B files appear in the Book Dock and the originals go to the recycle bin.",
-      "changePathPrefix": "To use a different folder, set",
-      "changePathSuffix": "in your .env file or container settings and restart BookOrbit."
-    },
-    "errors": {
-      "load": "Could not load conversions.",
-      "save": "Could not save the conversion settings.",
-      "retry": "Could not start the conversion again.",
-      "upload": "The upload failed. Nothing from it was converted."
-    },
-    "upload": {
-      "title": "Upload",
-      "hint": "Choose MP3, M4A or M4B files to convert each one on its own, or a folder holding one book to join its tracks into one M4B.",
-      "files": "Upload files",
-      "folder": "Upload a folder",
-      "progress": "Uploading file {current} of {total} ({percent}%)",
-      "done": "{count, plural, one {# file uploaded.} other {# files uploaded.}} Conversion starts shortly.",
-      "tooLarge": "{name} is larger than the {limit} MB upload limit. Raise the limit in Settings or copy it into the Convert folder instead.",
-      "failedFile": "{name} could not be uploaded. Nothing from this upload was converted."
-    },
-    "activeTitle": "{count, plural, =0 {Active conversions} one {Active conversions (#)} other {Active conversions (#)}}",
-    "noneActive": "Nothing is converting right now.",
-    "time": {
-      "underMinute": "under a minute",
-      "minutes": "{minutes} min",
-      "hours": "{hours} h {minutes} min",
-      "left": "About {time} left",
-      "took": "Took {time}",
-      "speed": "{speed}× real time",
-      "estimating": "Working out how long this will take",
-      "measuring": "Measuring the original's exact length first, because its file doesn't state it",
-      "lengthHours": "{hours} h {minutes} min {seconds} s",
-      "lengthMinutes": "{minutes} min {seconds} s"
-    },
-    "tuning": {
-      "title": "Conversion settings",
-      "speed": "Conversion speed",
-      "speedOption": {
-        "low": "Low",
-        "high": "High"
-      },
-      "speedHint": {
-        "low": "Conversions run at the lowest priority, so Plex, downloads and everything else on your server come first. Slower, but you won't notice it.",
-        "high": "Conversions run at normal priority, sharing the processor equally with other apps. Faster, but other apps may slow down while a book converts."
-      },
-      "concurrency": "Books converting at once",
-      "concurrencyHint": "Each book uses one processor core. More at once gets through a list sooner but doesn't speed up any one book.",
-      "concurrencyOption": "{count, plural, one {# book} other {# books}}"
-    },
-    "phase": {
-      "measuring": "Measuring",
-      "converting": "Converting",
-      "checking": "Checking length"
-    },
-    "lengthChecked": "Length checked: {length}, matches the original"
   }
 }

@@ -2,7 +2,6 @@ import { computed, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, type RouteLocationNormalizedLoaded, type RouteLocationRaw } from 'vue-router'
 import {
-  AudioLines,
   BarChart3,
   BookPlus,
   Building2,
@@ -22,7 +21,6 @@ import { usePermissions } from '@/features/auth/composables/usePermissions'
 import { useBookDockSummary } from '@/features/book-dock/composables/useBookDockSummary'
 import { useBrowseCounts } from '@/composables/useBrowseCounts'
 import { useBookRequestVisibility } from '@/features/book-requests/composables/useBookRequestVisibility'
-import { useConversionStatus } from '@/features/conversions/composables/useConversionStatus'
 
 /** `primary` is pinned on top; useSidebarLayout places the others among the list sections in the user's order. */
 export const SIDEBAR_ZONE_IDS = ['primary', 'browse', 'reading'] as const
@@ -33,8 +31,6 @@ interface NavContext {
   showBookRequests?: boolean
   achievementsEnabled?: boolean
   bookDockTotal: number
-  conversionsEnabled?: boolean
-  conversionsActive?: number
   outstandingRequestTotal: number
   outstandingRequestLabel: string
   browseCounts: BrowseCounts | null
@@ -154,17 +150,6 @@ export const SIDEBAR_NAV_REGISTRY: readonly SidebarNavEntry[] = [
     tourId: 'book-dock-btn',
   },
   {
-    id: 'conversions',
-    labelKey: 'conversions.title',
-    icon: AudioLines,
-    zone: 'primary',
-    to: { name: 'conversions' },
-    isActive: (route) => route.name === 'conversions',
-    permission: 'book_dock_access',
-    visible: (context) => context.conversionsEnabled === true,
-    badge: (context) => (context.conversionsActive ? { value: context.conversionsActive, tone: 'accent' } : null),
-  },
-  {
     id: 'book-requests',
     labelKey: 'bookRequests.title',
     icon: BookPlus,
@@ -272,8 +257,6 @@ export function useSidebarNav(getOutstandingRequestTotal: () => number = () => 0
   const { summary: bookDockSummary } = useBookDockSummary()
   const { counts: browseCounts } = useBrowseCounts()
   const { showBookRequests } = useBookRequestVisibility()
-  const { enabled: conversionsEnabled, active: conversionsActive, load: loadConversionStatus } = useConversionStatus()
-  if (hasPermission(Permission.BookDockAccess)) void loadConversionStatus()
 
   const context = computed<NavContext>(() => {
     const outstandingRequestTotal = getOutstandingRequestTotal()
@@ -286,8 +269,6 @@ export function useSidebarNav(getOutstandingRequestTotal: () => number = () => 0
       showBookRequests: showBookRequests.value,
       achievementsEnabled: user.value?.settings?.achievementPreferences?.enabled !== false,
       bookDockTotal: bookDockSummary.value.total,
-      conversionsEnabled: conversionsEnabled.value,
-      conversionsActive: conversionsActive.value,
       outstandingRequestTotal,
       outstandingRequestLabel: t(outstandingRequestLabelKey, { count: outstandingRequestTotal }),
       browseCounts: browseCounts.value,
