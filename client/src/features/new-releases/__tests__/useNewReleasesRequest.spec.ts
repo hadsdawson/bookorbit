@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NewReleaseItem, NewReleasesOverview } from '@bookorbit/types'
 
-const requestNewRelease = vi.fn()
+const requestNewRelease = vi.fn<(...args: unknown[]) => Promise<unknown>>()
 
 vi.mock('../api/new-releases', () => ({
-  getNewReleases: vi.fn(),
+  getNewReleases: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
   requestNewRelease: (...args: unknown[]) => requestNewRelease(...args),
-  setNewReleaseHidden: vi.fn(),
-  followAllForReleases: vi.fn(),
-  saveNewReleasesSettings: vi.fn(),
+  setNewReleaseHidden: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  followAllForReleases: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  saveNewReleasesSettings: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
 }))
 
 import { useNewReleases } from '../composables/useNewReleases'

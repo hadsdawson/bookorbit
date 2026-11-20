@@ -12209,6 +12209,18 @@
     "densityToggle": {
       "compact": "Compact rows"
     },
+    "savedViews": {
+      "title": "Saved views",
+      "empty": "No saved views yet.",
+      "nameLabel": "Name for this view",
+      "namePlaceholder": "Name this view",
+      "save": "Save",
+      "saved": "Saved view \"{name}\"",
+      "delete": "Delete view {name}",
+      "needFilters": "Choose a filter or a sort order to save it as a view.",
+      "saveFailed": "Could not save this view",
+      "deleteFailed": "Could not delete this view"
+    },
     "banner": {
       "automationOff": "Automatic grabbing is off.",
       "needsPick": "{count, plural, one {# approved request needs a release picked by hand.} other {# approved requests need a release picked by hand.}}",

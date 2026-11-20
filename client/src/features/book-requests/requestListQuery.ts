@@ -9,6 +9,7 @@ import {
 } from '@bookorbit/types'
 import type {
   BookRequestListView,
+  BookRequestSavedViewFilters,
   BookRequestMediaKind,
   BookRequestSortDirection,
   BookRequestSortField,
@@ -121,4 +122,32 @@ export function activeFilterCount(state: RequestListState): number {
 
 export function listStateKey(state: RequestListState): string {
   return JSON.stringify(listStateToQuery(state))
+}
+
+/** The filters and sort a saved view keeps. The tab and the search box stay where they are. */
+export function savedViewFilters(state: RequestListState): BookRequestSavedViewFilters {
+  const filters: BookRequestSavedViewFilters = {}
+  if (state.status) filters.status = state.status
+  if (state.format) filters.format = state.format
+  if (state.requester !== '') filters.requester = state.requester
+  if (state.approval) filters.approval = state.approval
+  if (state.tracking) filters.tracking = state.tracking
+  if (state.sort !== DEFAULT_LIST_STATE.sort) filters.sort = state.sort
+  if (state.dir !== defaultSortDirection(state.sort)) filters.dir = state.dir
+  return filters
+}
+
+/** What applying a saved view changes: every filter it keeps, and a clear for every one it does not. */
+export function savedViewPatch(filters: BookRequestSavedViewFilters, allowRequester: boolean): Partial<RequestListState> {
+  const sort = filters.sort ?? DEFAULT_LIST_STATE.sort
+  return {
+    status: filters.status ?? '',
+    format: filters.format ?? '',
+    requester: allowRequester ? (filters.requester ?? '') : '',
+    approval: filters.approval ?? '',
+    tracking: filters.tracking ?? '',
+    sort,
+    dir: filters.dir ?? defaultSortDirection(sort),
+    page: 1,
+  }
 }
