@@ -4,7 +4,11 @@ import { createI18n } from 'vue-i18n'
 
 import en from '@/locales/en.json'
 
-const api = vi.hoisted(() => ({ list: vi.fn(), save: vi.fn(), remove: vi.fn() }))
+const api = vi.hoisted(() => ({
+  list: vi.fn<() => Promise<unknown[]>>(),
+  save: vi.fn<(name: string, filters: unknown) => Promise<unknown>>(),
+  remove: vi.fn<(id: number) => Promise<void>>(),
+}))
 
 vi.mock('../api/saved-views', () => ({
   listSavedViews: api.list,
