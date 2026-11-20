@@ -15,7 +15,7 @@ vi.mock('../api/saved-views', () => ({
   saveSavedView: api.save,
   deleteSavedView: api.remove,
 }))
-vi.mock('vue-sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
+vi.mock('vue-sonner', () => ({ toast: { success: vi.fn<(m: string) => void>(), error: vi.fn<(m: string) => void>() } }))
 
 import RequestSavedViews from '../components/RequestSavedViews.vue'
 import { DEFAULT_LIST_STATE } from '../requestListQuery'
