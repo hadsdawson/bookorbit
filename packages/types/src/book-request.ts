@@ -747,6 +747,27 @@ export interface BookRequestViewCounts {
   awaitingManualPick: number;
 }
 
+/** Fork: the most saved filter views one person keeps, and the longest name one may have. */
+export const BOOK_REQUEST_SAVED_VIEW_LIMIT = 30;
+export const BOOK_REQUEST_SAVED_VIEW_NAME_MAX_LENGTH = 60;
+
+/** Fork: what a saved filter view puts back. A field left out means "no filter" or the default. */
+export interface BookRequestSavedViewFilters {
+  status?: BookRequestStatus;
+  format?: BookRequestMediaKind;
+  requester?: number;
+  approval?: "needed" | "skipped";
+  tracking?: BookRequestTrackingStatusFilter;
+  sort?: BookRequestSortField;
+  dir?: BookRequestSortDirection;
+}
+
+export interface BookRequestSavedView {
+  id: number;
+  name: string;
+  filters: BookRequestSavedViewFilters;
+}
+
 /** The most requests "select all matching" will gather; a larger match is reported as truncated. */
 export const BOOK_REQUEST_SELECT_ALL_LIMIT = 5000;
 

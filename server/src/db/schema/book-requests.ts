@@ -17,7 +17,7 @@ import {
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 import { BOOK_REQUEST_MEDIA_KINDS } from '@bookorbit/types';
-import type { BookRequestMetadataSource, LegacyBookRequestMediaKind } from '@bookorbit/types';
+import type { BookRequestMetadataSource, BookRequestSavedViewFilters, LegacyBookRequestMediaKind } from '@bookorbit/types';
 
 import { books } from './books';
 import { bookDockFiles } from './book-dock';
@@ -265,6 +265,22 @@ export const bookRequestDismissals = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.requestId, t.userId] }), index('book_request_dismissals_user_id_idx').on(t.userId)],
+);
+
+/** Fork: a person's own saved set of list filters, so it can be put back in one step. */
+export const bookRequestSavedViews = pgTable(
+  'book_request_saved_views',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 60 }).notNull(),
+    filters: jsonb('filters').$type<BookRequestSavedViewFilters>().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('book_request_saved_views_user_name_uidx').on(t.userId, t.name)],
 );
 
 export type BookRequestRow = typeof bookRequests.$inferSelect;

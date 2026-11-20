@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { formatNumber } from '@/i18n/formatters'
 import type { RequestListDensity } from '../composables/useRequestListDensity'
 import RequestColumnsMenu from './RequestColumnsMenu.vue'
+import RequestSavedViews from './RequestSavedViews.vue'
 import {
   activeFilterCount,
   DEFAULT_LIST_STATE,
@@ -167,6 +168,10 @@ function clearFilters() {
   emit('change', { status: '', format: '', requester: '', approval: '', tracking: '' })
 }
 
+function applySavedView(patch: Partial<RequestListState>) {
+  emit('change', patch)
+}
+
 function clearAndClose() {
   clearFilters()
   filtersOpen.value = false
@@ -297,6 +302,10 @@ const CHIP =
                 <option value="asc">{{ t('bookRequests.filterMenu.directions.asc') }}</option>
                 <option value="desc">{{ t('bookRequests.filterMenu.directions.desc') }}</option>
               </select>
+            </div>
+            <div class="col-span-2 -mx-3 h-px bg-border" />
+            <div class="col-span-2">
+              <RequestSavedViews :state="state" :show-requester="showRequester" @apply="applySavedView" />
             </div>
           </div>
           <div class="-mx-3 mt-3 flex justify-end gap-2 border-t border-border px-3 pt-2.5">

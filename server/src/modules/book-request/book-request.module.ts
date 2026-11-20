@@ -13,6 +13,9 @@ import { BookRequestAdminController } from './book-request-admin.controller';
 import { BookRequestAutomationController } from './book-request-automation.controller';
 import { BookRequestAttributionService } from './book-request-attribution.service';
 import { BookRequestController } from './book-request.controller';
+import { BookRequestSavedViewController } from './book-request-saved-view.controller';
+import { BookRequestSavedViewRepository } from './book-request-saved-view.repository';
+import { BookRequestSavedViewService } from './book-request-saved-view.service';
 import { BookRequestSelfFulfilController } from './book-request-self-fulfil.controller';
 import { BookRequestDedupeService } from './book-request-dedupe.service';
 import { BookRequestEventsService } from './book-request-events.service';
@@ -94,6 +97,7 @@ import { RequestWatchdogService } from './fulfillment/request-watchdog.service';
   controllers: [
     BookRequestController,
     BookRequestSelfFulfilController,
+    BookRequestSavedViewController,
     BookRequestAdminController,
     BookRequestAutomationController,
     DownloadClientController,
@@ -101,6 +105,8 @@ import { RequestWatchdogService } from './fulfillment/request-watchdog.service';
     IndexerManagerController,
   ],
   providers: [
+    BookRequestSavedViewRepository,
+    BookRequestSavedViewService,
     BookRequestService,
     BookRequestRepository,
     BookRequestAttributionService,
