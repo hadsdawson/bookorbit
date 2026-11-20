@@ -523,7 +523,11 @@ async function reselectPrimaryFile(tx: Tx, bookId: number, libraryId: number): P
     .from(libraries)
     .where(eq(libraries.id, libraryId))
     .limit(1);
-  const [book] = await tx.select({ primaryFileId: books.primaryFileId }).from(books).where(eq(books.id, bookId)).limit(1);
+  const [book] = await tx
+    .select({ primaryFileId: books.primaryFileId, pinnedPrimaryFileId: books.pinnedPrimaryFileId })
+    .from(books)
+    .where(eq(books.id, bookId))
+    .limit(1);
   if (!library || !book) return;
   const files = await tx
     .select({
@@ -536,7 +540,8 @@ async function reselectPrimaryFile(tx: Tx, bookId: number, libraryId: number): P
     })
     .from(bookFiles)
     .where(eq(bookFiles.bookId, bookId));
-  const winner = selectMovedPrimary(files, book.primaryFileId, library);
+  const pinned = files.find((file) => file.id === book.pinnedPrimaryFileId && file.role === 'content');
+  const winner = pinned ?? selectMovedPrimary(files, book.primaryFileId, library);
   if (!winner) return;
   await tx
     .update(books)

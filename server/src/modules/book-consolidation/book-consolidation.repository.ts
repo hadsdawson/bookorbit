@@ -880,6 +880,7 @@ export class BookConsolidationRepository {
     };
 
     await tx.execute(sql`update books set primary_file_id = ${w} where primary_file_id = ${l}`);
+    await tx.execute(sql`update books set pinned_primary_file_id = ${w} where pinned_primary_file_id = ${l}`);
     await newerWins(sql`reading_progress`, sql`y.user_id = x.user_id`, sql`updated_at`);
     await newerWins(sql`tts_reading_position`, sql`y.user_id = x.user_id`, sql`updated_at`);
     await newerWins(sql`koreader_progress_resets`, sql`y.user_id = x.user_id`, sql`reset_at`);

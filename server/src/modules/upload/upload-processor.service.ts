@@ -63,6 +63,7 @@ export interface ReplacedPrimary {
 interface JoinedBook {
   id: number;
   primaryFileId: number | null;
+  pinnedPrimaryFileId: number | null;
   status: string;
   formatPriority: string[];
 }
@@ -316,7 +317,13 @@ export class UploadProcessorService {
     };
 
     const [existingBook] = await tx
-      .select({ id: books.id, primaryFileId: books.primaryFileId, status: books.status, formatPriority: libraries.formatPriority })
+      .select({
+        id: books.id,
+        primaryFileId: books.primaryFileId,
+        pinnedPrimaryFileId: books.pinnedPrimaryFileId,
+        status: books.status,
+        formatPriority: libraries.formatPriority,
+      })
       .from(books)
       .innerJoin(libraries, eq(books.libraryId, libraries.id))
       .where(and(eq(books.libraryId, libraryId), eq(books.folderPath, folderPath)))
@@ -379,7 +386,7 @@ export class UploadProcessorService {
       .where(and(eq(bookFiles.bookId, book.id), eq(bookFiles.role, 'content')))
       .orderBy(asc(bookFiles.id));
 
-    const winner = selectPrimaryFileKeepingCurrent(contentFiles, book.primaryFileId, book.formatPriority);
+    const winner = selectPrimaryFileKeepingCurrent(contentFiles, book.primaryFileId, book.formatPriority, book.pinnedPrimaryFileId);
     // No winner means every file is empty, and clearing a primary over that is worse than keeping it.
     if (!winner || winner.id === book.primaryFileId) return null;
 

@@ -6,6 +6,7 @@ import { useElementSize } from '@vueuse/core'
 import { FilePlus, Files, X } from '@lucide/vue'
 import type { BookDetail, CreateReadAloudJobRequest, ReadAloudDecisions, ReadAloudJobInput } from '@bookorbit/types'
 import { Permission } from '@bookorbit/types'
+import { toast } from 'vue-sonner'
 import { api } from '@/lib/api'
 import { copyToClipboard } from '@/lib/clipboard'
 import { useBookDownload } from '@/features/book/composables/useBookDownload'
@@ -356,6 +357,30 @@ async function submitRename() {
   }
 }
 
+const primaryBusy = ref(false)
+
+async function changePrimary(file: TreeFile, method: 'PUT' | 'DELETE') {
+  if (primaryBusy.value) return
+  primaryBusy.value = true
+  try {
+    const response = await api(`/api/v1/books/files/${file.id}/primary`, { method })
+    if (!response.ok) throw new Error(t('book.detail.files.primaryFailed'))
+    emit('refetch')
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : t('book.detail.files.primaryFailed'))
+  } finally {
+    primaryBusy.value = false
+  }
+}
+
+function makePrimary(file: TreeFile) {
+  void changePrimary(file, 'PUT')
+}
+
+function usePriority(file: TreeFile) {
+  void changePrimary(file, 'DELETE')
+}
+
 function openDeleteModal(file: TreeFile) {
   deleteTarget.value = file
   deleteError.value = null
@@ -501,9 +526,13 @@ async function confirmDelete() {
             :can-download="canDownload"
             :can-edit="canEdit"
             :can-delete="canDelete"
+            :is-pinned-primary="selectedFile.id === book.pinnedPrimaryFileId"
+            :primary-busy="primaryBusy"
             @open="openFile"
             @download="downloadFile"
             @rename="openRenameModal"
+            @make-primary="makePrimary"
+            @use-priority="usePriority"
             @remove="openDeleteModal"
             @copy-path="copyPath"
           />

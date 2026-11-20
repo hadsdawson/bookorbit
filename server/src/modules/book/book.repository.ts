@@ -1843,6 +1843,14 @@ export class BookRepository {
     await this.db.update(books).set({ primaryFileId, updatedAt: new Date() }).where(eq(books.id, bookId));
   }
 
+  async pinPrimaryFile(bookId: number, fileId: number): Promise<void> {
+    await this.db.update(books).set({ primaryFileId: fileId, pinnedPrimaryFileId: fileId, updatedAt: new Date() }).where(eq(books.id, bookId));
+  }
+
+  async clearPinnedPrimaryFile(bookId: number): Promise<void> {
+    await this.db.update(books).set({ pinnedPrimaryFileId: null, updatedAt: new Date() }).where(eq(books.id, bookId));
+  }
+
   async findFilesForBook(bookId: number) {
     return this.db
       .select({

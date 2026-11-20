@@ -315,6 +315,8 @@ export type BookDetail = {
   libraryName: string;
   status: string;
   folderPath: string;
+  /** Fork: the file a person pinned as primary, which scans and imports leave in place. */
+  pinnedPrimaryFileId?: number | null;
   addedAt: string;
   updatedAt: string | null;
   title: string | null;

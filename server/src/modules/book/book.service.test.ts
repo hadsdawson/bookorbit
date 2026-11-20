@@ -7192,6 +7192,42 @@ describe('BookService', () => {
     });
   });
 
+  describe('primary format pin', () => {
+    function setup(file: Record<string, unknown>) {
+      const made = makeService();
+      made.bookRepo.findFileById = vi.fn().mockResolvedValue({ id: 100, bookId: 10, libraryId: 1, role: 'content', format: 'm4b', ...file });
+      made.libraryService.checkLibraryAccess = vi.fn().mockResolvedValue(true);
+      made.bookRepo.pinPrimaryFile = vi.fn().mockResolvedValue(undefined);
+      made.bookRepo.clearPinnedPrimaryFile = vi.fn().mockResolvedValue(undefined);
+      made.bookRepo.updateBookPrimaryFile = vi.fn().mockResolvedValue(undefined);
+      return made;
+    }
+
+    it('pins a content file as the primary', async () => {
+      const { service, bookRepo } = setup({});
+      await service.pinPrimaryFile(100, makeUser());
+      expect(bookRepo.pinPrimaryFile).toHaveBeenCalledWith(10, 100);
+    });
+
+    it('refuses to pin a cover or other non-content file', async () => {
+      const { service, bookRepo } = setup({ role: 'cover' });
+      await expect(service.pinPrimaryFile(100, makeUser())).rejects.toBeInstanceOf(BadRequestException);
+      expect(bookRepo.pinPrimaryFile).not.toHaveBeenCalled();
+    });
+
+    it('unpinning hands the choice back to the library format order', async () => {
+      const { service, bookRepo, libraryService } = setup({});
+      libraryService.findOne = vi.fn().mockResolvedValue({ formatPriority: ['m4b', 'epub'] });
+      bookRepo.findFilesForBook = vi.fn().mockResolvedValue([
+        { id: 100, role: 'primary', format: 'epub', sizeBytes: 10 },
+        { id: 101, role: 'content', format: 'm4b', sizeBytes: 10 },
+      ]);
+      await service.unpinPrimaryFile(100, makeUser());
+      expect(bookRepo.clearPinnedPrimaryFile).toHaveBeenCalledWith(10);
+      expect(bookRepo.updateBookPrimaryFile).toHaveBeenCalledWith(10, 101);
+    });
+  });
+
   describe('deleteFile', () => {
     it('moves the file to the recycle bin instead of deleting it when the bin is on', async () => {
       const { service, bookRepo, libraryService } = makeService();

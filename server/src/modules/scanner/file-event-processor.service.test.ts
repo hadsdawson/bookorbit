@@ -37,6 +37,7 @@ const mockRepo: Mocked<
     | 'findLibraryFolderPath'
     | 'findLibrarySettings'
     | 'updateBookPrimaryFile'
+    | 'findPinnedPrimaryFileId'
     | 'findBookById'
     | 'findPresentDuplicateBookFilesByHash'
     | 'replaceDuplicateBookWithMovedBook'
@@ -60,6 +61,7 @@ const mockRepo: Mocked<
   findLibraryFolderPath: vi.fn(),
   findLibrarySettings: vi.fn(),
   updateBookPrimaryFile: vi.fn(),
+  findPinnedPrimaryFileId: vi.fn(),
   findBookById: vi.fn(),
   findPresentDuplicateBookFilesByHash: vi.fn(),
   replaceDuplicateBookWithMovedBook: vi.fn(),
@@ -111,6 +113,7 @@ beforeEach(() => {
   mockPathsReferToSameEntry.mockResolvedValue(false);
   mockReaddir.mockResolvedValue([]);
   mockRepo.updateBookPrimaryFile.mockResolvedValue(undefined);
+  mockRepo.findPinnedPrimaryFileId.mockResolvedValue(null);
 });
 
 // ── handleUnlink ──────────────────────────────────────────────────────────────

@@ -47,6 +47,7 @@ export class BookDetailDto {
   libraryName: string;
   status: string;
   folderPath: string;
+  pinnedPrimaryFileId?: number | null;
   addedAt: Date;
   updatedAt: Date | null;
   title: string | null;
