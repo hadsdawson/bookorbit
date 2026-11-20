@@ -129,7 +129,7 @@ function fixedVisible(): FixedColumn[] {
  * book's minimum. Null before the table has been measured, when nothing is capped.
  */
 const fixedBudget = computed(() => {
-  if (rootWidth.value <= 0) return null
+  if (!(rootWidth.value > 0)) return null
   return Math.max(0, rootWidth.value / textScale.value - SELECT_COLUMN_WIDTH - BOOK_MIN_WIDTH)
 })
 
@@ -167,16 +167,32 @@ function columnFromEvent(event: Event): RequestTableColumn | null {
   return value && (REQUEST_TABLE_COLUMNS as readonly string[]).includes(value) ? (value as RequestTableColumn) : null
 }
 
-function fixedFromEvent(event: Event): FixedColumn | null {
-  const column = columnFromEvent(event)
-  return column && column !== 'book' ? column : null
+/**
+ * The book has no width of its own: it takes what the others leave. Dragging its edge therefore
+ * moves the boundary it shares with the next column, which grows as the book shrinks and the other
+ * way round. A book in the last position has no such edge.
+ */
+function resizeTarget(column: RequestTableColumn): { column: FixedColumn; direction: 1 | -1 } | null {
+  if (column !== 'book') return { column, direction: 1 }
+  const visible = visibleColumns.value
+  const next = visible[visible.indexOf('book') + 1]
+  return next && next !== 'book' ? { column: next, direction: -1 } : null
 }
 
-let resizing: { column: FixedColumn; startX: number; startWidth: number } | null = null
+function resizeFromEvent(event: Event) {
+  const column = columnFromEvent(event)
+  return column ? resizeTarget(column) : null
+}
+
+function hasResizeEdge(column: RequestTableColumn): boolean {
+  return resizeTarget(column) !== null
+}
+
+let resizing: { column: FixedColumn; direction: 1 | -1; startX: number; startWidth: number } | null = null
 
 function onResizeMove(event: PointerEvent) {
   if (!resizing) return
-  const width = resizing.startWidth + (event.clientX - resizing.startX) / textScale.value
+  const width = resizing.startWidth + (resizing.direction * (event.clientX - resizing.startX)) / textScale.value
   columns.setWidth(resizing.column, width, maxWidthFor(resizing.column))
 }
 
@@ -191,11 +207,11 @@ function onResizeEnd() {
 }
 
 function startResize(event: PointerEvent) {
-  const column = fixedFromEvent(event)
-  if (!column) return
+  const target = resizeFromEvent(event)
+  if (!target) return
   event.preventDefault()
   event.stopPropagation()
-  resizing = { column, startX: event.clientX, startWidth: renderedWidths.value[column] ?? storedWidth(column) }
+  resizing = { ...target, startX: event.clientX, startWidth: renderedWidths.value[target.column] ?? storedWidth(target.column) }
   document.body.style.cursor = 'col-resize'
   document.body.style.userSelect = 'none'
   window.addEventListener('pointermove', onResizeMove)
@@ -203,20 +219,20 @@ function startResize(event: PointerEvent) {
 }
 
 function resizeWithKeys(event: KeyboardEvent) {
-  const column = fixedFromEvent(event)
-  if (!column) return
+  const target = resizeFromEvent(event)
+  if (!target) return
   const step = event.shiftKey ? 48 : 16
-  const current = renderedWidths.value[column] ?? storedWidth(column)
-  if (event.key === 'ArrowRight') columns.setWidth(column, current + step, maxWidthFor(column))
-  else if (event.key === 'ArrowLeft') columns.setWidth(column, current - step, maxWidthFor(column))
+  const current = renderedWidths.value[target.column] ?? storedWidth(target.column)
+  if (event.key === 'ArrowRight') columns.setWidth(target.column, current + target.direction * step, maxWidthFor(target.column))
+  else if (event.key === 'ArrowLeft') columns.setWidth(target.column, current - target.direction * step, maxWidthFor(target.column))
   else return
   event.preventDefault()
   columns.commitWidths()
 }
 
 function resetWidth(event: MouseEvent) {
-  const column = fixedFromEvent(event)
-  if (column) columns.resetWidth(column)
+  const target = resizeFromEvent(event)
+  if (target) columns.resetWidth(target.column)
 }
 
 onBeforeUnmount(onResizeEnd)
@@ -511,7 +527,7 @@ const HEADER_LABEL = 'truncate text-xs font-semibold tracking-wide whitespace-no
           </th>
           <!--
             Each header carries a grip: drag it onto another header to move the column there, or
-            focus it and use the arrow keys. Every column but the book has a resize edge.
+            focus it and use the arrow keys. Every column has a resize edge, except a book in the last place.
           -->
           <th
             v-for="column in visibleColumns"
@@ -545,7 +561,7 @@ const HEADER_LABEL = 'truncate text-xs font-semibold tracking-wide whitespace-no
               <span v-else :class="[HEADER_LABEL, column === 'actions' && 'sr-only']">{{ headingOf(column) }}</span>
             </div>
             <span
-              v-if="column !== 'book'"
+              v-if="hasResizeEdge(column)"
               role="separator"
               aria-orientation="vertical"
               tabindex="0"

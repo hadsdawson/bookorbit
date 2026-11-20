@@ -120,11 +120,29 @@ describe('RequestListTable columns', () => {
     expect(wrapper.findAll('table tbody select')).toHaveLength(1)
   })
 
-  it('remembers widths across mounts, and the book has no resize edge', () => {
+  it('remembers widths across mounts', () => {
     useRequestTableColumns().setWidth('status', 200)
     const wrapper = render([request()])
     const index = headerColumns(wrapper).indexOf('status')
     expect(wrapper.findAll('colgroup col')[index + 1]!.attributes('style')).toContain('200px')
+  })
+
+  it('gives the book a resize edge that moves its boundary with the next column', async () => {
+    const wrapper = render([request()])
+    const edge = wrapper.find('thead th[data-column="book"] [role="separator"]')
+    expect(edge.exists()).toBe(true)
+    const columns = useRequestTableColumns()
+    const before = columns.widthOf('requested')
+    await edge.trigger('keydown', { key: 'ArrowRight' })
+    expect(columns.widthOf('requested')).toBe(before - 16)
+    await edge.trigger('keydown', { key: 'ArrowLeft' })
+    expect(columns.widthOf('requested')).toBe(before)
+  })
+
+  it('has no book resize edge when the book is the last column', async () => {
+    const columns = useRequestTableColumns()
+    columns.moveTo('book', 'actions')
+    const wrapper = render([request()])
     expect(wrapper.find('thead th[data-column="book"] [role="separator"]').exists()).toBe(false)
   })
 
