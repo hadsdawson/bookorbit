@@ -566,7 +566,8 @@ export class FileEventProcessorService {
       }));
     const settings = await this.scannerRepo.findLibrarySettings(libraryId);
     const formatPriority = settings?.formatPriority ?? DEFAULT_FORMAT_PRIORITY;
-    const winner = this.pickPrimaryFile(files, formatPriority);
+    const pinnedId = files.length > 1 ? await this.scannerRepo.findPinnedPrimaryFileId(bookId) : null;
+    const winner = files.find((file) => file.id === pinnedId) ?? this.pickPrimaryFile(files, formatPriority);
     await this.scannerRepo.updateBookPrimaryFile(bookId, winner?.id ?? null);
   }
 

@@ -356,6 +356,12 @@ export class ScannerRepository {
 
   // ── Books ──────────────────────────────────────────────────────────────────
 
+  /** Fork: the file a person pinned as this book's primary, if any. */
+  async findPinnedPrimaryFileId(bookId: number): Promise<number | null> {
+    const [row] = await this.db.select({ pinned: books.pinnedPrimaryFileId }).from(books).where(eq(books.id, bookId)).limit(1);
+    return row?.pinned ?? null;
+  }
+
   async findBooksByLibraryFolder(libraryFolderId: number) {
     return this.db
       .select({

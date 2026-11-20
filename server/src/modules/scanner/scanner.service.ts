@@ -2279,10 +2279,12 @@ export class ScannerService implements OnApplicationBootstrap {
 
     // A current primary that is still here keeps its place against files that only tie with it:
     // non-audio files are not sorted, so a fresh pick would follow directory order (B32).
+    const pinnedPrimaryFileId = contentFiles.length > 1 ? await this.scannerRepo.findPinnedPrimaryFileId(book.id) : null;
     const winner = selectPrimaryFileKeepingCurrent(
       contentFiles.map((file) => ({ ...file, id: file.fileId })),
       book.primaryFileId ?? null,
       formatPriority,
+      pinnedPrimaryFileId,
     );
 
     await this.scannerRepo.updateBookPrimaryFile(book.id, winner?.fileId ?? null);

@@ -74,6 +74,15 @@ describe('selectPrimaryFileKeepingCurrent', () => {
     expect(selectPrimaryFileKeepingCurrent([firstEpub, readAlong], firstEpub.id, ['epub'])).toBe(readAlong);
   });
 
+  it('keeps a pinned file primary even when another format ranks higher', () => {
+    expect(selectPrimaryFileKeepingCurrent([firstEpub, audiobook], firstEpub.id, ['m4b', 'epub'], firstEpub.id)).toBe(firstEpub);
+    expect(selectPrimaryFileKeepingCurrent([firstEpub, audiobook], firstEpub.id, ['epub', 'm4b'], audiobook.id)).toBe(audiobook);
+  });
+
+  it('ranks normally when the pinned file is no longer among the candidates', () => {
+    expect(selectPrimaryFileKeepingCurrent([firstEpub, audiobook], firstEpub.id, ['m4b', 'epub'], 99)).toBe(audiobook);
+  });
+
   it('ranks normally when there is no current primary, or it is not among the files', () => {
     expect(selectPrimaryFileKeepingCurrent([firstEpub, secondEpub], null, ['epub'])).toBe(firstEpub);
     expect(selectPrimaryFileKeepingCurrent([firstEpub, secondEpub], 99, ['epub'])).toBe(firstEpub);

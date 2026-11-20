@@ -52,12 +52,16 @@ export function selectPrimaryFile<T extends PrimaryFileCandidate>(
 /**
  * {@link selectPrimaryFile} for a book that already has a primary: a file that only ties with it,
  * such as a second EPUB beside the first, does not take its place. Only a better-ranked file does.
+ * Fork: a file the person pinned as primary always wins while it is still one of the candidates.
  */
 export function selectPrimaryFileKeepingCurrent<T extends PrimaryFileCandidate>(
   files: readonly T[],
   currentPrimaryFileId: number | null,
   formatPriority: readonly string[],
+  pinnedPrimaryFileId: number | null = null,
 ): T | null {
+  const pinned = pinnedPrimaryFileId == null ? undefined : files.find((file) => file.id === pinnedPrimaryFileId);
+  if (pinned) return pinned;
   const ordered =
     currentPrimaryFileId == null
       ? files

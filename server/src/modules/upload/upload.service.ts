@@ -342,6 +342,7 @@ export class UploadService {
       const [lockedBook] = await tx
         .select({
           primaryFileId: books.primaryFileId,
+          pinnedPrimaryFileId: books.pinnedPrimaryFileId,
           status: books.status,
           formatPriority: libraries.formatPriority,
         })
@@ -393,7 +394,12 @@ export class UploadService {
         .where(and(eq(bookFiles.bookId, bookId), eq(bookFiles.role, 'content')))
         .orderBy(asc(bookFiles.id));
 
-      const winner = selectPrimaryFileKeepingCurrent(contentFiles, lockedBook.primaryFileId, lockedBook.formatPriority);
+      const winner = selectPrimaryFileKeepingCurrent(
+        contentFiles,
+        lockedBook.primaryFileId,
+        lockedBook.formatPriority,
+        lockedBook.pinnedPrimaryFileId,
+      );
       const nextPrimaryFileId = winner?.id ?? null;
       const needsPrimaryUpdate = nextPrimaryFileId !== lockedBook.primaryFileId;
       const needsStatusUpdate = lockedBook.status === 'missing';

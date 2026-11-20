@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { BookOpen, Copy, Download, Eye, Headphones, MoreVertical } from '@lucide/vue'
+import { BookOpen, Copy, Download, Eye, Headphones, MoreVertical, Pin, PinOff } from '@lucide/vue'
 import { formatBytes } from '@/lib/formatting'
 import { formatDate, formatPercent, formatRelativeFromNow } from '@/i18n/formatters'
 import { formatColorVar } from '@/features/book/lib/format-colors'
@@ -27,6 +27,10 @@ const props = defineProps<{
   canDownload: boolean
   canEdit: boolean
   canDelete: boolean
+  /** Fork: this file is the primary because a person pinned it. */
+  isPinnedPrimary: boolean
+  /** Fork: a primary-format change is in flight. */
+  primaryBusy: boolean
 }>()
 
 const emit = defineEmits<{
@@ -35,6 +39,8 @@ const emit = defineEmits<{
   rename: [file: TreeFile]
   remove: [file: TreeFile]
   copyPath: [file: TreeFile]
+  makePrimary: [file: TreeFile]
+  usePriority: [file: TreeFile]
 }>()
 
 const { t } = useI18n()
@@ -103,6 +109,14 @@ function handleRemove() {
 function handleCopyPath() {
   emit('copyPath', props.file)
 }
+function handleMakePrimary() {
+  emit('makePrimary', props.file)
+}
+function handleUsePriority() {
+  emit('usePriority', props.file)
+}
+
+const canChoosePrimary = computed(() => props.canEdit && (props.file.role === 'content' || props.file.role === 'primary'))
 </script>
 
 <template>
@@ -228,6 +242,33 @@ function handleCopyPath() {
             }}
           </p>
         </div>
+      </div>
+
+      <div v-if="canChoosePrimary" class="flex flex-col gap-1.5" data-testid="primary-format-controls">
+        <button
+          v-if="file.role !== 'primary'"
+          type="button"
+          class="inline-flex h-[34px] items-center justify-center gap-1.5 rounded-lg border border-input px-3 text-[13px] font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+          :disabled="primaryBusy"
+          data-testid="make-primary"
+          @click="handleMakePrimary"
+        >
+          <Pin class="size-4" aria-hidden="true" />
+          {{ t('book.detail.files.makePrimary') }}
+        </button>
+        <template v-else-if="isPinnedPrimary">
+          <p class="text-[11.5px] leading-snug text-muted-foreground">{{ t('book.detail.files.primaryPinnedHint') }}</p>
+          <button
+            type="button"
+            class="inline-flex h-[34px] items-center justify-center gap-1.5 rounded-lg border border-input px-3 text-[13px] font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+            :disabled="primaryBusy"
+            data-testid="use-priority"
+            @click="handleUsePriority"
+          >
+            <PinOff class="size-4" aria-hidden="true" />
+            {{ t('book.detail.files.usePriority') }}
+          </button>
+        </template>
       </div>
 
       <div class="flex items-center gap-1.5">

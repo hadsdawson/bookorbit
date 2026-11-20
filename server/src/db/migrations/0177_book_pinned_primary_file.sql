@@ -1,0 +1,2 @@
+ALTER TABLE "books" ADD COLUMN "pinned_primary_file_id" integer;--> statement-breakpoint
+ALTER TABLE "books" ADD CONSTRAINT "books_pinned_primary_file_id_book_files_id_fk" FOREIGN KEY ("pinned_primary_file_id") REFERENCES "public"."book_files"("id") ON DELETE set null ON UPDATE no action;

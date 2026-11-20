@@ -14,6 +14,7 @@ export type BookFileRetireRuleKind = 'repoint' | 'newer-wins' | 'survivor-wins' 
 
 export const BOOK_FILE_RETIRE_RULES: Readonly<Record<string, BookFileRetireRuleKind>> = {
   'books.primary_file_id': 'primary',
+  'books.pinned_primary_file_id': 'primary',
   'reading_progress.book_file_id': 'newer-wins',
   'reading_sessions.book_file_id': 'repoint',
   'audiobook_progress.current_file_id': 'repoint',

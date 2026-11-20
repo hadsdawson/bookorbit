@@ -1845,6 +1845,37 @@ export class BookService {
     }
   }
 
+  /**
+   * Fork: makes one content file the book's primary and pins it, so a scan or an import keeps it
+   * whatever the library's format priority says. Pinning the file that is already primary just
+   * locks it in. The pin goes by itself if the file is deleted.
+   */
+  async pinPrimaryFile(fileId: number, user: RequestUser): Promise<void> {
+    const event = 'book.pin_primary_file';
+    this.logger.log(`[${event}] [start] fileId=${fileId} userId=${user.id} - pin primary file started`);
+    const file = await this.verifyFileAccess(fileId, user);
+    await this.libraryService.verifyAccessLevel(user, file.libraryId, 'editor');
+    if (file.role !== 'content') throw new BadRequestException('Only a book file can be the primary format');
+    await this.bookRepo.pinPrimaryFile(file.bookId, file.id);
+    this.logger.log(`[${event}] [end] fileId=${fileId} bookId=${file.bookId} format=${file.format ?? 'unknown'} - primary file pinned`);
+  }
+
+  /** Fork: hands the choice back to the library's format priority and re-picks the primary now. */
+  async unpinPrimaryFile(fileId: number, user: RequestUser): Promise<void> {
+    const event = 'book.unpin_primary_file';
+    this.logger.log(`[${event}] [start] fileId=${fileId} userId=${user.id} - unpin primary file started`);
+    const file = await this.verifyFileAccess(fileId, user);
+    await this.libraryService.verifyAccessLevel(user, file.libraryId, 'editor');
+    await this.bookRepo.clearPinnedPrimaryFile(file.bookId);
+    const library = await this.libraryService.findOne(file.libraryId);
+    const files = (await this.bookRepo.findFilesForBook(file.bookId)).filter(
+      (candidate) => candidate.role === 'content' || candidate.role === 'primary',
+    );
+    const winner = selectPrimaryFile(files, library.formatPriority ?? DEFAULT_FORMAT_PRIORITY, { allowZeroByteFallback: true });
+    if (winner) await this.bookRepo.updateBookPrimaryFile(file.bookId, winner.id);
+    this.logger.log(`[${event}] [end] fileId=${fileId} bookId=${file.bookId} - primary file unpinned`);
+  }
+
   async deleteFile(fileId: number, user: RequestUser): Promise<void> {
     const event = 'book.delete_file';
     const startedAt = Date.now();
@@ -3783,6 +3814,7 @@ export class BookService {
       libraryName: book.libraries?.name ?? '',
       status: book.books.status,
       folderPath: book.books.folderPath,
+      pinnedPrimaryFileId: book.books.pinnedPrimaryFileId ?? null,
       addedAt: book.books.addedAt,
       updatedAt: book.books.updatedAt ?? null,
       title: meta?.title ?? null,

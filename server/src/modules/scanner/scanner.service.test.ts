@@ -104,6 +104,7 @@ function makeRepo(overrides: Record<string, unknown> = {}) {
     promoteProcessingBookToPresent: vi.fn().mockResolvedValue(true),
     updateBookStatus: vi.fn().mockResolvedValue(undefined),
     updateBookPrimaryFile: vi.fn().mockResolvedValue(undefined),
+    findPinnedPrimaryFileId: vi.fn().mockResolvedValue(null),
     markBooksAsMissing: vi.fn().mockResolvedValue(undefined),
     createBookFile: vi.fn().mockResolvedValue(makeBookFile()),
     updateBookFile: vi.fn().mockResolvedValue(makeBookFile()),

@@ -13,6 +13,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Put,
   Query,
   Res,
 } from '@nestjs/common';
@@ -559,6 +560,22 @@ export class BookController {
   @RequirePermission(Permission.LibraryEditMetadata)
   async renameFile(@Param('fileId', ParseIntPipe) fileId: number, @Body() dto: UpdateBookFileDto, @CurrentUser() user: RequestUser) {
     await this.bookService.renameFile(fileId, dto, user);
+  }
+
+  /** Fork: pins this file as the book's primary format, so a scan or an import never moves it. */
+  @Put('files/:fileId/primary')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @RequirePermission(Permission.LibraryEditMetadata)
+  async pinPrimaryFile(@Param('fileId', ParseIntPipe) fileId: number, @CurrentUser() user: RequestUser) {
+    await this.bookService.pinPrimaryFile(fileId, user);
+  }
+
+  /** Fork: gives the choice back to the library's format priority. */
+  @Delete('files/:fileId/primary')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @RequirePermission(Permission.LibraryEditMetadata)
+  async unpinPrimaryFile(@Param('fileId', ParseIntPipe) fileId: number, @CurrentUser() user: RequestUser) {
+    await this.bookService.unpinPrimaryFile(fileId, user);
   }
 
   /**
