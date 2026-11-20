@@ -14,6 +14,7 @@ import { formatDate, formatPercent, formatRelativeFromNow } from '@/i18n/formatt
 import { formatBytes } from '@/lib/formatting'
 import { useUiTextScale } from '@/lib/ui-text-scale'
 import type { RequestListDensity } from '../composables/useRequestListDensity'
+import { useRequestFormatText } from '../composables/useRequestFormatText'
 import {
   BOOK_MIN_WIDTH,
   MIN_COLUMN_WIDTH,
@@ -108,6 +109,7 @@ function viewFor(row: BookRequestItem): RowView {
 // ── Fork: resizable, hideable and movable columns ───────────────────────────
 
 const columns = useRequestTableColumns()
+const { shown: showFormatText } = useRequestFormatText()
 const visibleColumns = computed(() => columns.visibleColumns.value)
 const textScale = useUiTextScale()
 
@@ -632,7 +634,7 @@ const HEADER_LABEL = 'truncate text-xs font-semibold tracking-wide whitespace-no
                         :class="requestMediaColor(half.mediaKind)"
                         aria-hidden="true"
                       />
-                      {{ formatLabel(row) }}
+                      <span :class="!showFormatText && 'sr-only'">{{ formatLabel(row) }}</span>
                     </span>
                     <template v-if="skippedApproval(row)">
                       <span aria-hidden="true">·</span>
@@ -834,7 +836,7 @@ const HEADER_LABEL = 'truncate text-xs font-semibold tracking-wide whitespace-no
                       :class="requestMediaColor(half.mediaKind)"
                       aria-hidden="true"
                     />
-                    {{ formatLabel(row) }}
+                    <span :class="!showFormatText && 'sr-only'">{{ formatLabel(row) }}</span>
                   </span>
                 </p>
                 <p class="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs whitespace-nowrap text-muted-foreground">
