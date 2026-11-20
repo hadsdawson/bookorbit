@@ -128,7 +128,9 @@ export function useNewReleases() {
     if (overview.value) {
       overview.value = {
         ...overview.value,
-        items: overview.value.items.map((entry) => (entry.id === item.id ? { ...entry, state: 'requested' as const } : entry)),
+        items: showHidden.value
+          ? overview.value.items.map((entry) => (entry.id === item.id ? { ...entry, state: 'requested' as const } : entry))
+          : overview.value.items.filter((entry) => entry.id !== item.id),
       }
     }
     return requested
