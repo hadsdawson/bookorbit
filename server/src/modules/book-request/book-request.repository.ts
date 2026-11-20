@@ -128,6 +128,11 @@ export interface RequestListFilters {
   status?: BookRequestStatus;
   /** Any of these statuses, which is what a list view asks for. Combines with `status`. */
   statuses?: readonly BookRequestStatus[];
+  /**
+   * Fork: how a pair with one finished half is placed. `finished` keeps a pair out until both halves
+   * are done, and `in_progress` takes in a pair that is only half done.
+   */
+  pairView?: 'finished' | 'in_progress';
   mediaKind?: BookRequestMediaKind;
   /** Exact original requester. Unlike userId, this does not include subscribers. */
   requesterUserId?: number;
@@ -273,10 +278,10 @@ export class BookRequestRepository {
   }
 
   /** What the viewer narrowed the list to, as opposed to what they are allowed to see. */
-  private filterConditions(table: RequestTable, opts: RequestListFilters): SQL[] {
+  private filterConditions(table: RequestTable, opts: RequestListFilters, skipViewStatuses = false): SQL[] {
     const conditions: SQL[] = [];
     if (opts.status) conditions.push(eq(table.status, opts.status));
-    if (opts.statuses) conditions.push(inArray(table.status, [...opts.statuses]));
+    if (opts.statuses && !skipViewStatuses) conditions.push(inArray(table.status, [...opts.statuses]));
     if (opts.mediaKind) conditions.push(eq(table.mediaKind, opts.mediaKind));
     if (opts.requesterUserId !== undefined) conditions.push(eq(table.userId, opts.requesterUserId));
     if (opts.selfServe !== undefined) conditions.push(eq(table.selfServe, opts.selfServe));
@@ -292,6 +297,16 @@ export class BookRequestRepository {
       conditions.push(or(ilike(table.title, pattern), author) as SQL);
     }
     return conditions;
+  }
+
+  /**
+   * Fork: a pair where one half is available and the other is still wanted but not available yet.
+   * A half that was rejected or cancelled no longer holds the pair back.
+   */
+  private halfDonePair(companion: typeof companionRequests, companionVisible: SQL): SQL {
+    const done = (table: RequestTable) => eq(table.status, 'available');
+    const open = (table: RequestTable) => notInArray(table.status, ['available', 'rejected', 'cancelled']);
+    return and(companionVisible, or(and(done(bookRequests), open(companion)), and(done(companion), open(bookRequests)))) as SQL;
   }
 
   /** Both pointers have to agree, so a half-written link can never fold a row away. */
@@ -326,7 +341,16 @@ export class BookRequestRepository {
 
     const conditions: SQL[] = [...visible];
     // The pair is one row, so it stays on the list when either half is what the viewer asked for.
-    if (filters.length) conditions.push(or(and(...filters), companionMatches) as SQL);
+    if (filters.length) {
+      const matches = [and(...filters) as SQL, companionMatches];
+      if (opts.pairView === 'in_progress') {
+        const rowOthers = this.filterConditions(bookRequests, opts, true);
+        const companionOthers = this.filterConditions(companion, opts, true);
+        matches.push(and(this.halfDonePair(companion, companionVisible), or(and(...rowOthers), and(companionVisible, ...companionOthers))) as SQL);
+      }
+      conditions.push(or(...matches) as SQL);
+    }
+    if (opts.pairView === 'finished') conditions.push(not(this.halfDonePair(companion, companionVisible)));
     // The audiobook half folds into its ebook whenever the viewer can see both.
     conditions.push(not(and(companionVisible, eq(bookRequests.mediaKind, 'audiobook')) as SQL));
     return { where: and(...conditions), companionVisible };

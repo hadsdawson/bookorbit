@@ -179,7 +179,8 @@ function withView(
 ): RequestListFilters {
   if (view === undefined) return { ...filters, excludeDismissedFor: includeDismissed ? undefined : viewerId };
   if (view === 'hidden') return { ...filters, onlyDismissedFor: viewerId };
-  return { ...filters, statuses: BOOK_REQUEST_VIEW_STATUSES[view], excludeDismissedFor: viewerId };
+  const pairView = view === 'finished' || view === 'in_progress' ? view : undefined;
+  return { ...filters, statuses: BOOK_REQUEST_VIEW_STATUSES[view], pairView, excludeDismissedFor: viewerId };
 }
 
 /** What one medium of a submission decides for itself; the work is shared. */
