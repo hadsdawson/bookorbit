@@ -394,9 +394,9 @@ export class NewReleasesRepository {
    * out within `retentionDays`, or (for the dashboard) out on one day in either format. Owned and
    * hidden books are left out. Bounded, soonest first.
    *
-   * A book shows as requested only while the user has an active request for it, so a cancelled or
-   * deleted request makes it requestable again. The stored "requested" mark still keeps automatic
-   * requests from filing it a second time.
+   * Fork: a book the user has an active request for is left out like a hidden one, and listed with
+   * the hidden books marked requested. A cancelled or deleted request brings it back to be requested
+   * again. The stored "requested" mark still keeps automatic requests from filing it a second time.
    */
   async listForUser(
     userId: number,
@@ -414,6 +414,12 @@ export class NewReleasesRepository {
       ACTIVE_BOOK_REQUEST_STATUSES.map((status) => sql`${status}`),
       sql`, `,
     );
+    const requestedOk = options.includeHidden
+      ? sql`TRUE`
+      : sql`NOT EXISTS (
+          SELECT 1 FROM book_requests br
+          WHERE br.user_id = ${userId} AND br.status IN (${activeStatuses}) AND lower(br.title) = lower(r.title)
+        )`;
     const result = await this.db.execute<Record<string, unknown>>(sql`
       SELECT r.*, matched.follows AS matched_follows, count(*) OVER () AS total_count,
         CASE
@@ -437,6 +443,7 @@ export class NewReleasesRepository {
         AND ${inWindow}
         AND r.owned_book_id IS NULL
         AND ${hiddenOk}
+        AND ${requestedOk}
         AND ${languageOk}
       ORDER BY r.release_date ASC, r.title ASC
       LIMIT ${limit}

@@ -126,7 +126,7 @@ describe('NewReleasesView', () => {
     expect(mocks.saveNewReleasesSettings).toHaveBeenCalledWith({ retentionDays: 60 })
     expect(mocks.getNewReleases).toHaveBeenCalledTimes(2)
   })
-  it('requests the server default of both formats, even one with no date yet, and shows it as requested', async () => {
+  it('requests the server default of both formats, even one with no date yet, and hides it once requested', async () => {
     mocks.getNewReleases.mockResolvedValue(overview({ items: [{ ...overview().items[0]!, audiobookDate: null, state: null }] }))
     const wrapper = mount(NewReleasesView)
     await flushPromises()
@@ -135,7 +135,7 @@ describe('NewReleasesView', () => {
     await flushPromises()
     expect(mocks.requestNewRelease).toHaveBeenCalledWith(1, ['ebook', 'audiobook'])
     expect(wrapper.find('[data-testid="request-release"]').exists()).toBe(false)
-    expect(wrapper.get('[data-testid="new-release-item"]').text()).toContain('Requested')
+    expect(wrapper.find('[data-testid="new-release-item"]').exists()).toBe(false)
   })
 
   it('offers no Request button for a book already requested', async () => {
