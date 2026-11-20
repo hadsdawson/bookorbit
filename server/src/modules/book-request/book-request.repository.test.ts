@@ -562,6 +562,37 @@ describe('BookRequestRepository list views', () => {
     expect(params).toEqual(expect.arrayContaining(['rejected', 'cancelled', 'AUTOMATION_DISABLED']));
   });
 
+  it('keeps a pair with one half still open out of the finished view', async () => {
+    const { repo, statements } = makeRepo(() => [[0]]);
+
+    await repo.countRows({ userId: 1, statuses: ['available'], pairView: 'finished' });
+
+    const [{ text, params }] = statements();
+    expect(text.text).toContain('not (');
+    expect(text.text).toContain('"companion"."status" not in');
+    expect(text.text).toContain('"book_requests"."status" not in');
+    expect(params).toEqual(expect.arrayContaining(['available', 'rejected', 'cancelled']));
+  });
+
+  it('takes a half-finished pair into the in-progress view', async () => {
+    const { repo, statements } = makeRepo(() => [[0]]);
+
+    await repo.countRows({ userId: 1, statuses: ['searching', 'grabbed', 'downloading', 'importing'], pairView: 'in_progress' });
+
+    const [{ text }] = statements();
+    expect(text.text).toContain('"companion"."status" not in');
+    expect(text.text).toContain('"book_requests"."status" not in');
+  });
+
+  it('leaves the other views alone', async () => {
+    const { repo, statements } = makeRepo(() => [[0]]);
+
+    await repo.countRows({ userId: 1, statuses: ['rejected', 'cancelled'] });
+
+    const [{ text }] = statements();
+    expect(text.text).not.toContain('not in (');
+  });
+
   it('selects the grouped rows with the viewer flags in one statement and the total in another', async () => {
     const { repo, statements } = makeRepo((text) =>
       text.startsWith('select count(*)')
