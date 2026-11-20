@@ -10,10 +10,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { useRequestFormatText } from '../composables/useRequestFormatText'
 import { LOCKED_COLUMNS, useRequestTableColumns, type RequestTableColumn } from '../composables/useRequestTableColumns'
 
 const { t } = useI18n()
 const columns = useRequestTableColumns()
+const { shown: formatTextShown, setShown: setFormatTextShown } = useRequestFormatText()
 
 function isLocked(column: RequestTableColumn): boolean {
   return LOCKED_COLUMNS.includes(column)
@@ -26,6 +28,10 @@ function toggle(column: RequestTableColumn) {
 /** Ticking several columns in a row is the usual case, so the menu stays open between them. */
 function keepOpen(event: Event) {
   event.preventDefault()
+}
+
+function toggleFormatText() {
+  setFormatTextShown(!formatTextShown.value)
 }
 
 function resetColumns() {
@@ -51,6 +57,10 @@ function resetColumns() {
         @update:model-value="toggle(column)"
       >
         {{ t(`bookRequests.columns.${column}`) }}
+      </DropdownMenuCheckboxItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuCheckboxItem :model-value="formatTextShown" @select="keepOpen" @update:model-value="toggleFormatText">
+        {{ t('bookRequests.columns.showFormatText') }}
       </DropdownMenuCheckboxItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem :disabled="!columns.isCustomized.value" @select="resetColumns">

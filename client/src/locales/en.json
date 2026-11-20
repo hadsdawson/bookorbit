@@ -12138,7 +12138,8 @@
       "nextStep": "Next step",
       "actions": "Actions",
       "move": "Move the {column} column",
-      "moveHint": "Drag to move this column, or use the arrow keys"
+      "moveHint": "Drag to move this column, or use the arrow keys",
+      "showFormatText": "Show format text (E-book, audiobook)"
     },
     "copy": {
       "title": "Copy title",
