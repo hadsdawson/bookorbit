@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { Permission } from '@bookorbit/types'
 import { usePermissions } from '@/features/auth/composables/usePermissions'
+import { useRequestShortcuts } from '@/features/book-requests/composables/useRequestShortcuts'
 import { useCommandPalette } from '@/features/command-palette/composables/useCommandPalette'
 import { useLibraryUploadEvents } from '@/features/library/composables/useLibraryUploadEvents'
 import { useNotifications } from '@/features/notifications/composables/useNotifications'
@@ -19,6 +20,7 @@ export function useShellServices() {
   const { subscribe: subscribeNotifications } = useNotifications()
   const { onLibraryUploadCompleted } = useLibraryUploadEvents()
   const { isOpen, openPalette } = useCommandPalette()
+  useRequestShortcuts()
 
   function handleGlobalKeydown(event: KeyboardEvent) {
     if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'k') return
