@@ -651,6 +651,20 @@ describe('LibrariesSettings ledger', () => {
       await flushPromises()
     }
 
+    it('opens the same details from the compact card, where the wide row is not shown', async () => {
+      const wrapper = await mountLoaded()
+      expect(wrapper.find('[id="library-card-detail-4"]').exists()).toBe(false)
+
+      const toggle = wrapper.get('[data-testid="library-card-toggle"]')
+      expect(toggle.attributes('aria-expanded')).toBe('false')
+      await toggle.trigger('click')
+      await flushPromises()
+
+      expect(wrapper.get('[data-testid="library-card-toggle"]').attributes('aria-expanded')).toBe('true')
+      expect(wrapper.get('[id="library-card-detail-4"]').text()).toContain('/books')
+      expect(apiMock.mock.calls.filter((call) => String(call[0]).includes('scan-history'))).toHaveLength(1)
+    })
+
     it('fetches nothing until a row is opened', async () => {
       const wrapper = await mountLoaded()
       expect(apiMock.mock.calls.filter((call) => String(call[0]).includes('scan-history'))).toHaveLength(0)

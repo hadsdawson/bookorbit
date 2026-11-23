@@ -13963,6 +13963,7 @@
         "addFolders": "Add folders",
         "absolutePath": "Absolute server path",
         "removeFolder": "Remove {folder}",
+        "relocateBlocked": "Save or discard your changes before changing the folder location.",
         "manualCheckHint": "Manual paths are checked together with the rest of the selected folders.",
         "pathPlaceholder": "/path/to/books",
         "test": "Test",
