@@ -17,6 +17,8 @@ import { LibraryScanSchedulerService } from './library-scan-scheduler.service';
 import { LibraryService } from './library.service';
 import { LibraryLifecycleService } from './library-lifecycle.service';
 import { LibraryAddedAtService } from './library-added-at.service';
+import { LibraryFolderRelocationRepository } from './library-folder-relocation.repository';
+import { LibraryFolderRelocationService } from './library-folder-relocation.service';
 
 @Module({
   imports: [
@@ -31,7 +33,16 @@ import { LibraryAddedAtService } from './library-added-at.service';
     PathModule,
   ],
   controllers: [LibraryController, LibraryFolderFilesController],
-  providers: [LibraryService, LibraryRepository, LibraryScanSchedulerService, BulkRenameService, LibraryAddedAtService, LibraryLifecycleService],
+  providers: [
+    LibraryService,
+    LibraryRepository,
+    LibraryScanSchedulerService,
+    BulkRenameService,
+    LibraryAddedAtService,
+    LibraryLifecycleService,
+    LibraryFolderRelocationRepository,
+    LibraryFolderRelocationService,
+  ],
   exports: [LibraryService, LibraryRepository, LibraryLifecycleService],
 })
 export class LibraryModule {}

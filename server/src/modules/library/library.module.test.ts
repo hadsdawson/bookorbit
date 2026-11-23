@@ -16,6 +16,8 @@ import { LibraryService } from './library.service';
 import { LibraryAddedAtService } from './library-added-at.service';
 import { BulkRenameService } from './bulk-rename.service';
 import { LibraryLifecycleService } from './library-lifecycle.service';
+import { LibraryFolderRelocationRepository } from './library-folder-relocation.repository';
+import { LibraryFolderRelocationService } from './library-folder-relocation.service';
 
 describe('LibraryModule', () => {
   it('registers expected controller/providers/exports', () => {
@@ -27,6 +29,8 @@ describe('LibraryModule', () => {
       BulkRenameService,
       LibraryAddedAtService,
       LibraryLifecycleService,
+      LibraryFolderRelocationRepository,
+      LibraryFolderRelocationService,
     ]);
     expect(Reflect.getMetadata('exports', LibraryModule)).toEqual([LibraryService, LibraryRepository, LibraryLifecycleService]);
   });

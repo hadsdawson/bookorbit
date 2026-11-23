@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, Clock, Copy, FolderOpen, History, Pencil, Tags, Users } from '@lucide/vue'
+import { Check, Clock, Copy, FolderInput, FolderOpen, History, Pencil, Tags, Users } from '@lucide/vue'
 import { toast } from 'vue-sonner'
-import type { Library, LibraryAccessEntry, LibraryScanHistoryEntry } from '@bookorbit/types'
+import type { Library, LibraryAccessEntry, LibraryFolder, LibraryScanHistoryEntry } from '@bookorbit/types'
 import { formatKeyName } from '@/features/book/lib/book-formats'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -11,6 +11,7 @@ import { formatDate, formatList, formatNumber } from '@/i18n/formatters'
 import UserAvatar from '@/components/UserAvatar.vue'
 import { METADATA_LABELS, type LibraryCreatorSectionId } from '@/features/library/composables/useLibraryCreator'
 import { copyToClipboard } from '@/lib/clipboard'
+import LibraryFolderRelocateDialog from './LibraryFolderRelocateDialog.vue'
 import LibraryScanHistory from './LibraryScanHistory.vue'
 
 const props = defineProps<{
@@ -51,6 +52,7 @@ const formatsLabel = computed(() =>
 const shownPeople = computed(() => (props.access ?? []).slice(0, PEOPLE_SHOWN))
 const hiddenPeople = computed(() => Math.max(0, (props.access?.length ?? 0) - PEOPLE_SHOWN))
 const copiedPath = ref<number | null>(null)
+const relocating = ref<LibraryFolder | null>(null)
 const readingThresholdLabel = computed(() => formatNumber(props.library.readingThreshold / 100, { style: 'percent', maximumFractionDigits: 2 }))
 const finishedThresholdLabel = computed(() =>
   formatNumber(props.library.markAsFinishedPercentComplete / 100, { style: 'percent', maximumFractionDigits: 2 }),
@@ -62,6 +64,14 @@ function editFolders() {
 
 function editMetadata() {
   emit('edit', props.library, 'metadata')
+}
+
+function startRelocate(folder: LibraryFolder) {
+  relocating.value = folder
+}
+
+function closeRelocate() {
+  relocating.value = null
 }
 
 function manageAccess() {
@@ -123,6 +133,17 @@ async function copyPath(folderId: number, path: string) {
                 @click="copyPath(folder.id, folder.path)"
               >
                 <component :is="copiedPath === folder.id ? Check : Copy" :size="12" aria-hidden="true" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                type="button"
+                class="size-5 shrink-0"
+                :aria-label="t('settings.admin.libraries.relocate.open')"
+                :title="t('settings.admin.libraries.relocate.open')"
+                @click="startRelocate(folder)"
+              >
+                <FolderInput :size="12" aria-hidden="true" />
               </Button>
             </dd>
           </div>
@@ -238,5 +259,13 @@ async function copyPath(folderId: number, path: string) {
       </p>
       <LibraryScanHistory v-else :entries="history" />
     </section>
+
+    <LibraryFolderRelocateDialog
+      v-if="relocating"
+      :library-id="library.id"
+      :library-name="library.name"
+      :folder="relocating"
+      @close="closeRelocate"
+    />
   </section>
 </template>
