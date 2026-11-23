@@ -87,6 +87,8 @@ export const BOOK_MERGE_RULES: Readonly<Record<string, BookMergeRuleKind>> = {
   'book_merges.target_book_id': 'flatten',
   // Fork: New Releases. A release already in the library stays hidden under the kept book.
   'upcoming_releases.owned_book_id': 'repoint',
+  // Fork: scan change details. A merged book's scan history follows the kept book.
+  'scan_job_changes.book_id': 'repoint',
 };
 
 /** Columns whose foreign key is ON DELETE SET NULL. Deleting the source would orphan them, so none may be left to the delete. */
@@ -100,4 +102,5 @@ export const BOOK_MERGE_SET_NULL_COLUMNS = [
   'reading_attempts.book_id',
   'book_link_groups.lead_book_id',
   'upcoming_releases.owned_book_id',
+  'scan_job_changes.book_id',
 ] as const;

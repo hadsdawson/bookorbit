@@ -15,8 +15,8 @@ describe('book merge rule registry', () => {
     expect(Object.keys(BOOK_MERGE_RULES).filter((key) => !present.has(key))).toEqual([]);
   });
 
-  it('covers the 61 single columns and the composite file key', () => {
-    expect(bookForeignKeys).toHaveLength(62);
+  it('covers the 62 single columns and the composite file key', () => {
+    expect(bookForeignKeys).toHaveLength(63);
     expect(bookForeignKeys.filter((foreignKey) => foreignKey.key.includes('+'))).toEqual([
       { key: 'book_files.book_id+library_folder_id', onDelete: 'cascade' },
     ]);
