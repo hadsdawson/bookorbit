@@ -16,6 +16,7 @@ import { BulkRenameExecuteDto } from './dto/bulk-rename-execute.dto';
 import { BulkRenamePreviewQueryDto } from './dto/bulk-rename-preview-query.dto';
 import { CreateLibraryDto } from './dto/create-library.dto';
 import { GrantLibraryAccessDto } from './dto/grant-library-access.dto';
+import { RelocateLibraryFolderDto } from './dto/relocate-library-folder.dto';
 import { PrescanLibraryDto } from './dto/prescan-library.dto';
 import { ReorderLibrariesDto } from './dto/reorder-libraries.dto';
 import { UpdateLibraryAccessDto } from './dto/update-library-access.dto';
@@ -23,6 +24,7 @@ import { UpdateLibraryDto } from './dto/update-library.dto';
 import { BulkRenameService } from './bulk-rename.service';
 import { LibraryService } from './library.service';
 import { LibraryAddedAtService } from './library-added-at.service';
+import { LibraryFolderRelocationService } from './library-folder-relocation.service';
 
 @Controller('libraries')
 export class LibraryController {
@@ -31,6 +33,7 @@ export class LibraryController {
     private readonly bookService: BookService,
     private readonly bulkRenameService: BulkRenameService,
     private readonly addedAtService: LibraryAddedAtService,
+    private readonly relocationService: LibraryFolderRelocationService,
   ) {}
 
   @Get()
@@ -122,6 +125,26 @@ export class LibraryController {
   })
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateLibraryDto) {
     return this.libraryService.update(id, dto);
+  }
+
+  @Post(':id/folders/:folderId/relocate/preview')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission(Permission.ManageLibraries)
+  previewRelocation(@Param('id', ParseIntPipe) id: number, @Param('folderId', ParseIntPipe) folderId: number, @Body() dto: RelocateLibraryFolderDto) {
+    return this.relocationService.preview(id, folderId, dto.newPath);
+  }
+
+  @Post(':id/folders/:folderId/relocate')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission(Permission.ManageLibraries)
+  @Auditable({
+    action: AuditAction.LibraryUpdate,
+    resource: AuditResource.Library,
+    getResourceId: (req) => parseInt(req.params['id'] as string, 10),
+    description: (req) => `Changed the location of folder #${req.params['folderId']} in library #${req.params['id']}`,
+  })
+  relocateFolder(@Param('id', ParseIntPipe) id: number, @Param('folderId', ParseIntPipe) folderId: number, @Body() dto: RelocateLibraryFolderDto) {
+    return this.relocationService.apply(id, folderId, dto.newPath);
   }
 
   @Delete(':id')

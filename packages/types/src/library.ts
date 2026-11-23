@@ -172,3 +172,25 @@ export interface FolderFilesStatus {
   skipped: number;
   failed: number;
 }
+
+export interface LibraryFolderRelocationPreview {
+  oldPath: string;
+  newPath: string;
+  bookCount: number;
+  fileCount: number;
+  filesFound: number;
+  filesMissing: number;
+  filesWrongSize: number;
+  filesNewerOrOlder: number;
+  pathConflicts: number;
+  sampleProblems: string[];
+  canApply: boolean;
+}
+
+export interface LibraryFolderRelocationResult {
+  folderId: number;
+  oldPath: string;
+  newPath: string;
+  bookCount: number;
+  fileCount: number;
+}

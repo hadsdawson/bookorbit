@@ -1534,7 +1534,27 @@
         "scanFinished": "Scan finished for \"{name}\": {outcome}",
         "scanFinishedFailed": "Scan failed for \"{name}\"",
         "viewChanges": "View changes",
-        "duplicateSettings": "Duplicate settings"
+        "duplicateSettings": "Duplicate settings",
+        "relocate": {
+          "open": "Change location",
+          "title": "Change folder location",
+          "body": "Point {name} at the same folder in a new place on disk. Your books keep their reading progress, shelves and ratings.",
+          "current": "Current location",
+          "newLocation": "New location",
+          "placeholder": "/data/books",
+          "copyFirst": "Copy the files to the new location first and leave the originals in place. Nothing is moved or deleted here, and the app checks every file before it changes anything.",
+          "checking": "Checking the new location...",
+          "preview": "Check location",
+          "apply": "Change location",
+          "summary": "{found} of {files} files found for {books} books.",
+          "missing": "{count, plural, one {# file is missing from the new location.} other {# files are missing from the new location.}}",
+          "wrongSize": "{count, plural, one {# file has a different size, so its copy may be unfinished.} other {# files have a different size, so their copies may be unfinished.}}",
+          "conflicts": "{count, plural, one {# file in the new location already belongs to another library.} other {# files in the new location already belong to another library.}}",
+          "timesDiffer": "{count, plural, one {# file has a different modified time. It will be read again after the change.} other {# files have a different modified time. They will be read again after the change.}}",
+          "ready": "Everything is in place. You can change the location.",
+          "done": "Library location changed. A scan has started.",
+          "failed": "Could not change the library location."
+        }
       },
       "authorEnrichment": {
         "configuration": "Configuration",
@@ -13613,7 +13633,11 @@
       "AI_CONNECTION_IN_USE": "{unfinishedJobs, plural, =0 {A slot uses this connection. Choose another connection for it first.} one {# unfinished build is using this connection.} other {# unfinished builds are using this connection.}}",
       "AI_PRIVACY_CONFIRMATION_REQUIRED": "Confirm what is sent to the provider before turning this feature on.",
       "AI_SLOT_EMPTY": "Choose a connection and a model for this slot first.",
-      "AI_PROVIDER_FAILED": "The provider couldn't be reached, or refused the request."
+      "AI_PROVIDER_FAILED": "The provider couldn't be reached, or refused the request.",
+      "LIBRARY_RELOCATION_SAME_PATH": "Choose a different location than the current one.",
+      "LIBRARY_RELOCATION_NESTED": "The new location cannot sit inside the current folder or contain it.",
+      "LIBRARY_RELOCATION_NOT_FOUND": "The new location is not a folder the app can read.",
+      "LIBRARY_RELOCATION_BLOCKED": "The new location does not hold every file yet. Check it again to see what is missing."
     }
   },
   "hardcover": {
