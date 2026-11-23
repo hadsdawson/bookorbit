@@ -25,7 +25,9 @@ import { useLibraryScan } from '@/features/scanner/composables/useLibraryScan'
 import LibrariesToolbar from './libraries/components/LibrariesToolbar.vue'
 import LibraryLedgerCards from './libraries/components/LibraryLedgerCards.vue'
 import LibraryLedgerList from './libraries/components/LibraryLedgerList.vue'
+import LibraryScanChangesDialog from './libraries/components/LibraryScanChangesDialog.vue'
 import { useLibraryDetail } from './libraries/composables/useLibraryDetail'
+import { useScanChangesViewer } from './libraries/composables/useScanChangesViewer'
 import { formatSchedule } from './libraries/lib/library-schedule'
 import type { AutomationToggle } from './libraries/components/LibraryAutomationList.vue'
 import { useLibraryOverview } from './libraries/composables/useLibraryOverview'
@@ -49,6 +51,8 @@ const { scanLibrary, startScanRequest } = useLibraryScan()
 const { syncAll: syncAllFiles } = useLibraryFileSync()
 const overview = useLibraryOverview()
 const detail = useLibraryDetail()
+const changesViewer = useScanChangesViewer()
+const changesTarget = changesViewer.target
 
 const query = ref('')
 const expandedId = ref<number | null>(null)
@@ -160,7 +164,13 @@ function announceFinished(event: ScanProgressEvent) {
   }
   highlightFinished(lib.id)
   toast.success(t('settings.admin.libraries.scanFinished', { name: lib.name, outcome: scanOutcomeText(event) }), {
-    action: { label: t('settings.admin.libraries.viewChanges'), onClick: () => openDetail(lib) },
+    action: {
+      label: t('settings.admin.libraries.viewChanges'),
+      onClick: () => {
+        openDetail(lib)
+        changesViewer.open({ libraryId: lib.id, libraryName: lib.name, jobId: event.jobId })
+      },
+    },
   })
 }
 
@@ -197,6 +207,10 @@ function toggleDetail(lib: LibraryType) {
   }
   expandedId.value = lib.id
   void detail.load(lib.id)
+}
+
+function closeChanges() {
+  changesViewer.close()
 }
 
 /** Opens a row's details without closing it if it is already open, for "View changes". */
@@ -618,6 +632,14 @@ async function confirmDelete() {
       :confirm-label="t('settings.admin.libraries.syncFiles')"
       @confirm="confirmSyncFiles"
       @cancel="cancelLibrarySync"
+    />
+
+    <LibraryScanChangesDialog
+      v-if="changesTarget"
+      :library-id="changesTarget.libraryId"
+      :library-name="changesTarget.libraryName"
+      :job-id="changesTarget.jobId"
+      @close="closeChanges"
     />
   </TooltipProvider>
 </template>

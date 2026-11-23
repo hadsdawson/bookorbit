@@ -3,10 +3,17 @@ import { useI18n } from 'vue-i18n'
 import type { LibraryScanHistoryEntry } from '@bookorbit/types'
 import { formatDateTime } from '@/i18n/formatters'
 import { relativeTimestamp } from '@/lib/relative-time'
+import { useScanChangesViewer } from '../composables/useScanChangesViewer'
 
-defineProps<{ entries: LibraryScanHistoryEntry[] }>()
+const props = defineProps<{ entries: LibraryScanHistoryEntry[]; libraryId: number; libraryName: string }>()
 
 const { t } = useI18n()
+const viewer = useScanChangesViewer()
+
+function openChanges(event: Event) {
+  const jobId = Number((event.currentTarget as HTMLElement).dataset.jobId)
+  if (Number.isFinite(jobId)) viewer.open({ libraryId: props.libraryId, libraryName: props.libraryName, jobId })
+}
 
 function durationLabel(entry: LibraryScanHistoryEntry): string {
   if (!entry.completedAt) return '—'
@@ -39,6 +46,9 @@ function resultParts(entry: LibraryScanHistoryEntry): { added: number; updated: 
         <th scope="col" class="pb-1.5 pe-3 text-start text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           {{ t('settings.admin.libraries.history.result') }}
         </th>
+        <th scope="col" class="w-24 pb-1.5 pe-3 text-start text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          {{ t('settings.admin.libraries.history.details') }}
+        </th>
         <th scope="col" class="w-28 pb-1.5 text-end text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           {{ t('settings.admin.libraries.history.status') }}
         </th>
@@ -69,6 +79,17 @@ function resultParts(entry: LibraryScanHistoryEntry): { added: number; updated: 
               {{ t('settings.admin.libraries.scanMissing', { count: entry.missingCount }) }}
             </span>
           </template>
+        </td>
+        <td class="py-1.5 pe-3">
+          <button
+            v-if="!resultParts(entry).empty && !entry.errorMessage"
+            type="button"
+            class="text-[11px] font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            :data-job-id="entry.id"
+            @click="openChanges"
+          >
+            {{ t('settings.admin.libraries.changes.viewBooks') }}
+          </button>
         </td>
         <td class="py-1.5 text-end">
           <!-- Only the exceptions get a chip, so a failure stands out in a column of completed scans. -->

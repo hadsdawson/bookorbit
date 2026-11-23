@@ -257,7 +257,7 @@ async function copyPath(folderId: number, path: string) {
         <Clock :size="13" aria-hidden="true" />
         {{ t('settings.admin.libraries.detail.historyEmpty') }}
       </p>
-      <LibraryScanHistory v-else :entries="history" />
+      <LibraryScanHistory v-else :entries="history" :library-id="library.id" :library-name="library.name" />
     </section>
 
     <LibraryFolderRelocateDialog

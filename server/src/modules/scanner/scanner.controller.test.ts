@@ -19,6 +19,21 @@ describe('ScannerController', () => {
     expect(scannerService.getScanHistory).toHaveBeenCalledWith(7, 5);
   });
 
+  it('delegates scan change requests with paging and the chosen kind of change', () => {
+    const scannerService = { getScanChanges: vi.fn().mockResolvedValue({ items: [], total: 0, truncated: false }) } as any;
+    const controller = new ScannerController(scannerService, {} as any);
+
+    void controller.scanChanges(7, 31, 50, 25, 'missing');
+
+    expect(scannerService.getScanChanges).toHaveBeenCalledWith(7, 31, { offset: 50, limit: 25, type: 'missing' });
+  });
+
+  it('rejects an unknown kind of scan change', () => {
+    const controller = new ScannerController({ getScanChanges: vi.fn() } as any, {} as any);
+
+    expect(() => controller.scanChanges(7, 31, 0, 50, 'deleted')).toThrow('Unknown change type');
+  });
+
   it('delegates cover refresh requests to ScannerService.refreshCovers', () => {
     const scannerService = { startScan: vi.fn(), refreshCovers: vi.fn().mockResolvedValue({ queued: 3 }) } as any;
     const controller = new ScannerController(scannerService, {} as any);

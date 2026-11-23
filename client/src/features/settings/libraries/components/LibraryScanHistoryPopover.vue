@@ -67,7 +67,7 @@ function requestScan() {
       <p v-else-if="entries && entries.length === 0" class="text-[12.5px] text-muted-foreground">
         {{ t('settings.admin.libraries.detail.historyEmpty') }}
       </p>
-      <LibraryScanHistory v-else-if="entries" :entries="entries" />
+      <LibraryScanHistory v-else-if="entries" :entries="entries" :library-id="library.id" :library-name="library.name" />
     </div>
     <div class="flex justify-end border-t border-border px-4 py-2.5">
       <Button variant="outline" size="sm" type="button" :disabled="scanning" @click="requestScan">

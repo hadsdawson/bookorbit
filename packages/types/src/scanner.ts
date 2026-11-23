@@ -18,6 +18,33 @@ export interface LibraryScanHistoryEntry extends LibraryLastScan {
   id: number;
 }
 
+export type LibraryScanChangeType = "added" | "updated" | "missing" | "restored";
+
+export interface LibraryScanFieldChange {
+  field: string;
+  old: string | null;
+  new: string | null;
+}
+
+/** One book a scan touched, with what happened to it. */
+export interface LibraryScanChange {
+  id: number;
+  bookId: number | null;
+  title: string | null;
+  authors: string | null;
+  folderPath: string | null;
+  changeType: LibraryScanChangeType;
+  fieldChanges: LibraryScanFieldChange[];
+  occurredAt: string;
+}
+
+export interface LibraryScanChangesPage {
+  items: LibraryScanChange[];
+  total: number;
+  /** True when the scan touched more books than the per-scan cap, so the list is not complete. */
+  truncated: boolean;
+}
+
 export interface ScanProgressEvent {
   jobId: number;
   libraryId: number;
