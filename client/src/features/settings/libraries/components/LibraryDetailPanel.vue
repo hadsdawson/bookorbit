@@ -97,7 +97,7 @@ async function copyPath(folderId: number, path: string) {
     role="region"
     :aria-label="t('settings.admin.libraries.detailRegion', { name: library.name })"
   >
-    <div class="grid gap-x-8 gap-y-6 lg:grid-cols-3">
+    <div class="grid gap-x-8 gap-y-6 @min-[60rem]:grid-cols-3">
       <section>
         <h4 class="mb-2.5 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           <FolderOpen :size="12" aria-hidden="true" />

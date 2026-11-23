@@ -12,7 +12,7 @@ import { useLibraries } from '@/features/library/composables/useLibraries'
 import { useLibraryFolderRelocation } from '../composables/useLibraryFolderRelocation'
 
 const props = defineProps<{ libraryId: number; libraryName: string; folder: LibraryFolder }>()
-const emit = defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: []; relocated: [] }>()
 
 const { t } = useI18n()
 const { refreshLibraries } = useLibraries()
@@ -40,6 +40,7 @@ async function handleApply() {
   if (!(await relocation.apply(preview.value.newPath))) return
   toast.success(t('settings.admin.libraries.relocate.done'))
   void refreshLibraries()
+  emit('relocated')
   emit('close')
 }
 

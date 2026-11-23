@@ -1,9 +1,23 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { CircleCheck, CircleX, FolderOpen, FolderPlus, FolderSearch, Info, Loader2, Plus, RefreshCw, Trash2, TriangleAlert } from '@lucide/vue'
-import type { LibraryStats, OrganizationMode } from '@bookorbit/types'
+import {
+  CircleCheck,
+  CircleX,
+  FolderInput,
+  FolderOpen,
+  FolderPlus,
+  FolderSearch,
+  Info,
+  Loader2,
+  Plus,
+  RefreshCw,
+  Trash2,
+  TriangleAlert,
+} from '@lucide/vue'
+import type { LibraryFolder, LibraryStats, OrganizationMode } from '@bookorbit/types'
 import { formatBytes } from '@/lib/formatting'
+import LibraryFolderRelocateDialog from '@/features/settings/libraries/components/LibraryFolderRelocateDialog.vue'
 import LibraryFormatBar from '@/features/settings/libraries/components/LibraryFormatBar.vue'
 import type { FolderCheck } from '../composables/useLibraryCreator'
 import { useLibraryFolderSelection } from '../composables/useLibraryFolderSelection'
@@ -22,6 +36,8 @@ const props = withDefaults(
     libraryId?: number | null
     organizationMode?: OrganizationMode
     organizationModeLocked?: boolean
+    savedFolders?: LibraryFolder[]
+    relocationBlocked?: boolean
   }>(),
   {
     checks: () => ({}),
@@ -31,6 +47,8 @@ const props = withDefaults(
     libraryId: null,
     organizationMode: 'book_per_folder',
     organizationModeLocked: false,
+    savedFolders: () => [],
+    relocationBlocked: false,
   },
 )
 
@@ -39,6 +57,7 @@ const emit = defineEmits<{
   'update:pickerOpen': [value: boolean]
   'update:organizationMode': [value: OrganizationMode]
   check: [paths: string[]]
+  relocated: []
 }>()
 
 const {
@@ -74,12 +93,15 @@ type FolderStatus =
 
 interface FolderRow {
   folder: string
+  saved: LibraryFolder | null
   parent: string
   leaf: string
   status: FolderStatus
 }
 
-const rows = computed<FolderRow[]>(() => props.folders.map((folder) => ({ folder, ...splitPath(folder), status: statusOf(props.checks[folder]) })))
+const rows = computed<FolderRow[]>(() =>
+  props.folders.map((folder) => ({ folder, saved: savedFolderFor(folder), ...splitPath(folder), status: statusOf(props.checks[folder]) })),
+)
 
 function statusOf(check: FolderCheck | undefined): FolderStatus {
   if (!check) return { kind: 'unchecked' }
@@ -102,6 +124,26 @@ function checkAll() {
 
 function retry(folder: string) {
   emit('check', [folder])
+}
+
+const relocating = ref<LibraryFolder | null>(null)
+
+function savedFolderFor(path: string): LibraryFolder | null {
+  return props.libraryId === null ? null : (props.savedFolders.find((folder) => folder.path === path) ?? null)
+}
+
+function startRelocate(folder: LibraryFolder) {
+  relocating.value = folder
+  emit('update:pickerOpen', true)
+}
+
+function closeRelocate() {
+  relocating.value = null
+  emit('update:pickerOpen', false)
+}
+
+function handleRelocated() {
+  emit('relocated')
 }
 
 function handleRemove(folder: string) {
@@ -191,6 +233,17 @@ function handleOrganizationMode(value: OrganizationMode) {
             {{ t('library.creator.folders.status.files', { count: row.status.files }) }}
           </span>
           <button
+            v-if="row.saved"
+            type="button"
+            class="flex size-8 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-muted disabled:opacity-50 disabled:hover:bg-transparent"
+            :aria-label="t('settings.admin.libraries.relocate.open')"
+            :title="relocationBlocked ? t('library.creator.folders.relocateBlocked') : t('settings.admin.libraries.relocate.open')"
+            :disabled="relocationBlocked"
+            @click="startRelocate(row.saved)"
+          >
+            <FolderInput :size="15" aria-hidden="true" />
+          </button>
+          <button
             type="button"
             class="flex size-8 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
             :aria-label="t('library.creator.folders.removeFolder', { folder: row.folder })"
@@ -256,6 +309,15 @@ function handleOrganizationMode(value: OrganizationMode) {
       <span>{{ t('library.creator.folders.checkHintOneLibrary') }}</span>
     </p>
   </div>
+
+  <LibraryFolderRelocateDialog
+    v-if="relocating && libraryId !== null"
+    :library-id="libraryId"
+    :library-name="libraryName"
+    :folder="relocating"
+    @relocated="handleRelocated"
+    @close="closeRelocate"
+  />
 
   <FolderPickerModal
     v-if="pickerOpen"

@@ -1,7 +1,8 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
-import type { LibraryStats } from '@bookorbit/types'
+import type { LibraryFolder, LibraryStats } from '@bookorbit/types'
 import type { FolderCheck } from '../../composables/useLibraryCreator'
+import LibraryFolderRelocateDialog from '@/features/settings/libraries/components/LibraryFolderRelocateDialog.vue'
 import LibraryCreatorFolders from '../LibraryCreatorFolders.vue'
 
 describe('LibraryCreatorFolders', () => {
@@ -66,6 +67,53 @@ describe('LibraryCreatorFolders', () => {
     expect(wrapper.text()).toContain('455 books')
     expect(wrapper.text()).toContain('EPUB')
   })
+  describe('change location', () => {
+    const saved: LibraryFolder = { id: 7, path: '/books/bookorbit' } as LibraryFolder
+    const relocateLabel = 'button[aria-label="Change location"]'
+
+    it('offers Change location only for a folder the library already has', () => {
+      const wrapper = mountFolders({ folders: ['/books/bookorbit', '/books/new'], libraryId: 3, savedFolders: [saved] })
+
+      const rows = wrapper.findAll('li')
+      expect(rows[0]!.find(relocateLabel).exists()).toBe(true)
+      expect(rows[1]!.find(relocateLabel).exists()).toBe(false)
+    })
+
+    it('hides it while a new library is being created', () => {
+      const wrapper = mountFolders({ folders: ['/books/bookorbit'], libraryId: null, savedFolders: [saved] })
+
+      expect(wrapper.find(relocateLabel).exists()).toBe(false)
+    })
+
+    it('disables it while the editor has unsaved changes', () => {
+      const wrapper = mountFolders({ folders: ['/books/bookorbit'], libraryId: 3, savedFolders: [saved], relocationBlocked: true })
+
+      expect(wrapper.get(relocateLabel).attributes('disabled')).toBeDefined()
+    })
+
+    it('opens the dialog for that folder and tells the editor a nested window is open', async () => {
+      const wrapper = mountFolders({ folders: ['/books/bookorbit'], libraryId: 3, savedFolders: [saved] })
+
+      await wrapper.get(relocateLabel).trigger('click')
+
+      expect(wrapper.findComponent(LibraryFolderRelocateDialog).props('folder')).toEqual(saved)
+      expect(wrapper.emitted('update:pickerOpen')).toEqual([[true]])
+    })
+
+    it('passes a finished relocation up and closes the dialog', async () => {
+      const wrapper = mountFolders({ folders: ['/books/bookorbit'], libraryId: 3, savedFolders: [saved] })
+      await wrapper.get(relocateLabel).trigger('click')
+
+      const dialog = wrapper.findComponent(LibraryFolderRelocateDialog)
+      dialog.vm.$emit('relocated')
+      dialog.vm.$emit('close')
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.emitted('relocated')).toHaveLength(1)
+      expect(wrapper.findComponent(LibraryFolderRelocateDialog).exists()).toBe(false)
+      expect(wrapper.emitted('update:pickerOpen')).toEqual([[true], [false]])
+    })
+  })
 })
 
 function mountFolders(
@@ -73,6 +121,9 @@ function mountFolders(
     folders?: string[]
     checks?: Record<string, FolderCheck>
     stats?: LibraryStats | null
+    libraryId?: number | null
+    savedFolders?: LibraryFolder[]
+    relocationBlocked?: boolean
   } = {},
 ) {
   return mount(LibraryCreatorFolders, {
@@ -80,10 +131,14 @@ function mountFolders(
       folders: props.folders ?? [],
       checks: props.checks ?? {},
       stats: props.stats ?? null,
+      libraryId: props.libraryId ?? null,
+      savedFolders: props.savedFolders ?? [],
+      relocationBlocked: props.relocationBlocked ?? false,
     },
     global: {
       stubs: {
         FolderPickerModal: true,
+        LibraryFolderRelocateDialog: true,
       },
     },
   })

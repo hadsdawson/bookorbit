@@ -266,6 +266,8 @@ const sectionProps = computed(() => ({
     libraryId: editingLibraryId.value,
     organizationMode: form.organizationMode,
     organizationModeLocked: !creating.value,
+    savedFolders: props.library?.folders ?? [],
+    relocationBlocked: isDirty.value,
   },
   scanner: {
     organizationMode: form.organizationMode,
@@ -528,6 +530,7 @@ const sectionListeners = {
   'update:fileWriteReadAlongEnabled': (value: boolean) => (form.fileWriteReadAlongEnabled = value),
   'update:fileWriteReadAlongMaxFileSizeMb': (value: number) => (form.fileWriteReadAlongMaxFileSizeMb = value),
   'update:pickerOpen': handleNestedModalChange,
+  relocated: closeEditor,
   'update:regexOpen': handleNestedModalChange,
 }
 
