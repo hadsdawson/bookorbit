@@ -17,6 +17,9 @@ import type {
   BookTransferredEvent,
   CoverRefreshProgressEvent,
   LibraryLastScan,
+  LibraryScanChangesPage,
+  LibraryScanChangeType,
+  LibraryScanFieldChange,
   LibraryScanHistoryEntry,
   ScanBooksAddedEvent,
   ScanJobStatus,
@@ -36,6 +39,7 @@ import { NotificationService } from '../notification/notification.service';
 import type { BookFile } from '../../db/schema';
 import { ScanGateway } from './scan.gateway';
 import { ScanJobStore } from './scan-job-store.service';
+import { recordScanChange, ScanChangeCollector, scanChangeStorage } from './scan-change-collector';
 import { basename, dirname, relative, sep } from 'path';
 import { readdir, stat } from 'fs/promises';
 
@@ -170,6 +174,47 @@ interface ScanCounts {
   addedCount: number;
   updatedCount: number;
   missingCount: number;
+}
+
+function formatBytes(bytes: number | null): string | null {
+  if (bytes === null) return null;
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ['KB', 'MB', 'GB', 'TB'];
+  let value = bytes / 1024;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit++;
+  }
+  return `${value.toFixed(1)} ${units[unit]}`;
+}
+
+/** What a scan found different about one file that was already known, in plain terms. */
+function describeFileChanges(
+  known: { relPath: string | null; sizeBytes: number | null } | undefined,
+  result: { isNew: boolean; reassigned: boolean; changed: boolean; pathChanged?: boolean },
+  file: { relPath: string; absolutePath: string; sizeBytes: number },
+): LibraryScanFieldChange[] {
+  const name = file.relPath || basename(file.absolutePath);
+  if (result.isNew) return [{ field: 'File added', old: null, new: name }];
+  if (!known) return [{ field: 'File moved or renamed', old: null, new: name }];
+  const changes: LibraryScanFieldChange[] = [];
+  if (result.reassigned) changes.push({ field: 'File moved from another book', old: null, new: name });
+  if (result.pathChanged) changes.push({ field: 'File renamed or moved', old: known.relPath, new: file.relPath });
+  if (result.changed) changes.push({ field: `File changed (${name})`, old: formatBytes(known.sizeBytes), new: formatBytes(file.sizeBytes) });
+  return changes;
+}
+
+function diffBookSnapshots(before: Record<string, string | null>, after: Record<string, string | null>): LibraryScanFieldChange[] {
+  const changes: LibraryScanFieldChange[] = [];
+  for (const field of Object.keys(after)) {
+    const previous = before[field] ?? null;
+    const next = after[field] ?? null;
+    if (previous === next) continue;
+    if (field === 'Cover') changes.push({ field, old: previous ? 'Previous cover' : null, new: 'New cover' });
+    else changes.push({ field, old: previous, new: next });
+  }
+  return changes;
 }
 
 type ScannerMetadataSource = (typeof SCANNER_METADATA_SOURCES)[number];
@@ -344,6 +389,58 @@ export class ScannerService implements OnApplicationBootstrap {
         },
       ]),
     );
+  }
+
+  /** The per-book changes one scan recorded, newest scan detail for the "View changes" panel. */
+  async getScanChanges(
+    libraryId: number,
+    jobId: number,
+    options: { offset: number; limit: number; type?: LibraryScanChangeType },
+  ): Promise<LibraryScanChangesPage> {
+    const limit = Math.min(Math.max(Math.trunc(options.limit) || 1, 1), 200);
+    const offset = Math.max(Math.trunc(options.offset) || 0, 0);
+    const job = await this.scannerRepo.findScanJobForLibrary(libraryId, jobId);
+    if (!job) throw new NotFoundException('Scan not found');
+    const [rows, total] = await Promise.all([
+      this.scannerRepo.findScanChanges(jobId, { offset, limit, type: options.type }),
+      this.scannerRepo.countScanChanges(jobId, options.type),
+    ]);
+    return {
+      items: rows.map((row) => ({
+        id: row.id,
+        bookId: row.bookId,
+        title: row.title,
+        authors: row.authors,
+        folderPath: row.folderPath,
+        changeType: row.changeType as LibraryScanChangeType,
+        fieldChanges: row.fieldChanges,
+        occurredAt: row.occurredAt.toISOString(),
+      })),
+      total,
+      truncated: job.changesTruncated,
+    };
+  }
+
+  /**
+   * Saves what the scan changed so it can be reviewed afterwards. Best effort: a scan that finished
+   * its work is never failed because its change list could not be written.
+   */
+  private async persistScanChanges(libraryId: number, jobId: number, collector: ScanChangeCollector | undefined): Promise<void> {
+    if (!collector) return;
+    const event = 'scanner.persist_changes';
+    const startedAt = Date.now();
+    try {
+      const entries = collector.entries;
+      if (entries.length === 0 && !collector.truncated) return;
+      await this.scannerRepo.saveScanChanges(jobId, entries, collector.truncated);
+      this.logger.log(
+        `[${event}] [end] libraryId=${libraryId} jobId=${jobId} durationMs=${Date.now() - startedAt} changeCount=${entries.length} truncated=${collector.truncated} - scan changes saved`,
+      );
+    } catch (err) {
+      this.logger.warn(
+        `[${event}] [fail] libraryId=${libraryId} jobId=${jobId} durationMs=${Date.now() - startedAt} errorClass=${err instanceof Error ? err.name : 'Error'} error="${sanitizeLogValue(err instanceof Error ? err.message : String(err))}" - scan changes were not saved`,
+      );
+    }
   }
 
   /** Newest-first scan history for one library, capped so the detail panel stays bounded. */
@@ -817,25 +914,30 @@ export class ScannerService implements OnApplicationBootstrap {
       this.scanJobStore.create(job.id, libraryId, 0, triggeredBy);
       this.emitFromStore(libraryId, job.id, 'running');
 
-      this.runScan(
-        libraryId,
-        job.id,
-        folders,
-        allowedFormats,
-        formatPriority,
-        metadataPrecedence,
-        excludePatterns,
-        organizationMode,
-        addedAtSource,
-        forceFullScan,
-        regexContext,
-      ).catch((err) => {
-        const errorClass = err instanceof Error ? err.name : 'Error';
-        const errorMessage = sanitizeLogValue(err instanceof Error ? err.message : String(err));
-        this.logger.error(
-          `[scanner.run_scan] [fail] libraryId=${libraryId} jobId=${job.id} errorClass=${errorClass} error="${errorMessage}" - scan job crashed unexpectedly`,
-        );
-      });
+      const changeCollector = new ScanChangeCollector();
+      scanChangeStorage
+        .run(changeCollector, () =>
+          this.runScan(
+            libraryId,
+            job.id,
+            folders,
+            allowedFormats,
+            formatPriority,
+            metadataPrecedence,
+            excludePatterns,
+            organizationMode,
+            addedAtSource,
+            forceFullScan,
+            regexContext,
+          ),
+        )
+        .catch((err) => {
+          const errorClass = err instanceof Error ? err.name : 'Error';
+          const errorMessage = sanitizeLogValue(err instanceof Error ? err.message : String(err));
+          this.logger.error(
+            `[scanner.run_scan] [fail] libraryId=${libraryId} jobId=${job.id} errorClass=${errorClass} error="${errorMessage}" - scan job crashed unexpectedly`,
+          );
+        });
 
       this.logger.log(
         `[${event}] [end] libraryId=${libraryId} triggeredBy=${triggeredBy} durationMs=${Date.now() - startedAt} jobId=${job.id} - scan start accepted`,
@@ -1805,6 +1907,7 @@ export class ScannerService implements OnApplicationBootstrap {
       }
 
       await this.pruneExpiredDormantCovers(libraryId, jobId);
+      await this.persistScanChanges(libraryId, jobId, scanChangeStorage.getStore());
       await this.scannerRepo.completeScanJob(jobId, totals);
       this.logger.log(
         `[${event}] [end] libraryId=${libraryId} jobId=${jobId} durationMs=${Date.now() - startedAt} addedCount=${totals.addedCount} updatedCount=${totals.updatedCount} missingCount=${totals.missingCount} - scan job completed`,
@@ -1906,7 +2009,10 @@ export class ScannerService implements OnApplicationBootstrap {
         async (registered, _candidate, index) => {
           const result = await this.readCandidateFiles(registered, libraryId, metadataPrecedence, regexContext);
           seenBookIds.add(result.bookId);
-          if (result.created) importedBookIdByCandidate[index] = result.bookId;
+          if (result.created) {
+            importedBookIdByCandidate[index] = result.bookId;
+            recordScanChange(result.bookId, 'added', [], registered.candidate.folderPath);
+          }
           for (const fid of result.retainedFileIds) allRetainedFileIds.add(fid);
           for (const coverBookId of result.coverBookIds) coverBookIds.add(coverBookId);
           counts.addedCount += result.added;
@@ -1961,6 +2067,9 @@ export class ScannerService implements OnApplicationBootstrap {
       const missingIds = await this.filterBookIdsMissingOnDisk(missingCandidates);
       if (missingIds.length > 0) {
         await this.scannerRepo.markBooksAsMissing(missingIds);
+        for (const missingId of missingIds) {
+          recordScanChange(missingId, 'missing', [{ field: 'Status', old: 'Present', new: 'Missing' }]);
+        }
         counts.missingCount += missingIds.length;
         this.scanJobStore.increment(libraryId, { missing: missingIds.length });
         this.scanGateway.emitBookMissing({ libraryId, bookIds: missingIds } satisfies BookMissingEvent);
@@ -2244,6 +2353,10 @@ export class ScannerService implements OnApplicationBootstrap {
       }
 
       counts.updated += fileCount.addedCount + fileCount.updatedCount;
+      if (!book.created) {
+        const fileChanges = describeFileChanges(knownEntry, processResult, fileStat);
+        if (fileChanges.length > 0) recordScanChange(book.id, 'updated', fileChanges, candidate.folderPath);
+      }
       if (processResult.previousBookId !== undefined && processResult.previousBookId !== book.id)
         formerOwnerBookIds.add(processResult.previousBookId);
       if (processResult.mediaOverlayChanged) mediaOverlayChanged = true;
@@ -2297,6 +2410,16 @@ export class ScannerService implements OnApplicationBootstrap {
    * registered as. It writes that book's own rows and name tables that take concurrent inserts, so a
    * full scan reads several candidates at once.
    */
+  /** Best effort: a scan must never fail because its change list could not be read. */
+  private async snapshotBookForChanges(bookId: number): Promise<Record<string, string | null> | null> {
+    if (!scanChangeStorage.getStore()) return null;
+    try {
+      return await this.scannerRepo.getBookChangeSnapshot(bookId);
+    } catch {
+      return null;
+    }
+  }
+
   private async readCandidateFiles(
     registered: RegisteredCandidate,
     libraryId: number,
@@ -2332,6 +2455,8 @@ export class ScannerService implements OnApplicationBootstrap {
     );
     const winnerIsAudio = winner !== null && winner.format !== null && isAudioFormat(winner.format);
     const audioOrderChanged = await this.remapAudioPositionsIfReordered(book.id, audioContentFiles);
+    const willRewriteMetadata = shouldExtractMetadata || changedAudioFiles.length > 0 || audioFilesNeedingDuration.length > 0;
+    const metadataBefore = !book.created && willRewriteMetadata ? await this.snapshotBookForChanges(book.id) : null;
 
     // 3a: Extract audio-specific fields (chapters, narrators) from the first audio file if any audio
     //     file is new, reassigned, or changed. Skipped when the audio winner is itself the leading
@@ -2418,6 +2543,12 @@ export class ScannerService implements OnApplicationBootstrap {
           `[scanner.merge_audio_chapters] [fail] bookId=${book.id} files=${orderedAudioPaths.length} errorClass=${err instanceof Error ? err.name : 'Error'} error="${sanitizeLogValue(err instanceof Error ? err.message : String(err))}" - audio chapter merge failed`,
         );
       }
+    }
+
+    if (metadataBefore) {
+      const metadataAfter = await this.snapshotBookForChanges(book.id);
+      const fieldChanges = metadataAfter ? diffBookSnapshots(metadataBefore, metadataAfter) : [];
+      if (fieldChanges.length > 0) recordScanChange(book.id, 'updated', fieldChanges, candidate.folderPath);
     }
 
     const becameVisible = await this.scannerRepo.promoteProcessingBookToPresent(book.id);
@@ -2646,6 +2777,7 @@ export class ScannerService implements OnApplicationBootstrap {
         if (survivor.status === 'missing') {
           await this.scannerRepo.updateBookStatus(survivor.id, 'present');
           counts.updatedCount++;
+          recordScanChange(survivor.id, 'restored', [{ field: 'Status', old: 'Missing', new: 'Present' }], candidate.folderPath);
           this.scanGateway.emitBookRestored({ libraryId, bookIds: [survivor.id] });
           this.bufferBooksRestoredNotification(libraryId, [survivor.id]);
         }
@@ -2696,6 +2828,7 @@ export class ScannerService implements OnApplicationBootstrap {
     if (existing.status === 'missing') {
       await this.scannerRepo.updateBookStatus(existing.id, 'present');
       counts.updatedCount++;
+      recordScanChange(existing.id, 'restored', [{ field: 'Status', old: 'Missing', new: 'Present' }], candidate.folderPath);
       this.scanGateway.emitBookRestored({ libraryId, bookIds: [existing.id] });
       this.bufferBooksRestoredNotification(libraryId, [existing.id]);
     }
@@ -2792,10 +2925,12 @@ export class ScannerService implements OnApplicationBootstrap {
       return null;
 
     await this.scannerRepo.updateBookFolderPath(sourceBook.id, candidate.folderPath);
+    recordScanChange(sourceBook.id, 'updated', [{ field: 'Folder', old: sourceBook.folderPath, new: candidate.folderPath }], candidate.folderPath);
 
     const restored = sourceBook.status === 'missing';
     if (restored) {
       await this.scannerRepo.updateBookStatus(sourceBook.id, 'present');
+      recordScanChange(sourceBook.id, 'restored', [{ field: 'Status', old: 'Missing', new: 'Present' }], candidate.folderPath);
       counts.updatedCount++;
       this.scanGateway.emitBookRestored({ libraryId, bookIds: [sourceBook.id] });
       this.bufferBooksRestoredNotification(libraryId, [sourceBook.id]);
@@ -3538,6 +3673,7 @@ export class ScannerService implements OnApplicationBootstrap {
       // Clean up in-memory maps
       for (const [path, entry] of fileByPath) {
         if (entry.id === fileId) {
+          recordScanChange(bookId, 'updated', [{ field: 'File removed', old: entry.relPath ?? basename(path), new: null }]);
           fileByPath.delete(path);
           break;
         }

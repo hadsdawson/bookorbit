@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
-import { bigint, check, index, integer, pgTable, serial, text, timestamp, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
+import { bigint, boolean, check, index, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
 
+import { books } from './books';
 import { libraries } from './libraries';
 import { libraryFolders } from './libraries';
 
@@ -17,6 +18,7 @@ export const scanJobs = pgTable(
     updatedCount: integer('updated_count').notNull().default(0),
     missingCount: integer('missing_count').notNull().default(0),
     errorMessage: text('error_message'),
+    changesTruncated: boolean('changes_truncated').notNull().default(false),
     startedAt: timestamp('started_at', { withTimezone: true }).defaultNow().notNull(),
     completedAt: timestamp('completed_at', { withTimezone: true }),
   },
@@ -39,6 +41,35 @@ export const scanJobs = pgTable(
 
 export type ScanJob = typeof scanJobs.$inferSelect;
 export type NewScanJob = typeof scanJobs.$inferInsert;
+
+/** Fork: one book a scan added, changed, restored or found missing, with the field values before and after. */
+export const scanJobChanges = pgTable(
+  'scan_job_changes',
+  {
+    id: serial('id').primaryKey(),
+    scanJobId: integer('scan_job_id')
+      .notNull()
+      .references(() => scanJobs.id, { onDelete: 'cascade' }),
+    bookId: integer('book_id').references(() => books.id, { onDelete: 'set null' }),
+    title: varchar('title', { length: 1000 }),
+    authors: text('authors'),
+    folderPath: varchar('folder_path', { length: 4096 }),
+    changeType: varchar('change_type', { length: 20 }).notNull(),
+    fieldChanges: jsonb('field_changes')
+      .$type<Array<{ field: string; old: string | null; new: string | null }>>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index('scan_job_changes_job_idx').on(t.scanJobId, t.id),
+    index('scan_job_changes_book_idx').on(t.bookId),
+    check('scan_job_changes_type_chk', sql`${t.changeType} in ('added', 'updated', 'missing', 'restored')`),
+  ],
+);
+
+export type ScanJobChange = typeof scanJobChanges.$inferSelect;
+export type NewScanJobChange = typeof scanJobChanges.$inferInsert;
 
 export const libraryDirScanState = pgTable(
   'library_dir_scan_state',

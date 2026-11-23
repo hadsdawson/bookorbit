@@ -7,7 +7,7 @@ import {
 } from '../../db/book-file-hash-history';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, lte, ne, or, sql, type SQL } from 'drizzle-orm';
-import type { JobView } from '@bookorbit/types';
+import type { JobView, LibraryScanChangeType, LibraryScanFieldChange } from '@bookorbit/types';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { DB } from '../../db';
@@ -25,6 +25,7 @@ import {
   koreaderDeviceProgress,
   libraries,
   libraryFolders,
+  scanJobChanges,
   scanJobs,
   userLibraryAccess,
   users,
@@ -480,6 +481,120 @@ export class ScannerRepository {
       .update(books)
       .set({ primaryFileId, updatedAt: new Date() })
       .where(and(eq(books.id, bookId), sql`${books.primaryFileId} IS DISTINCT FROM ${primaryFileId}`, primaryScope));
+  }
+
+  // ── Scan change details ────────────────────────────────────────────────────
+
+  async findScanJobForLibrary(libraryId: number, jobId: number) {
+    const [row] = await this.db
+      .select({ id: scanJobs.id, changesTruncated: scanJobs.changesTruncated })
+      .from(scanJobs)
+      .where(and(eq(scanJobs.id, jobId), eq(scanJobs.libraryId, libraryId)))
+      .limit(1);
+    return row ?? null;
+  }
+
+  async findScanChanges(jobId: number, options: { offset: number; limit: number; type?: LibraryScanChangeType }) {
+    return this.db
+      .select()
+      .from(scanJobChanges)
+      .where(
+        options.type ? and(eq(scanJobChanges.scanJobId, jobId), eq(scanJobChanges.changeType, options.type)) : eq(scanJobChanges.scanJobId, jobId),
+      )
+      .orderBy(asc(scanJobChanges.id))
+      .offset(options.offset)
+      .limit(options.limit);
+  }
+
+  async countScanChanges(jobId: number, type?: LibraryScanChangeType): Promise<number> {
+    const [row] = await this.db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(scanJobChanges)
+      .where(type ? and(eq(scanJobChanges.scanJobId, jobId), eq(scanJobChanges.changeType, type)) : eq(scanJobChanges.scanJobId, jobId));
+    return row?.total ?? 0;
+  }
+
+  /** Titles, authors and folders for a batch of books, read once after the scan instead of per book. */
+  private async findBookLabels(bookIds: number[]) {
+    if (bookIds.length === 0) return new Map<number, { title: string | null; authors: string | null; folderPath: string }>();
+    const rows = await this.db
+      .select({
+        id: books.id,
+        folderPath: books.folderPath,
+        title: bookMetadata.title,
+        authors: sql<
+          string | null
+        >`(select string_agg(${authors.name}, ', ' order by ${bookAuthors.displayOrder}) from ${bookAuthors} join ${authors} on ${authors.id} = ${bookAuthors.authorId} where ${bookAuthors.bookId} = ${books.id})`,
+      })
+      .from(books)
+      .leftJoin(bookMetadata, eq(bookMetadata.bookId, books.id))
+      .where(inArray(books.id, bookIds));
+    return new Map(rows.map((row) => [row.id, { title: row.title, authors: row.authors, folderPath: row.folderPath }]));
+  }
+
+  async saveScanChanges(
+    jobId: number,
+    entries: Array<{
+      bookId: number;
+      changeType: LibraryScanChangeType;
+      fieldChanges: LibraryScanFieldChange[];
+      folderPath: string | null;
+      occurredAt: Date;
+    }>,
+    truncated: boolean,
+  ): Promise<void> {
+    for (let start = 0; start < entries.length; start += CLAIM_LOOKUP_BATCH_SIZE) {
+      const chunk = entries.slice(start, start + CLAIM_LOOKUP_BATCH_SIZE);
+      const labels = await this.findBookLabels([...new Set(chunk.map((entry) => entry.bookId))]);
+      await this.db.insert(scanJobChanges).values(
+        chunk.map((entry) => {
+          const label = labels.get(entry.bookId);
+          return {
+            scanJobId: jobId,
+            bookId: label ? entry.bookId : null,
+            title: label?.title ?? null,
+            authors: label?.authors ?? null,
+            folderPath: entry.folderPath ?? label?.folderPath ?? null,
+            changeType: entry.changeType,
+            fieldChanges: entry.fieldChanges,
+            occurredAt: entry.occurredAt,
+          };
+        }),
+      );
+    }
+    if (truncated) await this.db.update(scanJobs).set({ changesTruncated: true }).where(eq(scanJobs.id, jobId));
+  }
+
+  /** The user-visible metadata of one book as text, so a scan can report which fields it changed. */
+  async getBookChangeSnapshot(bookId: number): Promise<Record<string, string | null>> {
+    const result = await this.db.execute<Record<string, string | null>>(sql`
+      select
+        b.folder_path as "Folder",
+        m.title as "Title",
+        m.subtitle as "Subtitle",
+        (select string_agg(a.name, ', ' order by ba.display_order) from book_authors ba join authors a on a.id = ba.author_id where ba.book_id = b.id) as "Authors",
+        (select string_agg(n.name, ', ' order by bn.display_order) from book_narrators bn join narrators n on n.id = bn.narrator_id where bn.book_id = b.id) as "Narrators",
+        m.series_name as "Series",
+        m.series_index as "Series number",
+        m.publisher as "Publisher",
+        m.published_date::text as "Published date",
+        m.published_year::text as "Published year",
+        m.language as "Language",
+        m.isbn10 as "ISBN-10",
+        m.isbn13 as "ISBN-13",
+        m.page_count::text as "Page count",
+        m.duration_seconds::text as "Duration (seconds)",
+        m.chapter_count::text as "Chapter count",
+        m.description as "Description",
+        m.abridged::text as "Abridged",
+        (select string_agg(g.name, ', ' order by g.name) from book_genres bg join genres g on g.id = bg.genre_id where bg.book_id = b.id) as "Genres",
+        (select string_agg(t.name, ', ' order by t.name) from book_tags bt join tags t on t.id = bt.tag_id where bt.book_id = b.id) as "Tags",
+        m.cover_updated_at::text as "Cover"
+      from books b
+      left join book_metadata m on m.book_id = b.id
+      where b.id = ${bookId}
+    `);
+    return result.rows[0] ?? {};
   }
 
   async markBooksAsMissing(ids: number[]) {

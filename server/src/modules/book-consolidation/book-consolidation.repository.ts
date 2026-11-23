@@ -696,6 +696,7 @@ export class BookConsolidationRepository {
     // A kept Book Dock original follows the book its copy now belongs to.
     await tx.execute(sql`update book_dock_kept_files set book_id = ${k} where book_id = ${s}`);
     await tx.execute(sql`update upcoming_releases set owned_book_id = ${k} where owned_book_id = ${s}`);
+    await tx.execute(sql`update scan_job_changes set book_id = ${k} where book_id = ${s}`);
     await tx.execute(sql`
       insert into book_duplicate_dismissals (user_id, kind, book_id_a, book_id_b, created_at)
       select user_id, kind,

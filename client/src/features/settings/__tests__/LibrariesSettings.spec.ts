@@ -152,6 +152,8 @@ function makeRouter() {
 import LibrariesSettings from '../LibrariesSettings.vue'
 import LibraryAutomationList from '../libraries/components/LibraryAutomationList.vue'
 import LibraryDetailPanel from '../libraries/components/LibraryDetailPanel.vue'
+import LibraryScanChangesDialog from '../libraries/components/LibraryScanChangesDialog.vue'
+import { useScanChangesViewer } from '../libraries/composables/useScanChangesViewer'
 import LibraryRowActions from '../libraries/components/LibraryRowActions.vue'
 
 /** Every mount is tracked so a leftover component's watchers cannot react to a later test's state. */
@@ -970,6 +972,12 @@ describe('LibrariesSettings ledger', () => {
       options!.action!.onClick()
       await flushPromises()
       expect(wrapper.find('[id="library-detail-4"]').exists()).toBe(true)
+      const changesCall = apiMock.mock.calls.find((call) => String(call[0]).includes('/scans/81/changes'))
+      expect(String(changesCall?.[0])).toContain('/api/v1/scanner/libraries/4/scans/81/changes')
+      expect(wrapper.findComponent(LibraryScanChangesDialog).props()).toEqual({ libraryId: 4, libraryName: 'Novels', jobId: 81 })
+
+      wrapper.unmount()
+      useScanChangesViewer().close()
     })
 
     it('puts the page actions in the settings header slot when one exists', async () => {

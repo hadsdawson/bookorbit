@@ -782,6 +782,19 @@
   {
     "file": "server/src/modules/scanner/scanner.controller.ts",
     "className": "ScannerController",
+    "methodName": "scanChanges",
+    "httpMethod": "GET",
+    "path": "/scanner/libraries/:id/scans/:jobId/changes",
+    "permissions": ["Permission.ManageLibraries"],
+    "libraryAccess": ["'viewer'"],
+    "isPublic": false,
+    "allowDefault": false,
+    "useGuards": [],
+    "apiKey": "read"
+  },
+  {
+    "file": "server/src/modules/scanner/scanner.controller.ts",
+    "className": "ScannerController",
     "methodName": "getRegexReapply",
     "httpMethod": "GET",
     "path": "/scanner/libraries/:id/reapply-regex-metadata",

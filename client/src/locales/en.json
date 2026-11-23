@@ -1441,6 +1441,7 @@
         "durationSeconds": "{seconds}s",
         "durationMinutes": "{minutes}m {seconds}s",
         "history": {
+          "details": "Details",
           "when": "When",
           "trigger": "Trigger",
           "duration": "Duration",
@@ -1534,6 +1535,33 @@
         "scanFinished": "Scan finished for \"{name}\": {outcome}",
         "scanFinishedFailed": "Scan failed for \"{name}\"",
         "viewChanges": "View changes",
+        "changes": {
+          "title": "What this scan changed",
+          "description": "Books this scan added, updated, restored or could not find in \"{name}\".",
+          "filterLabel": "Filter by kind of change",
+          "filterAll": "All",
+          "type": {
+            "added": "Added",
+            "updated": "Updated",
+            "missing": "Missing",
+            "restored": "Restored"
+          },
+          "time": {
+            "added": "Added {time}",
+            "updated": "Changed {time}",
+            "missing": "Found missing {time}",
+            "restored": "Back on disk {time}"
+          },
+          "untitled": "Untitled book",
+          "empty": "(empty)",
+          "none": "No changes were recorded for this scan.",
+          "failed": "Could not load the changes for this scan.",
+          "truncated": "This scan touched more books than are kept in the list, so only the first ones are shown. The counts in the history table are complete.",
+          "shown": "Showing {shown} of {total}",
+          "loadMore": "Show more",
+          "close": "Close",
+          "viewBooks": "View books"
+        },
         "duplicateSettings": "Duplicate settings",
         "relocate": {
           "open": "Change location",

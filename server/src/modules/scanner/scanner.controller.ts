@@ -1,5 +1,6 @@
 import { AuditAction, AuditResource, Permission } from '@bookorbit/types';
-import { Controller, DefaultValuePipe, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
+import type { LibraryScanChangeType } from '@bookorbit/types';
+import { BadRequestException, Controller, DefaultValuePipe, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
 
 import { Auditable } from '../../common/decorators/auditable.decorator';
 import { RequireLibraryAccess } from '../../common/decorators/require-library-access.decorator';
@@ -8,6 +9,8 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { RequestUser } from '../../common/types/request-user';
 import { RegexMetadataReapplyService } from './regex-metadata-reapply.service';
 import { ScannerService } from './scanner.service';
+
+const SCAN_CHANGE_TYPES: LibraryScanChangeType[] = ['added', 'updated', 'missing', 'restored'];
 
 @Controller('scanner')
 export class ScannerController {
@@ -32,6 +35,23 @@ export class ScannerController {
   @RequireLibraryAccess('viewer')
   scanHistory(@Param('id', ParseIntPipe) libraryId: number, @Query('limit', new DefaultValuePipe(5), ParseIntPipe) limit: number) {
     return this.scannerService.getScanHistory(libraryId, limit);
+  }
+
+  /** Which books one scan added, changed, restored or lost, with the values before and after. */
+  @Get('libraries/:id/scans/:jobId/changes')
+  @RequirePermission(Permission.ManageLibraries)
+  @RequireLibraryAccess('viewer')
+  scanChanges(
+    @Param('id', ParseIntPipe) libraryId: number,
+    @Param('jobId', ParseIntPipe) jobId: number,
+    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
+    @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
+    @Query('type') type?: string,
+  ) {
+    if (type !== undefined && !SCAN_CHANGE_TYPES.includes(type as LibraryScanChangeType)) {
+      throw new BadRequestException('Unknown change type');
+    }
+    return this.scannerService.getScanChanges(libraryId, jobId, { offset, limit, type: type as LibraryScanChangeType | undefined });
   }
 
   @Get('libraries/:id/reapply-regex-metadata')

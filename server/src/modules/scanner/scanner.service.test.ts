@@ -297,6 +297,173 @@ describe('scan history', () => {
   });
 });
 
+describe('scan change details', () => {
+  it('lists the changes one scan recorded for a library', async () => {
+    const repo = makeRepo({
+      findScanJobForLibrary: vi.fn().mockResolvedValue({ id: 31, changesTruncated: true }),
+      findScanChanges: vi.fn().mockResolvedValue([
+        {
+          id: 1,
+          bookId: 9,
+          title: 'Dune',
+          authors: 'Frank Herbert',
+          folderPath: '/library/Dune',
+          changeType: 'updated',
+          fieldChanges: [{ field: 'Title', old: 'dune', new: 'Dune' }],
+          occurredAt: new Date('2026-11-23T10:00:00.000Z'),
+        },
+      ]),
+      countScanChanges: vi.fn().mockResolvedValue(1),
+    });
+    const { service } = makeService(repo);
+
+    await expect(service.getScanChanges(7, 31, { offset: 0, limit: 50 })).resolves.toEqual({
+      items: [
+        {
+          id: 1,
+          bookId: 9,
+          title: 'Dune',
+          authors: 'Frank Herbert',
+          folderPath: '/library/Dune',
+          changeType: 'updated',
+          fieldChanges: [{ field: 'Title', old: 'dune', new: 'Dune' }],
+          occurredAt: '2026-11-23T10:00:00.000Z',
+        },
+      ],
+      total: 1,
+      truncated: true,
+    });
+    expect(repo.findScanJobForLibrary).toHaveBeenCalledWith(7, 31);
+  });
+
+  it('does not reveal a scan that belongs to another library', async () => {
+    const repo = makeRepo({ findScanJobForLibrary: vi.fn().mockResolvedValue(null) });
+    const { service } = makeService(repo);
+
+    await expect(service.getScanChanges(7, 31, { offset: 0, limit: 50 })).rejects.toThrow('Scan not found');
+  });
+
+  it('caps the page size and floors a negative offset', async () => {
+    const repo = makeRepo({
+      findScanJobForLibrary: vi.fn().mockResolvedValue({ id: 31, changesTruncated: false }),
+      findScanChanges: vi.fn().mockResolvedValue([]),
+      countScanChanges: vi.fn().mockResolvedValue(0),
+    });
+    const { service } = makeService(repo);
+
+    await service.getScanChanges(7, 31, { offset: -4, limit: 100000, type: 'added' });
+
+    expect(repo.findScanChanges).toHaveBeenCalledWith(31, { offset: 0, limit: 200, type: 'added' });
+  });
+
+  it('saves a missing book with when it went missing', async () => {
+    const saveScanChanges = vi.fn().mockResolvedValue(undefined);
+    const repo = makeRepo({
+      saveScanChanges,
+      findBooksByLibraryFolder: vi
+        .fn()
+        .mockResolvedValue([{ id: 5, libraryId: 1, libraryFolderId: 1, folderPath: '/library/old/book', status: 'present' }]),
+    });
+    mockFindCandidates.mockResolvedValue({ candidates: [], skippedDirs: new Set(), unchangedDirs: new Set(), dirMtimes: new Map() });
+    const done = awaitScan(repo);
+    const { service } = makeService(repo);
+    await service.startScan(1, 'manual');
+    await done;
+
+    expect(saveScanChanges).toHaveBeenCalledTimes(1);
+    const [jobId, entries, truncated] = saveScanChanges.mock.calls[0];
+    expect(jobId).toBe(100);
+    expect(truncated).toBe(false);
+    expect(entries).toEqual([
+      expect.objectContaining({
+        bookId: 5,
+        changeType: 'missing',
+        fieldChanges: [{ field: 'Status', old: 'Present', new: 'Missing' }],
+        occurredAt: expect.any(Date),
+      }),
+    ]);
+  });
+
+  it('saves a newly found book as added', async () => {
+    const saveScanChanges = vi.fn().mockResolvedValue(undefined);
+    const repo = makeRepo({ saveScanChanges });
+    const candidate = makeCandidate('/library/Author/Book', [makeFileStat()]);
+    mockFindCandidates.mockResolvedValue({ candidates: [candidate], skippedDirs: new Set(), unchangedDirs: new Set(), dirMtimes: new Map() });
+    const done = awaitScan(repo);
+    const { service } = makeService(repo);
+    await service.startScan(1, 'manual');
+    await done;
+
+    expect(saveScanChanges).toHaveBeenCalledTimes(1);
+    expect(saveScanChanges.mock.calls[0][1]).toEqual([
+      expect.objectContaining({ bookId: 1, changeType: 'added', folderPath: '/library/Author/Book' }),
+    ]);
+  });
+
+  it('reports which metadata fields a rescan changed on an existing book', async () => {
+    const saveScanChanges = vi.fn().mockResolvedValue(undefined);
+    const getBookChangeSnapshot = vi
+      .fn()
+      .mockResolvedValueOnce({ Title: 'Old Title', Authors: 'A. Author', Series: null })
+      .mockResolvedValueOnce({ Title: 'New Title', Authors: 'A. Author', Series: 'Saga' });
+    const file = makeFileStat();
+    const repo = makeRepo({
+      saveScanChanges,
+      getBookChangeSnapshot,
+      findBooksByLibraryFolder: vi
+        .fn()
+        .mockResolvedValue([{ id: 8, libraryId: 1, libraryFolderId: 1, folderPath: '/library/Author/Book', status: 'present', primaryFileId: 4 }]),
+      findBookFilesByLibraryFolder: vi.fn().mockResolvedValue([
+        {
+          id: 4,
+          bookId: 8,
+          absolutePath: file.absolutePath,
+          relPath: file.relPath,
+          ino: file.ino,
+          sizeBytes: 1,
+          mtime: new Date(0),
+          fileHash: 'h',
+          sortOrder: 0,
+          role: 'content',
+        },
+      ]),
+    });
+    mockFindCandidates.mockResolvedValue({
+      candidates: [makeCandidate('/library/Author/Book', [file])],
+      skippedDirs: new Set(),
+      unchangedDirs: new Set(),
+      dirMtimes: new Map(),
+    });
+    const done = awaitScan(repo);
+    const { service } = makeService(repo);
+    await service.startScan(1, 'manual');
+    await done;
+
+    const entries = saveScanChanges.mock.calls[0][1] as Array<{ bookId: number; changeType: string; fieldChanges: Array<{ field: string }> }>;
+    const updated = entries.find((entry) => entry.bookId === 8 && entry.changeType === 'updated');
+    expect(updated?.fieldChanges).toEqual(
+      expect.arrayContaining([
+        { field: 'Title', old: 'Old Title', new: 'New Title' },
+        { field: 'Series', old: null, new: 'Saga' },
+      ]),
+    );
+    expect(updated?.fieldChanges.map((change) => change.field)).not.toContain('Authors');
+  });
+
+  it('still completes the scan when the change list cannot be saved', async () => {
+    const repo = makeRepo({ saveScanChanges: vi.fn().mockRejectedValue(new Error('db down')) });
+    const candidate = makeCandidate('/library/Author/Book', [makeFileStat()]);
+    mockFindCandidates.mockResolvedValue({ candidates: [candidate], skippedDirs: new Set(), unchangedDirs: new Set(), dirMtimes: new Map() });
+    const done = awaitScan(repo);
+    const { service } = makeService(repo);
+    await service.startScan(1, 'manual');
+    await done;
+
+    expect(repo.completeScanJob).toHaveBeenCalled();
+    expect(repo.failScanJob).not.toHaveBeenCalled();
+  });
+});
+
 describe('Jobs area changes', () => {
   const stateChange = { type: 'library-scan', ownerId: null, state: true };
   const progressChange = { type: 'library-scan', ownerId: null, state: false };
