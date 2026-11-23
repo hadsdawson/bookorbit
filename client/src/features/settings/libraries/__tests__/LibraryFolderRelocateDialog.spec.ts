@@ -4,13 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import LibraryFolderRelocateDialog from '../components/LibraryFolderRelocateDialog.vue'
 
 const api = vi.hoisted(() => vi.fn<(url: string, init?: RequestInit) => Promise<Response>>())
-const refreshLibraries = vi.hoisted(() => vi.fn())
+const refreshLibraries = vi.hoisted(() => vi.fn<() => Promise<void>>())
 vi.mock('@/lib/api', () => ({
   api,
   NetworkError: class NetworkError extends Error {},
 }))
 vi.mock('@/features/library/composables/useLibraries', () => ({ useLibraries: () => ({ refreshLibraries }) }))
-vi.mock('vue-sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
+vi.mock('vue-sonner', () => ({ toast: { success: vi.fn<(message: string) => void>(), error: vi.fn<(message: string) => void>() } }))
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
