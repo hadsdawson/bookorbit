@@ -1,6 +1,6 @@
 {
-  "id": "887c18db-ed1c-459e-9954-8ca98407a4c8",
-  "prevId": "db671f8a-1773-4fd6-b1f5-5772407e2fc0",
+  "id": "db671f8a-1773-4fd6-b1f5-5772407e2fc0",
+  "prevId": "a56dd2b0-245d-4cb3-90b1-ca9cc934c18f",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -17247,12 +17247,6 @@
         "tracking_status": {
           "name": "tracking_status",
           "type": "varchar(30)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "tracking_status_source": {
-          "name": "tracking_status_source",
-          "type": "varchar(10)",
           "primaryKey": false,
           "notNull": false
         },

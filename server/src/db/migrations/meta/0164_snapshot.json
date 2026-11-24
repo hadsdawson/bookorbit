@@ -1,6 +1,6 @@
 {
-  "id": "3dcee171-97ba-4726-8e19-6e2dcd84103d",
-  "prevId": "82034ff1-5816-4c2f-851f-a4153b47fe8e",
+  "id": "82034ff1-5816-4c2f-851f-a4153b47fe8e",
+  "prevId": "5773ce41-4e2a-4a9b-a19a-1eda3408831f",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3417,13 +3417,6 @@
         },
         "file_write_metadata_json": {
           "name": "file_write_metadata_json",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "file_write_chapters_on_save": {
-          "name": "file_write_chapters_on_save",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,

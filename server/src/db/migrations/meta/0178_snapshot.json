@@ -1,6 +1,6 @@
 {
-  "id": "bec15781-24a6-4019-a405-634f90aa961e",
-  "prevId": "28a719c0-bdbb-423b-82b4-866c62ca1abf",
+  "id": "28a719c0-bdbb-423b-82b4-866c62ca1abf",
+  "prevId": "242190db-bc5f-41b8-8690-daea2d1352be",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -10794,144 +10794,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.scan_job_changes": {
-      "name": "scan_job_changes",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "scan_job_id": {
-          "name": "scan_job_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "book_id": {
-          "name": "book_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "title": {
-          "name": "title",
-          "type": "varchar(1000)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "authors": {
-          "name": "authors",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "folder_path": {
-          "name": "folder_path",
-          "type": "varchar(4096)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "change_type": {
-          "name": "change_type",
-          "type": "varchar(20)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "field_changes": {
-          "name": "field_changes",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::jsonb"
-        },
-        "occurred_at": {
-          "name": "occurred_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "scan_job_changes_job_idx": {
-          "name": "scan_job_changes_job_idx",
-          "columns": [
-            {
-              "expression": "scan_job_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "scan_job_changes_book_idx": {
-          "name": "scan_job_changes_book_idx",
-          "columns": [
-            {
-              "expression": "book_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "scan_job_changes_scan_job_id_scan_jobs_id_fk": {
-          "name": "scan_job_changes_scan_job_id_scan_jobs_id_fk",
-          "tableFrom": "scan_job_changes",
-          "tableTo": "scan_jobs",
-          "columnsFrom": [
-            "scan_job_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "scan_job_changes_book_id_books_id_fk": {
-          "name": "scan_job_changes_book_id_books_id_fk",
-          "tableFrom": "scan_job_changes",
-          "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "scan_job_changes_type_chk": {
-          "name": "scan_job_changes_type_chk",
-          "value": "\"scan_job_changes\".\"change_type\" in ('added', 'updated', 'missing', 'restored')"
-        }
-      },
-      "isRLSEnabled": false
-    },
     "public.scan_jobs": {
       "name": "scan_jobs",
       "schema": "",
@@ -10987,13 +10849,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
-        },
-        "changes_truncated": {
-          "name": "changes_truncated",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
         },
         "started_at": {
           "name": "started_at",

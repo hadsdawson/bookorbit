@@ -1,6 +1,6 @@
 {
-  "id": "9e789e10-19ec-4810-b105-64af16261f81",
-  "prevId": "044ff7a2-8fe8-4a67-965e-7ec0a763f8e3",
+  "id": "044ff7a2-8fe8-4a67-965e-7ec0a763f8e3",
+  "prevId": "887c18db-ed1c-459e-9954-8ca98407a4c8",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -16817,12 +16817,6 @@
           "notNull": true,
           "default": false
         },
-        "merged_into_id": {
-          "name": "merged_into_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -16883,21 +16877,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "book_dock_files_merged_into_id_idx": {
-          "name": "book_dock_files_merged_into_id_idx",
-          "columns": [
-            {
-              "expression": "merged_into_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
@@ -16933,19 +16912,6 @@
           "tableTo": "users",
           "columnsFrom": [
             "uploaded_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "book_dock_files_merged_into_id_book_dock_files_id_fk": {
-          "name": "book_dock_files_merged_into_id_book_dock_files_id_fk",
-          "tableFrom": "book_dock_files",
-          "tableTo": "book_dock_files",
-          "columnsFrom": [
-            "merged_into_id"
           ],
           "columnsTo": [
             "id"

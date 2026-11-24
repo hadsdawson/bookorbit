@@ -1,6 +1,6 @@
 {
-  "id": "82034ff1-5816-4c2f-851f-a4153b47fe8e",
-  "prevId": "5773ce41-4e2a-4a9b-a19a-1eda3408831f",
+  "id": "5773ce41-4e2a-4a9b-a19a-1eda3408831f",
+  "prevId": "f3e54a0b-fd5c-488b-b48f-2deb2f6b4f4f",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3407,20 +3407,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
-        },
-        "file_write_folder_covers": {
-          "name": "file_write_folder_covers",
-          "type": "varchar(10)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'off'"
-        },
-        "file_write_metadata_json": {
-          "name": "file_write_metadata_json",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
         },
         "file_write_epub_enabled": {
           "name": "file_write_epub_enabled",

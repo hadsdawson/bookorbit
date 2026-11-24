@@ -1,6 +1,6 @@
 {
-  "id": "044ff7a2-8fe8-4a67-965e-7ec0a763f8e3",
-  "prevId": "887c18db-ed1c-459e-9954-8ca98407a4c8",
+  "id": "887c18db-ed1c-459e-9954-8ca98407a4c8",
+  "prevId": "db671f8a-1773-4fd6-b1f5-5772407e2fc0",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -7428,89 +7428,6 @@
           "value": "\"author_enrichment_queue\".\"attempt_count\" >= 0"
         }
       },
-      "isRLSEnabled": false
-    },
-    "public.author_pen_names": {
-      "name": "author_pen_names",
-      "schema": "",
-      "columns": {
-        "pen_name_author_id": {
-          "name": "pen_name_author_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "author_id": {
-          "name": "author_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "author_pen_names_author_id_idx": {
-          "name": "author_pen_names_author_id_idx",
-          "columns": [
-            {
-              "expression": "author_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "author_pen_names_pen_name_author_id_authors_id_fk": {
-          "name": "author_pen_names_pen_name_author_id_authors_id_fk",
-          "tableFrom": "author_pen_names",
-          "tableTo": "authors",
-          "columnsFrom": [
-            "pen_name_author_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "author_pen_names_author_id_authors_id_fk": {
-          "name": "author_pen_names_author_id_authors_id_fk",
-          "tableFrom": "author_pen_names",
-          "tableTo": "authors",
-          "columnsFrom": [
-            "author_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "author_pen_names_pen_name_author_id_author_id_pk": {
-          "name": "author_pen_names_pen_name_author_id_author_id_pk",
-          "columns": [
-            "pen_name_author_id",
-            "author_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.authors": {

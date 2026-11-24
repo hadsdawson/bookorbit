@@ -1,6 +1,6 @@
 {
-  "id": "7bcce0f8-1795-41e1-9dda-88a6985b39a6",
-  "prevId": "838f610f-9745-407c-97de-4cf388345363",
+  "id": "838f610f-9745-407c-97de-4cf388345363",
+  "prevId": "9e789e10-19ec-4810-b105-64af16261f81",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -8184,7 +8184,7 @@
           "name": "authors_name_normalized_key_idx",
           "columns": [
             {
-              "expression": "lower(regexp_replace(btrim(regexp_replace(replace(\"name\", chr(160), ' '), '[[:space:]]+', ' ', 'g')), '(?<![[:alpha:]])([[:upper:]])\\.[[:space:]]+(?=[[:upper:]]\\.)', '\\1.', 'g'))",
+              "expression": "lower(btrim(regexp_replace(replace(\"name\", chr(160), ' '), '[[:space:]]+', ' ', 'g')))",
               "asc": true,
               "isExpression": true,
               "nulls": "last"
@@ -10660,7 +10660,7 @@
           "name": "narrators_name_normalized_key_idx",
           "columns": [
             {
-              "expression": "lower(regexp_replace(btrim(regexp_replace(replace(\"name\", chr(160), ' '), '[[:space:]]+', ' ', 'g')), '(?<![[:alpha:]])([[:upper:]])\\.[[:space:]]+(?=[[:upper:]]\\.)', '\\1.', 'g'))",
+              "expression": "lower(btrim(regexp_replace(replace(\"name\", chr(160), ' '), '[[:space:]]+', ' ', 'g')))",
               "asc": true,
               "isExpression": true,
               "nulls": "last"

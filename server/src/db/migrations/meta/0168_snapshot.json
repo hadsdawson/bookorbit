@@ -1,6 +1,6 @@
 {
-  "id": "106685ca-664d-4e38-84e7-d75ad896189b",
-  "prevId": "d5a9ef88-1464-4f9f-bb83-13cd72968098",
+  "id": "d5a9ef88-1464-4f9f-bb83-13cd72968098",
+  "prevId": "d33051c0-0718-4129-8f98-8a8aef220cd5",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1229,6 +1229,66 @@
         "refresh_tokens_authentication_method_chk": {
           "name": "refresh_tokens_authentication_method_chk",
           "value": "\"refresh_tokens\".\"authentication_method\" in ('password', 'oidc', 'magic_link', 'setup', 'legacy')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.user_content_filter_age_ratings": {
+      "name": "user_content_filter_age_ratings",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "filter_type": {
+          "name": "filter_type",
+          "type": "content_filter_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "age_rating": {
+          "name": "age_rating",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "user_content_filter_age_ratings_user_id_users_id_fk": {
+          "name": "user_content_filter_age_ratings_user_id_users_id_fk",
+          "tableFrom": "user_content_filter_age_ratings",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "user_content_filter_age_ratings_user_id_filter_type_age_rating_pk": {
+          "name": "user_content_filter_age_ratings_user_id_filter_type_age_rating_pk",
+          "columns": [
+            "user_id",
+            "filter_type",
+            "age_rating"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "user_content_filter_age_ratings_value_chk": {
+          "name": "user_content_filter_age_ratings_value_chk",
+          "value": "\"user_content_filter_age_ratings\".\"age_rating\" IN (-1, 0, 10, 13, 16, 18)"
         }
       },
       "isRLSEnabled": false
@@ -6881,6 +6941,12 @@
             "type": "stored"
           }
         },
+        "age_rating": {
+          "name": "age_rating",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
         "expected_book_count": {
           "name": "expected_book_count",
           "type": "integer",
@@ -6997,6 +7063,10 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
+        "book_series_age_rating_chk": {
+          "name": "book_series_age_rating_chk",
+          "value": "\"book_series\".\"age_rating\" IS NULL OR \"book_series\".\"age_rating\" IN (0, 10, 13, 16, 18)"
+        },
         "book_series_expected_book_count_range_chk": {
           "name": "book_series_expected_book_count_range_chk",
           "value": "\"book_series\".\"expected_book_count\" IS NULL OR (\"book_series\".\"expected_book_count\" >= 1 AND \"book_series\".\"expected_book_count\" <= 10000)"
@@ -8295,6 +8365,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "age_rating": {
+          "name": "age_rating",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
         "rating": {
           "name": "rating",
           "type": "integer",
@@ -8631,6 +8707,21 @@
           "columns": [
             {
               "expression": "series_name_sort_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "bm_age_rating_idx": {
+          "name": "bm_age_rating_idx",
+          "columns": [
+            {
+              "expression": "age_rating",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -9080,6 +9171,10 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
+        "bm_age_rating_chk": {
+          "name": "bm_age_rating_chk",
+          "value": "\"book_metadata\".\"age_rating\" IS NULL OR \"book_metadata\".\"age_rating\" IN (0, 10, 13, 16, 18)"
+        },
         "book_metadata_rating_range_chk": {
           "name": "book_metadata_rating_range_chk",
           "value": "\"book_metadata\".\"rating\" is null or (\"book_metadata\".\"rating\" >= 1 and \"book_metadata\".\"rating\" <= 10)"
