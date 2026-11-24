@@ -1,6 +1,6 @@
 {
-  "id": "db671f8a-1773-4fd6-b1f5-5772407e2fc0",
-  "prevId": "a56dd2b0-245d-4cb3-90b1-ca9cc934c18f",
+  "id": "a56dd2b0-245d-4cb3-90b1-ca9cc934c18f",
+  "prevId": "106685ca-664d-4e38-84e7-d75ad896189b",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -7176,88 +7176,6 @@
       },
       "isRLSEnabled": false
     },
-    "public.author_aliases": {
-      "name": "author_aliases",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "author_id": {
-          "name": "author_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar(500)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name_key": {
-          "name": "name_key",
-          "type": "varchar(500)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "author_aliases_author_id_idx": {
-          "name": "author_aliases_author_id_idx",
-          "columns": [
-            {
-              "expression": "author_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "author_aliases_author_id_authors_id_fk": {
-          "name": "author_aliases_author_id_authors_id_fk",
-          "tableFrom": "author_aliases",
-          "tableTo": "authors",
-          "columnsFrom": [
-            "author_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "author_aliases_name_key_unique": {
-          "name": "author_aliases_name_key_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "name_key"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.author_enrichment_queue": {
       "name": "author_enrichment_queue",
       "schema": "",
@@ -7428,6 +7346,61 @@
           "value": "\"author_enrichment_queue\".\"attempt_count\" >= 0"
         }
       },
+      "isRLSEnabled": false
+    },
+    "public.author_links": {
+      "name": "author_links",
+      "schema": "",
+      "columns": {
+        "author_id": {
+          "name": "author_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "group_id": {
+          "name": "group_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "author_links_group_id_idx": {
+          "name": "author_links_group_id_idx",
+          "columns": [
+            {
+              "expression": "group_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "author_links_author_id_authors_id_fk": {
+          "name": "author_links_author_id_authors_id_fk",
+          "tableFrom": "author_links",
+          "tableTo": "authors",
+          "columnsFrom": [
+            "author_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.authors": {

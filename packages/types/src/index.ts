@@ -122,3 +122,4 @@ export * from "./story-guide";
 export * from "./story-guide-fixes";
 export * from "./backup";
 export * from "./recycle-bin";
+export * from "./setup-overview";

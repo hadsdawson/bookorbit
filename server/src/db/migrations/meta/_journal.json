@@ -1139,120 +1139,127 @@
     {
       "idx": 162,
       "version": "7",
-      "when": 1794336093949,
-      "tag": "0162_request_tracking_and_not_interested",
+      "when": 1795337203892,
+      "tag": "0162_add_book_editions",
       "breakpoints": true
     },
     {
       "idx": 163,
       "version": "7",
-      "when": 1794410794073,
-      "tag": "0163_folder_covers_and_metadata_json",
+      "when": 1794336093949,
+      "tag": "0163_request_tracking_and_not_interested",
       "breakpoints": true
     },
     {
       "idx": 164,
       "version": "7",
-      "when": 1794492310622,
-      "tag": "0164_chapters_write_on_save",
+      "when": 1794410794073,
+      "tag": "0164_folder_covers_and_metadata_json",
       "breakpoints": true
     },
     {
       "idx": 165,
       "version": "7",
-      "when": 1794569604644,
-      "tag": "0165_age_ratings_and_sort_keys",
+      "when": 1794492310622,
+      "tag": "0165_chapters_write_on_save",
       "breakpoints": true
     },
     {
       "idx": 166,
       "version": "7",
-      "when": 1794595062517,
-      "tag": "0166_new_releases",
+      "when": 1794569604644,
+      "tag": "0166_age_ratings_and_sort_keys",
       "breakpoints": true
     },
     {
       "idx": 167,
       "version": "7",
-      "when": 1794598600658,
-      "tag": "0167_rename_on_add_file",
+      "when": 1794595062517,
+      "tag": "0167_new_releases",
       "breakpoints": true
     },
     {
       "idx": 168,
       "version": "7",
-      "when": 1794617131029,
-      "tag": "0168_remove_age_ratings",
+      "when": 1794598600658,
+      "tag": "0168_rename_on_add_file",
       "breakpoints": true
     },
     {
       "idx": 169,
       "version": "7",
-      "when": 1794699691120,
-      "tag": "0169_author_links",
+      "when": 1794617131029,
+      "tag": "0169_remove_age_ratings",
       "breakpoints": true
     },
     {
       "idx": 170,
       "version": "7",
-      "when": 1794703892454,
-      "tag": "0170_author_aliases",
+      "when": 1794699691120,
+      "tag": "0170_author_links",
       "breakpoints": true
     },
     {
       "idx": 171,
       "version": "7",
-      "when": 1794712374216,
-      "tag": "0171_request_tracking_source",
+      "when": 1794703892454,
+      "tag": "0171_author_aliases",
       "breakpoints": true
     },
     {
       "idx": 172,
       "version": "7",
-      "when": 1794769366358,
-      "tag": "0172_author_pen_names",
+      "when": 1794712374216,
+      "tag": "0172_request_tracking_source",
       "breakpoints": true
     },
     {
       "idx": 173,
       "version": "7",
-      "when": 1794774488549,
-      "tag": "0173_book_dock_merged_into",
+      "when": 1794769366358,
+      "tag": "0173_author_pen_names",
       "breakpoints": true
     },
     {
       "idx": 174,
       "version": "7",
-      "when": 1794877994675,
-      "tag": "0174_book_request_tracking_grabbed",
+      "when": 1794774488549,
+      "tag": "0174_book_dock_merged_into",
       "breakpoints": true
     },
     {
       "idx": 175,
       "version": "7",
-      "when": 1795039737661,
-      "tag": "0175_person_name_key_indexes",
+      "when": 1794877994675,
+      "tag": "0175_book_request_tracking_grabbed",
       "breakpoints": true
     },
     {
       "idx": 176,
       "version": "7",
-      "when": 1795207581621,
-      "tag": "0176_book_request_saved_views",
+      "when": 1795039737661,
+      "tag": "0176_person_name_key_indexes",
       "breakpoints": true
     },
     {
       "idx": 177,
       "version": "7",
-      "when": 1795208023086,
-      "tag": "0177_book_pinned_primary_file",
+      "when": 1795207581621,
+      "tag": "0177_book_request_saved_views",
       "breakpoints": true
     },
     {
       "idx": 178,
       "version": "7",
+      "when": 1795208023086,
+      "tag": "0178_book_pinned_primary_file",
+      "breakpoints": true
+    },
+    {
+      "idx": 179,
+      "version": "7",
       "when": 1795448155528,
-      "tag": "0178_scan_job_changes",
+      "tag": "0179_scan_job_changes",
       "breakpoints": true
     }
   ]

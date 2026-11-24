@@ -11,7 +11,7 @@ sides, exactly once, with upstream's first:
 
 1. Keep upstream's entries exactly as upstream has them: same numbers, tags and order.
 2. Put the fork's own migrations after upstream's newest one, renumbered to follow it (since the
-   2026-11-18 sync they are 0162 to 0174). Rename only the `.sql` file, the matching
+   2026-11-24 sync they start at 0163, after upstream's 0162). Rename only the `.sql` file, the matching
    `meta/NNNN_snapshot.json` file and the entry's `idx` and `tag`. Never change a fork migration's SQL
    or its `when`: databases record migrations by both, so a changed one would look new and run again.
 3. Renumber `idx` from 0 with no gaps.

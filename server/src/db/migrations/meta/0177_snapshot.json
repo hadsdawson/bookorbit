@@ -1,6 +1,6 @@
 {
-  "id": "28a719c0-bdbb-423b-82b4-866c62ca1abf",
-  "prevId": "242190db-bc5f-41b8-8690-daea2d1352be",
+  "id": "242190db-bc5f-41b8-8690-daea2d1352be",
+  "prevId": "7bcce0f8-1795-41e1-9dda-88a6985b39a6",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -43,12 +43,8 @@
           "name": "api_key_libraries_api_key_id_api_keys_id_fk",
           "tableFrom": "api_key_libraries",
           "tableTo": "api_keys",
-          "columnsFrom": [
-            "api_key_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["api_key_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -56,12 +52,8 @@
           "name": "api_key_libraries_library_id_libraries_id_fk",
           "tableFrom": "api_key_libraries",
           "tableTo": "libraries",
-          "columnsFrom": [
-            "library_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["library_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -69,10 +61,7 @@
       "compositePrimaryKeys": {
         "api_key_libraries_api_key_id_library_id_pk": {
           "name": "api_key_libraries_api_key_id_library_id_pk",
-          "columns": [
-            "api_key_id",
-            "library_id"
-          ]
+          "columns": ["api_key_id", "library_id"]
         }
       },
       "uniqueConstraints": {},
@@ -225,12 +214,8 @@
           "name": "api_keys_user_id_users_id_fk",
           "tableFrom": "api_keys",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -238,12 +223,8 @@
           "name": "api_keys_created_by_users_id_fk",
           "tableFrom": "api_keys",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -253,9 +234,7 @@
         "api_keys_token_hash_unique": {
           "name": "api_keys_token_hash_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token_hash"
-          ]
+          "columns": ["token_hash"]
         }
       },
       "policies": {},
@@ -538,12 +517,8 @@
           "name": "bulk_runs_requested_by_users_id_fk",
           "tableFrom": "bulk_runs",
           "tableTo": "users",
-          "columnsFrom": [
-            "requested_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["requested_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -551,12 +526,8 @@
           "name": "bulk_runs_api_key_id_api_keys_id_fk",
           "tableFrom": "bulk_runs",
           "tableTo": "api_keys",
-          "columnsFrom": [
-            "api_key_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["api_key_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -923,12 +894,8 @@
           "name": "audit_log_user_id_users_id_fk",
           "tableFrom": "audit_log",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -936,12 +903,8 @@
           "name": "audit_log_api_key_id_api_keys_id_fk",
           "tableFrom": "audit_log",
           "tableTo": "api_keys",
-          "columnsFrom": [
-            "api_key_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["api_key_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -989,9 +952,7 @@
         "app_settings_key_unique": {
           "name": "app_settings_key_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "key"
-          ]
+          "columns": ["key"]
         }
       },
       "policies": {},
@@ -1096,12 +1057,8 @@
           "name": "auth_sessions_user_id_users_id_fk",
           "tableFrom": "auth_sessions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1223,12 +1180,8 @@
           "name": "magic_access_tokens_user_id_users_id_fk",
           "tableFrom": "magic_access_tokens",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1236,12 +1189,8 @@
           "name": "magic_access_tokens_created_by_users_id_fk",
           "tableFrom": "magic_access_tokens",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1251,9 +1200,7 @@
         "magic_access_tokens_token_hash_unique": {
           "name": "magic_access_tokens_token_hash_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token_hash"
-          ]
+          "columns": ["token_hash"]
         }
       },
       "policies": {},
@@ -1344,12 +1291,8 @@
           "name": "password_reset_tokens_user_id_users_id_fk",
           "tableFrom": "password_reset_tokens",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1359,9 +1302,7 @@
         "password_reset_tokens_token_hash_unique": {
           "name": "password_reset_tokens_token_hash_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token_hash"
-          ]
+          "columns": ["token_hash"]
         }
       },
       "policies": {},
@@ -1492,12 +1433,8 @@
           "name": "refresh_tokens_user_id_users_id_fk",
           "tableFrom": "refresh_tokens",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1505,12 +1442,8 @@
           "name": "refresh_tokens_session_id_auth_sessions_id_fk",
           "tableFrom": "refresh_tokens",
           "tableTo": "auth_sessions",
-          "columnsFrom": [
-            "session_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1520,9 +1453,7 @@
         "refresh_tokens_token_hash_unique": {
           "name": "refresh_tokens_token_hash_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token_hash"
-          ]
+          "columns": ["token_hash"]
         }
       },
       "policies": {},
@@ -1584,12 +1515,8 @@
           "name": "user_content_filter_genres_user_id_users_id_fk",
           "tableFrom": "user_content_filter_genres",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1597,12 +1524,8 @@
           "name": "user_content_filter_genres_genre_id_genres_id_fk",
           "tableFrom": "user_content_filter_genres",
           "tableTo": "genres",
-          "columnsFrom": [
-            "genre_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["genre_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1610,11 +1533,7 @@
       "compositePrimaryKeys": {
         "user_content_filter_genres_user_id_filter_type_genre_id_pk": {
           "name": "user_content_filter_genres_user_id_filter_type_genre_id_pk",
-          "columns": [
-            "user_id",
-            "filter_type",
-            "genre_id"
-          ]
+          "columns": ["user_id", "filter_type", "genre_id"]
         }
       },
       "uniqueConstraints": {},
@@ -1668,12 +1587,8 @@
           "name": "user_content_filter_tags_user_id_users_id_fk",
           "tableFrom": "user_content_filter_tags",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1681,12 +1596,8 @@
           "name": "user_content_filter_tags_tag_id_tags_id_fk",
           "tableFrom": "user_content_filter_tags",
           "tableTo": "tags",
-          "columnsFrom": [
-            "tag_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tag_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1694,11 +1605,7 @@
       "compositePrimaryKeys": {
         "user_content_filter_tags_user_id_filter_type_tag_id_pk": {
           "name": "user_content_filter_tags_user_id_filter_type_tag_id_pk",
-          "columns": [
-            "user_id",
-            "filter_type",
-            "tag_id"
-          ]
+          "columns": ["user_id", "filter_type", "tag_id"]
         }
       },
       "uniqueConstraints": {},
@@ -1759,12 +1666,8 @@
           "name": "user_library_access_user_id_users_id_fk",
           "tableFrom": "user_library_access",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1772,12 +1675,8 @@
           "name": "user_library_access_library_id_libraries_id_fk",
           "tableFrom": "user_library_access",
           "tableTo": "libraries",
-          "columnsFrom": [
-            "library_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["library_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1785,10 +1684,7 @@
       "compositePrimaryKeys": {
         "user_library_access_user_id_library_id_pk": {
           "name": "user_library_access_user_id_library_id_pk",
-          "columns": [
-            "user_id",
-            "library_id"
-          ]
+          "columns": ["user_id", "library_id"]
         }
       },
       "uniqueConstraints": {},
@@ -1819,12 +1715,8 @@
           "name": "user_permissions_user_id_users_id_fk",
           "tableFrom": "user_permissions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1832,10 +1724,7 @@
       "compositePrimaryKeys": {
         "user_permissions_user_id_permission_name_pk": {
           "name": "user_permissions_user_id_permission_name_pk",
-          "columns": [
-            "user_id",
-            "permission_name"
-          ]
+          "columns": ["user_id", "permission_name"]
         }
       },
       "uniqueConstraints": {},
@@ -2089,16 +1978,12 @@
         "users_username_unique": {
           "name": "users_username_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "username"
-          ]
+          "columns": ["username"]
         },
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -2229,12 +2114,8 @@
           "name": "comic_metadata_book_id_books_id_fk",
           "tableFrom": "comic_metadata",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2244,9 +2125,7 @@
         "comic_metadata_book_id_unique": {
           "name": "comic_metadata_book_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "book_id"
-          ]
+          "columns": ["book_id"]
         }
       },
       "policies": {},
@@ -2323,12 +2202,8 @@
           "name": "book_custom_metadata_values_book_id_books_id_fk",
           "tableFrom": "book_custom_metadata_values",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2336,12 +2211,8 @@
           "name": "book_custom_metadata_values_field_id_custom_metadata_fields_id_fk",
           "tableFrom": "book_custom_metadata_values",
           "tableTo": "custom_metadata_fields",
-          "columnsFrom": [
-            "field_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["field_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2349,10 +2220,7 @@
       "compositePrimaryKeys": {
         "book_custom_metadata_values_book_id_field_id_pk": {
           "name": "book_custom_metadata_values_book_id_field_id_pk",
-          "columns": [
-            "book_id",
-            "field_id"
-          ]
+          "columns": ["book_id", "field_id"]
         }
       },
       "uniqueConstraints": {},
@@ -2576,12 +2444,8 @@
           "name": "custom_metadata_library_fields_field_id_custom_metadata_fields_id_fk",
           "tableFrom": "custom_metadata_library_fields",
           "tableTo": "custom_metadata_fields",
-          "columnsFrom": [
-            "field_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["field_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2589,12 +2453,8 @@
           "name": "custom_metadata_library_fields_library_id_libraries_id_fk",
           "tableFrom": "custom_metadata_library_fields",
           "tableTo": "libraries",
-          "columnsFrom": [
-            "library_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["library_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2602,10 +2462,7 @@
       "compositePrimaryKeys": {
         "custom_metadata_library_fields_library_id_field_id_pk": {
           "name": "custom_metadata_library_fields_library_id_field_id_pk",
-          "columns": [
-            "library_id",
-            "field_id"
-          ]
+          "columns": ["library_id", "field_id"]
         }
       },
       "uniqueConstraints": {},
@@ -2843,12 +2700,8 @@
           "name": "migration_plan_artifacts_source_id_migration_sources_id_fk",
           "tableFrom": "migration_plan_artifacts",
           "tableTo": "migration_sources",
-          "columnsFrom": [
-            "source_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["source_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2856,12 +2709,8 @@
           "name": "migration_plan_artifacts_profile_id_migration_profiles_id_fk",
           "tableFrom": "migration_plan_artifacts",
           "tableTo": "migration_profiles",
-          "columnsFrom": [
-            "profile_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["profile_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2869,12 +2718,8 @@
           "name": "migration_plan_artifacts_created_by_user_id_users_id_fk",
           "tableFrom": "migration_plan_artifacts",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -2882,14 +2727,8 @@
           "name": "migration_plan_artifacts_profile_source_fk",
           "tableFrom": "migration_plan_artifacts",
           "tableTo": "migration_profiles",
-          "columnsFrom": [
-            "profile_id",
-            "source_id"
-          ],
-          "columnsTo": [
-            "id",
-            "source_id"
-          ],
+          "columnsFrom": ["profile_id", "source_id"],
+          "columnsTo": ["id", "source_id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2899,11 +2738,7 @@
         "migration_plan_artifacts_id_source_profile_unique": {
           "name": "migration_plan_artifacts_id_source_profile_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "id",
-            "source_id",
-            "profile_id"
-          ]
+          "columns": ["id", "source_id", "profile_id"]
         }
       },
       "policies": {},
@@ -3029,12 +2864,8 @@
           "name": "migration_profiles_source_id_migration_sources_id_fk",
           "tableFrom": "migration_profiles",
           "tableTo": "migration_sources",
-          "columnsFrom": [
-            "source_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["source_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3042,12 +2873,8 @@
           "name": "migration_profiles_created_by_user_id_users_id_fk",
           "tableFrom": "migration_profiles",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3057,10 +2884,7 @@
         "migration_profiles_id_source_id_unique": {
           "name": "migration_profiles_id_source_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "id",
-            "source_id"
-          ]
+          "columns": ["id", "source_id"]
         }
       },
       "policies": {},
@@ -3199,12 +3023,8 @@
           "name": "migration_run_metrics_run_id_migration_runs_id_fk",
           "tableFrom": "migration_run_metrics",
           "tableTo": "migration_runs",
-          "columnsFrom": [
-            "run_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["run_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3372,12 +3192,8 @@
           "name": "migration_runs_source_id_migration_sources_id_fk",
           "tableFrom": "migration_runs",
           "tableTo": "migration_sources",
-          "columnsFrom": [
-            "source_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["source_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3385,12 +3201,8 @@
           "name": "migration_runs_profile_id_migration_profiles_id_fk",
           "tableFrom": "migration_runs",
           "tableTo": "migration_profiles",
-          "columnsFrom": [
-            "profile_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["profile_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3398,12 +3210,8 @@
           "name": "migration_runs_plan_artifact_id_migration_plan_artifacts_id_fk",
           "tableFrom": "migration_runs",
           "tableTo": "migration_plan_artifacts",
-          "columnsFrom": [
-            "plan_artifact_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["plan_artifact_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -3411,12 +3219,8 @@
           "name": "migration_runs_triggered_by_user_id_users_id_fk",
           "tableFrom": "migration_runs",
           "tableTo": "users",
-          "columnsFrom": [
-            "triggered_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["triggered_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -3424,14 +3228,8 @@
           "name": "migration_runs_profile_source_fk",
           "tableFrom": "migration_runs",
           "tableTo": "migration_profiles",
-          "columnsFrom": [
-            "profile_id",
-            "source_id"
-          ],
-          "columnsTo": [
-            "id",
-            "source_id"
-          ],
+          "columnsFrom": ["profile_id", "source_id"],
+          "columnsTo": ["id", "source_id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -3439,16 +3237,8 @@
           "name": "migration_runs_plan_artifact_source_profile_fk",
           "tableFrom": "migration_runs",
           "tableTo": "migration_plan_artifacts",
-          "columnsFrom": [
-            "plan_artifact_id",
-            "source_id",
-            "profile_id"
-          ],
-          "columnsTo": [
-            "id",
-            "source_id",
-            "profile_id"
-          ],
+          "columnsFrom": ["plan_artifact_id", "source_id", "profile_id"],
+          "columnsTo": ["id", "source_id", "profile_id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -3572,12 +3362,8 @@
           "name": "migration_sources_created_by_user_id_users_id_fk",
           "tableFrom": "migration_sources",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -4072,12 +3858,8 @@
           "name": "library_folders_library_id_libraries_id_fk",
           "tableFrom": "library_folders",
           "tableTo": "libraries",
-          "columnsFrom": [
-            "library_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["library_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4087,10 +3869,7 @@
         "library_folders_id_library_id_unique": {
           "name": "library_folders_id_library_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "id",
-            "library_id"
-          ]
+          "columns": ["id", "library_id"]
         }
       },
       "policies": {},
@@ -4227,12 +4006,8 @@
           "name": "library_docks_library_id_libraries_id_fk",
           "tableFrom": "library_docks",
           "tableTo": "libraries",
-          "columnsFrom": [
-            "library_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["library_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4240,12 +4015,8 @@
           "name": "library_docks_target_folder_id_library_folders_id_fk",
           "tableFrom": "library_docks",
           "tableTo": "library_folders",
-          "columnsFrom": [
-            "target_folder_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["target_folder_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -4255,9 +4026,7 @@
         "library_docks_library_id_unique": {
           "name": "library_docks_library_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "library_id"
-          ]
+          "columns": ["library_id"]
         }
       },
       "policies": {},
@@ -4594,12 +4363,8 @@
           "name": "book_files_book_id_books_id_fk",
           "tableFrom": "book_files",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4607,12 +4372,8 @@
           "name": "book_files_library_folder_id_library_folders_id_fk",
           "tableFrom": "book_files",
           "tableTo": "library_folders",
-          "columnsFrom": [
-            "library_folder_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["library_folder_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4620,14 +4381,8 @@
           "name": "book_files_book_folder_consistency_fk",
           "tableFrom": "book_files",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id",
-            "library_folder_id"
-          ],
-          "columnsTo": [
-            "id",
-            "library_folder_id"
-          ],
+          "columnsFrom": ["book_id", "library_folder_id"],
+          "columnsTo": ["id", "library_folder_id"],
           "onDelete": "cascade",
           "onUpdate": "cascade"
         }
@@ -4679,12 +4434,6 @@
         },
         "primary_file_id": {
           "name": "primary_file_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "pinned_primary_file_id": {
-          "name": "pinned_primary_file_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -4898,12 +4647,8 @@
           "name": "books_library_id_libraries_id_fk",
           "tableFrom": "books",
           "tableTo": "libraries",
-          "columnsFrom": [
-            "library_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["library_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4911,12 +4656,8 @@
           "name": "books_library_folder_id_library_folders_id_fk",
           "tableFrom": "books",
           "tableTo": "library_folders",
-          "columnsFrom": [
-            "library_folder_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["library_folder_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4924,25 +4665,8 @@
           "name": "books_primary_file_id_book_files_id_fk",
           "tableFrom": "books",
           "tableTo": "book_files",
-          "columnsFrom": [
-            "primary_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "books_pinned_primary_file_id_book_files_id_fk": {
-          "name": "books_pinned_primary_file_id_book_files_id_fk",
-          "tableFrom": "books",
-          "tableTo": "book_files",
-          "columnsFrom": [
-            "pinned_primary_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["primary_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -4950,14 +4674,8 @@
           "name": "books_library_folder_library_fk",
           "tableFrom": "books",
           "tableTo": "library_folders",
-          "columnsFrom": [
-            "library_folder_id",
-            "library_id"
-          ],
-          "columnsTo": [
-            "id",
-            "library_id"
-          ],
+          "columnsFrom": ["library_folder_id", "library_id"],
+          "columnsTo": ["id", "library_id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -4967,10 +4685,7 @@
         "books_id_library_folder_id_unique": {
           "name": "books_id_library_folder_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "id",
-            "library_folder_id"
-          ]
+          "columns": ["id", "library_folder_id"]
         }
       },
       "policies": {},
@@ -5042,12 +4757,8 @@
           "name": "book_covers_book_id_books_id_fk",
           "tableFrom": "book_covers",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -5055,10 +4766,7 @@
       "compositePrimaryKeys": {
         "book_covers_book_id_medium_pk": {
           "name": "book_covers_book_id_medium_pk",
-          "columns": [
-            "book_id",
-            "medium"
-          ]
+          "columns": ["book_id", "medium"]
         }
       },
       "uniqueConstraints": {},
@@ -5152,12 +4860,8 @@
           "name": "book_duplicate_dismissals_user_id_users_id_fk",
           "tableFrom": "book_duplicate_dismissals",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5165,12 +4869,8 @@
           "name": "book_duplicate_dismissals_book_id_a_books_id_fk",
           "tableFrom": "book_duplicate_dismissals",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id_a"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id_a"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5178,12 +4878,8 @@
           "name": "book_duplicate_dismissals_book_id_b_books_id_fk",
           "tableFrom": "book_duplicate_dismissals",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id_b"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id_b"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -5191,12 +4887,7 @@
       "compositePrimaryKeys": {
         "book_duplicate_dismissals_user_id_kind_book_id_a_book_id_b_pk": {
           "name": "book_duplicate_dismissals_user_id_kind_book_id_a_book_id_b_pk",
-          "columns": [
-            "user_id",
-            "kind",
-            "book_id_a",
-            "book_id_b"
-          ]
+          "columns": ["user_id", "kind", "book_id_a", "book_id_b"]
         }
       },
       "uniqueConstraints": {},
@@ -5264,12 +4955,8 @@
           "name": "book_duplicate_group_members_group_id_book_duplicate_groups_id_fk",
           "tableFrom": "book_duplicate_group_members",
           "tableTo": "book_duplicate_groups",
-          "columnsFrom": [
-            "group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["group_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5277,12 +4964,8 @@
           "name": "book_duplicate_group_members_scan_id_book_duplicate_scans_id_fk",
           "tableFrom": "book_duplicate_group_members",
           "tableTo": "book_duplicate_scans",
-          "columnsFrom": [
-            "scan_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["scan_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5290,12 +4973,8 @@
           "name": "book_duplicate_group_members_book_id_books_id_fk",
           "tableFrom": "book_duplicate_group_members",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -5303,10 +4982,7 @@
       "compositePrimaryKeys": {
         "book_duplicate_group_members_group_id_book_id_pk": {
           "name": "book_duplicate_group_members_group_id_book_id_pk",
-          "columns": [
-            "group_id",
-            "book_id"
-          ]
+          "columns": ["group_id", "book_id"]
         }
       },
       "uniqueConstraints": {},
@@ -5523,12 +5199,8 @@
           "name": "book_duplicate_groups_scan_id_book_duplicate_scans_id_fk",
           "tableFrom": "book_duplicate_groups",
           "tableTo": "book_duplicate_scans",
-          "columnsFrom": [
-            "scan_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["scan_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5536,12 +5208,8 @@
           "name": "book_duplicate_groups_root_book_id_books_id_fk",
           "tableFrom": "book_duplicate_groups",
           "tableTo": "books",
-          "columnsFrom": [
-            "root_book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["root_book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -5673,12 +5341,8 @@
           "name": "book_duplicate_pairs_scan_id_book_duplicate_scans_id_fk",
           "tableFrom": "book_duplicate_pairs",
           "tableTo": "book_duplicate_scans",
-          "columnsFrom": [
-            "scan_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["scan_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5686,12 +5350,8 @@
           "name": "book_duplicate_pairs_group_id_book_duplicate_groups_id_fk",
           "tableFrom": "book_duplicate_pairs",
           "tableTo": "book_duplicate_groups",
-          "columnsFrom": [
-            "group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["group_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5699,12 +5359,8 @@
           "name": "book_duplicate_pairs_book_id_a_books_id_fk",
           "tableFrom": "book_duplicate_pairs",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id_a"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id_a"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5712,12 +5368,8 @@
           "name": "book_duplicate_pairs_book_id_b_books_id_fk",
           "tableFrom": "book_duplicate_pairs",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id_b"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id_b"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -5725,12 +5377,7 @@
       "compositePrimaryKeys": {
         "book_duplicate_pairs_scan_id_kind_book_id_a_book_id_b_pk": {
           "name": "book_duplicate_pairs_scan_id_kind_book_id_a_book_id_b_pk",
-          "columns": [
-            "scan_id",
-            "kind",
-            "book_id_a",
-            "book_id_b"
-          ]
+          "columns": ["scan_id", "kind", "book_id_a", "book_id_b"]
         }
       },
       "uniqueConstraints": {},
@@ -5867,12 +5514,8 @@
           "name": "book_duplicate_resolutions_user_id_users_id_fk",
           "tableFrom": "book_duplicate_resolutions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5880,12 +5523,8 @@
           "name": "book_duplicate_resolutions_scan_id_book_duplicate_scans_id_fk",
           "tableFrom": "book_duplicate_resolutions",
           "tableTo": "book_duplicate_scans",
-          "columnsFrom": [
-            "scan_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["scan_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -5974,12 +5613,8 @@
           "name": "book_duplicate_scan_keys_scan_id_book_duplicate_scans_id_fk",
           "tableFrom": "book_duplicate_scan_keys",
           "tableTo": "book_duplicate_scans",
-          "columnsFrom": [
-            "scan_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["scan_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5987,12 +5622,8 @@
           "name": "book_duplicate_scan_keys_book_id_books_id_fk",
           "tableFrom": "book_duplicate_scan_keys",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -6000,12 +5631,7 @@
       "compositePrimaryKeys": {
         "book_duplicate_scan_keys_scan_id_book_id_kind_value_pk": {
           "name": "book_duplicate_scan_keys_scan_id_book_id_kind_value_pk",
-          "columns": [
-            "scan_id",
-            "book_id",
-            "kind",
-            "value"
-          ]
+          "columns": ["scan_id", "book_id", "kind", "value"]
         }
       },
       "uniqueConstraints": {},
@@ -6159,12 +5785,8 @@
           "name": "book_duplicate_scans_user_id_users_id_fk",
           "tableFrom": "book_duplicate_scans",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -6227,12 +5849,8 @@
           "name": "book_link_groups_lead_book_id_books_id_fk",
           "tableFrom": "book_link_groups",
           "tableTo": "books",
-          "columnsFrom": [
-            "lead_book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["lead_book_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -6240,12 +5858,8 @@
           "name": "book_link_groups_created_by_user_id_users_id_fk",
           "tableFrom": "book_link_groups",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -6314,12 +5928,8 @@
           "name": "book_links_book_id_books_id_fk",
           "tableFrom": "book_links",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -6327,12 +5937,8 @@
           "name": "book_links_group_id_book_link_groups_id_fk",
           "tableFrom": "book_links",
           "tableTo": "book_link_groups",
-          "columnsFrom": [
-            "group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["group_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -6340,12 +5946,8 @@
           "name": "book_links_linked_by_user_id_users_id_fk",
           "tableFrom": "book_links",
           "tableTo": "users",
-          "columnsFrom": [
-            "linked_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["linked_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -6576,12 +6178,8 @@
           "name": "book_merge_jobs_library_id_libraries_id_fk",
           "tableFrom": "book_merge_jobs",
           "tableTo": "libraries",
-          "columnsFrom": [
-            "library_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["library_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -6589,12 +6187,8 @@
           "name": "book_merge_jobs_requested_by_user_id_users_id_fk",
           "tableFrom": "book_merge_jobs",
           "tableTo": "users",
-          "columnsFrom": [
-            "requested_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["requested_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -6684,12 +6278,8 @@
           "name": "book_merges_target_book_id_books_id_fk",
           "tableFrom": "book_merges",
           "tableTo": "books",
-          "columnsFrom": [
-            "target_book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["target_book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -6697,12 +6287,8 @@
           "name": "book_merges_merged_by_user_id_users_id_fk",
           "tableFrom": "book_merges",
           "tableTo": "users",
-          "columnsFrom": [
-            "merged_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["merged_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -6710,12 +6296,8 @@
           "name": "book_merges_job_id_book_merge_jobs_id_fk",
           "tableFrom": "book_merges",
           "tableTo": "book_merge_jobs",
-          "columnsFrom": [
-            "job_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["job_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -6860,12 +6442,8 @@
           "name": "book_move_jobs_started_by_users_id_fk",
           "tableFrom": "book_move_jobs",
           "tableTo": "users",
-          "columnsFrom": [
-            "started_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["started_by"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -6873,12 +6451,8 @@
           "name": "book_move_jobs_target_library_id_libraries_id_fk",
           "tableFrom": "book_move_jobs",
           "tableTo": "libraries",
-          "columnsFrom": [
-            "target_library_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["target_library_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -6886,12 +6460,8 @@
           "name": "book_move_jobs_target_folder_id_library_folders_id_fk",
           "tableFrom": "book_move_jobs",
           "tableTo": "library_folders",
-          "columnsFrom": [
-            "target_folder_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["target_folder_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -6984,12 +6554,8 @@
           "name": "collection_books_collection_id_collections_id_fk",
           "tableFrom": "collection_books",
           "tableTo": "collections",
-          "columnsFrom": [
-            "collection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["collection_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -6997,12 +6563,8 @@
           "name": "collection_books_book_id_books_id_fk",
           "tableFrom": "collection_books",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -7010,10 +6572,7 @@
       "compositePrimaryKeys": {
         "collection_books_collection_id_book_id_pk": {
           "name": "collection_books_collection_id_book_id_pk",
-          "columns": [
-            "collection_id",
-            "book_id"
-          ]
+          "columns": ["collection_id", "book_id"]
         }
       },
       "uniqueConstraints": {},
@@ -7180,12 +6739,8 @@
           "name": "collections_user_id_users_id_fk",
           "tableFrom": "collections",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -7242,12 +6797,8 @@
           "name": "smart_scope_kobo_subscriptions_user_id_users_id_fk",
           "tableFrom": "smart_scope_kobo_subscriptions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -7255,12 +6806,8 @@
           "name": "smart_scope_kobo_subscriptions_smart_scope_id_smart_scopes_id_fk",
           "tableFrom": "smart_scope_kobo_subscriptions",
           "tableTo": "smart_scopes",
-          "columnsFrom": [
-            "smart_scope_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["smart_scope_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -7268,10 +6815,7 @@
       "compositePrimaryKeys": {
         "smart_scope_kobo_subscriptions_user_id_smart_scope_id_pk": {
           "name": "smart_scope_kobo_subscriptions_user_id_smart_scope_id_pk",
-          "columns": [
-            "user_id",
-            "smart_scope_id"
-          ]
+          "columns": ["user_id", "smart_scope_id"]
         }
       },
       "uniqueConstraints": {},
@@ -7369,12 +6913,8 @@
           "name": "smart_scopes_user_id_users_id_fk",
           "tableFrom": "smart_scopes",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -7384,10 +6924,7 @@
         "smart_scopes_user_id_name_unique": {
           "name": "smart_scopes_user_id_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "name"
-          ]
+          "columns": ["user_id", "name"]
         }
       },
       "policies": {},
@@ -7675,12 +7212,8 @@
           "name": "book_series_memberships_book_id_books_id_fk",
           "tableFrom": "book_series_memberships",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -7688,12 +7221,8 @@
           "name": "book_series_memberships_series_id_book_series_id_fk",
           "tableFrom": "book_series_memberships",
           "tableTo": "book_series",
-          "columnsFrom": [
-            "series_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["series_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -7701,10 +7230,7 @@
       "compositePrimaryKeys": {
         "book_series_memberships_book_id_series_id_pk": {
           "name": "book_series_memberships_book_id_series_id_pk",
-          "columns": [
-            "book_id",
-            "series_id"
-          ]
+          "columns": ["book_id", "series_id"]
         }
       },
       "uniqueConstraints": {},
@@ -7779,12 +7305,8 @@
           "name": "author_aliases_author_id_authors_id_fk",
           "tableFrom": "author_aliases",
           "tableTo": "authors",
-          "columnsFrom": [
-            "author_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["author_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -7794,9 +7316,7 @@
         "author_aliases_name_key_unique": {
           "name": "author_aliases_name_key_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "name_key"
-          ]
+          "columns": ["name_key"]
         }
       },
       "policies": {},
@@ -7946,12 +7466,8 @@
           "name": "author_enrichment_queue_author_id_authors_id_fk",
           "tableFrom": "author_enrichment_queue",
           "tableTo": "authors",
-          "columnsFrom": [
-            "author_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["author_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -8021,12 +7537,8 @@
           "name": "author_pen_names_pen_name_author_id_authors_id_fk",
           "tableFrom": "author_pen_names",
           "tableTo": "authors",
-          "columnsFrom": [
-            "pen_name_author_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["pen_name_author_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -8034,12 +7546,8 @@
           "name": "author_pen_names_author_id_authors_id_fk",
           "tableFrom": "author_pen_names",
           "tableTo": "authors",
-          "columnsFrom": [
-            "author_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["author_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -8047,10 +7555,7 @@
       "compositePrimaryKeys": {
         "author_pen_names_pen_name_author_id_author_id_pk": {
           "name": "author_pen_names_pen_name_author_id_author_id_pk",
-          "columns": [
-            "pen_name_author_id",
-            "author_id"
-          ]
+          "columns": ["pen_name_author_id", "author_id"]
         }
       },
       "uniqueConstraints": {},
@@ -8221,9 +7726,7 @@
         "authors_name_unique": {
           "name": "authors_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
+          "columns": ["name"]
         }
       },
       "policies": {},
@@ -8329,12 +7832,8 @@
           "name": "book_authors_book_id_books_id_fk",
           "tableFrom": "book_authors",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -8342,12 +7841,8 @@
           "name": "book_authors_author_id_authors_id_fk",
           "tableFrom": "book_authors",
           "tableTo": "authors",
-          "columnsFrom": [
-            "author_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["author_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -8355,10 +7850,7 @@
       "compositePrimaryKeys": {
         "book_authors_book_id_author_id_pk": {
           "name": "book_authors_book_id_author_id_pk",
-          "columns": [
-            "book_id",
-            "author_id"
-          ]
+          "columns": ["book_id", "author_id"]
         }
       },
       "uniqueConstraints": {},
@@ -8510,12 +8002,8 @@
           "name": "book_chapter_jobs_book_id_books_id_fk",
           "tableFrom": "book_chapter_jobs",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -8523,12 +8011,8 @@
           "name": "book_chapter_jobs_user_id_users_id_fk",
           "tableFrom": "book_chapter_jobs",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -8631,12 +8115,8 @@
           "name": "book_chapter_versions_book_id_books_id_fk",
           "tableFrom": "book_chapter_versions",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -8644,12 +8124,8 @@
           "name": "book_chapter_versions_created_by_users_id_fk",
           "tableFrom": "book_chapter_versions",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -8814,12 +8290,8 @@
           "name": "book_community_ratings_book_id_books_id_fk",
           "tableFrom": "book_community_ratings",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -8827,10 +8299,7 @@
       "compositePrimaryKeys": {
         "book_community_ratings_book_id_provider_pk": {
           "name": "book_community_ratings_book_id_provider_pk",
-          "columns": [
-            "book_id",
-            "provider"
-          ]
+          "columns": ["book_id", "provider"]
         }
       },
       "uniqueConstraints": {},
@@ -8886,12 +8355,8 @@
           "name": "book_genres_book_id_books_id_fk",
           "tableFrom": "book_genres",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -8899,12 +8364,8 @@
           "name": "book_genres_genre_id_genres_id_fk",
           "tableFrom": "book_genres",
           "tableTo": "genres",
-          "columnsFrom": [
-            "genre_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["genre_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -8912,10 +8373,7 @@
       "compositePrimaryKeys": {
         "book_genres_book_id_genre_id_pk": {
           "name": "book_genres_book_id_genre_id_pk",
-          "columns": [
-            "book_id",
-            "genre_id"
-          ]
+          "columns": ["book_id", "genre_id"]
         }
       },
       "uniqueConstraints": {},
@@ -9840,12 +9298,8 @@
           "name": "book_metadata_book_id_books_id_fk",
           "tableFrom": "book_metadata",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -9853,12 +9307,8 @@
           "name": "book_metadata_series_id_book_series_id_fk",
           "tableFrom": "book_metadata",
           "tableTo": "book_series",
-          "columnsFrom": [
-            "series_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["series_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -9866,12 +9316,8 @@
           "name": "book_metadata_chapters_updated_by_users_id_fk",
           "tableFrom": "book_metadata",
           "tableTo": "users",
-          "columnsFrom": [
-            "chapters_updated_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["chapters_updated_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -10046,12 +9492,8 @@
           "name": "book_metadata_fetch_queue_book_id_books_id_fk",
           "tableFrom": "book_metadata_fetch_queue",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -10139,12 +9581,8 @@
           "name": "book_provider_ids_book_id_books_id_fk",
           "tableFrom": "book_provider_ids",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -10152,10 +9590,7 @@
       "compositePrimaryKeys": {
         "book_provider_ids_book_id_provider_pk": {
           "name": "book_provider_ids_book_id_provider_pk",
-          "columns": [
-            "book_id",
-            "provider"
-          ]
+          "columns": ["book_id", "provider"]
         }
       },
       "uniqueConstraints": {},
@@ -10202,12 +9637,8 @@
           "name": "book_tags_book_id_books_id_fk",
           "tableFrom": "book_tags",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -10215,12 +9646,8 @@
           "name": "book_tags_tag_id_tags_id_fk",
           "tableFrom": "book_tags",
           "tableTo": "tags",
-          "columnsFrom": [
-            "tag_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tag_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -10228,10 +9655,7 @@
       "compositePrimaryKeys": {
         "book_tags_book_id_tag_id_pk": {
           "name": "book_tags_book_id_tag_id_pk",
-          "columns": [
-            "book_id",
-            "tag_id"
-          ]
+          "columns": ["book_id", "tag_id"]
         }
       },
       "uniqueConstraints": {},
@@ -10371,12 +9795,8 @@
           "name": "chapter_lookup_queue_book_id_books_id_fk",
           "tableFrom": "chapter_lookup_queue",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -10384,12 +9804,8 @@
           "name": "chapter_lookup_queue_user_id_users_id_fk",
           "tableFrom": "chapter_lookup_queue",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -10456,9 +9872,7 @@
         "genres_name_unique": {
           "name": "genres_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
+          "columns": ["name"]
         }
       },
       "policies": {},
@@ -10521,9 +9935,7 @@
         "tags_name_unique": {
           "name": "tags_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
+          "columns": ["name"]
         }
       },
       "policies": {},
@@ -10576,12 +9988,8 @@
           "name": "book_narrators_book_id_books_id_fk",
           "tableFrom": "book_narrators",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -10589,12 +9997,8 @@
           "name": "book_narrators_narrator_id_narrators_id_fk",
           "tableFrom": "book_narrators",
           "tableTo": "narrators",
-          "columnsFrom": [
-            "narrator_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["narrator_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -10602,10 +10006,7 @@
       "compositePrimaryKeys": {
         "book_narrators_book_id_narrator_id_pk": {
           "name": "book_narrators_book_id_narrator_id_pk",
-          "columns": [
-            "book_id",
-            "narrator_id"
-          ]
+          "columns": ["book_id", "narrator_id"]
         }
       },
       "uniqueConstraints": {},
@@ -10697,9 +10098,7 @@
         "narrators_name_unique": {
           "name": "narrators_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
+          "columns": ["name"]
         }
       },
       "policies": {},
@@ -10778,12 +10177,8 @@
           "name": "library_dir_scan_state_library_folder_id_library_folders_id_fk",
           "tableFrom": "library_dir_scan_state",
           "tableTo": "library_folders",
-          "columnsFrom": [
-            "library_folder_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["library_folder_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -10935,12 +10330,8 @@
           "name": "scan_jobs_library_id_libraries_id_fk",
           "tableFrom": "scan_jobs",
           "tableTo": "libraries",
-          "columnsFrom": [
-            "library_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["library_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -11131,12 +10522,8 @@
           "name": "annotation_positions_annotation_id_annotations_id_fk",
           "tableFrom": "annotation_positions",
           "tableTo": "annotations",
-          "columnsFrom": [
-            "annotation_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["annotation_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -11144,12 +10531,8 @@
           "name": "annotation_positions_user_id_users_id_fk",
           "tableFrom": "annotation_positions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -11157,12 +10540,8 @@
           "name": "annotation_positions_book_file_id_book_files_id_fk",
           "tableFrom": "annotation_positions",
           "tableTo": "book_files",
-          "columnsFrom": [
-            "book_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -11376,12 +10755,8 @@
           "name": "annotation_sync_state_annotation_id_annotations_id_fk",
           "tableFrom": "annotation_sync_state",
           "tableTo": "annotations",
-          "columnsFrom": [
-            "annotation_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["annotation_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -11389,12 +10764,8 @@
           "name": "annotation_sync_state_user_id_users_id_fk",
           "tableFrom": "annotation_sync_state",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -11692,12 +11063,8 @@
           "name": "annotations_user_id_users_id_fk",
           "tableFrom": "annotations",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -11705,12 +11072,8 @@
           "name": "annotations_book_id_books_id_fk",
           "tableFrom": "annotations",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -11788,12 +11151,8 @@
           "name": "audiobook_manifest_revisions_book_id_books_id_fk",
           "tableFrom": "audiobook_manifest_revisions",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -11801,10 +11160,7 @@
       "compositePrimaryKeys": {
         "audiobook_manifest_revisions_book_id_revision_pk": {
           "name": "audiobook_manifest_revisions_book_id_revision_pk",
-          "columns": [
-            "book_id",
-            "revision"
-          ]
+          "columns": ["book_id", "revision"]
         }
       },
       "uniqueConstraints": {},
@@ -11934,12 +11290,8 @@
           "name": "audiobook_progress_user_id_users_id_fk",
           "tableFrom": "audiobook_progress",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -11947,12 +11299,8 @@
           "name": "audiobook_progress_book_id_books_id_fk",
           "tableFrom": "audiobook_progress",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -11960,12 +11308,8 @@
           "name": "audiobook_progress_current_file_id_book_files_id_fk",
           "tableFrom": "audiobook_progress",
           "tableTo": "book_files",
-          "columnsFrom": [
-            "current_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["current_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -11973,10 +11317,7 @@
       "compositePrimaryKeys": {
         "audiobook_progress_user_id_book_id_pk": {
           "name": "audiobook_progress_user_id_book_id_pk",
-          "columns": [
-            "user_id",
-            "book_id"
-          ]
+          "columns": ["user_id", "book_id"]
         }
       },
       "uniqueConstraints": {},
@@ -12153,12 +11494,8 @@
           "name": "book_journal_entries_user_id_users_id_fk",
           "tableFrom": "book_journal_entries",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -12166,12 +11503,8 @@
           "name": "book_journal_entries_book_id_books_id_fk",
           "tableFrom": "book_journal_entries",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -12446,12 +11779,8 @@
           "name": "bookmarks_user_id_users_id_fk",
           "tableFrom": "bookmarks",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -12459,12 +11788,8 @@
           "name": "bookmarks_book_id_books_id_fk",
           "tableFrom": "bookmarks",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -12472,12 +11797,8 @@
           "name": "bookmarks_book_file_id_book_files_id_fk",
           "tableFrom": "bookmarks",
           "tableTo": "book_files",
-          "columnsFrom": [
-            "book_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -12557,12 +11878,8 @@
           "name": "reader_default_preferences_user_id_users_id_fk",
           "tableFrom": "reader_default_preferences",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -12657,12 +11974,8 @@
           "name": "reader_preferences_user_id_users_id_fk",
           "tableFrom": "reader_preferences",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -12670,12 +11983,8 @@
           "name": "reader_preferences_book_file_id_book_files_id_fk",
           "tableFrom": "reader_preferences",
           "tableTo": "book_files",
-          "columnsFrom": [
-            "book_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -12933,12 +12242,8 @@
           "name": "reading_attempts_user_id_users_id_fk",
           "tableFrom": "reading_attempts",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -12946,12 +12251,8 @@
           "name": "reading_attempts_book_id_books_id_fk",
           "tableFrom": "reading_attempts",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -13142,12 +12443,8 @@
           "name": "reading_progress_book_file_id_book_files_id_fk",
           "tableFrom": "reading_progress",
           "tableTo": "book_files",
-          "columnsFrom": [
-            "book_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -13155,12 +12452,8 @@
           "name": "reading_progress_user_id_users_id_fk",
           "tableFrom": "reading_progress",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -13168,10 +12461,7 @@
       "compositePrimaryKeys": {
         "reading_progress_book_file_id_user_id_pk": {
           "name": "reading_progress_book_file_id_user_id_pk",
-          "columns": [
-            "book_file_id",
-            "user_id"
-          ]
+          "columns": ["book_file_id", "user_id"]
         }
       },
       "uniqueConstraints": {},
@@ -13281,12 +12571,8 @@
           "name": "reading_session_sync_cursors_user_id_users_id_fk",
           "tableFrom": "reading_session_sync_cursors",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -13294,12 +12580,8 @@
           "name": "reading_session_sync_cursors_book_id_books_id_fk",
           "tableFrom": "reading_session_sync_cursors",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -13307,12 +12589,7 @@
       "compositePrimaryKeys": {
         "reading_session_sync_cursors_user_id_book_id_source_source_device_key_pk": {
           "name": "reading_session_sync_cursors_user_id_book_id_source_source_device_key_pk",
-          "columns": [
-            "user_id",
-            "book_id",
-            "source",
-            "source_device_key"
-          ]
+          "columns": ["user_id", "book_id", "source", "source_device_key"]
         }
       },
       "uniqueConstraints": {},
@@ -13618,12 +12895,8 @@
           "name": "reading_sessions_user_id_users_id_fk",
           "tableFrom": "reading_sessions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -13631,12 +12904,8 @@
           "name": "reading_sessions_book_file_id_book_files_id_fk",
           "tableFrom": "reading_sessions",
           "tableTo": "book_files",
-          "columnsFrom": [
-            "book_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -13644,12 +12913,8 @@
           "name": "reading_sessions_book_id_books_id_fk",
           "tableFrom": "reading_sessions",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -13657,12 +12922,8 @@
           "name": "reading_sessions_attempt_id_reading_attempts_id_fk",
           "tableFrom": "reading_sessions",
           "tableTo": "reading_attempts",
-          "columnsFrom": [
-            "attempt_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["attempt_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -13778,12 +13039,8 @@
           "name": "user_book_notes_user_id_users_id_fk",
           "tableFrom": "user_book_notes",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -13791,12 +13048,8 @@
           "name": "user_book_notes_book_id_books_id_fk",
           "tableFrom": "user_book_notes",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -13804,10 +13057,7 @@
       "compositePrimaryKeys": {
         "user_book_notes_user_id_book_id_pk": {
           "name": "user_book_notes_user_id_book_id_pk",
-          "columns": [
-            "user_id",
-            "book_id"
-          ]
+          "columns": ["user_id", "book_id"]
         }
       },
       "uniqueConstraints": {},
@@ -13908,12 +13158,8 @@
           "name": "user_book_ratings_user_id_users_id_fk",
           "tableFrom": "user_book_ratings",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -13921,12 +13167,8 @@
           "name": "user_book_ratings_book_id_books_id_fk",
           "tableFrom": "user_book_ratings",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -13934,10 +13176,7 @@
       "compositePrimaryKeys": {
         "user_book_ratings_user_id_book_id_pk": {
           "name": "user_book_ratings_user_id_book_id_pk",
-          "columns": [
-            "user_id",
-            "book_id"
-          ]
+          "columns": ["user_id", "book_id"]
         }
       },
       "uniqueConstraints": {},
@@ -14003,12 +13242,8 @@
           "name": "user_book_read_aloud_sync_settings_user_id_users_id_fk",
           "tableFrom": "user_book_read_aloud_sync_settings",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -14016,12 +13251,8 @@
           "name": "user_book_read_aloud_sync_settings_book_id_books_id_fk",
           "tableFrom": "user_book_read_aloud_sync_settings",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -14029,10 +13260,7 @@
       "compositePrimaryKeys": {
         "user_book_read_aloud_sync_settings_user_id_book_id_pk": {
           "name": "user_book_read_aloud_sync_settings_user_id_book_id_pk",
-          "columns": [
-            "user_id",
-            "book_id"
-          ]
+          "columns": ["user_id", "book_id"]
         }
       },
       "uniqueConstraints": {},
@@ -14159,12 +13387,8 @@
           "name": "user_book_status_user_id_users_id_fk",
           "tableFrom": "user_book_status",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -14172,12 +13396,8 @@
           "name": "user_book_status_book_id_books_id_fk",
           "tableFrom": "user_book_status",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -14185,10 +13405,7 @@
       "compositePrimaryKeys": {
         "user_book_status_user_id_book_id_pk": {
           "name": "user_book_status_user_id_book_id_pk",
-          "columns": [
-            "user_id",
-            "book_id"
-          ]
+          "columns": ["user_id", "book_id"]
         }
       },
       "uniqueConstraints": {},
@@ -14303,12 +13520,8 @@
           "name": "user_reading_daily_stats_user_id_users_id_fk",
           "tableFrom": "user_reading_daily_stats",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -14316,12 +13529,8 @@
           "name": "user_reading_daily_stats_library_id_libraries_id_fk",
           "tableFrom": "user_reading_daily_stats",
           "tableTo": "libraries",
-          "columnsFrom": [
-            "library_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["library_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -14329,11 +13538,7 @@
       "compositePrimaryKeys": {
         "user_reading_daily_stats_user_id_library_id_day_pk": {
           "name": "user_reading_daily_stats_user_id_library_id_day_pk",
-          "columns": [
-            "user_id",
-            "library_id",
-            "day"
-          ]
+          "columns": ["user_id", "library_id", "day"]
         }
       },
       "uniqueConstraints": {},
@@ -14414,12 +13619,8 @@
           "name": "oidc_group_mappings_provider_id_oidc_providers_id_fk",
           "tableFrom": "oidc_group_mappings",
           "tableTo": "oidc_providers",
-          "columnsFrom": [
-            "provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -14557,12 +13758,8 @@
           "name": "oidc_identities_user_id_users_id_fk",
           "tableFrom": "oidc_identities",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -14570,12 +13767,8 @@
           "name": "oidc_identities_provider_id_oidc_providers_id_fk",
           "tableFrom": "oidc_identities",
           "tableTo": "oidc_providers",
-          "columnsFrom": [
-            "provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -14615,12 +13808,8 @@
           "name": "oidc_permission_grants_user_id_users_id_fk",
           "tableFrom": "oidc_permission_grants",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -14628,12 +13817,8 @@
           "name": "oidc_permission_grants_provider_id_oidc_providers_id_fk",
           "tableFrom": "oidc_permission_grants",
           "tableTo": "oidc_providers",
-          "columnsFrom": [
-            "provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -14641,11 +13826,7 @@
       "compositePrimaryKeys": {
         "oidc_permission_grants_user_id_provider_id_permission_name_pk": {
           "name": "oidc_permission_grants_user_id_provider_id_permission_name_pk",
-          "columns": [
-            "user_id",
-            "provider_id",
-            "permission_name"
-          ]
+          "columns": ["user_id", "provider_id", "permission_name"]
         }
       },
       "uniqueConstraints": {},
@@ -14778,16 +13959,12 @@
         "oidc_providers_slug_unique": {
           "name": "oidc_providers_slug_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "slug"
-          ]
+          "columns": ["slug"]
         },
         "oidc_providers_issuer_uri_unique": {
           "name": "oidc_providers_issuer_uri_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "issuer_uri"
-          ]
+          "columns": ["issuer_uri"]
         }
       },
       "policies": {},
@@ -14977,12 +14154,8 @@
           "name": "oidc_sessions_user_id_users_id_fk",
           "tableFrom": "oidc_sessions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -14990,12 +14163,8 @@
           "name": "oidc_sessions_session_id_auth_sessions_id_fk",
           "tableFrom": "oidc_sessions",
           "tableTo": "auth_sessions",
-          "columnsFrom": [
-            "session_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -15003,12 +14172,8 @@
           "name": "oidc_sessions_provider_id_oidc_providers_id_fk",
           "tableFrom": "oidc_sessions",
           "tableTo": "oidc_providers",
-          "columnsFrom": [
-            "provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -15070,12 +14235,8 @@
           "name": "oidc_states_provider_id_oidc_providers_id_fk",
           "tableFrom": "oidc_states",
           "tableTo": "oidc_providers",
-          "columnsFrom": [
-            "provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -15206,12 +14367,8 @@
           "name": "opds_users_user_id_users_id_fk",
           "tableFrom": "opds_users",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -15221,9 +14378,7 @@
         "opds_users_username_unique": {
           "name": "opds_users_username_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "username"
-          ]
+          "columns": ["username"]
         }
       },
       "policies": {},
@@ -15306,12 +14461,8 @@
           "name": "kobo_annotation_serves_user_id_users_id_fk",
           "tableFrom": "kobo_annotation_serves",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -15319,12 +14470,8 @@
           "name": "kobo_annotation_serves_book_id_books_id_fk",
           "tableFrom": "kobo_annotation_serves",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -15332,14 +14479,8 @@
           "name": "kobo_annotation_serves_owner_fk",
           "tableFrom": "kobo_annotation_serves",
           "tableTo": "kobo_devices",
-          "columnsFrom": [
-            "device_id",
-            "user_id"
-          ],
-          "columnsTo": [
-            "id",
-            "user_id"
-          ],
+          "columnsFrom": ["device_id", "user_id"],
+          "columnsTo": ["id", "user_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -15445,12 +14586,8 @@
           "name": "kobo_book_entitlements_user_id_users_id_fk",
           "tableFrom": "kobo_book_entitlements",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -15458,12 +14595,8 @@
           "name": "kobo_book_entitlements_book_id_books_id_fk",
           "tableFrom": "kobo_book_entitlements",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -15473,26 +14606,17 @@
         "kobo_book_entitlements_user_book_unique": {
           "name": "kobo_book_entitlements_user_book_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "book_id"
-          ]
+          "columns": ["user_id", "book_id"]
         },
         "kobo_book_entitlements_user_entitlement_unique": {
           "name": "kobo_book_entitlements_user_entitlement_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "entitlement_id"
-          ]
+          "columns": ["user_id", "entitlement_id"]
         },
         "kobo_book_entitlements_user_cover_unique": {
           "name": "kobo_book_entitlements_user_cover_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "cover_image_id"
-          ]
+          "columns": ["user_id", "cover_image_id"]
         }
       },
       "policies": {},
@@ -15642,12 +14766,8 @@
           "name": "kobo_bookmark_links_bookmark_id_bookmarks_id_fk",
           "tableFrom": "kobo_bookmark_links",
           "tableTo": "bookmarks",
-          "columnsFrom": [
-            "bookmark_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["bookmark_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -15655,12 +14775,8 @@
           "name": "kobo_bookmark_links_user_id_users_id_fk",
           "tableFrom": "kobo_bookmark_links",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -15668,12 +14784,8 @@
           "name": "kobo_bookmark_links_book_id_books_id_fk",
           "tableFrom": "kobo_bookmark_links",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -15681,14 +14793,8 @@
           "name": "kobo_bookmark_links_owner_fk",
           "tableFrom": "kobo_bookmark_links",
           "tableTo": "kobo_devices",
-          "columnsFrom": [
-            "device_id",
-            "user_id"
-          ],
-          "columnsTo": [
-            "id",
-            "user_id"
-          ],
+          "columnsFrom": ["device_id", "user_id"],
+          "columnsTo": ["id", "user_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -15843,12 +14949,8 @@
           "name": "kobo_device_deliveries_user_id_users_id_fk",
           "tableFrom": "kobo_device_deliveries",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -15856,12 +14958,8 @@
           "name": "kobo_device_deliveries_book_id_books_id_fk",
           "tableFrom": "kobo_device_deliveries",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -15869,12 +14967,8 @@
           "name": "kobo_device_deliveries_source_file_id_book_files_id_fk",
           "tableFrom": "kobo_device_deliveries",
           "tableTo": "book_files",
-          "columnsFrom": [
-            "source_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["source_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -15882,14 +14976,8 @@
           "name": "kobo_device_deliveries_owner_fk",
           "tableFrom": "kobo_device_deliveries",
           "tableTo": "kobo_devices",
-          "columnsFrom": [
-            "device_id",
-            "user_id"
-          ],
-          "columnsTo": [
-            "id",
-            "user_id"
-          ],
+          "columnsFrom": ["device_id", "user_id"],
+          "columnsTo": ["id", "user_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -15958,14 +15046,8 @@
           "name": "kobo_device_entitlement_tombstones_owner_fk",
           "tableFrom": "kobo_device_entitlement_tombstones",
           "tableTo": "kobo_devices",
-          "columnsFrom": [
-            "device_id",
-            "user_id"
-          ],
-          "columnsTo": [
-            "id",
-            "user_id"
-          ],
+          "columnsFrom": ["device_id", "user_id"],
+          "columnsTo": ["id", "user_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -15973,14 +15055,8 @@
           "name": "kobo_device_entitlement_tombstones_tombstone_fk",
           "tableFrom": "kobo_device_entitlement_tombstones",
           "tableTo": "kobo_entitlement_tombstones",
-          "columnsFrom": [
-            "user_id",
-            "entitlement_id"
-          ],
-          "columnsTo": [
-            "user_id",
-            "entitlement_id"
-          ],
+          "columnsFrom": ["user_id", "entitlement_id"],
+          "columnsTo": ["user_id", "entitlement_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -15988,10 +15064,7 @@
       "compositePrimaryKeys": {
         "kobo_device_entitlement_tombstones_device_id_entitlement_id_pk": {
           "name": "kobo_device_entitlement_tombstones_device_id_entitlement_id_pk",
-          "columns": [
-            "device_id",
-            "entitlement_id"
-          ]
+          "columns": ["device_id", "entitlement_id"]
         }
       },
       "uniqueConstraints": {},
@@ -16083,12 +15156,8 @@
           "name": "kobo_device_reading_states_user_id_users_id_fk",
           "tableFrom": "kobo_device_reading_states",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -16096,12 +15165,8 @@
           "name": "kobo_device_reading_states_book_id_books_id_fk",
           "tableFrom": "kobo_device_reading_states",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -16109,12 +15174,8 @@
           "name": "kobo_device_reading_states_delivery_id_kobo_device_deliveries_id_fk",
           "tableFrom": "kobo_device_reading_states",
           "tableTo": "kobo_device_deliveries",
-          "columnsFrom": [
-            "delivery_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["delivery_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -16122,14 +15183,8 @@
           "name": "kobo_device_reading_states_owner_fk",
           "tableFrom": "kobo_device_reading_states",
           "tableTo": "kobo_devices",
-          "columnsFrom": [
-            "device_id",
-            "user_id"
-          ],
-          "columnsTo": [
-            "id",
-            "user_id"
-          ],
+          "columnsFrom": ["device_id", "user_id"],
+          "columnsTo": ["id", "user_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -16137,11 +15192,7 @@
       "compositePrimaryKeys": {
         "kobo_device_reading_states_user_id_device_id_book_id_pk": {
           "name": "kobo_device_reading_states_user_id_device_id_book_id_pk",
-          "columns": [
-            "user_id",
-            "device_id",
-            "book_id"
-          ]
+          "columns": ["user_id", "device_id", "book_id"]
         }
       },
       "uniqueConstraints": {},
@@ -16219,12 +15270,8 @@
           "name": "kobo_devices_user_id_users_id_fk",
           "tableFrom": "kobo_devices",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -16234,24 +15281,17 @@
         "kobo_devices_token_unique": {
           "name": "kobo_devices_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         },
         "kobo_devices_client_device_id_unique": {
           "name": "kobo_devices_client_device_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "client_device_id"
-          ]
+          "columns": ["client_device_id"]
         },
         "kobo_devices_id_user_id_unique": {
           "name": "kobo_devices_id_user_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "id",
-            "user_id"
-          ]
+          "columns": ["id", "user_id"]
         }
       },
       "policies": {},
@@ -16316,12 +15356,8 @@
           "name": "kobo_entitlement_tombstones_user_id_users_id_fk",
           "tableFrom": "kobo_entitlement_tombstones",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -16329,10 +15365,7 @@
       "compositePrimaryKeys": {
         "kobo_entitlement_tombstones_user_id_entitlement_id_pk": {
           "name": "kobo_entitlement_tombstones_user_id_entitlement_id_pk",
-          "columns": [
-            "user_id",
-            "entitlement_id"
-          ]
+          "columns": ["user_id", "entitlement_id"]
         }
       },
       "uniqueConstraints": {},
@@ -16394,12 +15427,8 @@
           "name": "kobo_known_positions_user_id_users_id_fk",
           "tableFrom": "kobo_known_positions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -16407,12 +15436,8 @@
           "name": "kobo_known_positions_book_id_books_id_fk",
           "tableFrom": "kobo_known_positions",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -16420,14 +15445,8 @@
           "name": "kobo_known_positions_owner_fk",
           "tableFrom": "kobo_known_positions",
           "tableTo": "kobo_devices",
-          "columnsFrom": [
-            "device_id",
-            "user_id"
-          ],
-          "columnsTo": [
-            "id",
-            "user_id"
-          ],
+          "columnsFrom": ["device_id", "user_id"],
+          "columnsTo": ["id", "user_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -16435,11 +15454,7 @@
       "compositePrimaryKeys": {
         "kobo_known_positions_user_id_device_id_book_id_pk": {
           "name": "kobo_known_positions_user_id_device_id_book_id_pk",
-          "columns": [
-            "user_id",
-            "device_id",
-            "book_id"
-          ]
+          "columns": ["user_id", "device_id", "book_id"]
         }
       },
       "uniqueConstraints": {},
@@ -16491,12 +15506,8 @@
           "name": "kobo_library_snapshots_user_id_users_id_fk",
           "tableFrom": "kobo_library_snapshots",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -16506,9 +15517,7 @@
         "kobo_library_snapshots_user_id_unique": {
           "name": "kobo_library_snapshots_user_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id"
-          ]
+          "columns": ["user_id"]
         }
       },
       "policies": {},
@@ -16627,12 +15636,8 @@
           "name": "kobo_snapshot_books_snapshot_id_kobo_library_snapshots_id_fk",
           "tableFrom": "kobo_snapshot_books",
           "tableTo": "kobo_library_snapshots",
-          "columnsFrom": [
-            "snapshot_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["snapshot_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -16640,12 +15645,8 @@
           "name": "kobo_snapshot_books_book_id_books_id_fk",
           "tableFrom": "kobo_snapshot_books",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -16653,10 +15654,7 @@
       "compositePrimaryKeys": {
         "kobo_snapshot_books_snapshot_id_book_id_pk": {
           "name": "kobo_snapshot_books_snapshot_id_book_id_pk",
-          "columns": [
-            "snapshot_id",
-            "book_id"
-          ]
+          "columns": ["snapshot_id", "book_id"]
         }
       },
       "uniqueConstraints": {},
@@ -16723,12 +15721,8 @@
           "name": "kobo_device_library_snapshots_user_id_users_id_fk",
           "tableFrom": "kobo_device_library_snapshots",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -16736,14 +15730,8 @@
           "name": "kobo_device_library_snapshots_device_owner_fk",
           "tableFrom": "kobo_device_library_snapshots",
           "tableTo": "kobo_devices",
-          "columnsFrom": [
-            "device_id",
-            "user_id"
-          ],
-          "columnsTo": [
-            "id",
-            "user_id"
-          ],
+          "columnsFrom": ["device_id", "user_id"],
+          "columnsTo": ["id", "user_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -16753,9 +15741,7 @@
         "kobo_device_library_snapshots_device_id_unique": {
           "name": "kobo_device_library_snapshots_device_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "device_id"
-          ]
+          "columns": ["device_id"]
         }
       },
       "policies": {},
@@ -16856,12 +15842,8 @@
           "name": "kobo_reading_states_user_id_users_id_fk",
           "tableFrom": "kobo_reading_states",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -16869,12 +15851,8 @@
           "name": "kobo_reading_states_book_id_books_id_fk",
           "tableFrom": "kobo_reading_states",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -16884,10 +15862,7 @@
         "kobo_reading_states_user_id_book_id_unique": {
           "name": "kobo_reading_states_user_id_book_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "book_id"
-          ]
+          "columns": ["user_id", "book_id"]
         }
       },
       "policies": {},
@@ -17031,12 +16006,8 @@
           "name": "kobo_device_snapshot_books_snapshot_id_kobo_device_library_snapshots_id_fk",
           "tableFrom": "kobo_device_snapshot_books",
           "tableTo": "kobo_device_library_snapshots",
-          "columnsFrom": [
-            "snapshot_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["snapshot_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -17044,12 +16015,8 @@
           "name": "kobo_device_snapshot_books_book_id_books_id_fk",
           "tableFrom": "kobo_device_snapshot_books",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -17057,10 +16024,7 @@
       "compositePrimaryKeys": {
         "kobo_device_snapshot_books_snapshot_id_book_id_pk": {
           "name": "kobo_device_snapshot_books_snapshot_id_book_id_pk",
-          "columns": [
-            "snapshot_id",
-            "book_id"
-          ]
+          "columns": ["snapshot_id", "book_id"]
         }
       },
       "uniqueConstraints": {},
@@ -17184,12 +16148,8 @@
           "name": "kobo_sync_history_user_id_users_id_fk",
           "tableFrom": "kobo_sync_history",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -17197,12 +16157,8 @@
           "name": "kobo_sync_history_device_id_kobo_devices_id_fk",
           "tableFrom": "kobo_sync_history",
           "tableTo": "kobo_devices",
-          "columnsFrom": [
-            "device_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["device_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -17332,12 +16288,8 @@
           "name": "kobo_sync_settings_user_id_users_id_fk",
           "tableFrom": "kobo_sync_settings",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -17347,9 +16299,7 @@
         "kobo_sync_settings_user_id_unique": {
           "name": "kobo_sync_settings_user_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id"
-          ]
+          "columns": ["user_id"]
         }
       },
       "policies": {},
@@ -17616,12 +16566,8 @@
           "name": "book_dock_files_target_library_id_libraries_id_fk",
           "tableFrom": "book_dock_files",
           "tableTo": "libraries",
-          "columnsFrom": [
-            "target_library_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["target_library_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -17629,12 +16575,8 @@
           "name": "book_dock_files_target_folder_id_library_folders_id_fk",
           "tableFrom": "book_dock_files",
           "tableTo": "library_folders",
-          "columnsFrom": [
-            "target_folder_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["target_folder_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -17642,12 +16584,8 @@
           "name": "book_dock_files_uploaded_by_users_id_fk",
           "tableFrom": "book_dock_files",
           "tableTo": "users",
-          "columnsFrom": [
-            "uploaded_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["uploaded_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -17655,12 +16593,8 @@
           "name": "book_dock_files_dock_id_library_docks_id_fk",
           "tableFrom": "book_dock_files",
           "tableTo": "library_docks",
-          "columnsFrom": [
-            "dock_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["dock_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -17668,12 +16602,8 @@
           "name": "book_dock_files_merged_into_id_book_dock_files_id_fk",
           "tableFrom": "book_dock_files",
           "tableTo": "book_dock_files",
-          "columnsFrom": [
-            "merged_into_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["merged_into_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -17683,16 +16613,12 @@
         "book_dock_files_absolute_path_unique": {
           "name": "book_dock_files_absolute_path_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "absolute_path"
-          ]
+          "columns": ["absolute_path"]
         },
         "book_dock_files_unit_directory_unique": {
           "name": "book_dock_files_unit_directory_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "unit_directory"
-          ]
+          "columns": ["unit_directory"]
         }
       },
       "policies": {},
@@ -17804,12 +16730,8 @@
           "name": "book_dock_kept_files_dock_id_library_docks_id_fk",
           "tableFrom": "book_dock_kept_files",
           "tableTo": "library_docks",
-          "columnsFrom": [
-            "dock_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["dock_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -17817,12 +16739,8 @@
           "name": "book_dock_kept_files_book_id_books_id_fk",
           "tableFrom": "book_dock_kept_files",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -17832,9 +16750,7 @@
         "book_dock_kept_files_absolute_path_unique": {
           "name": "book_dock_kept_files_absolute_path_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "absolute_path"
-          ]
+          "columns": ["absolute_path"]
         }
       },
       "policies": {},
@@ -17930,12 +16846,8 @@
           "name": "book_dock_unit_files_dock_file_id_book_dock_files_id_fk",
           "tableFrom": "book_dock_unit_files",
           "tableTo": "book_dock_files",
-          "columnsFrom": [
-            "dock_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["dock_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -17945,9 +16857,7 @@
         "book_dock_unit_files_absolute_path_unique": {
           "name": "book_dock_unit_files_absolute_path_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "absolute_path"
-          ]
+          "columns": ["absolute_path"]
         }
       },
       "policies": {},
@@ -17998,12 +16908,8 @@
           "name": "book_request_dedupe_aliases_request_id_book_requests_id_fk",
           "tableFrom": "book_request_dedupe_aliases",
           "tableTo": "book_requests",
-          "columnsFrom": [
-            "request_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["request_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -18011,10 +16917,7 @@
       "compositePrimaryKeys": {
         "book_request_dedupe_aliases_request_id_dedupe_key_pk": {
           "name": "book_request_dedupe_aliases_request_id_dedupe_key_pk",
-          "columns": [
-            "request_id",
-            "dedupe_key"
-          ]
+          "columns": ["request_id", "dedupe_key"]
         }
       },
       "uniqueConstraints": {},
@@ -18068,12 +16971,8 @@
           "name": "book_request_dismissals_request_id_book_requests_id_fk",
           "tableFrom": "book_request_dismissals",
           "tableTo": "book_requests",
-          "columnsFrom": [
-            "request_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["request_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -18081,12 +16980,8 @@
           "name": "book_request_dismissals_user_id_users_id_fk",
           "tableFrom": "book_request_dismissals",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -18094,10 +16989,7 @@
       "compositePrimaryKeys": {
         "book_request_dismissals_request_id_user_id_pk": {
           "name": "book_request_dismissals_request_id_user_id_pk",
-          "columns": [
-            "request_id",
-            "user_id"
-          ]
+          "columns": ["request_id", "user_id"]
         }
       },
       "uniqueConstraints": {},
@@ -18176,12 +17068,8 @@
           "name": "book_request_saved_views_user_id_users_id_fk",
           "tableFrom": "book_request_saved_views",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -18238,12 +17126,8 @@
           "name": "book_request_subscribers_request_id_book_requests_id_fk",
           "tableFrom": "book_request_subscribers",
           "tableTo": "book_requests",
-          "columnsFrom": [
-            "request_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["request_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -18251,12 +17135,8 @@
           "name": "book_request_subscribers_user_id_users_id_fk",
           "tableFrom": "book_request_subscribers",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -18264,10 +17144,7 @@
       "compositePrimaryKeys": {
         "book_request_subscribers_request_id_user_id_pk": {
           "name": "book_request_subscribers_request_id_user_id_pk",
-          "columns": [
-            "request_id",
-            "user_id"
-          ]
+          "columns": ["request_id", "user_id"]
         }
       },
       "uniqueConstraints": {},
@@ -18750,12 +17627,8 @@
           "name": "book_requests_user_id_users_id_fk",
           "tableFrom": "book_requests",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -18763,12 +17636,8 @@
           "name": "book_requests_target_library_id_libraries_id_fk",
           "tableFrom": "book_requests",
           "tableTo": "libraries",
-          "columnsFrom": [
-            "target_library_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["target_library_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -18776,12 +17645,8 @@
           "name": "book_requests_target_folder_id_library_folders_id_fk",
           "tableFrom": "book_requests",
           "tableTo": "library_folders",
-          "columnsFrom": [
-            "target_folder_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["target_folder_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -18789,12 +17654,8 @@
           "name": "book_requests_created_by_user_id_users_id_fk",
           "tableFrom": "book_requests",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -18802,12 +17663,8 @@
           "name": "book_requests_decided_by_user_id_users_id_fk",
           "tableFrom": "book_requests",
           "tableTo": "users",
-          "columnsFrom": [
-            "decided_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["decided_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -18815,12 +17672,8 @@
           "name": "book_requests_matched_book_id_books_id_fk",
           "tableFrom": "book_requests",
           "tableTo": "books",
-          "columnsFrom": [
-            "matched_book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["matched_book_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -18828,12 +17681,8 @@
           "name": "book_requests_book_dock_file_id_book_dock_files_id_fk",
           "tableFrom": "book_requests",
           "tableTo": "book_dock_files",
-          "columnsFrom": [
-            "book_dock_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_dock_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -18841,12 +17690,8 @@
           "name": "book_requests_fulfiller_user_id_users_id_fk",
           "tableFrom": "book_requests",
           "tableTo": "users",
-          "columnsFrom": [
-            "fulfiller_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["fulfiller_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -18854,12 +17699,8 @@
           "name": "book_requests_companion_request_id_book_requests_id_fk",
           "tableFrom": "book_requests",
           "tableTo": "book_requests",
-          "columnsFrom": [
-            "companion_request_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["companion_request_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -18867,12 +17708,8 @@
           "name": "book_requests_target_book_id_books_id_fk",
           "tableFrom": "book_requests",
           "tableTo": "books",
-          "columnsFrom": [
-            "target_book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["target_book_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -19199,12 +18036,8 @@
           "name": "book_request_downloads_request_id_book_requests_id_fk",
           "tableFrom": "book_request_downloads",
           "tableTo": "book_requests",
-          "columnsFrom": [
-            "request_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["request_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -19212,12 +18045,8 @@
           "name": "book_request_downloads_download_client_id_download_clients_id_fk",
           "tableFrom": "book_request_downloads",
           "tableTo": "download_clients",
-          "columnsFrom": [
-            "download_client_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["download_client_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -19225,12 +18054,8 @@
           "name": "book_request_downloads_indexer_id_request_indexers_id_fk",
           "tableFrom": "book_request_downloads",
           "tableTo": "request_indexers",
-          "columnsFrom": [
-            "indexer_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["indexer_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -19238,12 +18063,8 @@
           "name": "book_request_downloads_book_dock_file_id_book_dock_files_id_fk",
           "tableFrom": "book_request_downloads",
           "tableTo": "book_dock_files",
-          "columnsFrom": [
-            "book_dock_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_dock_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -19331,12 +18152,8 @@
           "name": "download_client_path_mappings_download_client_id_download_clients_id_fk",
           "tableFrom": "download_client_path_mappings",
           "tableTo": "download_clients",
-          "columnsFrom": [
-            "download_client_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["download_client_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -19795,12 +18612,8 @@
           "name": "request_indexers_manager_id_request_indexer_managers_id_fk",
           "tableFrom": "request_indexers",
           "tableTo": "request_indexer_managers",
-          "columnsFrom": [
-            "manager_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["manager_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -20132,12 +18945,8 @@
           "name": "file_write_log_book_id_books_id_fk",
           "tableFrom": "file_write_log",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -20145,12 +18954,8 @@
           "name": "file_write_log_book_file_id_book_files_id_fk",
           "tableFrom": "file_write_log",
           "tableTo": "book_files",
-          "columnsFrom": [
-            "book_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -20158,12 +18963,8 @@
           "name": "file_write_log_user_id_users_id_fk",
           "tableFrom": "file_write_log",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -20289,12 +19090,8 @@
           "name": "email_templates_user_id_users_id_fk",
           "tableFrom": "email_templates",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -20304,10 +19101,7 @@
         "email_templates_user_id_name_unique": {
           "name": "email_templates_user_id_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "name"
-          ]
+          "columns": ["user_id", "name"]
         }
       },
       "policies": {},
@@ -20493,12 +19287,8 @@
           "name": "email_providers_user_id_users_id_fk",
           "tableFrom": "email_providers",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -20508,18 +19298,12 @@
         "email_providers_user_id_name_unique": {
           "name": "email_providers_user_id_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "name"
-          ]
+          "columns": ["user_id", "name"]
         },
         "email_providers_id_user_id_unique": {
           "name": "email_providers_id_user_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "id",
-            "user_id"
-          ]
+          "columns": ["id", "user_id"]
         }
       },
       "policies": {},
@@ -20560,12 +19344,8 @@
           "name": "email_recipient_group_members_user_id_users_id_fk",
           "tableFrom": "email_recipient_group_members",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -20573,12 +19353,8 @@
           "name": "email_recipient_group_members_group_id_email_recipient_groups_id_fk",
           "tableFrom": "email_recipient_group_members",
           "tableTo": "email_recipient_groups",
-          "columnsFrom": [
-            "group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["group_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -20586,12 +19362,8 @@
           "name": "email_recipient_group_members_recipient_id_email_recipients_id_fk",
           "tableFrom": "email_recipient_group_members",
           "tableTo": "email_recipients",
-          "columnsFrom": [
-            "recipient_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["recipient_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -20599,14 +19371,8 @@
           "name": "email_recipient_group_members_group_user_fk",
           "tableFrom": "email_recipient_group_members",
           "tableTo": "email_recipient_groups",
-          "columnsFrom": [
-            "group_id",
-            "user_id"
-          ],
-          "columnsTo": [
-            "id",
-            "user_id"
-          ],
+          "columnsFrom": ["group_id", "user_id"],
+          "columnsTo": ["id", "user_id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -20614,14 +19380,8 @@
           "name": "email_recipient_group_members_recipient_user_fk",
           "tableFrom": "email_recipient_group_members",
           "tableTo": "email_recipients",
-          "columnsFrom": [
-            "recipient_id",
-            "user_id"
-          ],
-          "columnsTo": [
-            "id",
-            "user_id"
-          ],
+          "columnsFrom": ["recipient_id", "user_id"],
+          "columnsTo": ["id", "user_id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -20629,10 +19389,7 @@
       "compositePrimaryKeys": {
         "email_recipient_group_members_group_id_recipient_id_pk": {
           "name": "email_recipient_group_members_group_id_recipient_id_pk",
-          "columns": [
-            "group_id",
-            "recipient_id"
-          ]
+          "columns": ["group_id", "recipient_id"]
         }
       },
       "uniqueConstraints": {},
@@ -20689,12 +19446,8 @@
           "name": "email_recipient_groups_user_id_users_id_fk",
           "tableFrom": "email_recipient_groups",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -20702,12 +19455,8 @@
           "name": "email_recipient_groups_default_template_id_email_templates_id_fk",
           "tableFrom": "email_recipient_groups",
           "tableTo": "email_templates",
-          "columnsFrom": [
-            "default_template_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["default_template_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -20717,18 +19466,12 @@
         "email_recipient_groups_user_id_name_unique": {
           "name": "email_recipient_groups_user_id_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "name"
-          ]
+          "columns": ["user_id", "name"]
         },
         "email_recipient_groups_id_user_id_unique": {
           "name": "email_recipient_groups_id_user_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "id",
-            "user_id"
-          ]
+          "columns": ["id", "user_id"]
         }
       },
       "policies": {},
@@ -20853,12 +19596,8 @@
           "name": "email_recipients_user_id_users_id_fk",
           "tableFrom": "email_recipients",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -20866,12 +19605,8 @@
           "name": "email_recipients_default_template_id_email_templates_id_fk",
           "tableFrom": "email_recipients",
           "tableTo": "email_templates",
-          "columnsFrom": [
-            "default_template_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["default_template_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -20881,18 +19616,12 @@
         "email_recipients_user_id_email_unique": {
           "name": "email_recipients_user_id_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "email"
-          ]
+          "columns": ["user_id", "email"]
         },
         "email_recipients_id_user_id_unique": {
           "name": "email_recipients_id_user_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "id",
-            "user_id"
-          ]
+          "columns": ["id", "user_id"]
         }
       },
       "policies": {},
@@ -20963,12 +19692,8 @@
           "name": "email_preferences_user_id_users_id_fk",
           "tableFrom": "email_preferences",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -20976,12 +19701,8 @@
           "name": "email_preferences_default_provider_id_email_providers_id_fk",
           "tableFrom": "email_preferences",
           "tableTo": "email_providers",
-          "columnsFrom": [
-            "default_provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["default_provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -20989,12 +19710,8 @@
           "name": "email_preferences_default_recipient_id_email_recipients_id_fk",
           "tableFrom": "email_preferences",
           "tableTo": "email_recipients",
-          "columnsFrom": [
-            "default_recipient_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["default_recipient_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -21002,12 +19719,8 @@
           "name": "email_preferences_default_template_id_email_templates_id_fk",
           "tableFrom": "email_preferences",
           "tableTo": "email_templates",
-          "columnsFrom": [
-            "default_template_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["default_template_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -21015,14 +19728,8 @@
           "name": "email_preferences_default_recipient_owner_fk",
           "tableFrom": "email_preferences",
           "tableTo": "email_recipients",
-          "columnsFrom": [
-            "default_recipient_id",
-            "user_id"
-          ],
-          "columnsTo": [
-            "id",
-            "user_id"
-          ],
+          "columnsFrom": ["default_recipient_id", "user_id"],
+          "columnsTo": ["id", "user_id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -21032,9 +19739,7 @@
         "email_preferences_user_id_unique": {
           "name": "email_preferences_user_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id"
-          ]
+          "columns": ["user_id"]
         }
       },
       "policies": {},
@@ -21294,12 +19999,8 @@
           "name": "email_send_log_user_id_users_id_fk",
           "tableFrom": "email_send_log",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -21307,12 +20008,8 @@
           "name": "email_send_log_book_id_books_id_fk",
           "tableFrom": "email_send_log",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -21320,12 +20017,8 @@
           "name": "email_send_log_book_file_id_book_files_id_fk",
           "tableFrom": "email_send_log",
           "tableTo": "book_files",
-          "columnsFrom": [
-            "book_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -21333,12 +20026,8 @@
           "name": "email_send_log_provider_id_email_providers_id_fk",
           "tableFrom": "email_send_log",
           "tableTo": "email_providers",
-          "columnsFrom": [
-            "provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -21346,12 +20035,8 @@
           "name": "email_send_log_template_id_email_templates_id_fk",
           "tableFrom": "email_send_log",
           "tableTo": "email_templates",
-          "columnsFrom": [
-            "template_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["template_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -21572,12 +20257,8 @@
           "name": "notifications_user_id_users_id_fk",
           "tableFrom": "notifications",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -21685,12 +20366,8 @@
           "name": "dismissed_duplicate_pairs_dismissed_by_users_id_fk",
           "tableFrom": "dismissed_duplicate_pairs",
           "tableTo": "users",
-          "columnsFrom": [
-            "dismissed_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["dismissed_by"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -21700,11 +20377,7 @@
         "dismissed_duplicate_pairs_unique": {
           "name": "dismissed_duplicate_pairs_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "entity_type",
-            "entity_id_a",
-            "entity_id_b"
-          ]
+          "columns": ["entity_type", "entity_id_a", "entity_id_b"]
         }
       },
       "policies": {},
@@ -21808,12 +20481,8 @@
           "name": "dismissed_inline_duplicate_pairs_dismissed_by_users_id_fk",
           "tableFrom": "dismissed_inline_duplicate_pairs",
           "tableTo": "users",
-          "columnsFrom": [
-            "dismissed_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["dismissed_by"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -21823,11 +20492,7 @@
         "dismissed_inline_duplicate_pairs_unique": {
           "name": "dismissed_inline_duplicate_pairs_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "entity_type",
-            "value_a",
-            "value_b"
-          ]
+          "columns": ["entity_type", "value_a", "value_b"]
         }
       },
       "policies": {},
@@ -21947,11 +20612,7 @@
         "entity_duplicate_candidates_unique": {
           "name": "entity_duplicate_candidates_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "entity_type",
-            "entity_id_a",
-            "entity_id_b"
-          ]
+          "columns": ["entity_type", "entity_id_a", "entity_id_b"]
         }
       },
       "policies": {},
@@ -22161,12 +20822,8 @@
           "name": "server_fonts_uploaded_by_users_id_fk",
           "tableFrom": "server_fonts",
           "tableTo": "users",
-          "columnsFrom": [
-            "uploaded_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["uploaded_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -22347,12 +21004,8 @@
           "name": "user_fonts_user_id_users_id_fk",
           "tableFrom": "user_fonts",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -22464,12 +21117,8 @@
           "name": "book_file_chapters_book_file_id_book_files_id_fk",
           "tableFrom": "book_file_chapters",
           "tableTo": "book_files",
-          "columnsFrom": [
-            "book_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -22559,12 +21208,8 @@
           "name": "book_file_hash_history_book_file_id_book_files_id_fk",
           "tableFrom": "book_file_hash_history",
           "tableTo": "book_files",
-          "columnsFrom": [
-            "book_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -22705,12 +21350,8 @@
           "name": "koreader_book_hash_links_user_id_users_id_fk",
           "tableFrom": "koreader_book_hash_links",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -22718,12 +21359,8 @@
           "name": "koreader_book_hash_links_book_file_id_book_files_id_fk",
           "tableFrom": "koreader_book_hash_links",
           "tableTo": "book_files",
-          "columnsFrom": [
-            "book_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -22878,12 +21515,8 @@
           "name": "koreader_bookmark_links_bookmark_id_bookmarks_id_fk",
           "tableFrom": "koreader_bookmark_links",
           "tableTo": "bookmarks",
-          "columnsFrom": [
-            "bookmark_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["bookmark_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -22891,12 +21524,8 @@
           "name": "koreader_bookmark_links_user_id_users_id_fk",
           "tableFrom": "koreader_bookmark_links",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -22949,12 +21578,8 @@
           "name": "koreader_device_delivery_settings_user_id_users_id_fk",
           "tableFrom": "koreader_device_delivery_settings",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -22962,12 +21587,8 @@
           "name": "koreader_device_delivery_settings_credential_id_koreader_users_id_fk",
           "tableFrom": "koreader_device_delivery_settings",
           "tableTo": "koreader_users",
-          "columnsFrom": [
-            "credential_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["credential_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -22975,10 +21596,7 @@
       "compositePrimaryKeys": {
         "koreader_device_delivery_settings_user_id_device_id_pk": {
           "name": "koreader_device_delivery_settings_user_id_device_id_pk",
-          "columns": [
-            "user_id",
-            "device_id"
-          ]
+          "columns": ["user_id", "device_id"]
         }
       },
       "uniqueConstraints": {},
@@ -23027,12 +21645,8 @@
           "name": "koreader_device_names_user_id_users_id_fk",
           "tableFrom": "koreader_device_names",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -23040,10 +21654,7 @@
       "compositePrimaryKeys": {
         "koreader_device_names_user_id_device_id_pk": {
           "name": "koreader_device_names_user_id_device_id_pk",
-          "columns": [
-            "user_id",
-            "device_id"
-          ]
+          "columns": ["user_id", "device_id"]
         }
       },
       "uniqueConstraints": {},
@@ -23232,12 +21843,8 @@
           "name": "koreader_device_progress_book_file_id_book_files_id_fk",
           "tableFrom": "koreader_device_progress",
           "tableTo": "book_files",
-          "columnsFrom": [
-            "book_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -23245,12 +21852,8 @@
           "name": "koreader_device_progress_user_id_users_id_fk",
           "tableFrom": "koreader_device_progress",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -23312,12 +21915,8 @@
           "name": "koreader_device_retirements_user_id_users_id_fk",
           "tableFrom": "koreader_device_retirements",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -23325,10 +21924,7 @@
       "compositePrimaryKeys": {
         "koreader_device_retirements_user_id_device_id_pk": {
           "name": "koreader_device_retirements_user_id_device_id_pk",
-          "columns": [
-            "user_id",
-            "device_id"
-          ]
+          "columns": ["user_id", "device_id"]
         }
       },
       "uniqueConstraints": {},
@@ -23400,12 +21996,8 @@
           "name": "koreader_device_settings_user_id_users_id_fk",
           "tableFrom": "koreader_device_settings",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -23413,10 +22005,7 @@
       "compositePrimaryKeys": {
         "koreader_device_settings_user_id_device_id_pk": {
           "name": "koreader_device_settings_user_id_device_id_pk",
-          "columns": [
-            "user_id",
-            "device_id"
-          ]
+          "columns": ["user_id", "device_id"]
         }
       },
       "uniqueConstraints": {},
@@ -23510,12 +22099,8 @@
           "name": "koreader_device_sweeps_user_id_users_id_fk",
           "tableFrom": "koreader_device_sweeps",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -23523,10 +22108,7 @@
       "compositePrimaryKeys": {
         "koreader_device_sweeps_user_id_device_id_pk": {
           "name": "koreader_device_sweeps_user_id_device_id_pk",
-          "columns": [
-            "user_id",
-            "device_id"
-          ]
+          "columns": ["user_id", "device_id"]
         }
       },
       "uniqueConstraints": {},
@@ -23736,12 +22318,8 @@
           "name": "koreader_page_stats_user_id_users_id_fk",
           "tableFrom": "koreader_page_stats",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -23749,12 +22327,8 @@
           "name": "koreader_page_stats_book_file_id_book_files_id_fk",
           "tableFrom": "koreader_page_stats",
           "tableTo": "book_files",
-          "columnsFrom": [
-            "book_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -23818,14 +22392,8 @@
           "name": "koreader_progress_reset_devices_reset_fk",
           "tableFrom": "koreader_progress_reset_devices",
           "tableTo": "koreader_progress_resets",
-          "columnsFrom": [
-            "user_id",
-            "book_file_id"
-          ],
-          "columnsTo": [
-            "user_id",
-            "book_file_id"
-          ],
+          "columnsFrom": ["user_id", "book_file_id"],
+          "columnsTo": ["user_id", "book_file_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -23833,11 +22401,7 @@
       "compositePrimaryKeys": {
         "koreader_progress_reset_devices_user_id_book_file_id_device_id_pk": {
           "name": "koreader_progress_reset_devices_user_id_book_file_id_device_id_pk",
-          "columns": [
-            "user_id",
-            "book_file_id",
-            "device_id"
-          ]
+          "columns": ["user_id", "book_file_id", "device_id"]
         }
       },
       "uniqueConstraints": {},
@@ -23891,12 +22455,8 @@
           "name": "koreader_progress_resets_user_id_users_id_fk",
           "tableFrom": "koreader_progress_resets",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -23904,12 +22464,8 @@
           "name": "koreader_progress_resets_book_file_id_book_files_id_fk",
           "tableFrom": "koreader_progress_resets",
           "tableTo": "book_files",
-          "columnsFrom": [
-            "book_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -23917,10 +22473,7 @@
       "compositePrimaryKeys": {
         "koreader_progress_resets_user_id_book_file_id_pk": {
           "name": "koreader_progress_resets_user_id_book_file_id_pk",
-          "columns": [
-            "user_id",
-            "book_file_id"
-          ]
+          "columns": ["user_id", "book_file_id"]
         }
       },
       "uniqueConstraints": {},
@@ -24031,12 +22584,8 @@
           "name": "koreader_session_tombstones_user_id_users_id_fk",
           "tableFrom": "koreader_session_tombstones",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -24044,12 +22593,8 @@
           "name": "koreader_session_tombstones_book_file_id_book_files_id_fk",
           "tableFrom": "koreader_session_tombstones",
           "tableTo": "book_files",
-          "columnsFrom": [
-            "book_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -24123,12 +22668,8 @@
           "name": "koreader_unmatched_book_devices_user_id_users_id_fk",
           "tableFrom": "koreader_unmatched_book_devices",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -24136,14 +22677,8 @@
           "name": "koreader_unmatched_book_devices_user_hash_fk",
           "tableFrom": "koreader_unmatched_book_devices",
           "tableTo": "koreader_unmatched_books",
-          "columnsFrom": [
-            "user_id",
-            "hash"
-          ],
-          "columnsTo": [
-            "user_id",
-            "hash"
-          ],
+          "columnsFrom": ["user_id", "hash"],
+          "columnsTo": ["user_id", "hash"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -24151,11 +22686,7 @@
       "compositePrimaryKeys": {
         "koreader_unmatched_book_devices_user_id_hash_device_id_pk": {
           "name": "koreader_unmatched_book_devices_user_id_hash_device_id_pk",
-          "columns": [
-            "user_id",
-            "hash",
-            "device_id"
-          ]
+          "columns": ["user_id", "hash", "device_id"]
         }
       },
       "uniqueConstraints": {},
@@ -24266,12 +22797,8 @@
           "name": "koreader_unmatched_books_user_id_users_id_fk",
           "tableFrom": "koreader_unmatched_books",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -24279,10 +22806,7 @@
       "compositePrimaryKeys": {
         "koreader_unmatched_books_user_id_hash_pk": {
           "name": "koreader_unmatched_books_user_id_hash_pk",
-          "columns": [
-            "user_id",
-            "hash"
-          ]
+          "columns": ["user_id", "hash"]
         }
       },
       "uniqueConstraints": {},
@@ -24329,12 +22853,8 @@
           "name": "koreader_user_settings_user_id_users_id_fk",
           "tableFrom": "koreader_user_settings",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -24451,12 +22971,8 @@
           "name": "koreader_users_user_id_users_id_fk",
           "tableFrom": "koreader_users",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -24762,12 +23278,8 @@
           "name": "user_achievements_user_id_users_id_fk",
           "tableFrom": "user_achievements",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -24775,12 +23287,8 @@
           "name": "user_achievements_achievement_key_achievements_key_fk",
           "tableFrom": "user_achievements",
           "tableTo": "achievements",
-          "columnsFrom": [
-            "achievement_key"
-          ],
-          "columnsTo": [
-            "key"
-          ],
+          "columnsFrom": ["achievement_key"],
+          "columnsTo": ["key"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -24947,12 +23455,8 @@
           "name": "hardcover_book_state_user_id_users_id_fk",
           "tableFrom": "hardcover_book_state",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -24960,12 +23464,8 @@
           "name": "hardcover_book_state_book_id_books_id_fk",
           "tableFrom": "hardcover_book_state",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -24975,10 +23475,7 @@
         "hardcover_book_state_user_book_uidx": {
           "name": "hardcover_book_state_user_book_uidx",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "book_id"
-          ]
+          "columns": ["user_id", "book_id"]
         }
       },
       "policies": {},
@@ -25083,12 +23580,8 @@
           "name": "hardcover_user_settings_user_id_users_id_fk",
           "tableFrom": "hardcover_user_settings",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -25098,9 +23591,7 @@
         "hardcover_user_settings_user_id_unique": {
           "name": "hardcover_user_settings_user_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id"
-          ]
+          "columns": ["user_id"]
         }
       },
       "policies": {},
@@ -25176,12 +23667,8 @@
           "name": "readwise_user_settings_user_id_users_id_fk",
           "tableFrom": "readwise_user_settings",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -25191,9 +23678,7 @@
         "readwise_user_settings_user_id_unique": {
           "name": "readwise_user_settings_user_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id"
-          ]
+          "columns": ["user_id"]
         }
       },
       "policies": {},
@@ -25242,12 +23727,8 @@
           "name": "book_file_audio_timelines_file_id_book_files_id_fk",
           "tableFrom": "book_file_audio_timelines",
           "tableTo": "book_files",
-          "columnsFrom": [
-            "file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["file_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -25345,12 +23826,8 @@
           "name": "read_aloud_job_events_job_id_read_aloud_jobs_id_fk",
           "tableFrom": "read_aloud_job_events",
           "tableTo": "read_aloud_jobs",
-          "columnsFrom": [
-            "job_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["job_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -25396,12 +23873,8 @@
           "name": "read_aloud_job_reports_job_id_read_aloud_jobs_id_fk",
           "tableFrom": "read_aloud_job_reports",
           "tableTo": "read_aloud_jobs",
-          "columnsFrom": [
-            "job_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["job_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -25868,12 +24341,8 @@
           "name": "read_aloud_jobs_book_id_books_id_fk",
           "tableFrom": "read_aloud_jobs",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -25881,12 +24350,8 @@
           "name": "read_aloud_jobs_requested_by_user_id_users_id_fk",
           "tableFrom": "read_aloud_jobs",
           "tableTo": "users",
-          "columnsFrom": [
-            "requested_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["requested_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -25894,12 +24359,8 @@
           "name": "read_aloud_jobs_output_file_id_book_files_id_fk",
           "tableFrom": "read_aloud_jobs",
           "tableTo": "book_files",
-          "columnsFrom": [
-            "output_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["output_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -25907,12 +24368,8 @@
           "name": "read_aloud_jobs_replace_file_id_book_files_id_fk",
           "tableFrom": "read_aloud_jobs",
           "tableTo": "book_files",
-          "columnsFrom": [
-            "replace_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["replace_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -26100,12 +24557,8 @@
           "name": "storygraph_book_state_user_id_users_id_fk",
           "tableFrom": "storygraph_book_state",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -26113,12 +24566,8 @@
           "name": "storygraph_book_state_book_id_books_id_fk",
           "tableFrom": "storygraph_book_state",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -26128,10 +24577,7 @@
         "storygraph_book_state_user_book_uidx": {
           "name": "storygraph_book_state_user_book_uidx",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "book_id"
-          ]
+          "columns": ["user_id", "book_id"]
         }
       },
       "policies": {},
@@ -26228,12 +24674,8 @@
           "name": "storygraph_user_settings_user_id_users_id_fk",
           "tableFrom": "storygraph_user_settings",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -26243,9 +24685,7 @@
         "storygraph_user_settings_user_id_unique": {
           "name": "storygraph_user_settings_user_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id"
-          ]
+          "columns": ["user_id"]
         }
       },
       "policies": {},
@@ -26338,12 +24778,8 @@
           "name": "shared_reading_insight_view_sessions_viewer_user_id_users_id_fk",
           "tableFrom": "shared_reading_insight_view_sessions",
           "tableTo": "users",
-          "columnsFrom": [
-            "viewer_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["viewer_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -26351,12 +24787,8 @@
           "name": "shared_reading_insight_view_sessions_subject_user_id_users_id_fk",
           "tableFrom": "shared_reading_insight_view_sessions",
           "tableTo": "users",
-          "columnsFrom": [
-            "subject_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["subject_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -26431,12 +24863,8 @@
           "name": "user_preferences_user_id_users_id_fk",
           "tableFrom": "user_preferences",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -26530,12 +24958,8 @@
           "name": "tts_book_preferences_user_id_users_id_fk",
           "tableFrom": "tts_book_preferences",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -26543,12 +24967,8 @@
           "name": "tts_book_preferences_book_id_books_id_fk",
           "tableFrom": "tts_book_preferences",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -26556,12 +24976,8 @@
           "name": "tts_book_preferences_provider_id_tts_providers_id_fk",
           "tableFrom": "tts_book_preferences",
           "tableTo": "tts_providers",
-          "columnsFrom": [
-            "provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -26732,12 +25148,8 @@
           "name": "tts_reading_position_user_id_users_id_fk",
           "tableFrom": "tts_reading_position",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -26745,12 +25157,8 @@
           "name": "tts_reading_position_book_file_id_book_files_id_fk",
           "tableFrom": "tts_reading_position",
           "tableTo": "book_files",
-          "columnsFrom": [
-            "book_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -26833,12 +25241,8 @@
           "name": "tts_user_preferences_user_id_users_id_fk",
           "tableFrom": "tts_user_preferences",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -26846,12 +25250,8 @@
           "name": "tts_user_preferences_provider_id_tts_providers_id_fk",
           "tableFrom": "tts_user_preferences",
           "tableTo": "tts_providers",
-          "columnsFrom": [
-            "provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -27074,12 +25474,8 @@
           "name": "upload_sessions_user_id_users_id_fk",
           "tableFrom": "upload_sessions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -27087,12 +25483,8 @@
           "name": "upload_sessions_target_library_id_libraries_id_fk",
           "tableFrom": "upload_sessions",
           "tableTo": "libraries",
-          "columnsFrom": [
-            "target_library_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["target_library_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -27100,12 +25492,8 @@
           "name": "upload_sessions_target_folder_id_library_folders_id_fk",
           "tableFrom": "upload_sessions",
           "tableTo": "library_folders",
-          "columnsFrom": [
-            "target_folder_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["target_folder_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -27113,12 +25501,8 @@
           "name": "upload_sessions_target_book_id_books_id_fk",
           "tableFrom": "upload_sessions",
           "tableTo": "books",
-          "columnsFrom": [
-            "target_book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["target_book_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -27126,12 +25510,8 @@
           "name": "upload_sessions_result_book_id_books_id_fk",
           "tableFrom": "upload_sessions",
           "tableTo": "books",
-          "columnsFrom": [
-            "result_book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["result_book_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -27141,9 +25521,7 @@
         "upload_sessions_staging_path_unique": {
           "name": "upload_sessions_staging_path_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "staging_path"
-          ]
+          "columns": ["staging_path"]
         }
       },
       "policies": {},
@@ -27320,9 +25698,7 @@
         "provider_metadata_cache_key_hash_unique": {
           "name": "provider_metadata_cache_key_hash_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "key_hash"
-          ]
+          "columns": ["key_hash"]
         }
       },
       "policies": {},
@@ -27394,12 +25770,8 @@
           "name": "metadata_http_provider_icons_provider_id_metadata_http_providers_id_fk",
           "tableFrom": "metadata_http_provider_icons",
           "tableTo": "metadata_http_providers",
-          "columnsFrom": [
-            "provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -27534,12 +25906,8 @@
           "name": "metadata_http_providers_created_by_users_id_fk",
           "tableFrom": "metadata_http_providers",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -27633,12 +26001,8 @@
           "name": "delivery_artifacts_user_id_users_id_fk",
           "tableFrom": "delivery_artifacts",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -27646,12 +26010,8 @@
           "name": "delivery_artifacts_book_file_id_book_files_id_fk",
           "tableFrom": "delivery_artifacts",
           "tableTo": "book_files",
-          "columnsFrom": [
-            "book_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -27710,12 +26070,8 @@
           "name": "delivery_inspections_book_file_id_book_files_id_fk",
           "tableFrom": "delivery_inspections",
           "tableTo": "book_files",
-          "columnsFrom": [
-            "book_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -27881,12 +26237,8 @@
           "name": "story_edits_user_id_users_id_fk",
           "tableFrom": "story_edits",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -27894,12 +26246,8 @@
           "name": "story_edits_book_id_books_id_fk",
           "tableFrom": "story_edits",
           "tableTo": "books",
-          "columnsFrom": [
-            "book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["book_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -27907,11 +26255,7 @@
       "compositePrimaryKeys": {
         "story_edits_user_id_book_id_id_pk": {
           "name": "story_edits_user_id_book_id_id_pk",
-          "columns": [
-            "user_id",
-            "book_id",
-            "id"
-          ]
+          "columns": ["user_id", "book_id", "id"]
         }
       },
       "uniqueConstraints": {},
@@ -28458,12 +26802,8 @@
           "name": "ai_usage_connection_id_ai_connections_id_fk",
           "tableFrom": "ai_usage",
           "tableTo": "ai_connections",
-          "columnsFrom": [
-            "connection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["connection_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -28471,12 +26811,8 @@
           "name": "ai_usage_user_id_users_id_fk",
           "tableFrom": "ai_usage",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -28765,12 +27101,8 @@
           "name": "ai_artifacts_job_id_ai_jobs_id_fk",
           "tableFrom": "ai_artifacts",
           "tableTo": "ai_jobs",
-          "columnsFrom": [
-            "job_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["job_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -28862,12 +27194,8 @@
           "name": "ai_job_events_job_id_ai_jobs_id_fk",
           "tableFrom": "ai_job_events",
           "tableTo": "ai_jobs",
-          "columnsFrom": [
-            "job_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["job_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -29091,12 +27419,8 @@
           "name": "ai_job_steps_job_id_ai_jobs_id_fk",
           "tableFrom": "ai_job_steps",
           "tableTo": "ai_jobs",
-          "columnsFrom": [
-            "job_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["job_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -29478,12 +27802,8 @@
           "name": "ai_jobs_requested_by_users_id_fk",
           "tableFrom": "ai_jobs",
           "tableTo": "users",
-          "columnsFrom": [
-            "requested_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["requested_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -29625,12 +27945,8 @@
           "name": "ai_step_timings_connection_id_ai_connections_id_fk",
           "tableFrom": "ai_step_timings",
           "tableTo": "ai_connections",
-          "columnsFrom": [
-            "connection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["connection_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -29638,12 +27954,8 @@
           "name": "ai_step_timings_job_id_ai_jobs_id_fk",
           "tableFrom": "ai_step_timings",
           "tableTo": "ai_jobs",
-          "columnsFrom": [
-            "job_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["job_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -29777,12 +28089,8 @@
           "name": "book_file_texts_file_id_book_files_id_fk",
           "tableFrom": "book_file_texts",
           "tableTo": "book_files",
-          "columnsFrom": [
-            "file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["file_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -29953,12 +28261,8 @@
           "name": "story_guide_fixes_updated_by_users_id_fk",
           "tableFrom": "story_guide_fixes",
           "tableTo": "users",
-          "columnsFrom": [
-            "updated_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["updated_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -29966,10 +28270,7 @@
       "compositePrimaryKeys": {
         "story_guide_fixes_text_key_id_pk": {
           "name": "story_guide_fixes_text_key_id_pk",
-          "columns": [
-            "text_key",
-            "id"
-          ]
+          "columns": ["text_key", "id"]
         }
       },
       "uniqueConstraints": {},
@@ -30045,10 +28346,7 @@
       "compositePrimaryKeys": {
         "release_checks_kind_name_key_pk": {
           "name": "release_checks_kind_name_key_pk",
-          "columns": [
-            "kind",
-            "name_key"
-          ]
+          "columns": ["kind", "name_key"]
         }
       },
       "uniqueConstraints": {},
@@ -30171,12 +28469,8 @@
           "name": "release_follows_user_id_users_id_fk",
           "tableFrom": "release_follows",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -30184,12 +28478,8 @@
           "name": "release_follows_author_id_authors_id_fk",
           "tableFrom": "release_follows",
           "tableTo": "authors",
-          "columnsFrom": [
-            "author_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["author_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -30197,12 +28487,8 @@
           "name": "release_follows_series_id_book_series_id_fk",
           "tableFrom": "release_follows",
           "tableTo": "book_series",
-          "columnsFrom": [
-            "series_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["series_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -30248,12 +28534,8 @@
           "name": "release_user_settings_user_id_users_id_fk",
           "tableFrom": "release_user_settings",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -30309,12 +28591,8 @@
           "name": "release_user_states_user_id_users_id_fk",
           "tableFrom": "release_user_states",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -30322,12 +28600,8 @@
           "name": "release_user_states_release_id_upcoming_releases_id_fk",
           "tableFrom": "release_user_states",
           "tableTo": "upcoming_releases",
-          "columnsFrom": [
-            "release_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["release_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -30335,10 +28609,7 @@
       "compositePrimaryKeys": {
         "release_user_states_user_id_release_id_pk": {
           "name": "release_user_states_user_id_release_id_pk",
-          "columns": [
-            "user_id",
-            "release_id"
-          ]
+          "columns": ["user_id", "release_id"]
         }
       },
       "uniqueConstraints": {},
@@ -30534,12 +28805,8 @@
           "name": "upcoming_releases_owned_book_id_books_id_fk",
           "tableFrom": "upcoming_releases",
           "tableTo": "books",
-          "columnsFrom": [
-            "owned_book_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owned_book_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -30555,59 +28822,32 @@
     "public.content_filter_type": {
       "name": "content_filter_type",
       "schema": "public",
-      "values": [
-        "include",
-        "exclude"
-      ]
+      "values": ["include", "exclude"]
     },
     "public.library_access_level": {
       "name": "library_access_level",
       "schema": "public",
-      "values": [
-        "viewer",
-        "editor",
-        "owner"
-      ]
+      "values": ["viewer", "editor", "owner"]
     },
     "public.reading_insights_sharing_level": {
       "name": "reading_insights_sharing_level",
       "schema": "public",
-      "values": [
-        "private",
-        "summary",
-        "detailed"
-      ]
+      "values": ["private", "summary", "detailed"]
     },
     "public.user_avatar_source": {
       "name": "user_avatar_source",
       "schema": "public",
-      "values": [
-        "none",
-        "external",
-        "uploaded"
-      ]
+      "values": ["none", "external", "uploaded"]
     },
     "public.opds_sort_order": {
       "name": "opds_sort_order",
       "schema": "public",
-      "values": [
-        "recent",
-        "title_asc",
-        "title_desc",
-        "author_asc",
-        "author_desc",
-        "series_asc",
-        "series_desc"
-      ]
+      "values": ["recent", "title_asc", "title_desc", "author_asc", "author_desc", "series_asc", "series_desc"]
     },
     "public.book_request_media_kind": {
       "name": "book_request_media_kind",
       "schema": "public",
-      "values": [
-        "ebook",
-        "audiobook",
-        "comic"
-      ]
+      "values": ["ebook", "audiobook", "comic"]
     }
   },
   "schemas": {},

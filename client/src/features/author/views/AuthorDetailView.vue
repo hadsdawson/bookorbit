@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useWindowSize } from '@vueuse/core'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, ArrowRight, ChevronLeft, ImageMinus, Layers, LayoutGrid, Link, List, Upload } from '@lucide/vue'
@@ -65,7 +65,9 @@ const { hasPermissionInAnyLibrary } = useLibraryPermissions()
 
 const authorBooksViewMode = ref<'grid' | 'list'>('grid')
 
-const authorId = computed(() => Number(route.params.id))
+// Kept alive per path, so this page's author never changes. The shared route moves on while the
+// page is hidden, and following its `id` would load whichever author shares the next page's id.
+const authorId = shallowRef(Number(route.params.id))
 const { author, loading: loadingAuthor, error: authorError, notFound: authorNotFound, load: loadAuthor } = useAuthorDetail(authorId)
 const {
   items: books,
@@ -229,6 +231,7 @@ type BookActionType = 'quick-view' | 'edit-metadata' | 'add-to-collection' | 'mo
 const {
   pendingId: deleteBookId,
   deleting: deletingBook,
+  editions: deleteEditions,
   promptDelete,
   cancelDelete,
   confirmDelete,
@@ -245,6 +248,7 @@ const {
     author.value = {
       ...author.value,
       bookCount: Math.max(0, author.value.bookCount - 1),
+      ...(author.value.workCount === undefined ? {} : { workCount: Math.max(0, author.value.workCount - 1) }),
     }
   }
 })
@@ -357,7 +361,7 @@ function handleBookAction(book: BookCard, action: BookActionType) {
   }
 
   if (action === 'delete') {
-    promptDelete(book.id)
+    promptDelete(book.id, book)
   }
 }
 
@@ -641,16 +645,6 @@ onUnmounted(() => {
   observer?.disconnect()
   if (mergeSearchTimer) clearTimeout(mergeSearchTimer)
   cancelMetadataPreview()
-})
-
-watch(authorId, () => {
-  neighbors.value = { previous: null, next: null }
-  void loadNames()
-  void loadNeighbors()
-  selectedMergeIds.value = []
-  mergeCandidates.value = []
-  mergeQuery.value = ''
-  void Promise.all([loadAuthor(), loadBooks(true)]).then(() => loadMetadataPreview())
 })
 
 watch([sort, order, libraryId, collapseSeries], () => {
@@ -1087,5 +1081,12 @@ defineOptions({ name: 'AuthorDetailView' })
     />
 
     <DeleteBookDialog :open="deleteBookId !== null" :deleting="deletingBook" @confirm="confirmDelete" @cancel="cancelDelete" />
+    <DeleteBookDialog
+      :open="deleteBookId !== null"
+      :deleting="deletingBook"
+      :editions="deleteEditions"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
   </div>
 </template>

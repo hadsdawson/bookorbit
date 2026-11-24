@@ -25,6 +25,8 @@ const ROOT_FIELDS = [
   'publisher',
   'publishedDate',
   'publishedYear',
+  'editionName',
+  'originalPublishedYear',
   'language',
   'pageCount',
   'isbn10',
@@ -154,6 +156,8 @@ export function useMetadataEditor() {
     publisher: null as string | null,
     publishedDate: null as string | null,
     publishedYear: null as number | null,
+    editionName: null as string | null,
+    originalPublishedYear: null as number | null,
     language: null as string | null,
     pageCount: null as number | null,
     communityRatings: [] as BookCommunityRating[],
@@ -202,6 +206,7 @@ export function useMetadataEditor() {
 
   const snapshot = ref(JSON.stringify(form))
   const includeAudioMetadata = ref(false)
+  const includeNarrators = ref(false)
   let loadedBookId: number | null = null
 
   const isDirty = computed(() => JSON.stringify(form) !== snapshot.value)
@@ -213,6 +218,8 @@ export function useMetadataEditor() {
     form.publisher = book.publisher
     form.publishedDate = book.publishedDate
     form.publishedYear = book.publishedYear
+    form.editionName = book.editionName ?? null
+    form.originalPublishedYear = book.originalPublishedYear ?? null
     form.language = book.language
     form.pageCount = book.pageCount
     form.communityRatings = [...book.communityRatings]
@@ -261,6 +268,7 @@ export function useMetadataEditor() {
     form.customMetadata = (book.customMetadata ?? []).map((field) => ({ ...field }))
     // Narrators, duration and abridged are editable on every book: they can be known before the audiobook arrives.
     includeAudioMetadata.value = true
+    includeNarrators.value = true
     snapshot.value = JSON.stringify(form)
     loadedBookId = book.id
     error.value = null
@@ -311,16 +319,15 @@ export function useMetadataEditor() {
       payload.comicMetadata = comicMetadata
     }
 
-    if (includeAudioMetadata.value) {
-      const audioMetadata: Record<string, unknown> = {}
-      for (const [payloadKey, formKey] of Object.entries(AUDIO_FIELDS)) {
-        if (JSON.stringify(form[formKey]) !== JSON.stringify(previous[formKey])) {
-          audioMetadata[payloadKey] = form[formKey]
-        }
+    const audioMetadata: Record<string, unknown> = {}
+    for (const [payloadKey, formKey] of Object.entries(AUDIO_FIELDS)) {
+      const included = formKey === 'narrators' ? includeNarrators.value : includeAudioMetadata.value
+      if (included && JSON.stringify(form[formKey]) !== JSON.stringify(previous[formKey])) {
+        audioMetadata[payloadKey] = form[formKey]
       }
-      if (Object.keys(audioMetadata).length > 0) {
-        payload.audioMetadata = audioMetadata
-      }
+    }
+    if (Object.keys(audioMetadata).length > 0) {
+      payload.audioMetadata = audioMetadata
     }
 
     const externalIds = changedExternalProviderIds(form.externalProviderIds, previous.externalProviderIds)
@@ -373,5 +380,16 @@ export function useMetadataEditor() {
     }
   }
 
-  return { form, saving, error, isDirty, includeAudioMetadata: readonly(includeAudioMetadata), load, syncFromBook, reset, save }
+  return {
+    form,
+    saving,
+    error,
+    isDirty,
+    includeAudioMetadata: readonly(includeAudioMetadata),
+    includeNarrators: readonly(includeNarrators),
+    load,
+    syncFromBook,
+    reset,
+    save,
+  }
 }

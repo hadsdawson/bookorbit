@@ -1,6 +1,6 @@
 {
-  "id": "d5a9ef88-1464-4f9f-bb83-13cd72968098",
-  "prevId": "d33051c0-0718-4129-8f98-8a8aef220cd5",
+  "id": "d33051c0-0718-4129-8f98-8a8aef220cd5",
+  "prevId": "21f5fd88-aae8-4011-a19d-5be73e19e777",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3596,13 +3596,6 @@
         },
         "file_rename_enabled": {
           "name": "file_rename_enabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "rename_on_add_file": {
-          "name": "rename_on_add_file",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
