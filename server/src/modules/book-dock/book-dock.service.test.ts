@@ -4,10 +4,11 @@ import { BookDockService } from './book-dock.service';
 
 vi.mock('fs/promises', () => ({
   unlink: vi.fn(),
+  stat: vi.fn(),
   rmdir: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { rmdir, unlink } from 'fs/promises';
+import { rmdir, stat, unlink } from 'fs/promises';
 import { inspectEpubMediaOverlayFields } from '../reader/epub/epub-media-overlay-capability';
 
 vi.mock('../reader/epub/epub-media-overlay-capability', () => ({
@@ -58,6 +59,8 @@ function makeService() {
     getStatistics: vi.fn(),
     findUnitFiles: vi.fn().mockResolvedValue([]),
     findUnitFilesByDockFileIds: vi.fn().mockResolvedValue(new Map()),
+    setFileSize: vi.fn().mockResolvedValue(undefined),
+    setUnitFileSize: vi.fn().mockResolvedValue(undefined),
   };
   const ingestService = {
     retryFetch: vi.fn(),
@@ -203,6 +206,96 @@ describe('BookDockService', () => {
     expect(repo.findUnitFilesByDockFileIds).toHaveBeenCalledWith([shared.id]);
     expect(page.items[0].unitFiles).toEqual([member]);
     expect(detail.unitFiles).toEqual([member]);
+  });
+
+  describe('missing file sizes', () => {
+    const page = { page: 1, limit: 20, sort: 'createdAt' as const, order: 'desc' as const, userId: 1, canManageAll: false };
+
+    it('reads the size from disk for rows saved without one, saves it, and returns it', async () => {
+      const { service, repo } = makeService();
+      repo.findAll.mockResolvedValue({
+        items: [
+          row({ id: 1, fileSize: null, absolutePath: '/dock/a.m4b' }),
+          row({ id: 2, fileSize: 0, absolutePath: '/dock/b.m4b' }),
+          row({ id: 3, fileSize: 2048, absolutePath: '/dock/c.m4b' }),
+        ],
+        total: 3,
+      });
+      vi.mocked(stat).mockResolvedValue({ isFile: () => true, size: 408_000_000 } as never);
+
+      const result = await service.listFiles(page);
+
+      expect(result.items.map((item) => item.fileSize)).toEqual([408_000_000, 408_000_000, 2048]);
+      expect(repo.setFileSize).toHaveBeenCalledTimes(2);
+      expect(repo.setFileSize).toHaveBeenCalledWith(1, 408_000_000);
+      expect(repo.setFileSize).toHaveBeenCalledWith(2, 408_000_000);
+      expect(stat).not.toHaveBeenCalledWith('/dock/c.m4b');
+    });
+
+    it('fills in unit members that were saved without a size', async () => {
+      const { service, repo } = makeService();
+      const anchor = row({ id: 1, fileSize: 5000 });
+      const member = {
+        id: 9,
+        absolutePath: '/dock/book/track-02.mp3',
+        fileName: 'track-02.mp3',
+        fileSize: 0,
+        format: 'mp3',
+        role: 'content',
+        sortOrder: 1,
+      };
+      repo.findAll.mockResolvedValue({ items: [anchor], total: 1 });
+      repo.findUnitFilesByDockFileIds.mockResolvedValue(new Map([[1, [member]]]));
+      vi.mocked(stat).mockResolvedValue({ isFile: () => true, size: 777 } as never);
+
+      const result = await service.listFiles(page);
+
+      expect(repo.setUnitFileSize).toHaveBeenCalledWith(9, 777);
+      expect(result.items[0].unitFiles[0].fileSize).toBe(777);
+    });
+
+    it('leaves a missing or empty file alone and still lists the page', async () => {
+      const { service, repo } = makeService();
+      repo.findAll.mockResolvedValue({
+        items: [row({ id: 1, fileSize: null, absolutePath: '/dock/gone.m4b' }), row({ id: 2, fileSize: null, absolutePath: '/dock/empty.m4b' })],
+        total: 2,
+      });
+      vi.mocked(stat).mockImplementation((path) =>
+        path === '/dock/gone.m4b'
+          ? Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }))
+          : Promise.resolve({ isFile: () => true, size: 0 } as never),
+      );
+
+      const result = await service.listFiles(page);
+
+      expect(result.items.map((item) => item.fileSize)).toEqual([null, null]);
+      expect(repo.setFileSize).not.toHaveBeenCalled();
+    });
+
+    it('still shows the size when saving it fails', async () => {
+      const { service, repo } = makeService();
+      repo.findAll.mockResolvedValue({ items: [row({ id: 1, fileSize: null })], total: 1 });
+      vi.mocked(stat).mockResolvedValue({ isFile: () => true, size: 123 } as never);
+      repo.setFileSize.mockRejectedValue(new Error('db down'));
+
+      const result = await service.listFiles(page);
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].fileSize).toBeNull();
+    });
+
+    it('checks at most 50 files per page', async () => {
+      const { service, repo } = makeService();
+      repo.findAll.mockResolvedValue({
+        items: Array.from({ length: 60 }, (_, index) => row({ id: index + 1, fileSize: null, absolutePath: `/dock/${index + 1}.m4b` })),
+        total: 60,
+      });
+      vi.mocked(stat).mockResolvedValue({ isFile: () => true, size: 10 } as never);
+
+      await service.listFiles(page);
+
+      expect(stat).toHaveBeenCalledTimes(50);
+    });
   });
 
   it('says whether a single EPUB is a read-along, and never opens anything else to ask', async () => {

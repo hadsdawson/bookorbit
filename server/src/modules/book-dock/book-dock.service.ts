@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
-import { unlink } from 'fs/promises';
+import { stat, unlink } from 'fs/promises';
 import { eq, inArray } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
@@ -35,6 +35,7 @@ import type { BookDockFileRow, BookDockUnitFileRow } from '../../db/schema';
 
 type Db = NodePgDatabase<typeof schema>;
 const BULK_SELECTION_BATCH_SIZE = 500;
+const MISSING_SIZE_BATCH = 50;
 
 @Injectable()
 export class BookDockService {
@@ -65,6 +66,7 @@ export class BookDockService {
       viewer ? this.findAlsoIn(items, viewer) : Promise.resolve(new Map<number, string[]>()),
       primaries.length > 0 ? this.repo.findMergedMembers(primaries) : Promise.resolve(new Map<number, BookDockFileRow[]>()),
     ]);
+    await this.fillMissingFileSizes(items, unitFiles, merged);
 
     return {
       items: items.map((row) => ({
@@ -75,6 +77,66 @@ export class BookDockService {
       page: query.page,
       size: query.limit,
     };
+  }
+
+  /**
+   * Rows saved without a size (or with 0) show no size in the dock. The file on disk is the source
+   * of truth, so a page that lists such rows reads it once and keeps the answer. Bounded per page,
+   * and a file that is gone or truly empty is simply left alone; listing never fails over this.
+   */
+  private async fillMissingFileSizes(
+    items: BookDockFileRow[],
+    unitFiles: Map<number, BookDockUnitFileRow[]>,
+    merged: Map<number, BookDockFileRow[]>,
+  ): Promise<void> {
+    const rows = [...items, ...[...merged.values()].flat()].filter((row) => !row.fileSize).slice(0, MISSING_SIZE_BATCH);
+    const units = [...unitFiles.values()]
+      .flat()
+      .filter((file) => !file.fileSize)
+      .slice(0, MISSING_SIZE_BATCH - rows.length);
+    if (rows.length + units.length === 0) return;
+
+    const startedAt = Date.now();
+    let filled = 0;
+    let failed = 0;
+    const fill = async (path: string, save: (size: number) => Promise<void>, apply: (size: number) => void): Promise<void> => {
+      const size = await sizeOnDisk(path);
+      if (size === null) return;
+      try {
+        await save(size);
+        apply(size);
+        filled++;
+      } catch {
+        failed++;
+      }
+    };
+
+    await Promise.all([
+      ...rows.map((row) =>
+        fill(
+          row.absolutePath,
+          (size) => this.repo.setFileSize(row.id, size),
+          (size) => {
+            row.fileSize = size;
+          },
+        ),
+      ),
+      ...units.map((file) =>
+        fill(
+          file.absolutePath,
+          (size) => this.repo.setUnitFileSize(file.id, size),
+          (size) => {
+            file.fileSize = size;
+          },
+        ),
+      ),
+    ]);
+
+    if (filled > 0 || failed > 0) {
+      this.logger.log(
+        `[book_dock.fill_file_size] [end] checked=${rows.length + units.length} filled=${filled} failed=${failed} durationMs=${Date.now() - startedAt} - filled in missing file sizes from disk`,
+      );
+    }
   }
 
   /** Other libraries the viewer can see that already hold each ready file on the page. A few queries per page. */
@@ -733,6 +795,15 @@ function toDto(
       format: file.format,
     })),
   };
+}
+
+async function sizeOnDisk(path: string): Promise<number | null> {
+  try {
+    const info = await stat(path);
+    return info.isFile() && info.size > 0 ? info.size : null;
+  } catch {
+    return null;
+  }
 }
 
 async function safeUnlink(path: string): Promise<void> {
