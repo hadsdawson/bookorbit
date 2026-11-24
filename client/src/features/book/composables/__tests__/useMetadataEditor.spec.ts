@@ -133,6 +133,24 @@ describe('useMetadataEditor', () => {
     })
   })
 
+  it('edits narrators, duration and abridged on any book, even without audio files (fork)', async () => {
+    const book = makeBook()
+    apiMock.mockResolvedValue({ ok: true, json: async () => book })
+
+    const { form, includeAudioMetadata, includeNarrators, load, save } = useMetadataEditor()
+    load(book)
+    expect(includeNarrators.value).toBe(true)
+    expect(includeAudioMetadata.value).toBe(true)
+
+    form.narrators = ['Narrator One']
+    form.durationSeconds = 3600
+    await save(book.id, [])
+
+    const [, req] = apiMock.mock.calls[0] as [string, RequestInit]
+    const payload = JSON.parse(String(req.body)) as { metadata: { audioMetadata?: Record<string, unknown> } }
+    expect(payload.metadata.audioMetadata).toMatchObject({ narrators: ['Narrator One'], durationSeconds: 3600 })
+  })
+
   it('sends only changed fields in the metadata payload', async () => {
     const book = makeBook({ title: 'Original Title', publisher: 'Original Publisher' })
     apiMock.mockResolvedValue({ ok: true, json: async () => book })
@@ -149,6 +167,34 @@ describe('useMetadataEditor', () => {
       metadata: { publisher: 'Updated Publisher' },
       lockedFields: [],
     })
+  })
+
+  it('loads and saves the edition name and first published year with their locks', async () => {
+    const book = makeBook({ editionName: 'Full Cast', originalPublishedYear: null, publishedYear: 2019, publishedDate: '2019-05-01' })
+    apiMock.mockResolvedValue({ ok: true, json: async () => book })
+
+    const { form, load, save } = useMetadataEditor()
+    load(book)
+    expect(form.editionName).toBe('Full Cast')
+    expect(form.originalPublishedYear).toBeNull()
+    form.editionName = '25th Anniversary'
+    form.originalPublishedYear = 1965
+    await save(book.id, ['editionName', 'originalPublishedYear'])
+
+    const [, req] = apiMock.mock.calls[0] as [string, RequestInit]
+    expect(JSON.parse(String(req.body))).toEqual({
+      metadata: { editionName: '25th Anniversary', originalPublishedYear: 1965 },
+      lockedFields: ['editionName', 'originalPublishedYear'],
+    })
+  })
+
+  it('reads a book from an older server without the edition fields as unset', () => {
+    const { form, load, isDirty } = useMetadataEditor()
+    load(makeBook())
+
+    expect(form.editionName).toBeNull()
+    expect(form.originalPublishedYear).toBeNull()
+    expect(isDirty.value).toBe(false)
   })
 
   it('sends only changed custom metadata values in the metadata payload', async () => {

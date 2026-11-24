@@ -58,6 +58,8 @@ export class BookDetailDto {
   publisher: string | null;
   publishedDate: string | null;
   publishedYear: number | null;
+  editionName: string | null;
+  originalPublishedYear: number | null;
   language: string | null;
   pageCount: number | null;
   seriesId: number | null;
@@ -98,4 +100,5 @@ export class BookDetailDto {
   linkedBooks: LinkedBookSummary[];
   linkGroupId: number | null;
   linkIsLead: boolean;
+  linkSelf: LinkedBookSummary | null;
 }

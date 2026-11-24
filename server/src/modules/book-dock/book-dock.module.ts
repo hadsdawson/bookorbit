@@ -1,6 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 
 import { AppSettingsModule } from '../app-settings/app-settings.module';
+import { SetupOverviewModule } from '../setup-overview/setup-overview.module';
 import { AuthModule } from '../auth/auth.module';
 import { BookModule } from '../book/book.module';
 import { FileWriteModule } from '../file-write/file-write.module';
@@ -13,6 +14,7 @@ import { ScannerModule } from '../scanner/scanner.module';
 import { UploadModule } from '../upload/upload.module';
 import { UserModule } from '../user/user.module';
 import { BookDockController } from './book-dock.controller';
+import { BookDockSetupFlow } from './book-dock.setup-flow';
 import { BookDockDigestService } from './book-dock-digest.service';
 import { BookDockDuplicateService } from './book-dock-duplicate.service';
 import { BookDockEventsService } from './book-dock-events.service';
@@ -36,6 +38,7 @@ import { LibraryDockRepository } from './library-dock.repository';
 
 @Module({
   imports: [
+    SetupOverviewModule,
     UploadModule,
     ScannerModule,
     AuthModule,
@@ -51,6 +54,7 @@ import { LibraryDockRepository } from './library-dock.repository';
   ],
   controllers: [BookDockController, LibraryDockController],
   providers: [
+    BookDockSetupFlow,
     BookDockService,
     BookDockRepository,
     LibraryDockRepository,
