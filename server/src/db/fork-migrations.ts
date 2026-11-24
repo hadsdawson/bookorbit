@@ -1,10 +1,11 @@
 /**
- * Fork only. These migrations were written in this fork before upstream's 0143 to 0162 reached it,
- * and were renumbered after upstream's when the two were merged. Their SQL and journal `when` stay as
+ * Fork only. These migrations were written in this fork before some of upstream's reached it, and
+ * were renumbered after upstream's when the two were merged. Their SQL and journal `when` stay as
  * first deployed, because databases record them by both, so their times fall between upstream's
  * instead of after them. The journal tests check their order among themselves rather than against
  * upstream's entries. Databases that ran them before upstream's catch up through
- * applySkippedMigrations in server/src/scripts/skipped-migration-compatibility.ts.
+ * applySkippedMigrations in server/src/scripts/skipped-migration-compatibility.ts. The list is
+ * rewritten by src/scripts/renumber-fork-migrations.ts at each upstream merge.
  */
 export const FORK_MIGRATIONS_BEFORE_UPSTREAM_TIMES: ReadonlySet<string> = new Set([
   '0163_request_tracking_and_not_interested',

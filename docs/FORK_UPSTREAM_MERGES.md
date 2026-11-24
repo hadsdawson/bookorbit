@@ -4,14 +4,31 @@ This fork adds its own database migrations next to upstream's. Both sides number
 so a merge usually conflicts in `server/src/db/migrations/meta/_journal.json`, and sometimes in the
 `meta/*_snapshot.json` files. This page is how to settle those conflicts safely.
 
+## The quick way
+
+During the merge (before committing it), run:
+
+```bash
+cd server && npx tsx src/scripts/renumber-fork-migrations.ts --upstream upstream/main --ours HEAD
+```
+
+It does everything in "The journal" and "Snapshots" below: takes upstream's migrations, journal
+entries and snapshots exactly as upstream has them, moves the fork's own migrations to the numbers
+after upstream's newest (SQL and `when` untouched, only the file names change), links and refreshes
+the snapshots, rewrites `server/src/db/fork-migrations.ts` and stages the result. It stops with an
+error, changing nothing, if an upstream migration has the same name as a fork one or the fork lists
+upstream's migrations in a different order; those need a person. Running it twice gives the same
+result.
+
+Then check it, as in "Before merging the sync pull request" below.
+
 ## The journal
 
 `_journal.json` is the list Drizzle follows. After a merge it must hold every migration from both
 sides, exactly once, with upstream's first:
 
 1. Keep upstream's entries exactly as upstream has them: same numbers, tags and order.
-2. Put the fork's own migrations after upstream's newest one, renumbered to follow it (since the
-   2026-11-24 sync they start at 0163, after upstream's 0162). Rename only the `.sql` file, the matching
+2. Put the fork's own migrations after upstream's newest one, renumbered to follow it. Rename only the `.sql` file, the matching
    `meta/NNNN_snapshot.json` file and the entry's `idx` and `tag`. Never change a fork migration's SQL
    or its `when`: databases record migrations by both, so a changed one would look new and run again.
 3. Renumber `idx` from 0 with no gaps.
@@ -48,8 +65,10 @@ can be undone by restoring it.
 ## Before merging the sync pull request
 
 - The unit tests pass, including `migration-journal.test.ts`.
-- `cd server && pnpm db:migrate` works on a copy of a database from before the merge, when one is
-  to hand.
+- `cd server && pnpm db:generate check` reports nothing to migrate.
+- On a scratch database: migrate it with the fork's `main`, then with the sync branch. Both runs
+  succeed, and the result has the same structure as a new database migrated with the sync branch
+  alone (compare `pg_dump --schema-only` of the two). This is the same path the NAS takes.
 - New upstream migrations touch nothing the fork's own migrations changed: `book_requests`
   (`tracking_status`, `published_date`), `user_book_status` (the status check) and `libraries`
   (the `file_write_*` columns). If they do, read both before deploying.
