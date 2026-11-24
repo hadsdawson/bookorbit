@@ -415,6 +415,18 @@ export class BookDockRepository {
     return row;
   }
 
+  /** Keeps `updated_at`: the cover cache key and the status "since" time read it, and a size fix is neither. */
+  async setFileSize(id: number, fileSize: number): Promise<void> {
+    await this.db
+      .update(bookDockFiles)
+      .set({ fileSize, updatedAt: sql`${bookDockFiles.updatedAt}` })
+      .where(eq(bookDockFiles.id, id));
+  }
+
+  async setUnitFileSize(id: number, fileSize: number): Promise<void> {
+    await this.db.update(bookDockUnitFiles).set({ fileSize }).where(eq(bookDockUnitFiles.id, id));
+  }
+
   async deleteById(id: number): Promise<void> {
     await this.db.delete(bookDockFiles).where(eq(bookDockFiles.id, id));
   }
