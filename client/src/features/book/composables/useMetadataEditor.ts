@@ -10,7 +10,6 @@ import {
   type CustomMetadataBookValue,
   type CustomMetadataBookValueInput,
 } from '@bookorbit/types'
-import { hasAudioFile, hasReadAlongFile } from '@/features/book/lib/file-capabilities'
 
 export type EditableSeriesMembership = {
   seriesName: string
