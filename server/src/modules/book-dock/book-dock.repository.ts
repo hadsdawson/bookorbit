@@ -70,6 +70,11 @@ function shownInListCondition(): SQL {
   return or(isNull(bookDockFiles.mergedIntoId), eq(bookDockFiles.mergedIntoId, bookDockFiles.id))!;
 }
 
+/** Fork: the one row a merged group shows in the list, which every other file of the group hides. */
+function mergedPrimaryCondition(): SQL {
+  return eq(bookDockFiles.mergedIntoId, bookDockFiles.id);
+}
+
 /** The page's dock switcher: Unsorted, or one library dock by id. */
 export type BookDockDockFilter = number | 'unsorted';
 
@@ -98,6 +103,7 @@ export function dockFilterCondition(filter: BookDockDockFilter): SQL {
 
 /** A hold only means something on a ready file, so every hold filter reads ready files alone. */
 export function holdFilterCondition(hold: BookDockHoldFilter): SQL {
+  if (hold === 'merged') return mergedPrimaryCondition();
   const ready = eq(bookDockFiles.status, 'ready');
   if (hold === 'held') return and(ready, isNotNull(bookDockFiles.holdReason)) as SQL;
   if (hold === 'clear') return and(ready, isNull(bookDockFiles.holdReason)) as SQL;
@@ -192,6 +198,7 @@ export interface BookDockCountsByDockRow {
   onHold: number;
   ready: number;
   error: number;
+  merged: number;
 }
 
 /** Rows updated per statement when a library or folder goes away. */
@@ -763,6 +770,7 @@ export class BookDockRepository {
         onHold: sql<number>`count(*) filter (where ${bookDockFiles.status} = 'ready' and ${bookDockFiles.holdReason} is not null)`,
         ready: sql<number>`count(*) filter (where ${bookDockFiles.status} = 'ready' and ${bookDockFiles.holdReason} is null)`,
         error: sql<number>`count(*) filter (where ${bookDockFiles.status} = 'error')`,
+        merged: sql<number>`count(*) filter (where ${bookDockFiles.mergedIntoId} = ${bookDockFiles.id})`,
       })
       .from(bookDockFiles)
       .leftJoin(libraryDocks, and(isRequestImport(), eq(libraryDocks.libraryId, bookDockFiles.targetLibraryId)))
@@ -775,6 +783,7 @@ export class BookDockRepository {
       onHold: Number(r.onHold ?? 0),
       ready: Number(r.ready ?? 0),
       error: Number(r.error ?? 0),
+      merged: Number(r.merged ?? 0),
     }));
   }
 

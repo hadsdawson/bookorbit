@@ -540,7 +540,7 @@ export class BookDockService {
     const entry = (dockId: number | null) => {
       let counts = docks.get(dockId);
       if (!counts) {
-        counts = { dockId, total: 0, working: 0, onHold: 0, ready: 0, error: 0, keptForSeeding: 0, onHoldByReason: {} };
+        counts = { dockId, total: 0, working: 0, onHold: 0, ready: 0, error: 0, keptForSeeding: 0, merged: 0, onHoldByReason: {} };
         docks.set(dockId, counts);
       }
       return counts;

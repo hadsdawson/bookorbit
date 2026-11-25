@@ -206,9 +206,10 @@ export const BOOK_DOCK_UNSORTED_FILTER = "unsorted";
  * The `hold` filter on the file list, bulk actions and finalize: ready files that wait (`held`),
  * ready files that do not (`clear`), or ready files held for one reason.
  */
-export type BookDockHoldFilter = "held" | "clear" | BookDockHoldReason;
+/** Fork: `merged` is a hold-style chip too: books merged in Book Dock, filed later as one book. */
+export type BookDockHoldFilter = "held" | "clear" | "merged" | BookDockHoldReason;
 
-export const BOOK_DOCK_HOLD_FILTERS: readonly BookDockHoldFilter[] = ["held", "clear", ...BOOK_DOCK_HOLD_REASONS];
+export const BOOK_DOCK_HOLD_FILTERS: readonly BookDockHoldFilter[] = ["held", "clear", "merged", ...BOOK_DOCK_HOLD_REASONS];
 
 /** Why a dock management request was refused. Stable, so clients can show their own copy. */
 export const LIBRARY_DOCK_ERROR_CODES = [
@@ -245,6 +246,8 @@ export interface BookDockDockCounts {
   ready: number;
   error: number;
   keptForSeeding: number;
+  /** Fork: books merged in Book Dock, one per merged group. Absent on older servers. */
+  merged?: number;
   /** `onHold` split by reason. Reasons with no files are left out. Absent on older servers. */
   onHoldByReason?: Partial<Record<BookDockHoldReason, number>>;
 }

@@ -61,6 +61,7 @@ describe('useBookDockFiles views and docks', () => {
     ['working', { status: 'pending' }],
     ['ready', { hold: 'clear' }],
     ['error', { status: 'error' }],
+    ['merged', { hold: 'merged' }],
   ] as const)('asks for the %s view and keeps it for select-all', async (view, expected) => {
     respondWithNothing()
     const files = useBookDockFiles()

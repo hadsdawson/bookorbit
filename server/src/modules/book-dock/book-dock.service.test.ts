@@ -665,7 +665,7 @@ describe('BookDockService', () => {
       error: 3,
       total: 6,
       paused: false,
-      docks: [{ dockId: null, total: 0, working: 0, onHold: 0, ready: 0, error: 0, keptForSeeding: 0, onHoldByReason: {} }],
+      docks: [{ dockId: null, total: 0, working: 0, onHold: 0, ready: 0, error: 0, keptForSeeding: 0, merged: 0, onHoldByReason: {} }],
       keptForSeeding: 0,
     });
     await expect(service.getStatistics()).resolves.toEqual({ totalSizeBytes: 10, byFormat: [] });
@@ -674,7 +674,7 @@ describe('BookDockService', () => {
   it('counts each dock, Unsorted always included, with files kept for seeding for those who manage the dock', async () => {
     const { service, repo, keptFiles } = makeService();
     repo.countsByStatus.mockResolvedValue({ pending: 0, ready: 3, error: 0, total: 3 });
-    repo.countsByDock.mockResolvedValue([{ dockId: 11, total: 3, working: 0, onHold: 1, ready: 2, error: 0 }]);
+    repo.countsByDock.mockResolvedValue([{ dockId: 11, total: 3, working: 0, onHold: 1, ready: 2, error: 0, merged: 0 }]);
     repo.holdCountsByDock.mockResolvedValue([{ dockId: 11, reason: 'duplicate', count: 1 }]);
     keptFiles.countByDock.mockResolvedValue(
       new Map<number | null, number>([
@@ -690,9 +690,9 @@ describe('BookDockService', () => {
     expect(repo.holdCountsByDock).toHaveBeenCalledWith(1, true);
     expect(summary.keptForSeeding).toBe(43);
     expect(summary.docks).toEqual([
-      { dockId: null, total: 0, working: 0, onHold: 0, ready: 0, error: 0, keptForSeeding: 1, onHoldByReason: {} },
-      { dockId: 11, total: 3, working: 0, onHold: 1, ready: 2, error: 0, keptForSeeding: 40, onHoldByReason: { duplicate: 1 } },
-      { dockId: 12, total: 0, working: 0, onHold: 0, ready: 0, error: 0, keptForSeeding: 2, onHoldByReason: {} },
+      { dockId: null, total: 0, working: 0, onHold: 0, ready: 0, error: 0, keptForSeeding: 1, merged: 0, onHoldByReason: {} },
+      { dockId: 11, total: 3, working: 0, onHold: 1, ready: 2, error: 0, keptForSeeding: 40, merged: 0, onHoldByReason: { duplicate: 1 } },
+      { dockId: 12, total: 0, working: 0, onHold: 0, ready: 0, error: 0, keptForSeeding: 2, merged: 0, onHoldByReason: {} },
     ]);
   });
 
@@ -717,7 +717,7 @@ describe('BookDockService', () => {
       error: 0,
       total: 9,
       paused: true,
-      docks: [{ dockId: null, total: 0, working: 0, onHold: 0, ready: 0, error: 0, keptForSeeding: 0, onHoldByReason: {} }],
+      docks: [{ dockId: null, total: 0, working: 0, onHold: 0, ready: 0, error: 0, keptForSeeding: 0, merged: 0, onHoldByReason: {} }],
       keptForSeeding: 0,
     });
 
@@ -740,7 +740,7 @@ describe('BookDockService', () => {
       error: 1,
       total: 6,
       paused: false,
-      docks: [{ dockId: null, total: 0, working: 0, onHold: 0, ready: 0, error: 0, keptForSeeding: 0, onHoldByReason: {} }],
+      docks: [{ dockId: null, total: 0, working: 0, onHold: 0, ready: 0, error: 0, keptForSeeding: 0, merged: 0, onHoldByReason: {} }],
       keptForSeeding: 0,
     });
     await (service as any).resumeWorkPromise;
