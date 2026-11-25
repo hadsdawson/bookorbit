@@ -6,7 +6,7 @@ export type SortField = 'createdAt' | 'fileName' | 'format' | 'status' | 'fileSi
 export type SortOrder = 'asc' | 'desc'
 
 /** The chip set above the list. A held file is ready but waits, so On hold and Ready never overlap. */
-export type BookDockView = 'all' | 'onHold' | 'working' | 'ready' | 'error'
+export type BookDockView = 'all' | 'onHold' | 'working' | 'ready' | 'error' | 'merged'
 
 /** The dock switcher: every dock, Unsorted, or one library dock by id. */
 export type BookDockKey = 'all' | 'unsorted' | number
@@ -33,6 +33,8 @@ function viewFilters(view: BookDockView, reason: BookDockHoldReason | null): Pic
       return { hold: 'clear' }
     case 'error':
       return { status: 'error' }
+    case 'merged':
+      return { hold: 'merged' }
     default:
       return {}
   }

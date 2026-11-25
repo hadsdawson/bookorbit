@@ -113,7 +113,7 @@ function parseDockKey(value: unknown): BookDockKey {
   return 'all'
 }
 
-const EMPTY_COUNTS: BookDockDockCounts = { dockId: null, total: 0, working: 0, onHold: 0, ready: 0, error: 0, keptForSeeding: 0 }
+const EMPTY_COUNTS: BookDockDockCounts = { dockId: null, total: 0, working: 0, onHold: 0, ready: 0, error: 0, keptForSeeding: 0, merged: 0 }
 
 function countsFor(key: BookDockKey, source: BookDockSummary): BookDockDockCounts {
   const perDock = source.docks ?? []
@@ -126,6 +126,7 @@ function countsFor(key: BookDockKey, source: BookDockSummary): BookDockDockCount
         onHold: sum.onHold + counts.onHold,
         ready: sum.ready + counts.ready,
         error: sum.error + counts.error,
+        merged: (sum.merged ?? 0) + (counts.merged ?? 0),
         keptForSeeding: sum.keptForSeeding + counts.keptForSeeding,
         onHoldByReason: mergeReasons(sum.onHoldByReason, counts.onHoldByReason),
       }),
@@ -179,7 +180,7 @@ function viewFor(key: BookDockKey): BookDockView {
   const view = activeView.value
   if (view === 'all') return 'all'
   const counts = countsFor(key, summary.value)
-  const count = { onHold: counts.onHold, working: counts.working, ready: counts.ready, error: counts.error }[view]
+  const count = { onHold: counts.onHold, working: counts.working, ready: counts.ready, error: counts.error, merged: counts.merged ?? 0 }[view]
   return count > 0 ? view : 'all'
 }
 
@@ -343,6 +344,7 @@ const emptyMessage = computed(() => {
   if (activeView.value === 'ready') return t('bookDock.layout.empty.nothingReadyToFile')
   if (activeView.value === 'working') return t('bookDock.layout.empty.nothingWorking')
   if (activeView.value === 'error') return t('bookDock.layout.empty.nothingFailed')
+  if (activeView.value === 'merged') return t('bookDock.layout.empty.nothingMerged')
   if (currentDock.value?.entry?.dock) {
     return t('bookDock.layout.empty.dockPrompt', {
       folder: `_libraries/${currentDock.value.entry.dock.folderName}`,

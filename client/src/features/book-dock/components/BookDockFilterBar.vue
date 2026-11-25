@@ -12,6 +12,7 @@ export interface BookDockViewCounts {
   working: number
   ready: number
   error: number
+  merged?: number
 }
 
 const props = defineProps<{
@@ -46,6 +47,7 @@ const chips = computed<{ view: BookDockView; label: string; count: number; tone:
   { view: 'working', label: t('bookDock.layout.filter.working'), count: props.counts.working, tone: '' },
   { view: 'ready', label: t('bookDock.layout.filter.ready'), count: props.counts.ready, tone: '' },
   { view: 'error', label: t('bookDock.layout.filter.error'), count: props.counts.error, tone: 'text-red-600 dark:text-red-400' },
+  { view: 'merged', label: t('bookDock.layout.filter.merged'), count: props.counts.merged ?? 0, tone: '' },
 ])
 
 function countClass(chip: { view: BookDockView; count: number; tone: string }): string {

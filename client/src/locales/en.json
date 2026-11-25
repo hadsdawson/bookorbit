@@ -11119,7 +11119,8 @@
         "ready": "Ready",
         "error": "Error",
         "onHold": "On hold",
-        "working": "Working"
+        "working": "Working",
+        "merged": "Merged"
       },
       "working": {
         "label": "{count} working"
@@ -11154,6 +11155,7 @@
         "nothingOnHold": "Nothing is on hold.",
         "nothingWorking": "Nothing is being read or matched right now.",
         "nothingFailed": "No files failed.",
+        "nothingMerged": "No books are merged.",
         "dockTitle": "Nothing in the {dock} dock",
         "dockPrompt": "Drop files into {folder} or upload them here, and they are matched and filed into {library}."
       },

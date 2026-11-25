@@ -79,8 +79,8 @@ describe('LibraryDockRepository', () => {
 describe('BookDockRepository.countsByDock', () => {
   it('counts every dock as the switcher shows it in one grouped query, request downloads under their library', async () => {
     const { db, queries } = capturingDb([
-      [null, '4', '1', '2', '0', '1'],
-      [7, '6', '2', '4', '0', '0'],
+      [null, '4', '1', '2', '0', '1', '1'],
+      [7, '6', '2', '4', '0', '0', '3'],
     ]);
     const counts = await new BookDockRepository(db).countsByDock();
 
@@ -93,10 +93,11 @@ describe('BookDockRepository.countsByDock', () => {
     expect(sql).toContain(`count(*) filter (where "book_dock_files"."status" in ('pending', 'extracting', 'fetching'))`);
     expect(sql).toContain(`count(*) filter (where "book_dock_files"."status" = 'ready' and "book_dock_files"."hold_reason" is not null)`);
     expect(sql).toContain(`count(*) filter (where "book_dock_files"."status" = 'ready' and "book_dock_files"."hold_reason" is null)`);
+    expect(sql).toContain('count(*) filter (where "book_dock_files"."merged_into_id" = "book_dock_files"."id")');
     expect(sql).not.toContain('where "book_dock_files"."uploaded_by"');
     expect(counts).toEqual([
-      { dockId: null, total: 4, working: 1, onHold: 2, ready: 0, error: 1 },
-      { dockId: 7, total: 6, working: 2, onHold: 4, ready: 0, error: 0 },
+      { dockId: null, total: 4, working: 1, onHold: 2, ready: 0, error: 1, merged: 1 },
+      { dockId: 7, total: 6, working: 2, onHold: 4, ready: 0, error: 0, merged: 3 },
     ]);
   });
 
@@ -144,6 +145,22 @@ describe('BookDockRepository hold filter', () => {
     for (const query of [queries[0], queries[2]]) {
       expect(query.text.slice(query.text.indexOf(' where '))).toContain(condition);
       expect(query.values.slice(0, values.length)).toEqual(values);
+    }
+  });
+});
+
+describe('BookDockRepository merged filter', () => {
+  it('reads merged as the one row each merged group shows, whatever its status, on the list and on select-all', async () => {
+    const { db, queries } = capturingDb([['0']]);
+    const repo = new BookDockRepository(db);
+    await repo.findAll({ page: 1, limit: 20, sort: 'createdAt', order: 'desc', userId: 0, canManageAll: true, filter: { hold: 'merged' } });
+    await repo.findAllIds(undefined, undefined, undefined, 0, true, undefined, undefined, { hold: 'merged' });
+
+    for (const query of [queries[0], queries[2]]) {
+      const where = query.text.slice(query.text.indexOf(' where '));
+      expect(where).toContain('"book_dock_files"."merged_into_id" = "book_dock_files"."id"');
+      expect(where).not.toContain('"book_dock_files"."status" = $');
+      expect(query.values).not.toContain('ready');
     }
   });
 });
