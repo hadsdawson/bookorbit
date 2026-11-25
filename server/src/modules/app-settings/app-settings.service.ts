@@ -144,6 +144,7 @@ export class AppSettingsService {
       APP_SETTING_KEYS.BOOK_DOCK_AUTO_FINALIZE_METADATA_MODE,
       APP_SETTING_KEYS.BOOK_DOCK_UNSORTED_AUTO_JOIN,
       APP_SETTING_KEYS.BOOK_DOCK_UNSORTED_KEEP_ORIGINAL,
+      APP_SETTING_KEYS.BOOK_DOCK_UPLOAD_DEFAULT_LIBRARY_ID,
     ];
     const rows = await this.repo.findMany(keys);
     const settings = new Map(rows.map((row) => [row.key, row.value]));
@@ -160,6 +161,7 @@ export class AppSettingsService {
       autoFinalizeMetadataMode: parseAutoFinalizeMetadataMode(settings.get(APP_SETTING_KEYS.BOOK_DOCK_AUTO_FINALIZE_METADATA_MODE)),
       unsortedAutoJoin: parseBooleanSetting(settings.get(APP_SETTING_KEYS.BOOK_DOCK_UNSORTED_AUTO_JOIN), false),
       unsortedKeepOriginal: parseBooleanSetting(settings.get(APP_SETTING_KEYS.BOOK_DOCK_UNSORTED_KEEP_ORIGINAL), false),
+      uploadDefaultLibraryId: parseOptionalPositiveInt(settings.get(APP_SETTING_KEYS.BOOK_DOCK_UPLOAD_DEFAULT_LIBRARY_ID)),
     };
   }
 
@@ -178,6 +180,9 @@ export class AppSettingsService {
       ...(settings.unsortedKeepOriginal == null
         ? []
         : [{ key: APP_SETTING_KEYS.BOOK_DOCK_UNSORTED_KEEP_ORIGINAL, value: String(settings.unsortedKeepOriginal) }]),
+      ...(settings.uploadDefaultLibraryId === undefined
+        ? []
+        : [{ key: APP_SETTING_KEYS.BOOK_DOCK_UPLOAD_DEFAULT_LIBRARY_ID, value: settings.uploadDefaultLibraryId?.toString() ?? '' }]),
     ]);
 
     return this.getBookDockSettings();

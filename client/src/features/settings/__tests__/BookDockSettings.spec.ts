@@ -189,8 +189,25 @@ describe('BookDockSettings', () => {
         autoFinalizeMetadataMode: 'safe_merge',
         unsortedAutoJoin: false,
         unsortedKeepOriginal: false,
+        uploadDefaultLibraryId: null,
       },
     ])
+  })
+
+  it('lets the upload button destination be a library with its dock on, or back to Unsorted', async () => {
+    const wrapper = await mountSettings()
+    const select = wrapper.get('[data-testid="book-dock-upload-default"]')
+
+    expect(select.findAll('option').map((option) => option.text())).toEqual(['Unsorted', 'Library'])
+
+    await select.setValue('4')
+    await flushPromises()
+    await select.setValue('')
+    await flushPromises()
+
+    expect(putBodies('/api/v1/book-dock/settings').map((body) => (body as { uploadDefaultLibraryId: number | null }).uploadDefaultLibraryId)).toEqual(
+      [4, null],
+    )
   })
 
   it('explains the chosen metadata mode under its select and follows a change', async () => {

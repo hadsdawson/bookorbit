@@ -537,8 +537,17 @@ describe('LibraryDockService', () => {
       const targets = [{ dockId: 1, libraryId: 10, libraryName: 'Fiction', allowedFormats: [] }];
       dockRepo.listUploadTargets.mockResolvedValueOnce(targets);
 
-      await expect(service.listUploadTargets(user)).resolves.toEqual({ docks: targets });
+      await expect(service.listUploadTargets(user)).resolves.toEqual({ docks: targets, defaultLibraryId: null });
       expect(dockRepo.listUploadTargets).toHaveBeenCalledWith([10, 20]);
+    });
+
+    it('reports the library chosen to take uploads that name no dock', async () => {
+      global.uploadDefaultLibraryId = 10;
+      try {
+        await expect(service.listUploadTargets(user)).resolves.toMatchObject({ defaultLibraryId: 10 });
+      } finally {
+        delete global.uploadDefaultLibraryId;
+      }
     });
 
     it("lands an upload in the dock's folder, headed for its target folder", async () => {

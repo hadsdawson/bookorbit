@@ -36,4 +36,9 @@ export class UpdateBookDockSettingsDto implements UpdateBookDockSettingsRequest 
   @IsOptional()
   @IsBoolean()
   unsortedKeepOriginal?: boolean;
+
+  @ValidateIf((_, value) => value != null)
+  @IsInt()
+  @Min(1)
+  uploadDefaultLibraryId?: number | null;
 }

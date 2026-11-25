@@ -30,6 +30,7 @@ const autoFinalizeFolderId = ref<number | null>(null)
 const autoFinalizeMetadataMode = ref<BookDockAutoFinalizeMetadataMode>('safe_merge')
 const unsortedAutoJoin = ref(false)
 const unsortedKeepOriginal = ref(false)
+const uploadDefaultLibraryId = ref<number | null>(null)
 const bookDockPath = ref('')
 const loading = ref(true)
 const saving = ref(false)
@@ -79,6 +80,7 @@ function applySettings(next: BookDockSettings) {
   settings.value = next
   unsortedAutoJoin.value = next.unsortedAutoJoin ?? false
   unsortedKeepOriginal.value = next.unsortedKeepOriginal ?? false
+  uploadDefaultLibraryId.value = next.uploadDefaultLibraryId ?? null
   bookDockPath.value = next.bookDockPath
   autoFetch.value = next.autoFetchMetadata
   autoFinalizeEnabled.value = next.autoFinalizeEnabled
@@ -98,6 +100,7 @@ function settingsPayload(overrides: Partial<UpdateBookDockSettingsRequest> = {})
     autoFinalizeMetadataMode: autoFinalizeMetadataMode.value,
     unsortedAutoJoin: unsortedAutoJoin.value,
     unsortedKeepOriginal: unsortedKeepOriginal.value,
+    uploadDefaultLibraryId: uploadDefaultLibraryId.value,
     ...overrides,
   }
 }
@@ -145,6 +148,15 @@ async function onMetadataModeChange(event: Event) {
   const metadataMode = (event.target as HTMLSelectElement).value as BookDockAutoFinalizeMetadataMode
   if (await saveSettings({ autoFinalizeMetadataMode: metadataMode })) {
     toast.success(t('settings.reader.bookDock.metadataModeUpdated'))
+  }
+}
+
+const uploadDockOptions = computed(() => (admin.value?.libraries ?? []).filter((entry) => entry.dock?.enabled))
+
+async function onUploadDefaultChange(event: Event) {
+  const value = (event.target as HTMLSelectElement).value
+  if (await saveSettings({ uploadDefaultLibraryId: value === '' ? null : Number(value) })) {
+    toast.success(t('settings.reader.bookDock.docks.uploadDefaultSaved'))
   }
 }
 
@@ -284,6 +296,28 @@ async function saveUnsorted() {
       </h2>
 
       <div class="settings-card">
+        <div class="flex flex-col gap-3 px-4 py-3.5 bg-card md:flex-row md:items-center md:justify-between md:px-5 md:py-4">
+          <div class="min-w-0">
+            <p class="settings-label">
+              {{ t('settings.reader.bookDock.docks.uploadDefault') }}
+            </p>
+            <p class="settings-hint">
+              {{ t('settings.reader.bookDock.docks.uploadDefaultHint') }}
+            </p>
+          </div>
+          <select
+            class="select-field w-full self-start md:ml-4 md:w-56 md:self-auto"
+            data-testid="book-dock-upload-default"
+            :value="uploadDefaultLibraryId ?? ''"
+            :disabled="saving"
+            :aria-label="t('settings.reader.bookDock.docks.uploadDefault')"
+            @change="onUploadDefaultChange"
+          >
+            <option value="">{{ t('bookDock.switcher.unsorted') }}</option>
+            <option v-for="entry in uploadDockOptions" :key="entry.libraryId" :value="entry.libraryId">{{ entry.libraryName }}</option>
+          </select>
+        </div>
+
         <div class="flex flex-col gap-3 px-4 py-3.5 bg-card md:flex-row md:items-center md:justify-between md:px-5 md:py-4">
           <div class="min-w-0">
             <p class="settings-label">

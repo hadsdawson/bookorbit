@@ -16,6 +16,8 @@ export interface BookDockSettings {
   /** Unsorted's own toggles; library docks carry theirs on the dock. Absent on older servers. */
   unsortedAutoJoin?: boolean;
   unsortedKeepOriginal?: boolean;
+  /** The library whose dock takes uploads from the "All docks" view; null sends them to Unsorted. Absent on older servers. */
+  uploadDefaultLibraryId?: number | null;
 }
 
 export type UpdateBookDockSettingsRequest = Omit<BookDockSettings, "bookDockPath">;
@@ -176,6 +178,8 @@ export interface BookDockUploadTarget {
  */
 export interface BookDockUploadTargets {
   docks: BookDockUploadTarget[];
+  /** The library chosen to take uploads that name no dock; null or absent means Unsorted. */
+  defaultLibraryId?: number | null;
 }
 
 /**
