@@ -31,6 +31,13 @@ describe('UpdateBookDockSettingsDto', () => {
     ).resolves.toHaveLength(0);
   });
 
+  it('accepts the upload button destination as a library id, null or left out', async () => {
+    await expect(errorsFor({ uploadDefaultLibraryId: 4 })).resolves.toHaveLength(0);
+    await expect(errorsFor({ uploadDefaultLibraryId: null })).resolves.toHaveLength(0);
+    await expect(errorsFor({ uploadDefaultLibraryId: 0 })).resolves.not.toHaveLength(0);
+    await expect(errorsFor({ uploadDefaultLibraryId: 'x' })).resolves.not.toHaveLength(0);
+  });
+
   it.each([
     ['autoFetchMetadata', 'true'],
     ['autoFinalizeEnabled', 1],

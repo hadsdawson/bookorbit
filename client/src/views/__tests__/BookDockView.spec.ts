@@ -17,6 +17,9 @@ vi.mock('vue-router', () => ({
 
 const fictionTarget = { dockId: 7, libraryId: 3, libraryName: 'Fiction', allowedFormats: ['epub'] }
 
+const titleRowStub = { PageTitleRow: { template: '<div><slot name="actions" /></div>' } }
+const defaultUpload = vi.hoisted(() => ({ target: undefined as unknown }))
+
 vi.mock('@/features/book-dock/composables/useLibraryDocks', () => ({
   useLibraryDocks: () => ({
     docks: ref([{ ...fictionTarget, enabled: true, entry: null }]),
@@ -33,6 +36,7 @@ vi.mock('@/features/book-dock/composables/useLibraryDocks', () => ({
     refreshFiling: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
     dockById: (id: number) => (id === 7 ? { ...fictionTarget, enabled: true, entry: null } : undefined),
     uploadTargetFor: (id: number) => (id === 7 ? fictionTarget : undefined),
+    defaultUploadTarget: () => defaultUpload.target,
   }),
 }))
 
@@ -271,6 +275,46 @@ describe('BookDockView docks', () => {
     await wrapper.get('main').trigger('drop', { dataTransfer: { files } })
 
     expect(addFilesMock).toHaveBeenCalledWith(files, fictionTarget)
+    wrapper.unmount()
+  })
+
+  it('sends the upload button on All docks to the chosen default dock', async () => {
+    defaultUpload.target = fictionTarget
+    resetRoute()
+    const wrapper = shallowMount(BookDockView, { global: { stubs: titleRowStub } })
+    await flushPromises()
+
+    expect(wrapper.findComponent({ name: 'BookDockActionCluster' }).props('uploadTarget')).toEqual(fictionTarget)
+    defaultUpload.target = undefined
+    wrapper.unmount()
+  })
+
+  it('keeps the upload button on Unsorted and on All docks without a default going to Unsorted', async () => {
+    defaultUpload.target = fictionTarget
+    resetRoute({ dock: 'unsorted' })
+    const unsorted = shallowMount(BookDockView, { global: { stubs: titleRowStub } })
+    await flushPromises()
+    expect(unsorted.findComponent({ name: 'BookDockActionCluster' }).props('uploadTarget')).toBeNull()
+    unsorted.unmount()
+
+    defaultUpload.target = undefined
+    resetRoute()
+    const all = shallowMount(BookDockView, { global: { stubs: titleRowStub } })
+    await flushPromises()
+    expect(all.findComponent({ name: 'BookDockActionCluster' }).props('uploadTarget')).toBeNull()
+    all.unmount()
+  })
+
+  it('sends a drop on every dock to Unsorted even when a default dock is set', async () => {
+    defaultUpload.target = fictionTarget
+    resetRoute()
+    const wrapper = shallowMount(BookDockView)
+    const files = [new File(['x'], 'dune.epub')]
+
+    await wrapper.get('main').trigger('drop', { dataTransfer: { files } })
+
+    expect(addFilesMock).toHaveBeenCalledWith(files, null)
+    defaultUpload.target = undefined
     wrapper.unmount()
   })
 

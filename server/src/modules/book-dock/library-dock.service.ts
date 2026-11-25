@@ -136,7 +136,8 @@ export class LibraryDockService implements OnModuleInit, LibraryLifecycleListene
   /** The docks this user may upload into: turned on, in a library they can see (D26, D27). */
   async listUploadTargets(user: RequestUser): Promise<BookDockUploadTargets> {
     const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
-    return { docks: await this.dockRepo.listUploadTargets(libraryIds) };
+    const [docks, settings] = await Promise.all([this.dockRepo.listUploadTargets(libraryIds), this.appSettings.getBookDockSettings()]);
+    return { docks, defaultLibraryId: settings.uploadDefaultLibraryId ?? null };
   }
 
   /**

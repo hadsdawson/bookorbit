@@ -100,7 +100,7 @@ const showStatistics = computed(
 const { addFiles, isUploading } = useBookDockUpload()
 const { isDemoRestrictedAccount, hasPermission } = usePermissions()
 const { conflicts, scheduleConflicts, cancelConflicts } = useBookDockConflicts()
-const { docks, admin, filing, refreshDocks, refreshFiling, dockById, uploadTargetFor } = useLibraryDocks()
+const { docks, admin, filing, refreshDocks, refreshFiling, dockById, uploadTargetFor, defaultUploadTarget } = useLibraryDocks()
 const route = useRoute()
 const router = useRouter()
 
@@ -149,7 +149,8 @@ function mergeReasons(
 const currentCounts = computed(() => countsFor(filters.dock, summary.value))
 const viewCounts = computed<BookDockViewCounts>(() => currentCounts.value)
 const currentDock = computed(() => (typeof filters.dock === 'number' ? (dockById(filters.dock) ?? null) : null))
-const uploadTarget = computed(() => (typeof filters.dock === 'number' ? (uploadTargetFor(filters.dock) ?? null) : null))
+const viewedDockTarget = computed(() => (typeof filters.dock === 'number' ? (uploadTargetFor(filters.dock) ?? null) : null))
+const uploadTarget = computed(() => viewedDockTarget.value ?? (filters.dock === 'all' ? (defaultUploadTarget() ?? null) : null))
 const uploadAccept = computed(() =>
   uploadTarget.value?.allowedFormats.length ? uploadTarget.value.allowedFormats.map((format) => `.${format}`).join(',') : SUPPORTED_FORMATS_ACCEPT,
 )
@@ -673,7 +674,7 @@ function onDrop(e: DragEvent) {
   dragOver.value = false
   // Unsupported files go through too, so the upload failures panel can say why they were refused.
   const files = e.dataTransfer?.files
-  if (files?.length) addFiles(files, uploadTarget.value)
+  if (files?.length) addFiles(files, viewedDockTarget.value)
 }
 
 watch(isUploading, (uploading, was) => {

@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import type { BookDockUploadTarget, LibraryDockAdminEntry, LibraryDockFiling, LibraryDocksAdmin } from '@bookorbit/types'
 
-import { checkLibraryDockFiling, fetchDockUploadTargets, fetchLibraryDocksAdmin } from '../api/book-dock.api'
+import { checkLibraryDockFiling, fetchDockUploadInfo, fetchLibraryDocksAdmin } from '../api/book-dock.api'
 
 /** A library dock as the dock page shows it. Managers also get the dock's settings entry. */
 export interface LibraryDockView {
@@ -15,6 +15,7 @@ export interface LibraryDockView {
 }
 
 const uploadTargets = ref<BookDockUploadTarget[]>([])
+const defaultUploadLibraryId = ref<number | null>(null)
 const admin = ref<LibraryDocksAdmin | null>(null)
 const filing = ref<Map<number, LibraryDockFiling>>(new Map())
 const loaded = ref(false)
@@ -46,8 +47,9 @@ const docks = computed<LibraryDockView[]>(() => {
  */
 export function useLibraryDocks() {
   async function refreshDocks(manager: boolean): Promise<void> {
-    const [targets, adminData] = await Promise.all([fetchDockUploadTargets(), manager ? fetchLibraryDocksAdmin() : Promise.resolve(null)])
-    uploadTargets.value = targets
+    const [info, adminData] = await Promise.all([fetchDockUploadInfo(), manager ? fetchLibraryDocksAdmin() : Promise.resolve(null)])
+    uploadTargets.value = info.docks
+    defaultUploadLibraryId.value = info.defaultLibraryId
     admin.value = adminData
     loaded.value = true
   }
@@ -66,5 +68,10 @@ export function useLibraryDocks() {
     return uploadTargets.value.find((target) => target.dockId === dockId)
   }
 
-  return { docks, admin, uploadTargets, filing, loaded, refreshDocks, refreshFiling, dockById, uploadTargetFor }
+  /** The dock that takes uploads made without picking one; undefined when none is set or it is gone, off or out of reach. */
+  function defaultUploadTarget(): BookDockUploadTarget | undefined {
+    return uploadTargets.value.find((target) => target.libraryId === defaultUploadLibraryId.value)
+  }
+
+  return { docks, admin, uploadTargets, filing, loaded, refreshDocks, refreshFiling, dockById, uploadTargetFor, defaultUploadTarget }
 }

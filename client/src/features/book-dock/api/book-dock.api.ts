@@ -45,14 +45,19 @@ async function dockRequest<T>(path: string, method: 'POST' | 'PUT', body?: unkno
 }
 
 /** Docks the caller can see and upload into. Any failure reads as "Unsorted only". */
-export async function fetchDockUploadTargets(): Promise<BookDockUploadTarget[]> {
+export async function fetchDockUploadInfo(): Promise<{ docks: BookDockUploadTarget[]; defaultLibraryId: number | null }> {
   try {
     const response = await api('/api/v1/book-dock/docks')
-    if (!response.ok) return []
-    return ((await response.json()) as Partial<BookDockUploadTargets>).docks ?? []
+    if (!response.ok) return { docks: [], defaultLibraryId: null }
+    const body = (await response.json()) as Partial<BookDockUploadTargets>
+    return { docks: body.docks ?? [], defaultLibraryId: body.defaultLibraryId ?? null }
   } catch {
-    return []
+    return { docks: [], defaultLibraryId: null }
   }
+}
+
+export async function fetchDockUploadTargets(): Promise<BookDockUploadTarget[]> {
+  return (await fetchDockUploadInfo()).docks
 }
 
 export async function fetchLibraryDocksAdmin(): Promise<LibraryDocksAdmin | null> {

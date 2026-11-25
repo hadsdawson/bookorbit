@@ -483,6 +483,7 @@ describe('AppSettingsService', () => {
         autoFinalizeMetadataMode: 'safe_merge',
         unsortedAutoJoin: false,
         unsortedKeepOriginal: false,
+        uploadDefaultLibraryId: null,
       });
     });
 
@@ -557,6 +558,24 @@ describe('AppSettingsService', () => {
       const keys = (repo.upsertMany.mock.lastCall?.[0] as Array<{ key: string }>).map((entry) => entry.key);
       expect(keys).not.toContain('book_dock_unsorted_auto_join');
       expect(keys).not.toContain('book_dock_unsorted_keep_original');
+      expect(keys).not.toContain('book_dock_upload_default_library_id');
+    });
+
+    it('stores, clears and keeps the upload button destination', async () => {
+      const base = {
+        autoFetchMetadata: true,
+        autoFinalizeEnabled: false,
+        autoFinalizeThreshold: 85,
+        autoFinalizeLibraryId: null,
+        autoFinalizeFolderId: null,
+        autoFinalizeMetadataMode: 'safe_merge' as const,
+      };
+
+      await service.updateBookDockSettings({ ...base, uploadDefaultLibraryId: 7 });
+      expect(repo.upsertMany).toHaveBeenLastCalledWith(expect.arrayContaining([{ key: 'book_dock_upload_default_library_id', value: '7' }]));
+
+      await service.updateBookDockSettings({ ...base, uploadDefaultLibraryId: null });
+      expect(repo.upsertMany).toHaveBeenLastCalledWith(expect.arrayContaining([{ key: 'book_dock_upload_default_library_id', value: '' }]));
     });
   });
 
