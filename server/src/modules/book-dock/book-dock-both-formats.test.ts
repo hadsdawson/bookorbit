@@ -46,4 +46,37 @@ describe('mergeFormatLookups', () => {
   it('returns nothing when neither lookup found anything', () => {
     expect(mergeFormatLookups({ metadata: {}, sources: {} }, { metadata: {}, sources: {} }, 'ebook')).toEqual({ metadata: {}, sources: {} });
   });
+
+  it('takes the series name and number together from the other format when the ebook has no series', () => {
+    const withIndexOnly = { metadata: { ...ebook.metadata, seriesIndex: '4' }, sources: { ...ebook.sources, seriesIndex: 'goodreads' } };
+    const withSeries = {
+      metadata: { ...audio.metadata, seriesName: 'Dune Chronicles', seriesIndex: '1' },
+      sources: { ...audio.sources, seriesName: 'audible', seriesIndex: 'audible' },
+    };
+
+    const { metadata, sources } = mergeFormatLookups(withIndexOnly, withSeries, 'audio');
+
+    expect(metadata.seriesName).toBe('Dune Chronicles');
+    expect(metadata.seriesIndex).toBe('1');
+    expect(sources.seriesIndex).toBe('audible');
+  });
+
+  it('does not borrow a number from a different series', () => {
+    const named = { metadata: { ...ebook.metadata, seriesName: 'Dune Chronicles' }, sources: { ...ebook.sources, seriesName: 'goodreads' } };
+    const other = { metadata: { ...audio.metadata, seriesName: 'Great Sci-Fi', seriesIndex: '7' }, sources: audio.sources };
+
+    const { metadata } = mergeFormatLookups(named, other, 'audio');
+
+    expect(metadata.seriesName).toBe('Dune Chronicles');
+    expect(metadata.seriesIndex).toBeUndefined();
+  });
+
+  it('drops a series number that has no series name', () => {
+    const indexOnly = { metadata: { ...ebook.metadata, seriesIndex: '4' }, sources: { ...ebook.sources, seriesIndex: 'goodreads' } };
+
+    const { metadata, sources } = mergeFormatLookups(indexOnly, audio, 'audio');
+
+    expect(metadata.seriesIndex).toBeUndefined();
+    expect(sources.seriesIndex).toBeUndefined();
+  });
 });

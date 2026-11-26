@@ -299,7 +299,9 @@ export function useMetadataDiff(input: MetadataDiffInput) {
     return [...groups.values()]
   }
 
-  function makeRow(key: DiffFieldKey, labelKey: string, active: MetadataCandidate, current: MetadataSource): DiffField | null {
+  function makeRow(key: DiffFieldKey, labelKey: string, offered: MetadataCandidate, current: MetadataSource): DiffField | null {
+    // A result's series number is not offered without the series name it belongs to.
+    const active = key === 'seriesIndex' && !hasSeriesName(offered) ? { ...offered, seriesIndex: undefined } : offered
     const candidateDisplay = key === 'description' ? descriptionPlainText(active.description) : getCandidateValueFrom(active, key)
     const bookValue = key === 'description' ? descriptionPlainText(current.description) : getSourceValue(current, key, active.provider)
     if (!candidateDisplay && !bookValue) return null
@@ -412,6 +414,10 @@ export function useMetadataDiff(input: MetadataDiffInput) {
   function setField(key: DiffFieldKey, decision: FieldDecision, from?: MetadataCandidate | null) {
     if (isLocked(key)) return
     const candidate = from ?? toValue(input.active)
+    if (key === 'seriesIndex' || key === 'seriesName') {
+      setSeriesField(key, decision, candidate)
+      return
+    }
     if (key === 'communityRating') {
       if (!candidate) return
       if (decision === 'keep') ratingPicks.delete(candidate.provider)
@@ -425,6 +431,28 @@ export function useMetadataDiff(input: MetadataDiffInput) {
     if (!candidate) return
     picks.set(key, toRaw(candidate))
     if (key === 'genres' && (decision === 'merge' || decision === 'replace')) genreWriteMode.value = decision
+  }
+
+  /**
+   * Series name and number move together when the book has no series name of its own: taking a
+   * number takes its result's name with it, and dropping that name drops the number.
+   */
+  function setSeriesField(key: 'seriesIndex' | 'seriesName', decision: FieldDecision, candidate: MetadataCandidate | null | undefined) {
+    const bookHasName = !!toValue(input.current).seriesName?.trim()
+    if (decision === 'keep') {
+      picks.delete(key)
+      if (key === 'seriesName' && !bookHasName) picks.delete('seriesIndex')
+      return
+    }
+    if (!candidate) return
+    if (key === 'seriesIndex') {
+      if (!hasSeriesName(candidate)) return
+      if (!bookHasName && !picks.has('seriesName')) {
+        if (isLocked('seriesName')) return
+        picks.set('seriesName', toRaw(candidate))
+      }
+    }
+    picks.set(key, toRaw(candidate))
   }
 
   /** The decision a field's control shows for the active result. */
@@ -489,6 +517,10 @@ export function useMetadataDiff(input: MetadataDiffInput) {
   function unstage(key: string) {
     if (key.startsWith('rating:')) {
       ratingPicks.delete(key.slice('rating:'.length) as MetadataProviderKey)
+      return
+    }
+    if (key === 'seriesName') {
+      setSeriesField('seriesName', 'keep', null)
       return
     }
     picks.delete(key as DiffFieldKey)
@@ -655,6 +687,9 @@ export function useMetadataDiff(input: MetadataDiffInput) {
       if (memberships.length > 0) formPatch.seriesMemberships = memberships
     }
 
+    const patchedSeriesName = 'seriesName' in formPatch ? formPatch.seriesName : current.seriesName
+    if (formPatch.seriesIndex != null && !patchedSeriesName?.trim()) delete formPatch.seriesIndex
+
     if (Object.keys(comicPatch).length > 0) {
       formPatch.comicMetadata = comicPatch as ComicMetadataFields
     }
@@ -718,4 +753,8 @@ export function useMetadataDiff(input: MetadataDiffInput) {
     unstage,
     buildPatch,
   }
+}
+
+function hasSeriesName(candidate: MetadataCandidate): boolean {
+  return !!candidate.seriesName?.trim()
 }

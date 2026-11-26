@@ -27,6 +27,7 @@ export interface GoodreadsAutocompleteItem {
 export interface GoodreadsApolloBook {
   legacyId?: string | number;
   title?: string;
+  titleComplete?: string;
   description?: string;
   imageUrl?: string;
   details?: GoodreadsApolloDetails;

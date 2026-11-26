@@ -16,7 +16,9 @@ export function mapGoodreadsApolloState(state: Record<string, unknown>, bookId: 
 
   const firstSeries = book.bookSeries?.[0];
   const seriesRef = firstSeries?.series?.__ref;
-  const series = findSeries(state, seriesRef) ?? firstSeries?.series;
+  const series = findSeries(state, seriesRef);
+  const titleSeries = parseSeriesFromTitle(book.titleComplete);
+  const seriesName = normalize(series?.title) ?? normalize(firstSeries?.series?.title) ?? titleSeries.seriesName;
 
   const primaryContributorRef = book.primaryContributorEdge?.node?.__ref;
   const contributor = findContributor(state, primaryContributorRef);
@@ -32,7 +34,7 @@ export function mapGoodreadsApolloState(state: Record<string, unknown>, bookId: 
   const publishedDate = parsePublishedDateFromEpochMillis(details?.publicationTime);
   const publishedYear = publishedDate ? publishedYearFromDateKey(publishedDate) : undefined;
   const pageCount = parsePositiveInt(details?.numPages);
-  const seriesIndex = parseSeriesIndex(firstSeries?.userPosition);
+  const seriesIndex = seriesName ? (parseSeriesIndex(firstSeries?.userPosition) ?? titleSeries.seriesIndex) : undefined;
   const communityRating = normalizeCommunityRating(work?.stats?.averageRating);
   const communityRatingCount = normalizeCommunityRatingCount(work?.stats?.ratingsCount);
 
@@ -53,7 +55,7 @@ export function mapGoodreadsApolloState(state: Record<string, unknown>, bookId: 
     genres: genres.length ? genres : undefined,
     coverUrl: book.imageUrl,
     sourceUrl: `https://www.goodreads.com/book/show/${bookId}`,
-    seriesName: normalize(series?.title),
+    seriesName,
     seriesIndex,
     ...(communityRating !== undefined ? { communityRating } : {}),
     ...(communityRatingCount !== undefined ? { communityRatingCount } : {}),

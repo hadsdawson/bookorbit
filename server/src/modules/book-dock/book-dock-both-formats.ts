@@ -37,10 +37,17 @@ export function mergeFormatLookups(ebook: MediumLookup, audio: MediumLookup, own
   };
 
   for (const [field, value] of Object.entries(extra.metadata) as [keyof BookDockMetadata, unknown][]) {
-    if (field === 'coverUrl' || field === 'chapters') continue;
+    if (field === 'coverUrl' || field === 'chapters' || field === 'seriesIndex') continue;
     const audioOnly = (AUDIO_FIELDS as readonly string[]).includes(field);
     if (hasValue(value) && ((audioOnly && extra === audio) || !hasValue(metadata[field]))) take(field);
   }
+  // The series number is taken only with the series name it belongs to.
+  if (!hasValue(base.metadata.seriesName)) {
+    delete metadata.seriesIndex;
+    delete sources.seriesIndex;
+  }
+  if (!hasValue(metadata.seriesIndex) && hasValue(extra.metadata.seriesIndex) && sameSeries(metadata.seriesName, extra.metadata.seriesName))
+    take('seriesIndex');
   // Chapters only mean something next to the audio they were timed against.
   if (ownFormat === 'audio' && hasValue(audio.metadata.chapters)) {
     metadata.chapters = audio.metadata.chapters;
@@ -64,6 +71,10 @@ export function mergeFormatLookups(ebook: MediumLookup, audio: MediumLookup, own
 function sameBook(ebookTitle: string | null | undefined, audioTitle: string | null | undefined): boolean {
   if (!ebookTitle || !audioTitle) return true;
   return symmetricTitleSimilarity(mainTitlePart(ebookTitle), mainTitlePart(audioTitle)) >= SAME_BOOK_SIMILARITY;
+}
+
+function sameSeries(name: string | null | undefined, extraName: string | null | undefined): boolean {
+  return !!name && !!extraName && name.trim().toLowerCase() === extraName.trim().toLowerCase();
 }
 
 function isEmpty(metadata: BookDockMetadata): boolean {

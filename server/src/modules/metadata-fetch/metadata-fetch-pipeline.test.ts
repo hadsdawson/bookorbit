@@ -952,6 +952,68 @@ describe('MetadataFetchPipeline', () => {
     expect(resolved.seriesIndex).toBe('7');
   });
 
+  it('skips a series number that comes without a series name and takes the next provider that has both', async () => {
+    const prefs = createPreferences((fields) => {
+      fields.seriesName = { enabled: true, providers: [MetadataProviderKey.GOODREADS, MetadataProviderKey.AMAZON], mergeStrategy: 'overwrite' };
+      fields.seriesIndex = { enabled: true, providers: [MetadataProviderKey.GOODREADS, MetadataProviderKey.AMAZON], mergeStrategy: 'overwrite' };
+    });
+
+    preferencesService.getGlobal.mockResolvedValue(prefs);
+    resolver.resolve.mockReturnValue(prefs);
+    resolver.withForwardCompatibility.mockReturnValue(prefs);
+    registry.all.mockReturnValue([{ key: MetadataProviderKey.GOODREADS }, { key: MetadataProviderKey.AMAZON }] as never);
+    fetchService.searchCandidates.mockReturnValue(
+      of(
+        candidate(MetadataProviderKey.GOODREADS, 'gr1', { seriesIndex: '4' }),
+        candidate(MetadataProviderKey.AMAZON, 'am1', { seriesName: 'Three Dahlias', seriesIndex: '4' }),
+      ),
+    );
+
+    const { resolved, sources } = await pipeline.runWithSources({ title: 'Query' }, {});
+
+    expect(resolved.seriesName).toBe('Three Dahlias');
+    expect(resolved.seriesIndex).toBe('4');
+    expect(sources.seriesIndex).toBe(MetadataProviderKey.AMAZON);
+  });
+
+  it('leaves the series number empty when no provider has a series name for it', async () => {
+    const prefs = createPreferences((fields) => {
+      fields.seriesName = { enabled: true, providers: [MetadataProviderKey.GOODREADS], mergeStrategy: 'overwrite' };
+      fields.seriesIndex = { enabled: true, providers: [MetadataProviderKey.GOODREADS], mergeStrategy: 'overwrite' };
+    });
+
+    preferencesService.getGlobal.mockResolvedValue(prefs);
+    resolver.resolve.mockReturnValue(prefs);
+    resolver.withForwardCompatibility.mockReturnValue(prefs);
+    registry.all.mockReturnValue([{ key: MetadataProviderKey.GOODREADS }] as never);
+    fetchService.searchCandidates.mockReturnValue(of(candidate(MetadataProviderKey.GOODREADS, 'gr1', { seriesIndex: '4' })));
+
+    const { resolved, sources } = await pipeline.runWithSources({ title: 'Query' }, {});
+
+    expect(resolved.seriesName).toBeUndefined();
+    expect(resolved.seriesIndex).toBeUndefined();
+    expect(sources.seriesIndex).toBeUndefined();
+  });
+
+  it('drops a fetched series number when the series name field is off and the book has no series name', async () => {
+    const prefs = createPreferences((fields) => {
+      fields.seriesName = { enabled: false, providers: [MetadataProviderKey.GOODREADS], mergeStrategy: 'overwrite' };
+      fields.seriesIndex = { enabled: true, providers: [MetadataProviderKey.GOODREADS], mergeStrategy: 'overwrite' };
+    });
+
+    preferencesService.getGlobal.mockResolvedValue(prefs);
+    resolver.resolve.mockReturnValue(prefs);
+    resolver.withForwardCompatibility.mockReturnValue(prefs);
+    registry.all.mockReturnValue([{ key: MetadataProviderKey.GOODREADS }] as never);
+    fetchService.searchCandidates.mockReturnValue(
+      of(candidate(MetadataProviderKey.GOODREADS, 'gr1', { seriesName: 'Three Dahlias', seriesIndex: '4' })),
+    );
+
+    const { resolved } = await pipeline.runWithSources({ title: 'Query' }, {});
+
+    expect(resolved.seriesIndex).toBeUndefined();
+  });
+
   it('still lets a provider replace a series name that only differs by more than the run year', async () => {
     const prefs = createPreferences((fields) => {
       fields.seriesName = { enabled: true, providers: [MetadataProviderKey.COMICVINE], mergeStrategy: 'overwrite' };
@@ -1858,7 +1920,7 @@ describe('MetadataFetchPipeline', () => {
             { seriesName: 'Chainfire Trilogy', seriesIndex: '3' },
           ],
         }),
-        candidate(MetadataProviderKey.GOOGLE, 'g1', { seriesIndex: '12' }),
+        candidate(MetadataProviderKey.GOOGLE, 'g1', { seriesName: 'Sword of Truth', seriesIndex: '12' }),
       ),
     );
 
