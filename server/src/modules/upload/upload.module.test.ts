@@ -7,6 +7,7 @@ vi.mock('../file-write/file-write.module', () => ({ FileWriteModule: class FileW
 vi.mock('../book-metadata-fetch/book-metadata-fetch.module', () => ({ BookMetadataFetchModule: class BookMetadataFetchModule {} }));
 vi.mock('../path/path.module', () => ({ PathModule: class PathModule {} }));
 
+import { BookFileScanRepository } from './book-file-scan.repository';
 import { BookFileScanService } from './book-file-scan.service';
 import { BookFileUploadController } from './book-file-upload.controller';
 import { UploadController } from './upload.controller';
@@ -28,6 +29,7 @@ describe('UploadModule', () => {
     expect(Reflect.getMetadata('providers', UploadModule)).toEqual([
       UploadService,
       BookFileScanService,
+      BookFileScanRepository,
       GeneratedBookFileService,
       GeneratedBookFileRepository,
       UploadValidatorService,

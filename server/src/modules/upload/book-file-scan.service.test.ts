@@ -13,12 +13,8 @@ const user = { id: 3 } as never;
 function makeDb(book: unknown, fileRowsPerCall: { absolutePath: string }[][]) {
   let fileCall = 0;
   return {
-    select: vi.fn(() => ({
-      from: vi.fn(() => ({
-        innerJoin: vi.fn(() => ({ where: vi.fn(() => ({ limit: vi.fn().mockResolvedValue(book ? [book] : []) })) })),
-        where: vi.fn(() => Promise.resolve(fileRowsPerCall[fileCall++] ?? [])),
-      })),
-    })),
+    findBook: vi.fn().mockResolvedValue(book ?? null),
+    findFilePaths: vi.fn(() => Promise.resolve(new Set((fileRowsPerCall[fileCall++] ?? []).map((row) => row.absolutePath)))),
   };
 }
 

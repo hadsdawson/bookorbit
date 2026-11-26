@@ -1,19 +1,13 @@
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { BookFileScanResult } from '@bookorbit/types';
-import { eq } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { stat } from 'fs/promises';
 import { basename } from 'path';
 
-import { DB } from '../../db';
-import * as schema from '../../db/schema';
-import { bookFiles, books, libraries } from '../../db/schema';
 import type { RequestUser } from '../../common/types/request-user';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
 import { LibraryService } from '../library/library.service';
 import { ScannerService } from '../scanner/scanner.service';
-
-type Db = NodePgDatabase<typeof schema>;
+import { BookFileScanRepository } from './book-file-scan.repository';
 
 /** Fork. Rescans the folder of one book on request, so a file the book lost can be picked up again. */
 @Injectable()
@@ -21,7 +15,7 @@ export class BookFileScanService {
   private readonly logger = new Logger(BookFileScanService.name);
 
   constructor(
-    @Inject(DB) private readonly db: Db,
+    private readonly repo: BookFileScanRepository,
     private readonly libraryService: LibraryService,
     private readonly scanner: ScannerService,
   ) {}
@@ -30,12 +24,7 @@ export class BookFileScanService {
     const event = 'book.scan_files';
     const startedAt = Date.now();
 
-    const [book] = await this.db
-      .select({ id: books.id, libraryId: books.libraryId, folderPath: books.folderPath, organizationMode: libraries.organizationMode })
-      .from(books)
-      .innerJoin(libraries, eq(books.libraryId, libraries.id))
-      .where(eq(books.id, bookId))
-      .limit(1);
+    const book = await this.repo.findBook(bookId);
     if (!book) throw new NotFoundException(`Book ${bookId} not found`);
 
     await this.libraryService.verifyAccessLevel(user, book.libraryId, 'editor');
@@ -43,10 +32,10 @@ export class BookFileScanService {
     this.logger.log(`[${event}] [start] bookId=${bookId} userId=${user.id} libraryId=${book.libraryId} - book file scan started`);
 
     try {
-      const before = await this.filePaths(bookId);
+      const before = await this.repo.findFilePaths(bookId);
       const target = await this.scanTarget(book.folderPath, book.organizationMode, before);
       const status = await this.scanner.scanPathAndWait(target.type, target.path, book.libraryId);
-      const after = await this.filePaths(bookId);
+      const after = await this.repo.findFilePaths(bookId);
 
       const addedFiles = [...after].filter((path) => !before.has(path)).map((path) => basename(path));
       const removedFiles = [...before].filter((path) => !after.has(path)).map((path) => basename(path));
@@ -61,11 +50,6 @@ export class BookFileScanService {
       );
       throw err;
     }
-  }
-
-  private async filePaths(bookId: number): Promise<Set<string>> {
-    const rows = await this.db.select({ absolutePath: bookFiles.absolutePath }).from(bookFiles).where(eq(bookFiles.bookId, bookId));
-    return new Set(rows.map((row) => row.absolutePath));
   }
 
   /**
