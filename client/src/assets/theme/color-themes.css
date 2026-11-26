@@ -854,65 +854,93 @@ html[data-color-theme]:not([data-color-theme='none']) .text-muted-foreground > s
 
 /* Status pills: a tinted round pill with text in its own tone is filled solid in the theme's hue for that tone. It
    must also look like a pill, bordered or small padded text, so progress tracks, icon discs and glows that share the
-   tint stay as they are. */
+   tint stay as they are. Fork: the tint and text must be the pill's own classes, not a state variant such as
+   `aria-pressed:bg-primary/12`, or every toggle chip (the library's format chips) is filled whether picked or not. */
 html[data-color-theme]:not([data-color-theme='none'])
-  .rounded-full:is(.border, [class*='px-'][class*='text-xs'])[class*='bg-warning/'][class*='text-warning'] {
+  .rounded-full:is(.border, [class*='px-'][class*='text-xs']):is([class^='bg-warning/'], [class*=' bg-warning/']):is(
+    [class^='text-warning'],
+    [class*=' text-warning']
+  ) {
   border-color: var(--ct-pill-wait);
   background-color: var(--ct-pill-wait);
   color: var(--ct-pill-ink);
 }
 
 html[data-color-theme]:not([data-color-theme='none'])
-  .rounded-full:is(.border, [class*='px-'][class*='text-xs'])[class*='bg-info/'][class*='text-info'] {
+  .rounded-full:is(.border, [class*='px-'][class*='text-xs']):is([class^='bg-info/'], [class*=' bg-info/']):is(
+    [class^='text-info'],
+    [class*=' text-info']
+  ) {
   border-color: var(--ct-pill-progress);
   background-color: var(--ct-pill-progress);
   color: var(--ct-pill-ink);
 }
 
 html[data-color-theme]:not([data-color-theme='none'])
-  .rounded-full:is(.border, [class*='px-'][class*='text-xs'])[class*='bg-success/'][class*='text-success'] {
+  .rounded-full:is(.border, [class*='px-'][class*='text-xs']):is([class^='bg-success/'], [class*=' bg-success/']):is(
+    [class^='text-success'],
+    [class*=' text-success']
+  ) {
   border-color: var(--ct-pill-done);
   background-color: var(--ct-pill-done);
   color: var(--ct-pill-ink);
 }
 
 html[data-color-theme]:not([data-color-theme='none'])
-  .rounded-full:is(.border, [class*='px-'][class*='text-xs'])[class*='bg-destructive/'][class*='text-destructive'] {
+  .rounded-full:is(.border, [class*='px-'][class*='text-xs']):is([class^='bg-destructive/'], [class*=' bg-destructive/']):is(
+    [class^='text-destructive'],
+    [class*=' text-destructive']
+  ) {
   border-color: var(--ct-pill-fail);
   background-color: var(--ct-pill-fail);
   color: var(--ct-pill-ink);
 }
 
 html[data-color-theme]:not([data-color-theme='none'])
-  .rounded-full:is(.border, [class*='px-'][class*='text-xs'])[class*='bg-[var(--pill-warning)]/'][class*='text-[var(--pill-warning)]'] {
+  .rounded-full:is(.border, [class*='px-'][class*='text-xs']):is([class^='bg-[var(--pill-warning)]/'], [class*=' bg-[var(--pill-warning)]/']):is(
+    [class^='text-[var(--pill-warning)]'],
+    [class*=' text-[var(--pill-warning)]']
+  ) {
   border-color: var(--ct-pill-wait);
   background-color: var(--ct-pill-wait);
   color: var(--ct-pill-ink);
 }
 
 html[data-color-theme]:not([data-color-theme='none'])
-  .rounded-full:is(.border, [class*='px-'][class*='text-xs'])[class*='bg-[var(--pill-pending)]/'][class*='text-[var(--pill-pending)]'] {
+  .rounded-full:is(.border, [class*='px-'][class*='text-xs']):is([class^='bg-[var(--pill-pending)]/'], [class*=' bg-[var(--pill-pending)]/']):is(
+    [class^='text-[var(--pill-pending)]'],
+    [class*=' text-[var(--pill-pending)]']
+  ) {
   border-color: var(--ct-pill-wait);
   background-color: var(--ct-pill-wait);
   color: var(--ct-pill-ink);
 }
 
 html[data-color-theme]:not([data-color-theme='none'])
-  .rounded-full:is(.border, [class*='px-'][class*='text-xs'])[class*='bg-[var(--pill-info)]/'][class*='text-[var(--pill-info)]'] {
+  .rounded-full:is(.border, [class*='px-'][class*='text-xs']):is([class^='bg-[var(--pill-info)]/'], [class*=' bg-[var(--pill-info)]/']):is(
+    [class^='text-[var(--pill-info)]'],
+    [class*=' text-[var(--pill-info)]']
+  ) {
   border-color: var(--ct-pill-progress);
   background-color: var(--ct-pill-progress);
   color: var(--ct-pill-ink);
 }
 
 html[data-color-theme]:not([data-color-theme='none'])
-  .rounded-full:is(.border, [class*='px-'][class*='text-xs'])[class*='bg-[var(--pill-success)]/'][class*='text-[var(--pill-success)]'] {
+  .rounded-full:is(.border, [class*='px-'][class*='text-xs']):is([class^='bg-[var(--pill-success)]/'], [class*=' bg-[var(--pill-success)]/']):is(
+    [class^='text-[var(--pill-success)]'],
+    [class*=' text-[var(--pill-success)]']
+  ) {
   border-color: var(--ct-pill-done);
   background-color: var(--ct-pill-done);
   color: var(--ct-pill-ink);
 }
 
 html[data-color-theme]:not([data-color-theme='none'])
-  .rounded-full:is(.border, [class*='px-'][class*='text-xs'])[class*='bg-primary/'][class*='text-primary'] {
+  .rounded-full:is(.border, [class*='px-'][class*='text-xs']):is([class^='bg-primary/'], [class*=' bg-primary/']):is(
+    [class^='text-primary'],
+    [class*=' text-primary']
+  ) {
   border-color: var(--primary);
   background-color: var(--primary);
   color: var(--primary-foreground);
@@ -920,16 +948,28 @@ html[data-color-theme]:not([data-color-theme='none'])
 
 /* Text inside a filled pill that names its own tone would vanish into the fill. */
 html[data-color-theme]:not([data-color-theme='none'])
-  .rounded-full:is(.border, [class*='px-'][class*='text-xs'])[class*='bg-warning/'][class*='text-warning']
+  .rounded-full:is(.border, [class*='px-'][class*='text-xs']):is([class^='bg-warning/'], [class*=' bg-warning/']):is(
+    [class^='text-warning'],
+    [class*=' text-warning']
+  )
   [class*='text-warning'],
 html[data-color-theme]:not([data-color-theme='none'])
-  .rounded-full:is(.border, [class*='px-'][class*='text-xs'])[class*='bg-info/'][class*='text-info']
+  .rounded-full:is(.border, [class*='px-'][class*='text-xs']):is([class^='bg-info/'], [class*=' bg-info/']):is(
+    [class^='text-info'],
+    [class*=' text-info']
+  )
   [class*='text-info'],
 html[data-color-theme]:not([data-color-theme='none'])
-  .rounded-full:is(.border, [class*='px-'][class*='text-xs'])[class*='bg-success/'][class*='text-success']
+  .rounded-full:is(.border, [class*='px-'][class*='text-xs']):is([class^='bg-success/'], [class*=' bg-success/']):is(
+    [class^='text-success'],
+    [class*=' text-success']
+  )
   [class*='text-success'],
 html[data-color-theme]:not([data-color-theme='none'])
-  .rounded-full:is(.border, [class*='px-'][class*='text-xs'])[class*='bg-destructive/'][class*='text-destructive']
+  .rounded-full:is(.border, [class*='px-'][class*='text-xs']):is([class^='bg-destructive/'], [class*=' bg-destructive/']):is(
+    [class^='text-destructive'],
+    [class*=' text-destructive']
+  )
   [class*='text-destructive'] {
   color: inherit;
 }
