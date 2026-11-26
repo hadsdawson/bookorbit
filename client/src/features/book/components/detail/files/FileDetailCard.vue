@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { BookOpen, Copy, Download, Eye, Headphones, MoreVertical, Pin, PinOff } from '@lucide/vue'
+import { BookOpen, Check, Copy, Download, Eye, Headphones, MoreVertical, Pin, PinOff } from '@lucide/vue'
 import { formatBytes } from '@/lib/formatting'
 import { formatDate, formatPercent, formatRelativeFromNow } from '@/i18n/formatters'
 import { formatColorVar } from '@/features/book/lib/format-colors'
@@ -31,6 +31,8 @@ const props = defineProps<{
   isPinnedPrimary: boolean
   /** Fork: a primary-format change is in flight. */
   primaryBusy: boolean
+  /** Fork: this file's path was just copied, so the copy button shows a check for a moment. */
+  pathCopied?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -163,12 +165,18 @@ const canChoosePrimary = computed(() => props.canEdit && (props.file.role === 'c
         <code class="path-tail min-w-0 flex-1 truncate font-mono text-[11.5px] text-muted-foreground" :title="file.absolutePath">
           <bdi>{{ file.absolutePath }}</bdi>
         </code>
+        <span v-if="pathCopied" class="shrink-0 text-[11px] font-medium text-success" data-test="path-copied-label">
+          {{ t('book.detail.files.copied') }}
+        </span>
         <button
-          class="inline-flex size-[22px] shrink-0 items-center justify-center rounded-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          class="inline-flex size-[22px] shrink-0 items-center justify-center rounded-xs transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          :class="pathCopied ? 'text-success' : 'text-muted-foreground hover:text-foreground'"
           :aria-label="t('book.detail.files.copyPath')"
+          data-test="copy-path-button"
           @click="handleCopyPath"
         >
-          <Copy class="size-3.5" aria-hidden="true" />
+          <Check v-if="pathCopied" class="size-3.5" aria-hidden="true" />
+          <Copy v-else class="size-3.5" aria-hidden="true" />
         </button>
       </div>
 

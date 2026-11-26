@@ -2,7 +2,7 @@
 import { computed, nextTick, ref, useId, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useResizeObserver } from '@vueuse/core'
-import { ArrowDown, ArrowUp, ArrowUpDown, AudioLines, CircleCheck, FilePlus, Loader2, TriangleAlert } from '@lucide/vue'
+import { ArrowDown, ArrowUp, ArrowUpDown, AudioLines, CircleCheck, FilePlus, FolderSearch, Loader2, TriangleAlert } from '@lucide/vue'
 import type { BookDetail } from '@bookorbit/types'
 import { formatBytes } from '@/lib/formatting'
 import { formatList } from '@/i18n/formatters'
@@ -20,6 +20,10 @@ const props = defineProps<{
   formatShares: FormatShare[]
   folderSegments: string[]
   canUpload: boolean
+  /** Fork: the viewer may rescan this book's folder. */
+  canScan?: boolean
+  /** Fork: a rescan of this book's folder is in flight. */
+  scanning?: boolean
   showReadAloud?: boolean
   /** False keeps the entry focusable but inert, so its reason can still be reached and read. */
   readAloudAvailable?: boolean
@@ -34,7 +38,7 @@ const props = defineProps<{
   sortOptions: { key: SortKey; label: string }[]
 }>()
 
-const emit = defineEmits<{ sort: [key: SortKey]; addFile: []; generateReadAloud: []; retryReadAloud: [] }>()
+const emit = defineEmits<{ sort: [key: SortKey]; addFile: []; scan: []; generateReadAloud: []; retryReadAloud: [] }>()
 
 const { t, locale } = useI18n()
 const { coverUrl } = useCoverVersions()
@@ -81,7 +85,17 @@ useResizeObserver([heroRef, statsRef, actionsRef], measureStacking)
 
 // A stacked stat row spans the strip, so its box does not resize when a value or label changes.
 watch(
-  () => [props.fileCount, props.totalBytes, props.runtimeLabel, props.formatShares.length, props.showReadAloud, props.canUpload, locale.value],
+  () => [
+    props.fileCount,
+    props.totalBytes,
+    props.runtimeLabel,
+    props.formatShares.length,
+    props.showReadAloud,
+    props.canUpload,
+    props.canScan,
+    props.scanning,
+    locale.value,
+  ],
   () => nextTick(measureStacking),
 )
 
@@ -110,6 +124,9 @@ function handleSort(key: SortKey) {
 }
 function handleAddFile() {
   emit('addFile')
+}
+function handleScan() {
+  if (!props.scanning) emit('scan')
 }
 function handleGenerateReadAloud() {
   if (props.readAloudAvailable) emit('generateReadAloud')
@@ -216,6 +233,22 @@ function handleRetryReadAloud() {
         >
           <AudioLines class="size-4" :class="readAloudAvailable ? 'text-primary' : undefined" aria-hidden="true" />
           {{ t('book.detail.files.readAloud.action') }}
+        </button>
+
+        <button
+          v-if="canScan"
+          type="button"
+          class="inline-flex h-[34px] items-center gap-1.5 rounded-lg border border-input px-3 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          :class="scanning ? 'cursor-progress text-muted-foreground' : 'text-foreground hover:bg-muted'"
+          :aria-disabled="scanning ? 'true' : undefined"
+          :aria-busy="scanning ? 'true' : undefined"
+          :title="t('book.detail.files.scan.hint')"
+          data-test="scan-book-files"
+          @click="handleScan"
+        >
+          <Loader2 v-if="scanning" class="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+          <FolderSearch v-else class="size-4" aria-hidden="true" />
+          {{ scanning ? t('book.detail.files.scan.scanning') : t('book.detail.files.scan.action') }}
         </button>
 
         <button

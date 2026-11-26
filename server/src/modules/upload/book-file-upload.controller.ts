@@ -1,10 +1,11 @@
 import { BadRequestException, Controller, HttpCode, HttpStatus, Param, ParseIntPipe, Post, Req } from '@nestjs/common';
-import { Permission } from '@bookorbit/types';
+import { Permission, type BookFileScanResult } from '@bookorbit/types';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
 import type { MultipartRequest } from '../../common/types/multipart-request';
 import type { RequestUser } from '../../common/types/request-user';
 import { AppSettingsService } from '../app-settings/app-settings.service';
+import { BookFileScanService } from './book-file-scan.service';
 import { UploadService } from './upload.service';
 
 @Controller('books')
@@ -12,6 +13,7 @@ export class BookFileUploadController {
   constructor(
     private readonly uploadService: UploadService,
     private readonly appSettings: AppSettingsService,
+    private readonly bookFileScan: BookFileScanService,
   ) {}
 
   @Post(':id/files')
@@ -29,5 +31,12 @@ export class BookFileUploadController {
   @RequirePermission(Permission.LibraryEditMetadata)
   async renameBookFiles(@Param('id', ParseIntPipe) bookId: number, @CurrentUser() user: RequestUser): Promise<void> {
     await this.uploadService.renameBookFiles(bookId, user);
+  }
+
+  @Post(':id/scan-files')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission(Permission.LibraryEditMetadata)
+  scanBookFiles(@Param('id', ParseIntPipe) bookId: number, @CurrentUser() user: RequestUser): Promise<BookFileScanResult> {
+    return this.bookFileScan.scanBookFiles(bookId, user);
   }
 }

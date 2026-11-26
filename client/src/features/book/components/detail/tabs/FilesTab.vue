@@ -21,6 +21,7 @@ import FileDetailCard from '../files/FileDetailCard.vue'
 import WriteBackCard from '../files/WriteBackCard.vue'
 import { useLibraries } from '@/features/library/composables/useLibraries'
 import AddBookFileModal from './AddBookFileModal.vue'
+import { useBookFileScan } from '@/features/book/composables/useBookFileScan'
 import ReadAloudDialog from '@/features/read-aloud/components/ReadAloudDialog.vue'
 import ReadAloudJobCard from '@/features/read-aloud/components/ReadAloudJobCard.vue'
 import { useReadAloud } from '@/features/read-aloud/composables/useReadAloud'
@@ -197,7 +198,10 @@ function goToMetadata() {
 const copiedPathFileId = ref<number | null>(null)
 
 async function copyPath(file: TreeFile) {
-  if (!(await copyToClipboard(file.absolutePath))) return
+  if (!(await copyToClipboard(file.absolutePath))) {
+    toast.error(t('book.detail.files.copyFailed'))
+    return
+  }
   copiedPathFileId.value = file.id
   window.setTimeout(() => {
     if (copiedPathFileId.value === file.id) copiedPathFileId.value = null
@@ -326,6 +330,26 @@ function onFilesAdded() {
   emit('refetch')
 }
 
+const { scanning, scanBookFiles } = useBookFileScan()
+
+async function handleScanFiles() {
+  if (scanning.value) return
+  try {
+    const result = await scanBookFiles(props.book.id)
+    if (result.status === 'library-scan-running') {
+      toast.info(t('book.detail.files.scan.libraryScanRunning'))
+      return
+    }
+    const added = result.addedFiles.length
+    const removed = result.removedFiles.length
+    if (added === 0 && removed === 0) toast.success(t('book.detail.files.scan.noChanges'))
+    else toast.success(t('book.detail.files.scan.changed', { added, removed }))
+    emit('refetch')
+  } catch {
+    toast.error(t('book.detail.files.scan.failed'))
+  }
+}
+
 function openRenameModal(file: TreeFile) {
   renameTarget.value = file
   renameInput.value = file.leaf
@@ -423,6 +447,8 @@ async function confirmDelete() {
       :format-shares="formatShares"
       :folder-segments="folderSegments.relative"
       :can-upload="canUpload"
+      :can-scan="canEditMetadata"
+      :scanning="scanning"
       :show-read-aloud="readAloudEntry.kind !== 'hidden'"
       :read-aloud-available="readAloudEntry.kind === 'available'"
       :read-aloud-note="readAloudNote"
@@ -433,6 +459,7 @@ async function confirmDelete() {
       :sort-options="sortOptions"
       @sort="handleSort"
       @add-file="openAddFileModal"
+      @scan="handleScanFiles"
       @generate-read-aloud="openReadAloudDialog"
       @retry-read-aloud="retryReadAloudCheck"
     />
@@ -528,6 +555,7 @@ async function confirmDelete() {
             :can-delete="canDelete"
             :is-pinned-primary="selectedFile.id === book.pinnedPrimaryFileId"
             :primary-busy="primaryBusy"
+            :path-copied="copiedPathFileId === selectedFile.id"
             @open="openFile"
             @download="downloadFile"
             @rename="openRenameModal"

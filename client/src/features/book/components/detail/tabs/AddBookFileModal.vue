@@ -91,8 +91,10 @@ function onFileInputChange(e: Event) {
 
 async function handleUpload() {
   if (pendingCount.value === 0 || isUploading.value) return
-  // A locked library renames on the server once the uploads go quiet, so the client asks for nothing.
-  await startUpload(props.bookId, { renameAfter: !props.renameLocked && props.canRenameFiles && renameAfter.value })
+  // A locked library also renames on the server once the uploads go quiet, but only this window
+  // knows the batch is done: asking now lets the new names show when it closes, not seconds later.
+  const wantsRename = props.renameLocked || renameAfter.value
+  await startUpload(props.bookId, { renameAfter: props.canRenameFiles && wantsRename })
 }
 
 function fileRowClass(status: string): string {

@@ -125,9 +125,10 @@ interface LibraryScanSettings {
   addedAtSource: AddedAtSource;
 }
 
-type TargetedScanJob =
+type TargetedScanJob = (
   | { type: 'book' | 'directory'; path: string; libraryId: number }
-  | { type: 'registered'; path: string; libraryId: number; bookId: number; fileId: number };
+  | { type: 'registered'; path: string; libraryId: number; bookId: number; fileId: number }
+) & { onDone?: Array<() => void> };
 
 const METADATA_FORMATS = new Set([
   'epub',
@@ -1150,6 +1151,20 @@ export class ScannerService implements OnApplicationBootstrap {
     this.drainTargetedBookScanQueue();
   }
 
+  /**
+   * Fork. Runs one targeted scan through the same queue as the watcher's and resolves once it has
+   * finished, so a caller can report what it changed. A full library scan covers the path itself,
+   * so the targeted one is skipped while that runs.
+   */
+  async scanPathAndWait(type: 'book' | 'directory', path: string, libraryId: number): Promise<'scanned' | 'library-scan-running'> {
+    if (this.scanJobStore.isRunning(libraryId)) return 'library-scan-running';
+    await new Promise<void>((resolve) => {
+      this.targetedBookScanQueue.push({ type, path, libraryId, onDone: [resolve] });
+      this.drainTargetedBookScanQueue();
+    });
+    return 'scanned';
+  }
+
   private releaseScanGate(libraryId: number): void {
     const release = this.scanGateReleases.get(libraryId);
     if (!release) return;
@@ -1169,7 +1184,9 @@ export class ScannerService implements OnApplicationBootstrap {
       this.deferredTargetedScans.set(job.libraryId, pending);
       void this.libraryGate.whenReleased(job.libraryId).then(() => this.requeueDeferredTargetedScans(job.libraryId));
     }
-    pending.set(job.type === 'registered' ? `registered:${job.fileId}` : `${job.type}:${job.path}`, job);
+    const key = job.type === 'registered' ? `registered:${job.fileId}` : `${job.type}:${job.path}`;
+    const earlierWaiters = pending.get(key)?.onDone ?? [];
+    pending.set(key, earlierWaiters.length > 0 ? { ...job, onDone: [...earlierWaiters, ...(job.onDone ?? [])] } : job);
   }
 
   private requeueDeferredTargetedScans(libraryId: number): void {
@@ -1203,6 +1220,7 @@ export class ScannerService implements OnApplicationBootstrap {
         )
         .finally(() => {
           if (job.type === 'registered') this.pendingFileRepairs.delete(job.fileId);
+          for (const done of job.onDone ?? []) done();
           this.activeTargetedBookScans -= 1;
           this.drainTargetedBookScanQueue();
         });
