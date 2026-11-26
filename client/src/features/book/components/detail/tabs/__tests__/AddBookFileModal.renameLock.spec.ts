@@ -25,11 +25,22 @@ vi.mock('@/features/settings/composables/useAppInfo', () => ({ useAppInfo: () =>
 import AddBookFileModal from '../AddBookFileModal.vue'
 
 describe('AddBookFileModal rename lock', () => {
-  it('shows the rename as always on and leaves the rename to the server', async () => {
+  it('shows the rename as always on and renames as soon as the batch lands', async () => {
     const wrapper = mount(AddBookFileModal, { props: { bookId: 7, canRenameFiles: true, renameLocked: true }, attachTo: document.body })
     const locked = document.querySelector<HTMLInputElement>('[data-testid="rename-locked"] input')!
     expect(locked.checked).toBe(true)
     expect(locked.disabled).toBe(true)
+
+    const upload = [...document.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.includes('Upload'))
+    upload!.click()
+    await Promise.resolve()
+    expect(startUpload).toHaveBeenCalledWith(7, { renameAfter: true })
+    wrapper.unmount()
+  })
+
+  it('leaves the rename to the server when the viewer cannot rename files', async () => {
+    startUpload.mockClear()
+    const wrapper = mount(AddBookFileModal, { props: { bookId: 7, canRenameFiles: false, renameLocked: true }, attachTo: document.body })
 
     const upload = [...document.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.includes('Upload'))
     upload!.click()

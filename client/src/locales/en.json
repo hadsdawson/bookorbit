@@ -9130,6 +9130,17 @@
         "missing": "Missing",
         "backToFolder": "Back to folder",
         "copyPath": "Copy full path",
+        "copied": "Copied",
+        "copyFailed": "Could not copy the path",
+        "scan": {
+          "action": "Scan",
+          "scanning": "Scanning...",
+          "hint": "Check this book's folder and update its files to match what is on disk",
+          "noChanges": "Scan finished: the files already match the folder",
+          "changed": "Scan finished: {added, plural, =0 {no files added} one {# file added} other {# files added}}, {removed, plural, =0 {none removed} one {# removed} other {# removed}}",
+          "libraryScanRunning": "A library scan is running and will cover this book. Check back when it finishes.",
+          "failed": "The scan could not be run"
+        },
         "pathCopied": "Path copied to clipboard",
         "resume": "Resume",
         "audiobook": "Audiobook",

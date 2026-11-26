@@ -5740,3 +5740,47 @@ describe('nested library folders', () => {
     expect(repo.findAllLibraryRoots).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('scanPathAndWait', () => {
+  it('skips the targeted scan while a full library scan is running', async () => {
+    const { service, jobStore } = makeService(makeRepo());
+    vi.spyOn(jobStore, 'isRunning').mockReturnValue(true);
+    const directoryScan = vi.spyOn(service as any, 'scanBookDirectory');
+
+    await expect(service.scanPathAndWait('directory', '/library/Author/Book', 1)).resolves.toBe('library-scan-running');
+    expect(directoryScan).not.toHaveBeenCalled();
+  });
+
+  it('resolves only after the targeted scan has finished', async () => {
+    const { service } = makeService(makeRepo());
+    let finishScan!: () => void;
+    const scanDone = new Promise<void>((resolve) => {
+      finishScan = resolve;
+    });
+    vi.spyOn(service as any, 'scanBookDirectory').mockReturnValue(scanDone);
+
+    let settled = false;
+    const waiting = service.scanPathAndWait('directory', '/library/Author/Book', 1).then((status) => {
+      settled = true;
+      return status;
+    });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    finishScan();
+    await expect(waiting).resolves.toBe('scanned');
+  });
+
+  it('still answers when its scan waits behind a move and merges with a later scan of the same folder', async () => {
+    const { service, libraryGate } = makeService(makeRepo());
+    const release = libraryGate.tryAcquire(1, 'move')!;
+    const directoryScan = vi.spyOn(service as any, 'scanBookDirectory').mockResolvedValue(undefined);
+
+    const first = service.scanPathAndWait('directory', '/library/Author/Book', 1);
+    service.scanBookDirectoryAsync('/library/Author/Book', 1);
+    release();
+
+    await expect(first).resolves.toBe('scanned');
+    expect(directoryScan).toHaveBeenCalledTimes(1);
+  });
+});

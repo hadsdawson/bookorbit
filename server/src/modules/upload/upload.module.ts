@@ -9,6 +9,7 @@ import { LibraryModule } from '../library/library.module';
 import { MetadataModule } from '../metadata/metadata.module';
 import { PathModule } from '../path/path.module';
 import { ScannerModule } from '../scanner/scanner.module';
+import { BookFileScanService } from './book-file-scan.service';
 import { BookFileUploadController } from './book-file-upload.controller';
 import { GeneratedBookFileRepository } from './generated-book-file.repository';
 import { GeneratedBookFileService } from './generated-book-file.service';
@@ -36,6 +37,7 @@ import { UploadSessionService } from './upload-session.service';
   controllers: [UploadController, BookFileUploadController, UploadSessionController],
   providers: [
     UploadService,
+    BookFileScanService,
     GeneratedBookFileService,
     GeneratedBookFileRepository,
     UploadValidatorService,

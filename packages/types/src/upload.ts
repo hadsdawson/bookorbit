@@ -115,3 +115,12 @@ export type AddBookFileResult = {
   mediaOverlay?: EpubMediaOverlayCapability | null;
   bookStatus: string;
 };
+
+/** Fork. What a scan of one book's folder from its Files tab found. */
+export type BookFileScanResult = {
+  /** `library-scan-running`: a full library scan is under way and will cover the book itself. */
+  status: 'scanned' | 'library-scan-running';
+  addedFiles: string[];
+  removedFiles: string[];
+  fileCount: number;
+};

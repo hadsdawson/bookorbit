@@ -169,3 +169,40 @@ describe('FilesHeroBar stacking', () => {
     expect(bar.get('.files-hero').attributes('data-stacked')).toBeUndefined()
   })
 })
+
+describe('FilesHeroBar scan button', () => {
+  it('is hidden for viewers who cannot rescan the book', () => {
+    const bar = mountBar()
+    expect(bar.find('[data-test="scan-book-files"]').exists()).toBe(false)
+  })
+
+  it('asks for a scan and then shows it as busy, ignoring clicks until it finishes', async () => {
+    wrapper = mount(FilesHeroBar, {
+      attachTo: document.body,
+      props: {
+        book: BOOK,
+        fileCount: 2,
+        totalBytes: 2048,
+        runtimeLabel: null,
+        formatShares: [],
+        folderSegments: ['Dune'],
+        canUpload: false,
+        canScan: true,
+        sortKey: 'name',
+        sortDirection: 'asc',
+        sortOptions: [],
+      },
+    })
+    const button = wrapper.get('[data-test="scan-book-files"]')
+    expect(button.text()).toBe(t('book.detail.files.scan.action'))
+
+    await button.trigger('click')
+    expect(wrapper.emitted('scan')).toHaveLength(1)
+
+    await wrapper.setProps({ scanning: true })
+    expect(button.text()).toBe(t('book.detail.files.scan.scanning'))
+    expect(button.attributes('aria-busy')).toBe('true')
+    await button.trigger('click')
+    expect(wrapper.emitted('scan')).toHaveLength(1)
+  })
+})
