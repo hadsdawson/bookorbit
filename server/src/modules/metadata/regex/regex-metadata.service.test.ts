@@ -218,6 +218,13 @@ describe('regex metadata precedence', () => {
   it('fills missing values when the file source has priority', () => {
     expect(mergeRegexMetadata(base, { title: 'Regex', seriesIndex: '08' }, false)).toEqual({ ...base, seriesIndex: '08' });
   });
+  it('drops a regex series number when neither the file nor the rule names the series (fork)', () => {
+    expect(mergeRegexMetadata({ ...base, seriesName: null, seriesIndex: null }, { seriesIndex: '3' }, true)).toMatchObject({ seriesIndex: null });
+    expect(mergeRegexMetadata({ ...base, seriesName: null, seriesIndex: null }, { seriesName: 'Hades', seriesIndex: '3' }, true)).toMatchObject({
+      seriesName: 'Hades',
+      seriesIndex: '3',
+    });
+  });
   it('lets a run-year series from the path name the same run more precisely than the file', () => {
     expect(mergeRegexMetadata({ ...base, seriesName: 'Batman' }, { seriesName: 'Batman (2016)', seriesIndex: '3' }, false)).toMatchObject({
       seriesName: 'Batman (2016)',

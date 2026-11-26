@@ -235,6 +235,16 @@ describe('BookDockFileSheet', () => {
     }
   })
 
+  it('notes that a series number without a series name will not be saved (fork)', async () => {
+    const lone = mountSheet(makeFile({ selectedMetadata: { title: 'A Beautiful Evil', seriesIndex: '3' } }))
+    await flushPromises()
+    expect(lone.find('[data-testid="series-index-needs-name"]').exists()).toBe(true)
+
+    const named = mountSheet(makeFile({ selectedMetadata: { title: 'Dune', seriesName: 'Dune', seriesIndex: '1' } }))
+    await flushPromises()
+    expect(named.find('[data-testid="series-index-needs-name"]').exists()).toBe(false)
+  })
+
   it('autosaves an exact series index label including its trailing zero', async () => {
     vi.useFakeTimers()
     try {

@@ -2174,6 +2174,21 @@ describe('BookDockFinalizeService', () => {
     expect(metadataScoreService.calculateAndSave).toHaveBeenCalledWith(15);
   });
 
+  it('does not save a series number that has no series name (fork)', async () => {
+    const { service, db } = makeService();
+    const updateChain = { set: vi.fn(), where: vi.fn().mockResolvedValue(undefined) };
+    updateChain.set.mockReturnValue(updateChain);
+    db.update.mockReturnValue(updateChain);
+    const bucketRow = makeRow({
+      selectedMetadata: { title: 'A Beautiful Evil', authors: ['Bea Fitzgerald'], seriesName: '  ', seriesIndex: '3' } as BookDockMetadata,
+      coverPath: null,
+    });
+
+    await (service as any).applyMetadata(15, bucketRow);
+
+    expect(updateChain.set).toHaveBeenCalledWith(expect.objectContaining({ seriesName: null, seriesIndex: null }));
+  });
+
   describe("the other format's cover", () => {
     function setUp(unitFormats: string[], slotEmpty = true, picked = false) {
       const ctx = makeService();

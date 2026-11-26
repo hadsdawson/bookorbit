@@ -120,6 +120,7 @@ const tagList = computed({
   },
 })
 
+const seriesIndexWithoutName = computed(() => form.seriesIndex.trim() !== '' && form.seriesName.trim() === '')
 const seriesIndexError = computed(() => form.seriesIndex !== '' && !isValidSeriesIndex(form.seriesIndex.trim()))
 
 function normalizedSeriesIndex(): string | null {
@@ -797,6 +798,9 @@ onMounted(() => {
               />
               <span v-if="seriesIndexError" class="mt-1 block text-xs text-destructive" role="alert">
                 {{ t('bookDock.invalidSeriesIndex') }}
+              </span>
+              <span v-else-if="seriesIndexWithoutName" class="mt-1 block text-xs text-muted-foreground" data-testid="series-index-needs-name">
+                {{ t('bookDock.seriesIndexNeedsName') }}
               </span>
             </label>
             <SeriesChoice
