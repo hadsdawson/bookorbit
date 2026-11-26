@@ -23,7 +23,9 @@ export type MetadataScoreField =
   | "itunesId"
   | "koboId"
   | "aladinId"
-  | "audiobookChapters";
+  | "audiobookChapters"
+  | "editionName"
+  | "originalPublishedYear";
 
 export type MetadataScoreGroup = "core" | "publishing" | "classification" | "enrichment" | "providers";
 
@@ -50,6 +52,9 @@ export const METADATA_SCORE_FIELDS: Record<MetadataScoreField, MetadataScoreFiel
   publishedYear: { group: "publishing", rule: "positive", defaultWeight: 4 },
   language: { group: "publishing", rule: "text", defaultWeight: 4 },
   pageCount: { group: "publishing", rule: "positive", defaultWeight: 2 },
+  // Fork. Off until given a weight, so turning them on is a choice and existing scores stay as they were.
+  editionName: { group: "publishing", rule: "text", defaultWeight: 0 },
+  originalPublishedYear: { group: "publishing", rule: "positive", defaultWeight: 0 },
   isbn13: { group: "classification", rule: "text", defaultWeight: 7 },
   isbn10: { group: "classification", rule: "text", defaultWeight: 2 },
   seriesName: { group: "classification", rule: "text", defaultWeight: 0 },

@@ -17,6 +17,8 @@ export const METADATA_SCORE_BASE_SELECT = {
   isbn13: bookMetadata.isbn13,
   publisher: bookMetadata.publisher,
   publishedYear: bookMetadata.publishedYear,
+  editionName: bookMetadata.editionName,
+  originalPublishedYear: bookMetadata.originalPublishedYear,
   language: bookMetadata.language,
   pageCount: bookMetadata.pageCount,
   seriesName: bookMetadata.seriesName,

@@ -2561,6 +2561,7 @@
         "authors": "Authors",
         "publisher": "Publisher",
         "publishedYear": "Published year",
+        "editionName": "Edition name",
         "originalPublishedYear": "First published",
         "language": "Language",
         "pageCount": "Page count",

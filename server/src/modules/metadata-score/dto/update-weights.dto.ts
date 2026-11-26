@@ -27,4 +27,7 @@ export class UpdateWeightsDto {
   @IsInt() @Min(0) aladinId!: number;
   /** Fork. Scored only for a book with an M4B file. */
   @IsInt() @Min(0) audiobookChapters!: number;
+  /** Fork. */
+  @IsInt() @Min(0) editionName!: number;
+  @IsInt() @Min(0) originalPublishedYear!: number;
 }
