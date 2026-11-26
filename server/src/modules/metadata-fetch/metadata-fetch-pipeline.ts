@@ -790,6 +790,8 @@ export class MetadataFetchPipeline {
         const value = this.extractField(candidate, field);
         if (value === undefined || value === null) continue;
         if (mergeStrategy !== 'overwrite' && this.isEmptyProviderValue(value)) continue;
+        // A number with no series name says nothing, so the next provider gets a turn.
+        if (field === 'seriesIndex' && this.isMissing(candidate.seriesName)) continue;
 
         if (field === 'genres') {
           if (!Array.isArray(value)) continue;
@@ -828,6 +830,8 @@ export class MetadataFetchPipeline {
         break;
       }
     }
+
+    this.dropSeriesIndexWithoutName(result, sources, existing);
 
     const seriesMemberships = this.resolveSeriesMemberships(byProvider, result, sources);
     if (seriesMemberships) result.seriesMemberships = seriesMemberships;
@@ -968,6 +972,15 @@ export class MetadataFetchPipeline {
 
   private normalizeCommunityRatingCount(value: unknown): number | undefined {
     return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : undefined;
+  }
+
+  /** A series number only stands next to a series name, either fetched or already on the book. */
+  private dropSeriesIndexWithoutName(result: ResolvedMetadataFields, sources: Record<string, string>, existing: ExistingMetadataFields): void {
+    if (this.isMissing(result.seriesIndex)) return;
+    if (!this.isMissing(result.seriesName)) return;
+    if (result.seriesName === undefined && !this.isMissing(existing.seriesName)) return;
+    delete result.seriesIndex;
+    delete sources.seriesIndex;
   }
 
   private resolveSeriesMemberships(

@@ -109,6 +109,35 @@ describe('GoodreadsMapper', () => {
     expect(result?.communityRatingCount).toBeUndefined();
   });
 
+  it('reads the series name from the full title when the linked series record is missing', () => {
+    const state: Record<string, any> = {
+      'Book:kca:1': {
+        title: 'A Lively Midwinter Murder',
+        titleComplete: 'A Lively Midwinter Murder (The Three Dahlias, #4)',
+        bookSeries: [{ userPosition: '4', series: { __ref: 'Series:kca:missing' } }],
+      },
+    };
+
+    const result = mapGoodreadsApolloState(state, '1');
+
+    expect(result?.seriesName).toBe('The Three Dahlias');
+    expect(result?.seriesIndex).toBe('4');
+  });
+
+  it('gives no series number when no series name can be found', () => {
+    const state: Record<string, any> = {
+      'Book:kca:1': {
+        title: 'A Lively Midwinter Murder',
+        bookSeries: [{ userPosition: '4', series: { __ref: 'Series:kca:missing' } }],
+      },
+    };
+
+    const result = mapGoodreadsApolloState(state, '1');
+
+    expect(result?.seriesName).toBeUndefined();
+    expect(result?.seriesIndex).toBeUndefined();
+  });
+
   it('uses only the first Goodreads Apollo bookSeries entry', () => {
     const bookId = '604803';
     const mockState: Record<string, any> = {

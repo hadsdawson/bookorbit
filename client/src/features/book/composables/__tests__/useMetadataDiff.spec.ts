@@ -404,6 +404,49 @@ describe('useMetadataDiff', () => {
     expect(diff.buildPatch().formPatch.seriesMemberships).toBeUndefined()
   })
 
+  describe('series number without a series name', () => {
+    const noSeries: MetadataSource = { ...mockCurrent, seriesName: null, seriesIndex: null }
+    const numberOnly: MetadataCandidate = { provider: 'goodreads', providerId: 'gr2', title: 'Book', seriesIndex: '4' }
+    const named: MetadataCandidate = { provider: 'amazon', providerId: 'am1', title: 'Book', seriesName: 'Three Dahlias', seriesIndex: '4' }
+
+    it('does not offer a number from a result that has no series name', () => {
+      const diff = setup(numberOnly, { current: noSeries })
+
+      expect(field(diff, 'seriesIndex')).toBeUndefined()
+      diff.setField('seriesIndex', 'use')
+      expect(diff.buildPatch().formPatch.seriesIndex).toBeUndefined()
+    })
+
+    it('takes the series name along when a number is picked for a book with no series', () => {
+      const diff = setup(named, { current: noSeries })
+
+      diff.toggleField('seriesIndex')
+
+      expect(diff.buildPatch().formPatch).toMatchObject({ seriesName: 'Three Dahlias', seriesIndex: '4' })
+    })
+
+    it('drops the number when its series name is unpicked on a book with no series', () => {
+      const diff = setup(named, { current: noSeries })
+
+      diff.toggleField('seriesIndex')
+      diff.toggleField('seriesName')
+
+      const patch = diff.buildPatch().formPatch
+      expect(patch.seriesName).toBeUndefined()
+      expect(patch.seriesIndex).toBeUndefined()
+    })
+
+    it('lets a number be picked on its own when the book already has a series name', () => {
+      const diff = setup(named)
+
+      diff.toggleField('seriesIndex')
+
+      const patch = diff.buildPatch().formPatch
+      expect(patch.seriesIndex).toBe('4')
+      expect(patch.seriesName).toBeUndefined()
+    })
+  })
+
   it('takes every difference from the active result', () => {
     const diff = setup(google)
 
