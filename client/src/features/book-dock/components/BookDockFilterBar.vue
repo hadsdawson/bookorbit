@@ -98,7 +98,7 @@ function clearSearch() {
         type="search"
         :placeholder="t('bookDock.searchPlaceholder')"
         :aria-label="t('bookDock.searchPlaceholder')"
-        class="h-full w-28 bg-transparent text-xs outline-none placeholder:text-muted-foreground sm:w-44"
+        class="book-dock-search h-full w-28 bg-transparent text-xs outline-none placeholder:text-muted-foreground sm:w-44"
         @input="onSearchInput"
       />
       <button
@@ -114,3 +114,14 @@ function clearSearch() {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Fork: the browser's own clear button sat beside the dock's; only the dock's is kept. */
+.book-dock-search::-webkit-search-decoration,
+.book-dock-search::-webkit-search-cancel-button,
+.book-dock-search::-webkit-search-results-button,
+.book-dock-search::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+</style>
