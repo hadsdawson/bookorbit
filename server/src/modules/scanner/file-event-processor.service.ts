@@ -51,6 +51,16 @@ export class FileEventProcessorService {
 
     const { file, libraryId: rowLibraryId, primaryFileId } = row;
 
+    // A file rewritten in place (tag write-back, another app on the NAS) can raise a delete event
+    // while it is still there. Only a path that is really gone loses its record; anything else is
+    // left for a scan of its folder to refresh.
+    if (await this.pathMayStillExist(absolutePath)) {
+      this.logger.log(
+        `[scanner.file_event.unlink] [end] libraryId=${rowLibraryId} bookId=${file.bookId} path="${sanitizeLogValue(absolutePath)}" action=ignore_still_on_disk - delete event ignored, file still on disk`,
+      );
+      return { type: 'scan-required', scope: 'file' };
+    }
+
     const shouldReevaluate =
       file.id === primaryFileId ||
       // Legacy/inconsistent rows may have NULL primary_file_id while content files still exist.
@@ -103,12 +113,30 @@ export class FileEventProcessorService {
     return { type: 'book-restored', libraryId: rowLibraryId, bookIds: [file.bookId] };
   }
 
+  /** Only "not found" proves a path is gone; a busy or unreadable path is treated as still there. */
+  private async pathMayStillExist(absolutePath: string): Promise<boolean> {
+    try {
+      await stat(absolutePath);
+      return true;
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      return code !== 'ENOENT' && code !== 'ENOTDIR';
+    }
+  }
+
   async handleUnlinkDir(absolutePath: string, scopeLibraryId?: number): Promise<FileEventResult> {
     const matched = await this.scannerRepo.findBooksByFolderPath(absolutePath, scopeLibraryId);
     if (matched.length === 0) return { type: 'noop' };
 
     const bookIds = matched.map((b) => b.id);
     const matchedLibraryId = matched[0].libraryId;
+
+    if (await this.pathMayStillExist(absolutePath)) {
+      this.logger.log(
+        `[scanner.file_event.unlink_dir] [end] libraryId=${matchedLibraryId} path="${sanitizeLogValue(absolutePath)}" bookCount=${bookIds.length} action=ignore_still_on_disk - delete event ignored, folder still on disk`,
+      );
+      return { type: 'noop' };
+    }
 
     await this.scannerRepo.markBooksAsMissing(bookIds);
 

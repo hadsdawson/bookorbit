@@ -773,6 +773,26 @@ describe('folders the walk could not read', () => {
     expect(repo.markBooksAsMissing).not.toHaveBeenCalled();
   });
 
+  it('keeps a file the book already has when this scan finds it empty mid-rewrite', async () => {
+    const repo = makeRepo({
+      findBooksByLibraryFolder: vi.fn().mockResolvedValue([book]),
+      findBookFilesByLibraryFolder: vi.fn().mockResolvedValue([discTwoTrack]),
+    });
+    mockFindCandidates.mockResolvedValue({
+      candidates: [makeCandidate(bookPath, [{ ...discTwoTrackOnDisk, sizeBytes: 0 }])],
+      skippedDirs: new Set(),
+      unchangedDirs: new Set(),
+      dirMtimes: new Map(),
+    });
+
+    const done = awaitScan(repo);
+    const { service } = makeService(repo);
+    await service.startScan(1, 'manual');
+    await done;
+
+    expect(repo.deleteBookFile).not.toHaveBeenCalled();
+  });
+
   it('does not mark a book missing when every folder holding its files could not be read', async () => {
     const repo = makeRepo({
       findBooksByLibraryFolder: vi.fn().mockResolvedValue([book]),

@@ -119,6 +119,40 @@ beforeEach(() => {
 // ── handleUnlink ──────────────────────────────────────────────────────────────
 
 describe('handleUnlink', () => {
+  beforeEach(() => {
+    mockStat.mockRejectedValue(Object.assign(new Error('gone'), { code: 'ENOENT' }));
+  });
+
+  it('keeps the record and asks for a folder scan when the file is still on disk', async () => {
+    mockRepo.findBookFileByAbsolutePath.mockResolvedValue({
+      file: { id: 57, bookId: 12, role: 'content' },
+      libraryId: 5,
+      primaryFileId: 99,
+    } as any);
+    mockStat.mockResolvedValue({} as any);
+
+    const result = await makeService().handleUnlink('/books/Solo/solo.epub');
+
+    expect(result).toEqual({ type: 'scan-required', scope: 'file' });
+    expect(mockRepo.deleteBookFile).not.toHaveBeenCalled();
+    expect(mockRepo.markBooksAsMissing).not.toHaveBeenCalled();
+  });
+
+  it('keeps the record when the file cannot be checked right now', async () => {
+    mockRepo.findBookFileByAbsolutePath.mockResolvedValue({
+      file: { id: 58, bookId: 12, role: 'content' },
+      libraryId: 5,
+      primaryFileId: 58,
+    } as any);
+    mockStat.mockRejectedValue(Object.assign(new Error('busy'), { code: 'EBUSY' }));
+
+    const result = await makeService().handleUnlink('/books/Solo/solo.m4b');
+
+    expect(result).toEqual({ type: 'scan-required', scope: 'file' });
+    expect(mockRepo.deleteBookFile).not.toHaveBeenCalled();
+    expect(mockRepo.updateBookPrimaryFile).not.toHaveBeenCalled();
+  });
+
   it('returns noop when path is not tracked in DB', async () => {
     mockRepo.findBookFileByAbsolutePath.mockResolvedValue(null);
 
@@ -207,7 +241,7 @@ describe('handleUnlink', () => {
     mockRepo.replaceDuplicateBookWithMovedBook.mockResolvedValue({ bookId: 12, libraryId: 9, duplicateBookId: 77 });
     mockStat.mockImplementation((path) => {
       if (path === destinationPath) return Promise.resolve(makeFileStat());
-      return Promise.reject(new Error('ENOENT'));
+      return Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
     });
 
     const result = await makeService().handleUnlink(sourcePath);
@@ -257,7 +291,7 @@ describe('handleUnlink', () => {
     mockRepo.replaceDuplicateBookWithMovedBook.mockResolvedValue({ bookId: 14, libraryId: 9, duplicateBookId: 88 });
     mockStat.mockImplementation((path) => {
       if (path === destinationPath) return Promise.resolve(makeFileStat());
-      return Promise.reject(new Error('ENOENT'));
+      return Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
     });
 
     const result = await makeService().handleUnlink(sourcePath);
@@ -396,6 +430,20 @@ describe('handleUnlink', () => {
 // ── handleUnlinkDir ───────────────────────────────────────────────────────────
 
 describe('handleUnlinkDir', () => {
+  beforeEach(() => {
+    mockStat.mockRejectedValue(Object.assign(new Error('gone'), { code: 'ENOENT' }));
+  });
+
+  it('does not mark books missing when the folder is still on disk', async () => {
+    mockRepo.findBooksByFolderPath.mockResolvedValue([{ id: 20, libraryId: 1 }] as any);
+    mockStat.mockResolvedValue({} as any);
+
+    const result = await makeService().handleUnlinkDir('/books/Author');
+
+    expect(result).toEqual({ type: 'noop' });
+    expect(mockRepo.markBooksAsMissing).not.toHaveBeenCalled();
+  });
+
   it('returns noop when no books are under the deleted folder', async () => {
     mockRepo.findBooksByFolderPath.mockResolvedValue([]);
 
@@ -979,7 +1027,7 @@ describe('reconcileMissingBooks', () => {
     mockRepo.replaceDuplicateBookWithMovedBook.mockResolvedValue({ bookId: 52, libraryId: 7, duplicateBookId: 80 });
     mockStat.mockImplementation((path) => {
       if (path === destinationPath) return Promise.resolve(makeFileStat());
-      return Promise.reject(new Error('ENOENT'));
+      return Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
     });
 
     const results = await makeService().reconcileMissingBooks([2]);

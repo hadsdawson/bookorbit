@@ -95,6 +95,19 @@ describe('process()', () => {
     expect((scannerService as any).bufferBooksUnavailableNotification).toHaveBeenCalledWith(1, [10, 11]);
   });
 
+  it('rescans the folder instead of dropping the file when a delete event finds it still on disk', async () => {
+    const { service, processor, scannerService } = makeService();
+    processor.handleUnlink = vi.fn().mockResolvedValue({ type: 'scan-required', scope: 'file' });
+    processor.handleUnlinkDir = vi.fn();
+
+    await (service as any).process('delete', '/books/Author/Book/book.epub', 1);
+    vi.runAllTimers();
+
+    expect(processor.handleUnlinkDir).not.toHaveBeenCalled();
+    expect(scannerService.scanBookFolderAsync).toHaveBeenCalledWith('/books/Author/Book/book.epub', 1);
+    expect((scannerService as any).bufferBookMissingEvent).not.toHaveBeenCalled();
+  });
+
   it('falls back to handleUnlinkDir when handleUnlink returns noop on delete', async () => {
     const { service, processor, gateway, scannerService } = makeService();
     const missing = { type: 'book-missing', libraryId: 3, bookIds: [20] };
