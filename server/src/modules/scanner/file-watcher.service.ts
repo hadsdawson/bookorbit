@@ -495,6 +495,10 @@ export class FileWatcherService implements OnApplicationBootstrap, OnModuleDestr
       }
     } else {
       result = await this.processor.handleUnlink(path, libraryId);
+      if (result.type === 'scan-required') {
+        this.scheduleFolderScan(path, libraryId);
+        return;
+      }
       if (result.type === 'noop') {
         result = await this.processor.handleUnlinkDir(path, libraryId);
       }

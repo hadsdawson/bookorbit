@@ -2419,16 +2419,23 @@ export class ScannerService implements OnApplicationBootstrap {
       const format = fileStat.format ?? classifyFile(fileStat.absolutePath).format;
       const role = fileStat.role ?? classifyFile(fileStat.absolutePath).role;
 
+      const knownEntry = fileByPath.get(fileStat.absolutePath);
+      // A file this book already has stays on it when this scan cannot read it: the file is still
+      // in the folder, and an empty or busy file is usually one being rewritten in place.
+      const keepKnownFile = () => {
+        if (knownEntry?.bookId === book.id) retainedFileIds.add(knownEntry.id);
+      };
+
       if (role === 'content' && fileStat.sizeBytes === 0) {
         this.logger.warn(
           `[scanner.process_file] [fail] bookId=${book.id} path="${sanitizeLogValue(fileStat.absolutePath)}" reason=zero_byte_content - content file skipped`,
         );
+        keepKnownFile();
         continue;
       }
 
       const fileCount: ScanCounts = { addedCount: 0, updatedCount: 0, missingCount: 0 };
       let processResult: ProcessedFileResult;
-      const knownEntry = fileByPath.get(fileStat.absolutePath);
       const knownDurationSeconds = knownEntry?.durationSeconds ?? null;
       const previousSortOrder = knownEntry?.bookId === book.id ? knownEntry.sortOrder : null;
 
@@ -2449,6 +2456,7 @@ export class ScannerService implements OnApplicationBootstrap {
         this.logger.warn(
           `[scanner.process_file] [fail] bookId=${book.id} path="${sanitizeLogValue(fileStat.absolutePath)}" errorClass=${err instanceof Error ? err.name : 'Error'} error="${sanitizeLogValue(err instanceof Error ? err.message : String(err))}" - file processing failed`,
         );
+        keepKnownFile();
         continue;
       }
 
