@@ -7,6 +7,7 @@ import { DEFAULT_FORMAT_PRIORITY, pickByFormatPriority, type BookDockCombineResu
 import { api } from '@/lib/api'
 import { useBookDestination } from '@/features/library/composables/useBookDestination'
 import BookDestinationFields from '@/features/library/components/BookDestinationFields.vue'
+import BookFormatChip from '@/features/book/components/BookFormatChip.vue'
 
 const { t } = useI18n()
 
@@ -174,7 +175,14 @@ function goToBook(bookId: number) {
                 @change="choosePrimary(file.id)"
               />
               <span class="min-w-0 flex-1 break-words">{{ file.fileName }}</span>
-              <span class="shrink-0 text-xs uppercase text-muted-foreground">{{ extensionOf(file) || t('bookDock.combine.folder') }}</span>
+              <BookFormatChip
+                v-if="extensionOf(file)"
+                :format-key="extensionOf(file)"
+                :primary="file.id === primaryFileId"
+                class="shrink-0 rounded-xs px-2 py-0.5 text-[10px] tracking-wider"
+                data-testid="combine-format-chip"
+              />
+              <span v-else class="shrink-0 text-xs uppercase text-muted-foreground">{{ t('bookDock.combine.folder') }}</span>
             </label>
             <p class="text-xs break-words text-muted-foreground">
               {{ t('bookDock.combine.primaryHint', { title: primaryTitle }) }}
