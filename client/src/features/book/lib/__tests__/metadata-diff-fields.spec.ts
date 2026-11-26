@@ -28,6 +28,16 @@ describe('difference kinds', () => {
     expect(classifyText('Miramax', 'Disney Hyperion')).toEqual({ kind: 'change' })
   })
 
+  it('names a spacing-only difference formatting, never capitalization', () => {
+    expect(classifyText('Anna Dorn', 'Anna\u00a0Dorn')).toEqual({ kind: 'minor', reason: 'formatting' })
+    expect(classifyText('Hank Green', 'Hank  Green')).toEqual({ kind: 'minor', reason: 'formatting' })
+    expect(classifyText('Hank Green', 'hank\u00a0green')).toEqual({ kind: 'minor', reason: 'capitalization' })
+    expect(classifyList(['Anna Dorn'], ['Anna\u00a0Dorn'])).toEqual({ kind: 'minor', reason: 'formatting' })
+    expect(classifyList(['Anna Dorn'], ['Anna Dorn\u200B'])).toEqual({ kind: 'minor', reason: 'formatting' })
+    expect(classifyList(['Anna Dorn'], ['anna dorn'])).toEqual({ kind: 'minor', reason: 'capitalization' })
+    expect(classifyList(['Dune: Messiah'], ['Dune Messiah'])).toEqual({ kind: 'minor', reason: 'punctuation' })
+  })
+
   it('compares lists as sets, so the same genres in another order are only reordered', () => {
     expect(classifyList(['Fantasy', 'Fiction'], ['Fiction', 'Fantasy'])).toEqual({ kind: 'minor', reason: 'reordered' })
     expect(classifyList(['Fantasy'], ['fantasy'])).toEqual({ kind: 'minor', reason: 'capitalization' })
