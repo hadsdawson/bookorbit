@@ -10958,6 +10958,8 @@
       "publisher": "Publisher",
       "publishedDate": "Published Date",
       "year": "Year",
+      "editionName": "Edition name",
+      "firstPublished": "First published",
       "language": "Language",
       "isbn13": "ISBN-13",
       "isbn10": "ISBN-10",

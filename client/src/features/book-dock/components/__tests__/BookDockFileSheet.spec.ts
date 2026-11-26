@@ -191,6 +191,50 @@ describe('BookDockFileSheet', () => {
     })
   })
 
+  it('saves the first published year from the search diff, and never the links the dock cannot keep', async () => {
+    mocks.filteredResults.push({ provider: 'hardcover', providerId: 'hardcover-book', title: 'The Peacock Throne' })
+    const wrapper = mountSheet(makeFile())
+    const searchButton = wrapper.findAll('button').find((button) => button.text().trim() === 'Search')
+    await searchButton!.trigger('click')
+
+    wrapper.getComponent(WorkspaceStub).vm.$emit('apply', {
+      formPatch: {
+        title: 'The Peacock Throne',
+        originalPublishedYear: 2024,
+        externalProviderIds: { 'x-storytel': 'st-1' },
+        externalProviderLinks: { 'x-storytel': 'https://example.com/st-1' },
+      },
+    })
+    await wrapper.vm.$nextTick()
+
+    const patch = mocks.saveMetadata.mock.lastCall?.[1] as Record<string, unknown>
+    expect(patch).toMatchObject({ originalPublishedYear: 2024, externalProviderIds: { 'x-storytel': 'st-1' } })
+    expect(patch).not.toHaveProperty('externalProviderLinks')
+  })
+
+  it('shows and autosaves the edition name and first published year', async () => {
+    vi.useFakeTimers()
+    try {
+      const wrapper = mountSheet(
+        makeFile({ embeddedMetadata: { title: 'The Peacock Throne', editionName: 'Full Cast', originalPublishedYear: 2023 } }),
+      )
+      const edition = wrapper.get<HTMLInputElement>('[data-testid="book-dock-edition-name"]')
+      const firstPublished = wrapper.get<HTMLInputElement>('[data-testid="book-dock-first-published"]')
+      expect(edition.element.value).toBe('Full Cast')
+      expect(firstPublished.element.value).toBe('2023')
+
+      await edition.setValue('Dramatized')
+      await firstPublished.setValue('99')
+      await vi.advanceTimersByTimeAsync(1000)
+
+      const patch = mocks.saveMetadata.mock.lastCall?.[1] as Record<string, unknown>
+      expect(patch.editionName).toBe('Dramatized')
+      expect(patch.originalPublishedYear).toBeUndefined()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('autosaves an exact series index label including its trailing zero', async () => {
     vi.useFakeTimers()
     try {

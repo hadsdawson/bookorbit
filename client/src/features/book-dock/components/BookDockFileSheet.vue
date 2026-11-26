@@ -71,6 +71,8 @@ const form = reactive({
   publisher: '',
   publishedDate: '',
   publishedYear: '',
+  editionName: '',
+  originalPublishedYear: '',
   language: '',
   isbn13: '',
   isbn10: '',
@@ -135,6 +137,8 @@ watch(
     form.publisher = m.publisher ?? ''
     form.publishedDate = m.publishedDate ?? ''
     form.publishedYear = m.publishedYear != null ? String(m.publishedYear) : ''
+    form.editionName = m.editionName ?? ''
+    form.originalPublishedYear = m.originalPublishedYear != null ? String(m.originalPublishedYear) : ''
     form.language = m.language ?? ''
     form.isbn13 = m.isbn13 ?? ''
     form.isbn10 = m.isbn10 ?? ''
@@ -167,6 +171,12 @@ onUnmounted(() => {
   if (debounceTimer) clearTimeout(debounceTimer)
 })
 
+/** Fork: the First published box as a year the server stores (1000 to 2200), or null. */
+function firstPublishedYear(): number | null {
+  const year = parseInt(form.originalPublishedYear, 10)
+  return Number.isInteger(year) && year >= 1000 && year <= 2200 ? year : null
+}
+
 function buildMetadataPatchFromForm(): Partial<BookDockMetadata> {
   return {
     ...passthroughMetadata.value,
@@ -182,6 +192,8 @@ function buildMetadataPatchFromForm(): Partial<BookDockMetadata> {
     publisher: form.publisher || undefined,
     publishedDate: form.publishedDate || undefined,
     publishedYear: form.publishedYear ? ((n) => (isNaN(n) ? undefined : n))(parseInt(form.publishedYear, 10)) : undefined,
+    editionName: form.editionName.trim() || undefined,
+    originalPublishedYear: firstPublishedYear() ?? undefined,
     language: form.language || undefined,
     isbn13: form.isbn13 || undefined,
     isbn10: form.isbn10 || undefined,
@@ -308,6 +320,7 @@ const currentSource = computed<MetadataSource>(() => ({
   publisher: form.publisher || null,
   publishedDate: form.publishedDate || null,
   publishedYear: form.publishedYear ? ((n) => (isNaN(n) ? null : n))(parseInt(form.publishedYear, 10)) : null,
+  originalPublishedYear: firstPublishedYear(),
   language: form.language || null,
   pageCount: passthroughMetadata.value.pageCount ?? null,
   seriesName: form.seriesName || null,
@@ -430,6 +443,8 @@ async function handleApply(patch: MetadataDiffApply) {
   const p = patch.formPatch
   const bookDockPatch = { ...p }
   delete bookDockPatch.customMetadata
+  // Fork: links are shown on a book page only; the Book Dock keeps the ids, and its save refuses unknown fields.
+  delete bookDockPatch.externalProviderLinks
   passthroughMetadata.value = { ...passthroughMetadata.value, ...bookDockPatch }
   if ('title' in p) form.title = p.title ?? ''
   if ('subtitle' in p) form.subtitle = p.subtitle ?? ''
@@ -437,6 +452,7 @@ async function handleApply(patch: MetadataDiffApply) {
   if ('publisher' in p) form.publisher = p.publisher ?? ''
   if ('publishedDate' in p) form.publishedDate = p.publishedDate ?? ''
   if ('publishedYear' in p) form.publishedYear = p.publishedYear == null ? '' : String(p.publishedYear)
+  if ('originalPublishedYear' in p) form.originalPublishedYear = p.originalPublishedYear == null ? '' : String(p.originalPublishedYear)
   if ('language' in p) form.language = p.language ?? ''
   if ('isbn13' in p) form.isbn13 = p.isbn13 ?? ''
   if ('isbn10' in p) form.isbn10 = p.isbn10 ?? ''
@@ -506,6 +522,7 @@ function openFetchedDiff() {
     publisher: f.publisher ?? undefined,
     publishedDate: f.publishedDate ?? undefined,
     publishedYear: f.publishedYear ?? undefined,
+    originalPublishedYear: f.originalPublishedYear ?? undefined,
     language: f.language ?? undefined,
     pageCount: f.pageCount ?? undefined,
     isbn10: f.isbn10 ?? undefined,
@@ -661,6 +678,25 @@ onMounted(() => {
                 v-model="form.publishedYear"
                 class="mt-1 w-full h-8 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-1 focus:ring-ring"
                 @input="onPublishedYearChange"
+              />
+            </label>
+            <label>
+              <span class="text-xs font-medium text-muted-foreground">{{ t('bookDock.field.editionName') }}</span>
+              <input
+                v-model="form.editionName"
+                data-testid="book-dock-edition-name"
+                class="mt-1 w-full h-8 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-1 focus:ring-ring"
+                @input="onFieldChange"
+              />
+            </label>
+            <label>
+              <span class="text-xs font-medium text-muted-foreground">{{ t('bookDock.field.firstPublished') }}</span>
+              <input
+                v-model="form.originalPublishedYear"
+                inputmode="numeric"
+                data-testid="book-dock-first-published"
+                class="mt-1 w-full h-8 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-1 focus:ring-ring"
+                @input="onFieldChange"
               />
             </label>
             <label>
