@@ -4,7 +4,7 @@ import SeriesSplitDialog from './SeriesSplitDialog.vue'
 
 const apiMock = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>()
 vi.mock('@/lib/api', () => ({ api: (url: string, init?: RequestInit) => apiMock(url, init) }))
-const toastError = vi.fn()
+const toastError = vi.fn<(message: string) => void>()
 vi.mock('vue-sonner', () => ({ toast: { error: (message: string) => toastError(message) } }))
 
 const books = [

@@ -6,7 +6,7 @@ const apiMock = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>()
 vi.mock('@/lib/api', () => ({ api: (url: string, init?: RequestInit) => apiMock(url, init) }))
 let granted = true
 vi.mock('@/features/auth/composables/usePermissions', () => ({ usePermissions: () => ({ hasPermission: () => granted }) }))
-vi.mock('vue-sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
+vi.mock('vue-sonner', () => ({ toast: { error: vi.fn<(message: string) => void>(), success: vi.fn<(message: string) => void>() } }))
 
 const mixedPage = {
   items: [
