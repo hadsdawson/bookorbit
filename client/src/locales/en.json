@@ -16204,6 +16204,25 @@
     "booksAdded": "{count, plural, one {# new book added} other {# new books added}}"
   },
   "series": {
+    "split": {
+      "action": "Split series",
+      "title": "Split series",
+      "description": "Tick the books that belong to a different series. They move into a new series with its own #ID and keep their numbers. The other books stay here.",
+      "byAuthor": "Select by author",
+      "untitled": "Untitled book",
+      "loadMore": "Show more books ({shown} of {total})",
+      "loadFailed": "The books could not be loaded.",
+      "newName": "Name of the new series",
+      "nameHint": "It can have the same name as this one.",
+      "writeFiles": "Write changes to files",
+      "selected": "{count, plural, =0 {No books selected} one {# book selected} other {# books selected}}",
+      "keepOne": "Leave at least one book in this series.",
+      "submit": "{count, plural, one {Move # book} other {Move # books}}",
+      "splitting": "Splitting...",
+      "failed": "The series could not be split.",
+      "done": "{count, plural, one {Moved # book to {name}} other {Moved # books to {name}}}",
+      "openNew": "Open new series"
+    },
     "completion": {
       "readOfTotal": "{read} of {total} read ({percentage}%)"
     },
@@ -16668,7 +16687,39 @@
       "missingResources": "Missing Resources",
       "chapterHealth": "Chapter Health",
       "communityRatings": "Community Ratings",
+      "seriesCheck": "Series Check",
       "recycleBin": "Recycle Bin"
+    },
+    "seriesCheck": {
+      "title": "Series check",
+      "description": "Series that may mix books from two different series, and books whose series name matches more than one series.",
+      "noPermission": "You need permission to edit metadata to use this tool.",
+      "sections": { "mixed": "Series to check", "waiting": "Books waiting for a series" },
+      "views": { "open": "To check ({count})", "fine": "Marked fine ({count})" },
+      "splitHint": "Open a series to split off the books that belong to another series.",
+      "waitingHint": "Each book's series name matches more than one series. Choose the right one, or start a new series.",
+      "reasons": {
+        "repeatedNumber": "Same number, different authors: {numbers}",
+        "unrelatedAuthors": "Authors who never wrote together"
+      },
+      "bookCount": "{count, plural, one {# book} other {# books}}",
+      "noAuthors": "No authors",
+      "moreAuthors": "{names} and {count} more",
+      "openSeries": "Open series",
+      "looksFine": "Looks fine",
+      "bringBack": "Bring back",
+      "untitled": "Untitled book",
+      "waitingFor": "Series: {series}",
+      "empty": {
+        "open": "No series look mixed.",
+        "fine": "No series are marked fine.",
+        "waiting": "No books are waiting for a series."
+      },
+      "loadFailed": "This list could not be loaded.",
+      "fineFailed": "That series could not be updated.",
+      "pickFailed": "That series could not be saved.",
+      "pagination": "Pages",
+      "page": "Page {page} of {total}"
     },
     "recycleBin": {
       "title": "Recycle bin",
@@ -18255,6 +18306,7 @@
     "tts": "Text-to-Speech",
     "chapterHealth": "Chapter Health",
     "communityRatings": "Community Ratings",
+    "seriesCheck": "Series Check",
     "recycleBin": "Recycle Bin",
     "readingHistory": "Reading History",
     "newReleases": "New Releases",

@@ -2,8 +2,8 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 import { SeriesStrategy } from './series.strategy';
 
-function makeStrategy(db: Record<string, unknown> = {}) {
-  return new SeriesStrategy(db as never);
+function makeStrategy(db: Record<string, unknown> = {}, seriesIdentity: Record<string, unknown> = {}) {
+  return new SeriesStrategy(db as never, seriesIdentity as never);
 }
 
 function flattenSql(value: unknown): string {
@@ -338,6 +338,78 @@ describe('SeriesStrategy', () => {
     const strategy = makeStrategy({});
 
     expect(() => strategy.split()).toThrow(BadRequestException);
+  });
+
+  describe('splitBooks (fork)', () => {
+    function makeSplitDb(sourceRows: unknown[], memberRows: unknown[], createdName = 'Wisdom') {
+      const source = makeSelectChain(sourceRows);
+      const members = makeWhereRowsSelectChain(memberRows);
+      const created = makeSelectChain([{ name: createdName }]);
+      const update = makeUpdateTx();
+      const txSelect = vi.fn().mockReturnValueOnce(members.select()).mockReturnValueOnce(created.select());
+      const tx = { select: txSelect, update: update.update, execute: update.execute };
+      const transaction = vi.fn().mockImplementation(async (callback: (txArg: typeof tx) => Promise<unknown>) => callback(tx));
+      return { db: { select: source.select, transaction }, update, members };
+    }
+
+    it('moves only the chosen books in editable libraries into a new series of the same name', async () => {
+      const { db, update } = makeSplitDb(
+        [{ id: 1, name: 'Wisdom' }],
+        [
+          { bookId: 10, libraryId: 1 },
+          { bookId: 11, libraryId: 1 },
+          { bookId: 12, libraryId: 2 },
+        ],
+      );
+      const createSeriesVariant = vi.fn().mockResolvedValue(44);
+      const strategy = makeStrategy(db, { createSeriesVariant });
+
+      const result = await strategy.splitBooks({ seriesId: 1, bookIds: [11, 12, 99], libraryIds: [1] });
+
+      expect(createSeriesVariant).toHaveBeenCalledWith('Wisdom', expect.anything());
+      expect(update.set).toHaveBeenCalledWith(expect.objectContaining({ seriesId: 44 }));
+      expect(result).toEqual({ seriesId: 44, name: 'Wisdom', affectedBookIds: [11] });
+    });
+
+    it('uses a new name when one is given', async () => {
+      const { db } = makeSplitDb(
+        [{ id: 1, name: 'Wisdom' }],
+        [
+          { bookId: 10, libraryId: 1 },
+          { bookId: 11, libraryId: 1 },
+        ],
+        'Wisdom Saga',
+      );
+      const createSeriesVariant = vi.fn().mockResolvedValue(45);
+      const result = await makeStrategy(db, { createSeriesVariant }).splitBooks({
+        seriesId: 1,
+        bookIds: [11],
+        name: '  Wisdom Saga ',
+        libraryIds: [1],
+      });
+
+      expect(createSeriesVariant).toHaveBeenCalledWith('Wisdom Saga', expect.anything());
+      expect(result.name).toBe('Wisdom Saga');
+    });
+
+    it('refuses to move every book, which would be a rename', async () => {
+      const { db } = makeSplitDb([{ id: 1, name: 'Wisdom' }], [{ bookId: 10, libraryId: 1 }]);
+      const createSeriesVariant = vi.fn();
+      await expect(makeStrategy(db, { createSeriesVariant }).splitBooks({ seriesId: 1, bookIds: [10], libraryIds: [1] })).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      expect(createSeriesVariant).not.toHaveBeenCalled();
+    });
+
+    it('refuses books that are not in the series', async () => {
+      const { db } = makeSplitDb([{ id: 1, name: 'Wisdom' }], [{ bookId: 10, libraryId: 1 }]);
+      await expect(makeStrategy(db, {}).splitBooks({ seriesId: 1, bookIds: [77], libraryIds: [1] })).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('throws for a missing series', async () => {
+      const { db } = makeSplitDb([], []);
+      await expect(makeStrategy(db, {}).splitBooks({ seriesId: 5, bookIds: [1], libraryIds: [1] })).rejects.toBeInstanceOf(NotFoundException);
+    });
   });
 
   it('finds all series ids', async () => {

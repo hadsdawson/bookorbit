@@ -5,6 +5,7 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { buildContentFilterClauses } from '../../../common/utils/content-filter-sql.utils';
 import { accentInsensitiveIlike } from '../../../common/utils/accent-insensitive-search.utils';
 import { normalizeMetadataText, normalizeMetadataTextKey } from '../../../common/utils/metadata-text-normalize.utils';
+import { SeriesIdentityService } from '../../../common/services/series-identity.service';
 import { DB } from '../../../db';
 import * as schema from '../../../db/schema';
 import { bookMetadata, books, bookSeries, bookSeriesMemberships } from '../../../db/schema';
@@ -46,7 +47,10 @@ export class SeriesStrategy implements EntityStrategy {
   readonly entityType = 'series' as const;
   readonly isInline = false;
 
-  constructor(@Inject(DB) private readonly db: Db) {}
+  constructor(
+    @Inject(DB) private readonly db: Db,
+    private readonly seriesIdentity: SeriesIdentityService,
+  ) {}
 
   async findCandidatePairs(libraryIds: number[], minSimilarity: number): Promise<RawCandidatePair[]> {
     const scopedLibraryIds = numericIds(libraryIds);
@@ -262,6 +266,51 @@ export class SeriesStrategy implements EntityStrategy {
 
   split(): Promise<StrategySplitResult> {
     throw new BadRequestException('Split is not supported for series');
+  }
+
+  /**
+   * Fork. Moves some of a series' books into a new series, by default of the same name, so a series
+   * that mixed two real series can be told apart. Each book keeps its number and its place among
+   * its series. Only books in `libraryIds` move.
+   */
+  async splitBooks(input: {
+    seriesId: number;
+    bookIds: number[];
+    name?: string;
+    libraryIds: number[];
+  }): Promise<{ seriesId: number; name: string; affectedBookIds: number[] }> {
+    const source = await this.findEntityById(input.seriesId);
+    if (!source) throw new NotFoundException('Series not found');
+    const requested = numericIds(input.bookIds);
+    const libraryIds = numericIds(input.libraryIds);
+    if (requested.length === 0 || libraryIds.length === 0) throw new BadRequestException('Choose at least one book to move');
+
+    const name = normalizeMetadataText(input.name ?? '') ?? source.name;
+    return this.db.transaction(async (tx) => {
+      const db = tx as unknown as Db;
+      const memberRows = await db
+        .select({ bookId: bookSeriesMemberships.bookId, libraryId: books.libraryId })
+        .from(bookSeriesMemberships)
+        .innerJoin(books, eq(books.id, bookSeriesMemberships.bookId))
+        .where(eq(bookSeriesMemberships.seriesId, input.seriesId));
+      const requestedSet = new Set(requested);
+      const libraryIdSet = new Set(libraryIds);
+      const moving = memberRows.filter((row) => requestedSet.has(row.bookId) && libraryIdSet.has(row.libraryId)).map((row) => row.bookId);
+      if (moving.length === 0) throw new BadRequestException('None of these books are in this series');
+      if (moving.length === memberRows.length) throw new BadRequestException('Leave at least one book in the series; to rename it, use Rename');
+
+      const newSeriesId = await this.seriesIdentity.createSeriesVariant(name, db);
+      if (newSeriesId == null) throw new BadRequestException('Could not create the new series');
+
+      await db
+        .update(bookSeriesMemberships)
+        .set({ seriesId: newSeriesId, updatedAt: new Date() })
+        .where(and(eq(bookSeriesMemberships.seriesId, input.seriesId), inArray(bookSeriesMemberships.bookId, moving)));
+      await this.syncPrimaryMetadataForBooks(moving, db);
+
+      const [created] = await db.select({ name: bookSeries.name }).from(bookSeries).where(eq(bookSeries.id, newSeriesId)).limit(1);
+      return { seriesId: newSeriesId, name: created?.name ?? name, affectedBookIds: moving };
+    });
   }
 
   async findAffectedBookIds(ids: (number | string)[]): Promise<number[]> {

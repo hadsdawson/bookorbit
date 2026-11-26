@@ -819,6 +819,12 @@ export const routes: RouteRecordRaw[] = [
             meta: { title: () => t('titles.communityRatings') },
           },
           {
+            path: 'series-check',
+            name: 'tools-series-check',
+            component: () => import('@/features/tools/series-check/views/SeriesCheckView.vue'),
+            meta: { title: () => t('titles.seriesCheck') },
+          },
+          {
             path: 'recycle-bin',
             name: 'tools-recycle-bin',
             component: () => import('@/features/tools/recycle-bin/views/RecycleBinView.vue'),

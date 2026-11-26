@@ -83,6 +83,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { MigrationModule } from './modules/migration/migration.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { SeriesModule } from './modules/series/series.module';
+import { SeriesReviewModule } from './modules/series-review/series-review.module';
 import { TaxonomyModule } from './modules/taxonomy/taxonomy.module';
 import { EntityManagerModule } from './modules/entity-manager/entity-manager.module';
 import { FontModule } from './modules/font/font.module';
@@ -222,6 +223,7 @@ import { BulkRunsModule } from './modules/bulk-runs/bulk-runs.module';
     MigrationModule,
     NotificationModule,
     SeriesModule,
+    SeriesReviewModule,
     TaxonomyModule,
     EntityManagerModule,
     FontModule,

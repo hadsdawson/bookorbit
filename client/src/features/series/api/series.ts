@@ -1,5 +1,5 @@
 import { api } from '@/lib/api'
-import type { SeriesBooksPage, SeriesPage } from '@bookorbit/types'
+import type { SeriesBooksPage, SeriesPage, SplitSeriesBooksRequest, SplitSeriesBooksResult } from '@bookorbit/types'
 import type { CompletionStatus, SeriesBookSort, SeriesListSort, SortDirection } from '../types/series'
 
 type ListSeriesParams = {
@@ -39,5 +39,19 @@ export async function fetchSeriesBooks(seriesId: number, params: ListSeriesBooks
   const qs = toQuery({ ...params, collapseLinked: params.collapseLinked ? 'true' : undefined })
   const res = await api(`/api/v1/series/${seriesId}/books?${qs}`)
   if (!res.ok) throw new Error(`Failed to fetch series books: ${res.status}`)
+  return res.json()
+}
+
+/** Fork. Moves the chosen books of a series into a new series. */
+export async function splitSeriesBooks(body: SplitSeriesBooksRequest): Promise<SplitSeriesBooksResult> {
+  const res = await api('/api/v1/entity-manager/series/split-books', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    const data = (await res.json().catch(() => null)) as { message?: string } | null
+    throw new Error(data?.message ?? `Failed to split series: ${res.status}`)
+  }
   return res.json()
 }

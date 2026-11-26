@@ -33,6 +33,7 @@ const sections = computed<ToolSection[]>(() => {
 
   if (hasPermission('library_edit_metadata')) {
     result.push({ label: t('tools.header.chapterHealth'), routeName: 'tools-chapter-health' })
+    result.push({ label: t('tools.header.seriesCheck'), routeName: 'tools-series-check' })
   }
 
   if (hasPermission('manage_metadata_config')) {

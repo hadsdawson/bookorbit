@@ -1063,4 +1063,31 @@ describe('EntityManagerService', () => {
       expect(strategies.tag.rename).toHaveBeenCalled();
     });
   });
+
+  describe('splitSeriesBooks (fork)', () => {
+    it('splits within editable libraries, hides the pair from duplicates and writes files when asked', async () => {
+      const { service, repo, libraryService, fileWriteService, metadataScoreService, strategies } = makeService();
+      const splitBooks = vi.fn().mockResolvedValue({ seriesId: 9, name: 'Wisdom', affectedBookIds: [10, 20] });
+      (strategies.series as unknown as { splitBooks: typeof splitBooks }).splitBooks = splitBooks;
+
+      const result = await service.splitSeriesBooks(mockUser, { seriesId: 3, bookIds: [10, 20], writeFiles: true });
+
+      expect(libraryService.findEditableLibraryIds).toHaveBeenCalledWith(mockUser);
+      expect(splitBooks).toHaveBeenCalledWith({ seriesId: 3, bookIds: [10, 20], name: undefined, libraryIds: [1, 2] });
+      expect(repo.insertDismissedPair).toHaveBeenCalledWith('series', 3, 9, 'split', mockUser.id);
+      expect(fileWriteService.scheduleWrite).toHaveBeenCalledTimes(2);
+      expect(metadataScoreService.calculateAndSaveMany).toHaveBeenCalledWith([10, 20]);
+      expect(result).toEqual({ seriesId: 9, name: 'Wisdom', movedBookCount: 2 });
+    });
+
+    it('passes split errors through without side effects', async () => {
+      const { service, repo, strategies } = makeService();
+      (strategies.series as unknown as { splitBooks: ReturnType<typeof vi.fn> }).splitBooks = vi
+        .fn()
+        .mockRejectedValue(new BadRequestException('nope'));
+
+      await expect(service.splitSeriesBooks(mockUser, { seriesId: 3, bookIds: [10], writeFiles: false })).rejects.toBeInstanceOf(BadRequestException);
+      expect(repo.insertDismissedPair).not.toHaveBeenCalled();
+    });
+  });
 });

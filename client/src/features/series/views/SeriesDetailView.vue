@@ -3,10 +3,10 @@ import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } fr
 import { useI18n } from 'vue-i18n'
 import { formatNumber } from '@/i18n/formatters'
 import { useRoute, useRouter } from 'vue-router'
-import { ChevronLeft, Pencil } from '@lucide/vue'
+import { ChevronLeft, Pencil, Split } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 
-import type { BookCard, BookDetail } from '@bookorbit/types'
+import type { BookCard, BookDetail, SplitSeriesBooksResult } from '@bookorbit/types'
 import VirtualBookGrid from '@/features/book/components/VirtualBookGrid.vue'
 import SingleSortControl from '@/features/book/components/sort-filter/SingleSortControl.vue'
 import LibraryMenuButton from '@/components/browse-header/LibraryMenuButton.vue'
@@ -30,6 +30,7 @@ import { useDeleteBook } from '@/features/book/composables/useDeleteBook'
 import SeriesCompletionBar from '../components/SeriesCompletionBar.vue'
 import SeriesOwnershipBar from '../components/SeriesOwnershipBar.vue'
 import SeriesGapBanner from '../components/SeriesGapBanner.vue'
+import SeriesSplitDialog from '../components/SeriesSplitDialog.vue'
 import { fetchSeriesBooks } from '../api/series'
 import { groupSeriesBooksByMedia } from '../composables/useSeriesBookMediaGroups'
 import { useSeriesDetail } from '../composables/useSeriesDetail'
@@ -114,6 +115,25 @@ function canEditBookMetadata(book: BookCard): boolean {
   return hasLibraryPermission('library_edit_metadata', book.libraryId, 'editor')
 }
 const canEditMetadata = computed(() => hasPermissionInAnyLibrary('library_edit_metadata', 'editor'))
+
+const splitOpen = ref(false)
+const canSplit = computed(() => canEditMetadata.value && total.value >= 2)
+
+function openSplit() {
+  splitOpen.value = true
+}
+
+function closeSplit() {
+  splitOpen.value = false
+}
+
+function handleSplit(result: SplitSeriesBooksResult) {
+  splitOpen.value = false
+  toast.success(t('series.split.done', { count: result.movedBookCount, name: result.name }), {
+    action: { label: t('series.split.openNew'), onClick: () => void router.push({ name: 'series-detail', params: { seriesId: result.seriesId } }) },
+  })
+  void loadBooks({ reset: true, keepPreviousData: true })
+}
 const safeLeadDescription = useSafeHtml(() => leadBook.value?.description)
 const visibleSeriesAuthors = computed(() => (seriesInfo.value?.authors ?? []).slice(0, 5))
 const hiddenSeriesAuthorsCount = computed(() => Math.max(0, (seriesInfo.value?.authors.length ?? 0) - visibleSeriesAuthors.value.length))
@@ -583,6 +603,15 @@ defineOptions({ name: 'SeriesDetailView' })
                     <Pencil :size="14" />
                     {{ openingSeriesEditor ? t('series.detail.preparingEditor') : t('series.detail.editMetadata') }}
                   </button>
+                  <button
+                    v-if="canSplit"
+                    class="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-2.5 text-sm transition-colors hover:bg-muted sm:px-3 md:w-auto"
+                    data-testid="series-split-button"
+                    @click="openSplit"
+                  >
+                    <Split :size="14" />
+                    {{ t('series.split.action') }}
+                  </button>
                 </div>
               </div>
 
@@ -749,6 +778,8 @@ defineOptions({ name: 'SeriesDetailView' })
         </section>
       </template>
     </main>
+
+    <SeriesSplitDialog :open="splitOpen" :series-id="seriesId" :series-name="seriesInfo?.name ?? ''" @close="closeSplit" @split="handleSplit" />
 
     <AddToCollectionSheet
       :open="addToCollectionOpen"
