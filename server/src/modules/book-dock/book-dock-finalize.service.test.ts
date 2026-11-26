@@ -2271,6 +2271,26 @@ describe('BookDockFinalizeService', () => {
     );
   });
 
+  it('applyMetadata saves the edition name and first published year', async () => {
+    const { service, db } = makeService();
+    const updateChain = {
+      set: vi.fn(),
+      where: vi.fn().mockResolvedValue(undefined),
+    };
+    updateChain.set.mockReturnValue(updateChain);
+    db.update.mockReturnValue(updateChain);
+
+    await (service as any).applyMetadata(
+      19,
+      makeRow({
+        selectedMetadata: { title: 'Infinite Wisdom', editionName: ' Full Cast ', originalPublishedYear: 1999 } as BookDockMetadata,
+        coverPath: null,
+      }),
+    );
+
+    expect(updateChain.set).toHaveBeenCalledWith(expect.objectContaining({ editionName: 'Full Cast', originalPublishedYear: 1999 }));
+  });
+
   it('applyMetadata preserves legacy fetched duration and strips rating timestamps during finalization', async () => {
     const { service, db, bookReadService } = makeService();
     const updateChain = {

@@ -177,6 +177,8 @@ type NormalizedFinalizeMetadata = {
   publisher: string | null;
   publishedDate: string | null;
   publishedYear: number | null;
+  editionName: string | null;
+  originalPublishedYear: number | null;
   language: string | null;
   pageCount: number | null;
   seriesName: string | null;
@@ -1819,6 +1821,8 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
       publisher: meta.publisher ?? null,
       publishedDate: meta.publishedDate ?? null,
       publishedYear: meta.publishedYear ?? null,
+      editionName: meta.editionName ?? null,
+      originalPublishedYear: meta.originalPublishedYear ?? null,
       language: meta.language ?? null,
       seriesName: meta.seriesName ?? null,
       seriesIndex: meta.seriesIndex ?? null,
@@ -2080,6 +2084,8 @@ function normalizeFinalizeMetadata(meta: BookDockMetadata | null | undefined): N
     publisher: normalizeText(normalizedMeta?.publisher, 500),
     publishedDate,
     publishedYear: publishedDate ? publishedYearFromDateKey(publishedDate) : normalizePublishedYear(normalizedMeta?.publishedYear),
+    editionName: normalizeText(normalizedMeta?.editionName, 500),
+    originalPublishedYear: normalizePublishedYear(normalizedMeta?.originalPublishedYear),
     language: normalizeLanguage(normalizedMeta?.language),
     pageCount: normalizeInteger(normalizedMeta?.pageCount),
     seriesName,

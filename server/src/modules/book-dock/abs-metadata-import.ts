@@ -2,6 +2,8 @@ import { basename } from 'path';
 
 import type { BookDockMetadata, MetadataSeriesMembership } from '@bookorbit/types';
 
+import { normalizeBookDockMetadata } from './book-dock-metadata.utils';
+
 /** Audiobookshelf keeps a book's details in this file inside the book's folder. */
 export const ABS_METADATA_FILE_NAME = 'metadata.json';
 /** Larger than any real metadata.json by far, so a stray huge file is never read into memory. */
@@ -79,7 +81,38 @@ export function parseAbsMetadataJson(text: string, options: { audio: boolean }):
     if (chapters.length > 0) meta.chapters = chapters;
   }
 
+  applyBookOrbitExtras(raw.bookorbit, meta);
+
   return meta;
+}
+
+/**
+ * Fork. BookOrbit writes what Audiobookshelf has no field for under `bookorbit`, named as in
+ * BookDockMetadata, so it goes through the same checks as any other Book Dock details. Its values
+ * are exact where the Audiobookshelf ones are a guess (one ISBN, an ASIN of either kind), so they win.
+ */
+function applyBookOrbitExtras(value: unknown, meta: BookDockMetadata): void {
+  if (!isRecord(value)) return;
+  const extras = normalizeBookDockMetadata(value);
+  if (!extras) return;
+  const target = meta as Record<string, unknown>;
+  for (const [field, fieldValue] of Object.entries(extras)) {
+    if (!hasContent(fieldValue)) continue;
+    target[field] = fieldValue;
+  }
+  const primary = meta.seriesMemberships?.[0];
+  if (extras.seriesMemberships && primary) {
+    meta.seriesName = primary.seriesName;
+    meta.seriesIndex = primary.seriesIndex ?? null;
+  }
+}
+
+function hasContent(value: unknown): boolean {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'string') return value.trim() !== '';
+  if (Array.isArray(value)) return value.length > 0;
+  if (isRecord(value)) return Object.keys(value).length > 0;
+  return true;
 }
 
 function applyDates(raw: Record<string, unknown>, meta: BookDockMetadata): void {

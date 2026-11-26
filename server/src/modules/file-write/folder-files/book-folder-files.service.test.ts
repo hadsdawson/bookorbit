@@ -50,6 +50,9 @@ function makeService(
     }),
     findChapterSource: vi.fn().mockResolvedValue({ chapters: [{ title: 'One', startMs: 0 }], durationSeconds: 90, abridged: false }),
     findAuthorOtherNames: vi.fn().mockResolvedValue({}),
+    findFolderExtras: vi
+      .fn()
+      .mockResolvedValue({ editionName: null, originalPublishedYear: null, seriesMemberships: [], communityRatings: [], externalProviderIds: {} }),
     countLibraryBooks: vi.fn().mockResolvedValue({ total: 5, ownFolder: 3 }),
     findContentFilesAt: vi.fn().mockResolvedValue(new Set<string>()),
     listOwnFolderBookIds: vi.fn().mockImplementation((_libraryId: number, afterId: number) => Promise.resolve(afterId === 0 ? [7, 8, 9] : [])),
@@ -182,6 +185,26 @@ describe('BookFolderFilesService', () => {
     await service.writeForBook(7);
     await expect(stat(join(folder, 'cover.jpg'))).rejects.toThrow();
     await expect(stat(join(folder, 'metadata.json'))).resolves.toBeDefined();
+  });
+
+  it('writes the BookOrbit details Audiobookshelf has no field for', async () => {
+    const { service, repo } = makeService({ folderCovers: 'off' });
+    repo.findFolderExtras.mockResolvedValue({
+      editionName: 'Full Cast',
+      originalPublishedYear: 1999,
+      seriesMemberships: [{ seriesName: 'Wisdom', seriesIndex: '2' }],
+      communityRatings: [],
+      externalProviderIds: {},
+    });
+    await service.writeForBook(7);
+    const json = JSON.parse(await readFile(join(folder, 'metadata.json'), 'utf8'));
+    expect(json.series).toEqual(['Wisdom #2']);
+    expect(json.bookorbit).toMatchObject({
+      formatVersion: 1,
+      editionName: 'Full Cast',
+      originalPublishedYear: 1999,
+      seriesMemberships: [{ seriesName: 'Wisdom', seriesIndex: '2' }],
+    });
   });
 
   it('writes only the cover when the JSON is off', async () => {

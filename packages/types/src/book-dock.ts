@@ -277,6 +277,10 @@ export interface BookDockMetadata {
   publisher?: string | null;
   publishedDate?: string | null;
   publishedYear?: number | null;
+  /** Fork: the edition's own name, such as "Full Cast". */
+  editionName?: string | null;
+  /** Fork: the year the work first came out, which this edition's `publishedYear` may be later than. */
+  originalPublishedYear?: number | null;
   language?: string | null;
   pageCount?: number | null;
   isbn10?: string | null;
@@ -595,3 +599,35 @@ export interface BookDockCombineResult extends BookDockFinalizeResult {
   bookId?: number;
   primaryFileId: number;
 }
+
+/**
+ * Fork: what BookOrbit adds to a book folder's metadata.json under a `bookorbit` key, beside the
+ * Audiobookshelf fields. It holds the details Audiobookshelf has no field for, named as in
+ * `BookDockMetadata` so the Book Dock can read them straight back.
+ */
+export type BookOrbitFolderMetadata = { formatVersion: 1 } & Pick<
+  BookDockMetadata,
+  | "editionName"
+  | "originalPublishedYear"
+  | "pageCount"
+  | "isbn10"
+  | "isbn13"
+  | "seriesMemberships"
+  | "communityRatings"
+  | "googleBooksId"
+  | "goodreadsId"
+  | "amazonId"
+  | "hardcoverId"
+  | "hardcoverEditionId"
+  | "openLibraryId"
+  | "itunesId"
+  | "audibleId"
+  | "librofmId"
+  | "koboId"
+  | "comicvineId"
+  | "ranobedbId"
+  | "lubimyczytacId"
+  | "aladinId"
+  | "externalProviderIds"
+  | "comicMetadata"
+>;
