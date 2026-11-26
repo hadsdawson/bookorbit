@@ -1,4 +1,11 @@
-import type { AudiobookChapter, CoverMedium, FolderCoverMedia } from '@bookorbit/types';
+import type {
+  AudiobookChapter,
+  BookOrbitFolderMetadata,
+  ComicMetadataFields,
+  CoverMedium,
+  FolderCoverMedia,
+  MetadataProviderKey,
+} from '@bookorbit/types';
 
 /** The fields Audiobookshelf reads from a book folder's metadata.json, in the order it writes them. */
 export interface AbsMetadataJson {
@@ -21,7 +28,29 @@ export interface AbsMetadataJson {
   abridged: boolean;
   /** Fork: other names each credited author goes by. Only written when an author has any. */
   authorsAlsoKnownAs?: Record<string, string[]>;
+  /** Fork: everything else BookOrbit keeps for the book, which Audiobookshelf has no field for. */
+  bookorbit?: BookOrbitFolderMetadata;
 }
+
+/** Fork: the provider ids BookOrbit stores on the book itself, written under `bookorbit` by these names. */
+const IDENTIFIER_FIELDS = [
+  'googleBooksId',
+  'goodreadsId',
+  'amazonId',
+  'hardcoverId',
+  'hardcoverEditionId',
+  'openLibraryId',
+  'itunesId',
+  'audibleId',
+  'librofmId',
+  'koboId',
+  'comicvineId',
+  'ranobedbId',
+  'lubimyczytacId',
+  'aladinId',
+] as const;
+
+type IdentifierField = (typeof IDENTIFIER_FIELDS)[number];
 
 export interface AbsMetadataSource {
   title: string | null;
@@ -48,13 +77,24 @@ export interface AbsMetadataSource {
   explicit?: boolean;
   /** Fork: other names each credited author goes by. */
   authorsAlsoKnownAs?: Record<string, string[]>;
+  /** Fork: the details below go in the `bookorbit` section. */
+  editionName?: string | null;
+  originalPublishedYear?: number | null;
+  pageCount?: number | null;
+  seriesMemberships?: { seriesName: string; seriesIndex: string | null }[];
+  communityRatings?: { provider: string; rating: number; ratingCount: number | null }[];
+  externalProviderIds?: Record<string, string>;
+  comicMetadata?: ComicMetadataFields | null;
 }
+
+type AbsIdentifierSource = Partial<Record<IdentifierField, string | null>>;
 
 export const METADATA_JSON_NAME = 'metadata.json';
 export const PRIMARY_COVER_NAME = 'cover.jpg';
 export const EBOOK_COVER_NAME = 'cover-ebook.jpg';
 
-export function buildAbsMetadata(source: AbsMetadataSource): AbsMetadataJson {
+export function buildAbsMetadata(source: AbsMetadataSource & AbsIdentifierSource): AbsMetadataJson {
+  const extras = buildBookOrbitExtras(source);
   return {
     tags: [...source.tags],
     chapters: absChapters(source.chapters, source.durationSeconds),
@@ -62,7 +102,7 @@ export function buildAbsMetadata(source: AbsMetadataSource): AbsMetadataJson {
     subtitle: source.subtitle,
     authors: source.authors.map((author) => author.name),
     narrators: [...source.narrators],
-    series: source.seriesName ? [seriesEntry(source.seriesName, source.seriesIndex)] : [],
+    series: seriesEntries(source),
     genres: [...source.genres],
     publishedYear: source.publishedYear !== null ? String(source.publishedYear) : (source.publishedDate?.slice(0, 4) ?? null),
     publishedDate: source.publishedDate,
@@ -74,7 +114,65 @@ export function buildAbsMetadata(source: AbsMetadataSource): AbsMetadataJson {
     explicit: source.explicit === true,
     abridged: source.abridged,
     ...(source.authorsAlsoKnownAs && Object.keys(source.authorsAlsoKnownAs).length > 0 ? { authorsAlsoKnownAs: source.authorsAlsoKnownAs } : {}),
+    ...(extras ? { bookorbit: extras } : {}),
   };
+}
+
+/** Every series the book is in, main one first, falling back to the main series alone. */
+function seriesEntries(source: AbsMetadataSource): string[] {
+  const memberships = source.seriesMemberships ?? [];
+  if (memberships.length > 0) return memberships.map((membership) => seriesEntry(membership.seriesName, membership.seriesIndex));
+  return source.seriesName ? [seriesEntry(source.seriesName, source.seriesIndex)] : [];
+}
+
+/**
+ * Fork. The `bookorbit` section: what the Audiobookshelf fields cannot hold, or hold only in part
+ * (one ISBN, one ASIN). Empty values are left out, and so is the section when nothing is left.
+ */
+function buildBookOrbitExtras(source: AbsMetadataSource & AbsIdentifierSource): BookOrbitFolderMetadata | null {
+  const extras: BookOrbitFolderMetadata = { formatVersion: 1 };
+  const editionName = source.editionName?.trim();
+  if (editionName) extras.editionName = editionName;
+  if (isPositive(source.originalPublishedYear)) extras.originalPublishedYear = source.originalPublishedYear;
+  if (isPositive(source.pageCount)) extras.pageCount = source.pageCount;
+  if (source.isbn10?.trim()) extras.isbn10 = source.isbn10.trim();
+  if (source.isbn13?.trim()) extras.isbn13 = source.isbn13.trim();
+  for (const field of IDENTIFIER_FIELDS) {
+    const id = source[field]?.trim();
+    if (id) extras[field] = id;
+  }
+  if (source.seriesMemberships && source.seriesMemberships.length > 0) {
+    extras.seriesMemberships = source.seriesMemberships.map((membership) => ({
+      seriesName: membership.seriesName,
+      seriesIndex: membership.seriesIndex,
+    }));
+  }
+  if (source.communityRatings && source.communityRatings.length > 0) {
+    extras.communityRatings = source.communityRatings.map((rating) => ({
+      provider: rating.provider as MetadataProviderKey,
+      rating: rating.rating,
+      ratingCount: rating.ratingCount,
+    }));
+  }
+  if (source.externalProviderIds && Object.keys(source.externalProviderIds).length > 0)
+    extras.externalProviderIds = { ...source.externalProviderIds };
+  const comic = compactComicMetadata(source.comicMetadata);
+  if (comic) extras.comicMetadata = comic;
+  return Object.keys(extras).length > 1 ? extras : null;
+}
+
+function compactComicMetadata(comic: ComicMetadataFields | null | undefined): ComicMetadataFields | null {
+  if (!comic) return null;
+  const out: ComicMetadataFields = {};
+  for (const [key, value] of Object.entries(comic) as [keyof ComicMetadataFields, string | string[] | undefined][]) {
+    if (typeof value === 'string' && value.trim()) (out as Record<string, unknown>)[key] = value.trim();
+    else if (Array.isArray(value) && value.length > 0) (out as Record<string, unknown>)[key] = [...value];
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+function isPositive(value: number | null | undefined): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
 }
 
 /** Audiobookshelf's "Name #2" form, with the number written the way people write it (1, 1.5). */

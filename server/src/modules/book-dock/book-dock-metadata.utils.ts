@@ -16,6 +16,8 @@ const PASSTHROUGH_FIELDS = [
   'publisher',
   'publishedDate',
   'publishedYear',
+  'editionName',
+  'originalPublishedYear',
   'language',
   'pageCount',
   'isbn10',

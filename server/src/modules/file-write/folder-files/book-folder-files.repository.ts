@@ -5,7 +5,16 @@ import type { AudiobookChapter, FolderCoverMedia } from '@bookorbit/types';
 
 import { DB } from '../../../db';
 import * as schema from '../../../db/schema';
-import { bookFiles, bookMetadata, books, libraries } from '../../../db/schema';
+import {
+  bookCommunityRatings,
+  bookFiles,
+  bookMetadata,
+  bookProviderIds,
+  bookSeries,
+  bookSeriesMemberships,
+  books,
+  libraries,
+} from '../../../db/schema';
 
 type Db = NodePgDatabase<typeof schema>;
 
@@ -78,6 +87,49 @@ export class BookFolderFilesRepository {
     const out: Record<string, string[]> = {};
     for (const row of result.rows) (out[row.credited] ??= []).push(row.other);
     return out;
+  }
+
+  /**
+   * Fork: the details metadata.json carries in its `bookorbit` section that the write payload does
+   * not already hold: the edition's name and first year, every series, ratings and other provider ids.
+   */
+  async findFolderExtras(bookId: number): Promise<{
+    editionName: string | null;
+    originalPublishedYear: number | null;
+    seriesMemberships: { seriesName: string; seriesIndex: string | null }[];
+    communityRatings: { provider: string; rating: number; ratingCount: number | null }[];
+    externalProviderIds: Record<string, string>;
+  }> {
+    const [[meta], memberships, ratings, providerIds] = await Promise.all([
+      this.db
+        .select({ editionName: bookMetadata.editionName, originalPublishedYear: bookMetadata.originalPublishedYear })
+        .from(bookMetadata)
+        .where(eq(bookMetadata.bookId, bookId))
+        .limit(1),
+      this.db
+        .select({ seriesName: bookSeries.name, seriesIndex: bookSeriesMemberships.seriesIndex })
+        .from(bookSeriesMemberships)
+        .innerJoin(bookSeries, eq(bookSeries.id, bookSeriesMemberships.seriesId))
+        .where(eq(bookSeriesMemberships.bookId, bookId))
+        .orderBy(asc(bookSeriesMemberships.displayOrder), asc(bookSeries.name)),
+      this.db
+        .select({ provider: bookCommunityRatings.provider, rating: bookCommunityRatings.rating, ratingCount: bookCommunityRatings.ratingCount })
+        .from(bookCommunityRatings)
+        .where(eq(bookCommunityRatings.bookId, bookId))
+        .orderBy(asc(bookCommunityRatings.provider)),
+      this.db
+        .select({ provider: bookProviderIds.provider, externalId: bookProviderIds.externalId })
+        .from(bookProviderIds)
+        .where(eq(bookProviderIds.bookId, bookId))
+        .orderBy(asc(bookProviderIds.provider)),
+    ]);
+    return {
+      editionName: meta?.editionName ?? null,
+      originalPublishedYear: meta?.originalPublishedYear ?? null,
+      seriesMemberships: memberships,
+      communityRatings: ratings,
+      externalProviderIds: Object.fromEntries(providerIds.map((row) => [row.provider, row.externalId])),
+    };
   }
 
   async findChapterSource(bookId: number): Promise<{ chapters: AudiobookChapter[]; durationSeconds: number | null; abridged: boolean }> {

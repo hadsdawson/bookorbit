@@ -168,7 +168,21 @@ export class BookFolderFilesService implements OnModuleDestroy {
         const metadataPath = join(target.folderPath, METADATA_JSON_NAME);
         const explicit = readExplicitFlag(await readFile(metadataPath, 'utf8').catch(() => null));
         const authorsAlsoKnownAs = await this.repo.findAuthorOtherNames(bookId);
-        const json = buildAbsMetadata({ ...payload, ...chapterSource, explicit, authorsAlsoKnownAs });
+        const extras = await this.repo.findFolderExtras(bookId);
+        const comicMetadata = {
+          issueNumber: payload.comicIssueNumber ?? undefined,
+          volumeName: payload.comicVolumeName ?? undefined,
+          pencillers: payload.comicPencillers,
+          inkers: payload.comicInkers,
+          colorists: payload.comicColorists,
+          letterers: payload.comicLetterers,
+          coverArtists: payload.comicCoverArtists,
+          characters: payload.comicCharacters,
+          teams: payload.comicTeams,
+          locations: payload.comicLocations,
+          storyArcs: payload.comicStoryArcs,
+        };
+        const json = buildAbsMetadata({ ...payload, ...chapterSource, ...extras, comicMetadata, explicit, authorsAlsoKnownAs });
         files.push({ path: metadataPath, bytes: Buffer.from(`${JSON.stringify(json, null, 2)}\n`) });
       }
     }

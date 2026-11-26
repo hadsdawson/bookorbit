@@ -49,6 +49,7 @@ describe('buildAbsMetadata', () => {
       language: 'en',
       explicit: false,
       abridged: false,
+      bookorbit: { formatVersion: 1, isbn10: '0062255657', isbn13: '9780062255655', amazonId: 'B00B7NPRY8', audibleId: 'B00C5QGQ7A' },
     });
   });
 
@@ -71,7 +72,55 @@ describe('buildAbsMetadata', () => {
       'language',
       'explicit',
       'abridged',
+      'bookorbit',
     ]);
+  });
+
+  it('writes every series the book is in, main one first', () => {
+    const json = buildAbsMetadata({
+      ...SOURCE,
+      seriesMemberships: [
+        { seriesName: 'Discworld', seriesIndex: '1' },
+        { seriesName: 'Rincewind', seriesIndex: null },
+      ],
+    });
+    expect(json.series).toEqual(['Discworld #1', 'Rincewind']);
+  });
+
+  it('puts what Audiobookshelf has no field for under bookorbit', () => {
+    const json = buildAbsMetadata({
+      ...SOURCE,
+      editionName: 'Full Cast',
+      originalPublishedYear: 1999,
+      pageCount: 192,
+      goodreadsId: '15783514',
+      hardcoverEditionId: '30405274',
+      seriesMemberships: [{ seriesName: 'Discworld', seriesIndex: '1' }],
+      communityRatings: [{ provider: 'goodreads', rating: 3.98, ratingCount: 120 }],
+      externalProviderIds: { 'x-storytel': 'st-1' },
+      comicMetadata: { issueNumber: '', pencillers: [], storyArcs: ['Arc'] },
+    });
+    expect(json.bookorbit).toEqual({
+      formatVersion: 1,
+      editionName: 'Full Cast',
+      originalPublishedYear: 1999,
+      pageCount: 192,
+      isbn10: '0062255657',
+      isbn13: '9780062255655',
+      goodreadsId: '15783514',
+      amazonId: 'B00B7NPRY8',
+      hardcoverEditionId: '30405274',
+      audibleId: 'B00C5QGQ7A',
+      seriesMemberships: [{ seriesName: 'Discworld', seriesIndex: '1' }],
+      communityRatings: [{ provider: 'goodreads', rating: 3.98, ratingCount: 120 }],
+      externalProviderIds: { 'x-storytel': 'st-1' },
+      comicMetadata: { storyArcs: ['Arc'] },
+    });
+  });
+
+  it('leaves the bookorbit section out when there is nothing for it', () => {
+    const json = buildAbsMetadata({ ...SOURCE, isbn10: null, isbn13: null, audibleId: null, amazonId: null, editionName: '  ', pageCount: 0 });
+    expect(json).not.toHaveProperty('bookorbit');
   });
 
   it('handles a book with no series, chapters or year', () => {
@@ -87,7 +136,7 @@ describe('buildAbsMetadata', () => {
     expect(buildAbsMetadata({ ...SOURCE, authorsAlsoKnownAs: {} })).not.toHaveProperty('authorsAlsoKnownAs');
     const json = buildAbsMetadata({ ...SOURCE, authorsAlsoKnownAs: { 'A. Deborah Baker': ['Seanan McGuire'] } });
     expect(json.authorsAlsoKnownAs).toEqual({ 'A. Deborah Baker': ['Seanan McGuire'] });
-    expect(Object.keys(json).at(-1)).toBe('authorsAlsoKnownAs');
+    expect(Object.keys(json).at(-2)).toBe('authorsAlsoKnownAs');
   });
 
   it('keeps a half-numbered series entry and ends the last chapter at its start without a duration', () => {

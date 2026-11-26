@@ -94,6 +94,78 @@ describe('parseAbsMetadataJson', () => {
   });
 });
 
+describe('parseAbsMetadataJson bookorbit section', () => {
+  const withExtras = {
+    ...absJson,
+    isbn: '0765326353',
+    asin: 'B003ZWFO7E',
+    bookorbit: {
+      formatVersion: 1,
+      editionName: 'Full Cast',
+      originalPublishedYear: 2010,
+      pageCount: 1007,
+      isbn10: '0765326353',
+      isbn13: '9780765326355',
+      googleBooksId: 'QVn-CgAAQBAJ',
+      goodreadsId: '7235533',
+      amazonId: 'B003P2WO5E',
+      audibleId: 'B003ZWFO7E',
+      hardcoverId: 'the-way-of-kings',
+      hardcoverEditionId: '30405274',
+      openLibraryId: 'OL15358691W',
+      koboId: 'the-way-of-kings',
+      seriesMemberships: [
+        { seriesName: 'The Stormlight Archive', seriesIndex: '1' },
+        { seriesName: 'Cosmere', seriesIndex: null },
+      ],
+      communityRatings: [{ provider: 'goodreads', rating: 4.65, ratingCount: 500000 }],
+      externalProviderIds: { 'x-storytel': 'st-1' },
+      comicMetadata: { storyArcs: ['Arc'] },
+    },
+  };
+
+  it('reads every BookOrbit detail, with its exact ids winning over the Audiobookshelf guesses', () => {
+    const meta = parseAbsMetadataJson(JSON.stringify(withExtras), { audio: false })!;
+    expect(meta).toMatchObject({
+      editionName: 'Full Cast',
+      originalPublishedYear: 2010,
+      pageCount: 1007,
+      isbn10: '0765326353',
+      isbn13: '9780765326355',
+      googleBooksId: 'QVn-CgAAQBAJ',
+      goodreadsId: '7235533',
+      amazonId: 'B003P2WO5E',
+      audibleId: 'B003ZWFO7E',
+      hardcoverId: 'the-way-of-kings',
+      hardcoverEditionId: '30405274',
+      openLibraryId: 'OL15358691W',
+      koboId: 'the-way-of-kings',
+      seriesName: 'The Stormlight Archive',
+      seriesIndex: '1',
+      communityRatings: [{ provider: 'goodreads', rating: 4.65, ratingCount: 500000 }],
+      externalProviderIds: { 'x-storytel': 'st-1' },
+      comicMetadata: { storyArcs: ['Arc'] },
+    });
+    expect(meta.seriesMemberships).toEqual([
+      { seriesName: 'The Stormlight Archive', seriesIndex: '1' },
+      { seriesName: 'Cosmere', seriesIndex: null },
+    ]);
+    expect(meta).not.toHaveProperty('formatVersion');
+  });
+
+  it('ignores a bookorbit section that is not an object, and empty values in one', () => {
+    expect(parseAbsMetadataJson(JSON.stringify({ ...absJson, bookorbit: 'nope' }), { audio: true })).toEqual(
+      parseAbsMetadataJson(JSON.stringify(absJson), { audio: true }),
+    );
+    const meta = parseAbsMetadataJson(JSON.stringify({ ...absJson, bookorbit: { editionName: '  ', isbn13: null, pageCount: null } }), {
+      audio: true,
+    })!;
+    expect(meta.isbn13).toBe('9780765326355');
+    expect(meta).not.toHaveProperty('editionName');
+    expect(meta).not.toHaveProperty('pageCount');
+  });
+});
+
 describe('isAbsMetadataFile', () => {
   it('matches the file name in any case and nothing else', () => {
     expect(isAbsMetadataFile('/books/Book/Metadata.JSON')).toBe(true);
