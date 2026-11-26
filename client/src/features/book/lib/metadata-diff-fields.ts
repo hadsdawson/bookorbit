@@ -322,13 +322,25 @@ export function normalizeForMatch(value: string): string {
     .trim()
 }
 
+/** Fork: every run of spaces (non-breaking and invisible ones included) as one plain space. */
+function collapseSpaces(value: string): string {
+  return value
+    .replace(/[\u200B\u2060\uFEFF]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export function classifyText(current: string, incoming: string): DiffClass {
   const a = current.trim()
   const b = incoming.trim()
   if (!b) return { kind: 'missing' }
   if (!a) return { kind: 'fill' }
   if (a === b) return SAME
-  if (a.toLowerCase() === b.toLowerCase()) return minor('capitalization')
+  // Fork: spacing alone looks identical on screen, so it is named as formatting, never capitalization.
+  const spacedA = collapseSpaces(a)
+  const spacedB = collapseSpaces(b)
+  if (spacedA === spacedB) return minor('formatting')
+  if (spacedA.toLowerCase() === spacedB.toLowerCase()) return minor('capitalization')
   if (normalizeForMatch(a) === normalizeForMatch(b)) return minor('punctuation')
   return CHANGE
 }
@@ -345,7 +357,13 @@ export function classifyList(current: readonly string[], incoming: readonly stri
   const sameItems = leftSet.size === rightSet.size && [...leftSet].every((v) => rightSet.has(v))
   if (!sameItems) return CHANGE
   if (a.join('\u0000') === b.join('\u0000')) return SAME
-  return left.join('\u0000') === right.join('\u0000') ? minor('capitalization') : minor('reordered')
+  if (left.join('\u0000') !== right.join('\u0000')) return minor('reordered')
+  // Fork: same items in the same order; name what actually differs, the way a single value is named.
+  const spacedA = a.map(collapseSpaces)
+  const spacedB = b.map(collapseSpaces)
+  if (spacedA.join('\u0000') === spacedB.join('\u0000')) return minor('formatting')
+  if (spacedA.join('\u0000').toLowerCase() === spacedB.join('\u0000').toLowerCase()) return minor('capitalization')
+  return minor('punctuation')
 }
 
 export function classifyDescription(current: string | null | undefined, incoming: string | null | undefined): DiffClass {

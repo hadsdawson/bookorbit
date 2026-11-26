@@ -2,6 +2,7 @@ import type { MetadataCacheServedProvider, MetadataCandidate, MetadataCandidateC
 
 import type { CacheDirective, ProviderCacheContext } from '../../common/provider-cache/provider-cache-spec';
 import type { LiveFailure, ProviderOperationExecutor, ProviderOperationResult } from '../metadata-cache/provider-operation-executor.service';
+import { tidyCandidateText } from './candidate-text';
 import { bookLookupCodec, bookSearchCodec } from './metadata-cache-codecs';
 import { ProviderThrottleError } from './provider-throttle.error';
 import { isIdentifiable, MetadataProvider } from './providers/metadata-provider';
@@ -59,7 +60,7 @@ export class ProviderRun {
     if (value === undefined && result.liveOutcome === 'throttled' && Array.isArray(result.partial)) {
       value = result.partial as MetadataCandidate[];
     }
-    return { value, cache: cacheInfo(result), stopped: isStopped(result) };
+    return { value: value?.map(tidyCandidateText), cache: cacheInfo(result), stopped: isStopped(result) };
   }
 
   async lookup(providerId: string, params: MetadataSearchParams | undefined): Promise<RunOperation<MetadataCandidate | null>> {
@@ -79,7 +80,7 @@ export class ProviderRun {
       classifyError: classifyBookProviderError,
     });
     this.results.push(result);
-    return { value: result.value, cache: cacheInfo(result), stopped: isStopped(result) };
+    return { value: result.value ? tidyCandidateText(result.value) : result.value, cache: cacheInfo(result), stopped: isStopped(result) };
   }
 
   /** How the provider stopped, if it did; a throttle outranks a timeout, which outranks a failure. */
