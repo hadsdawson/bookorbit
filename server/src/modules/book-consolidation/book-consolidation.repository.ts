@@ -215,6 +215,13 @@ export class BookConsolidationRepository {
       select ${targetBookId}::int, series_id, series_index, display_order, created_at, now()
       from book_series_memberships where book_id = ${sourceBookId}
     `);
+    // Fork: and the series the source still waits on a pick for.
+    await tx.delete(schema.bookSeriesPending).where(eq(schema.bookSeriesPending.bookId, targetBookId));
+    await tx.execute(sql`
+      insert into book_series_pending (book_id, series_name, series_index, display_order, created_at)
+      select ${targetBookId}::int, series_name, series_index, display_order, created_at
+      from book_series_pending where book_id = ${sourceBookId}
+    `);
   }
 
   async uniteGenres(tx: ConsolidationTx, targetBookId: number, sourceBookId: number, excludeGenreIds: number[]): Promise<void> {

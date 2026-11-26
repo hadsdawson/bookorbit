@@ -257,7 +257,7 @@ export class MetadataService {
 
     if (Object.keys(scalarFields).length > 0) {
       scalarFields.updatedAt = new Date();
-      const patch = (await this.seriesIdentity?.resolveMetadataPatch(scalarFields)) ?? scalarFields;
+      const patch = (await this.seriesIdentity?.resolveMetadataPatch(scalarFields, undefined, { bookId })) ?? scalarFields;
       await this.db.update(bookMetadata).set(patch).where(eq(bookMetadata.bookId, bookId));
       if (scalarFields.seriesName !== undefined || scalarFields.seriesIndex !== undefined)
         await this.seriesMemberships?.syncPrimaryFromMetadata(bookId);
@@ -1107,7 +1107,7 @@ export class MetadataService {
       const shouldSyncSeries =
         Object.prototype.hasOwnProperty.call(scalarFields, 'seriesName') || Object.prototype.hasOwnProperty.call(scalarFields, 'seriesIndex');
       scalarFields.updatedAt = new Date();
-      const patch = (await this.seriesIdentity?.resolveMetadataPatch(scalarFields)) ?? scalarFields;
+      const patch = (await this.seriesIdentity?.resolveMetadataPatch(scalarFields, undefined, { bookId })) ?? scalarFields;
       await this.db.update(bookMetadata).set(patch).where(eq(bookMetadata.bookId, bookId));
       if (shouldSyncSeries) {
         await this.seriesMemberships?.syncPrimaryFromMetadata(bookId);
@@ -1210,7 +1210,7 @@ export class MetadataService {
       const shouldSyncSeries =
         Object.prototype.hasOwnProperty.call(scalarFields, 'seriesName') || Object.prototype.hasOwnProperty.call(scalarFields, 'seriesIndex');
       scalarFields.updatedAt = new Date();
-      const patch = (await this.seriesIdentity?.resolveMetadataPatch(scalarFields)) ?? scalarFields;
+      const patch = (await this.seriesIdentity?.resolveMetadataPatch(scalarFields, undefined, { bookId })) ?? scalarFields;
       await this.db.update(bookMetadata).set(patch).where(eq(bookMetadata.bookId, bookId));
       if (shouldSyncSeries) {
         await this.seriesMemberships?.syncPrimaryFromMetadata(bookId);

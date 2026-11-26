@@ -215,7 +215,12 @@ export class SeriesStrategy implements EntityStrategy {
       };
     }
 
-    const target = await this.upsertSeries(newName);
+    // Fork: a new spelling of the series' own name renames it in place; with several series able to
+    // share a name, looking the name up could otherwise merge it into a different one.
+    const target =
+      normalizeMetadataTextKey(newName) === normalizeMetadataTextKey(current.name)
+        ? await this.renameInPlace(entityId, newName)
+        : await this.upsertSeries(newName);
     const wasImplicitMerge = target.id !== entityId;
 
     await this.db.transaction(async (tx) => {
@@ -316,13 +321,34 @@ export class SeriesStrategy implements EntityStrategy {
     const displayName = normalizeMetadataText(name);
     const normalized = normalizeMetadataTextKey(displayName);
     if (!displayName || !normalized) throw new BadRequestException('Name cannot be empty');
+    // Fork: an existing series of this name (the automatic one first) takes the books, as before.
+    const [existing] = await this.db
+      .select({ id: bookSeries.id })
+      .from(bookSeries)
+      .where(eq(bookSeries.normalizedName, normalized))
+      .orderBy(asc(bookSeries.nameVariant), asc(bookSeries.id))
+      .limit(1);
+    if (existing) return this.renameInPlace(existing.id, displayName);
+
     const [row] = await this.db
       .insert(bookSeries)
-      .values({ name: displayName, normalizedName: normalized })
+      .values({ name: displayName, normalizedName: normalized, nameVariant: 0 })
       .onConflictDoUpdate({
-        target: bookSeries.normalizedName,
+        target: [bookSeries.normalizedName, bookSeries.nameVariant],
         set: { name: displayName, updatedAt: new Date() },
       })
+      .returning({ id: bookSeries.id, name: bookSeries.name });
+    if (!row) throw new BadRequestException('Unable to resolve series');
+    return row;
+  }
+
+  private async renameInPlace(seriesId: number, name: string): Promise<{ id: number; name: string }> {
+    const displayName = normalizeMetadataText(name);
+    if (!displayName) throw new BadRequestException('Name cannot be empty');
+    const [row] = await this.db
+      .update(bookSeries)
+      .set({ name: displayName, updatedAt: new Date() })
+      .where(eq(bookSeries.id, seriesId))
       .returning({ id: bookSeries.id, name: bookSeries.name });
     if (!row) throw new BadRequestException('Unable to resolve series');
     return row;

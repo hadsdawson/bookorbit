@@ -92,7 +92,16 @@ export class SeriesExpectedCountService {
 
     const seriesId = await this.seriesIdentity.findIdByName(displayName, executor);
     if (seriesId == null) return false;
+    return this.setManualForSeries(seriesId, expectedBookCount, executor, options);
+  }
 
+  /** Fork: {@link setManual} for an exact series, since two series can share a name. */
+  async setManualForSeries(
+    seriesId: number,
+    expectedBookCount: number | null,
+    executor: ExpectedCountExecutor = this.db,
+    options: { previousSeriesIds?: ReadonlySet<number> } = {},
+  ): Promise<boolean> {
     const total = expectedBookCount === null ? null : (normalizeSeriesTotalBooks(expectedBookCount) ?? null);
     if (total === null && options.previousSeriesIds && !options.previousSeriesIds.has(seriesId)) return true;
 

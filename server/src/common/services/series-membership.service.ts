@@ -1,20 +1,33 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { DB } from '../../db';
 import * as schema from '../../db/schema';
-import { bookMetadata, bookSeries, bookSeriesMemberships, books } from '../../db/schema';
+import { bookMetadata, bookSeries, bookSeriesMemberships, bookSeriesPending, books } from '../../db/schema';
 import { SeriesIdentityService } from './series-identity.service';
 
 type Db = NodePgDatabase<typeof schema>;
 type DbTransaction = Parameters<Parameters<Db['transaction']>[0]>[0];
 type SeriesMembershipExecutor = Pick<Db, 'delete' | 'insert' | 'select' | 'update'> | DbTransaction;
+type SeriesResolveExecutor = Pick<Db, 'insert' | 'select'> | DbTransaction;
 type SeriesMembershipReadExecutor = Pick<Db, 'select'> | DbTransaction;
 
 export type SeriesMembershipInput = {
   seriesName: string | null;
   seriesIndex?: string | null;
+  /** Fork: the exact series a person picked; ignored when it no longer carries this name. */
+  seriesId?: number | null;
+  /** Fork: start a new series of this name beside any that already have it. */
+  newSeries?: boolean;
+};
+
+/** Fork: a series the book names that could not be told apart from another of the same name. */
+export type SeriesPendingRef = {
+  seriesName: string;
+  seriesIndex: string | null;
+  /** Position among everything the book named; 0 is its main series. */
+  displayOrder: number;
 };
 
 export type SeriesMembershipRef = {
@@ -37,13 +50,15 @@ export class SeriesMembershipService {
     memberships: readonly SeriesMembershipInput[] | null | undefined,
     executor: SeriesMembershipExecutor = this.db,
   ): Promise<SeriesMembershipRef[]> {
-    const normalized = await this.normalizeMemberships(memberships ?? [], executor);
+    const current = await this.findByBookId(bookId, executor);
+    const { resolved, pending } = await this.resolveMemberships(bookId, memberships ?? [], new Set(current.map((m) => m.seriesId)), executor);
 
     await executor.delete(bookSeriesMemberships).where(eq(bookSeriesMemberships.bookId, bookId));
+    await executor.delete(bookSeriesPending).where(eq(bookSeriesPending.bookId, bookId));
 
-    if (normalized.length > 0) {
+    if (resolved.length > 0) {
       await executor.insert(bookSeriesMemberships).values(
-        normalized.map((membership) => ({
+        resolved.map((membership) => ({
           bookId,
           seriesId: membership.seriesId,
           seriesIndex: membership.seriesIndex,
@@ -51,9 +66,12 @@ export class SeriesMembershipService {
         })),
       );
     }
+    if (pending.length > 0) {
+      await executor.insert(bookSeriesPending).values(pending.map((entry) => ({ bookId, ...entry })));
+    }
 
-    await this.syncPrimaryMetadata(bookId, normalized, executor);
-    return normalized;
+    await this.syncPrimaryMetadata(bookId, resolved, executor, pending);
+    return resolved;
   }
 
   async syncPrimaryFromMetadata(bookId: number, executor: SeriesMembershipExecutor = this.db): Promise<SeriesMembershipRef[]> {
@@ -68,23 +86,27 @@ export class SeriesMembershipService {
       .limit(1);
 
     const current = await this.findByBookId(bookId, executor);
-    const rest = current.filter((membership) => membership.displayOrder !== 0);
+    const pendingNow = await this.findPendingByBookId(bookId, executor);
+    // Fork: the other series keep their exact ids, and those still waiting for a pick stay waiting.
+    const ordered: Array<{ order: number; input: SeriesMembershipInput }> = [
+      ...current
+        .filter((membership) => membership.displayOrder !== 0)
+        .map((membership) => ({
+          order: membership.displayOrder,
+          input: { seriesId: membership.seriesId, seriesName: membership.seriesName, seriesIndex: membership.seriesIndex },
+        })),
+      ...pendingNow
+        .filter((entry) => entry.displayOrder !== 0)
+        .map((entry) => ({ order: entry.displayOrder, input: { seriesName: entry.seriesName, seriesIndex: entry.seriesIndex } })),
+    ];
+    const rest = ordered.sort((a, b) => a.order - b.order).map((entry) => entry.input);
     const displayName = this.seriesIdentity.normalizeDisplayName(metadata?.seriesName);
 
-    if (!displayName) {
-      return this.replaceForBook(
-        bookId,
-        rest.map((membership) => ({ seriesName: membership.seriesName, seriesIndex: membership.seriesIndex })),
-        executor,
-      );
-    }
+    if (!displayName) return this.replaceForBook(bookId, rest, executor);
 
     return this.replaceForBook(
       bookId,
-      [
-        { seriesName: displayName, seriesIndex: metadata?.seriesIndex ?? null },
-        ...rest.map((membership) => ({ seriesName: membership.seriesName, seriesIndex: membership.seriesIndex })),
-      ],
+      [{ seriesId: metadata?.seriesId ?? null, seriesName: displayName, seriesIndex: metadata?.seriesIndex ?? null }, ...rest],
       executor,
     );
   }
@@ -133,6 +155,32 @@ export class SeriesMembershipService {
     return result;
   }
 
+  /** Fork: the series each book names but that still need a person to pick which one. */
+  async findPendingByBookIds(bookIds: number[], executor: SeriesMembershipReadExecutor = this.db): Promise<Map<number, SeriesPendingRef[]>> {
+    const result = new Map<number, SeriesPendingRef[]>();
+    if (bookIds.length === 0) return result;
+    const rows = await executor
+      .select({
+        bookId: bookSeriesPending.bookId,
+        seriesName: bookSeriesPending.seriesName,
+        seriesIndex: bookSeriesPending.seriesIndex,
+        displayOrder: bookSeriesPending.displayOrder,
+      })
+      .from(bookSeriesPending)
+      .where(inArray(bookSeriesPending.bookId, bookIds))
+      .orderBy(asc(bookSeriesPending.bookId), asc(bookSeriesPending.displayOrder));
+    for (const { bookId, ...entry } of rows) {
+      const list = result.get(bookId) ?? [];
+      list.push(entry);
+      result.set(bookId, list);
+    }
+    return result;
+  }
+
+  async findPendingByBookId(bookId: number, executor: SeriesMembershipReadExecutor = this.db): Promise<SeriesPendingRef[]> {
+    return (await this.findPendingByBookIds([bookId], executor)).get(bookId) ?? [];
+  }
+
   async backfillFromMetadata(executor: Pick<Db, 'execute'> = this.db): Promise<void> {
     await executor.execute(sql`
       INSERT INTO ${bookSeriesMemberships} (book_id, series_id, series_index, display_order)
@@ -152,45 +200,83 @@ export class SeriesMembershipService {
     bookId: number,
     memberships: readonly SeriesMembershipRef[],
     executor: SeriesMembershipExecutor = this.db,
+    pending: readonly SeriesPendingRef[] = [],
   ): Promise<void> {
-    const primary = memberships[0] ?? null;
+    // Fork: a main series still waiting for a pick keeps its name and number but no series id.
+    const pendingPrimary = pending.find((entry) => entry.displayOrder === 0) ?? null;
+    const primary = pendingPrimary ? null : (memberships[0] ?? null);
     await executor
       .update(bookMetadata)
       .set({
         seriesId: primary?.seriesId ?? null,
-        seriesName: primary?.seriesName ?? null,
-        seriesIndex: primary?.seriesIndex ?? null,
+        seriesName: primary?.seriesName ?? pendingPrimary?.seriesName ?? null,
+        seriesIndex: primary?.seriesIndex ?? pendingPrimary?.seriesIndex ?? null,
         updatedAt: new Date(),
       })
       .where(eq(bookMetadata.bookId, bookId));
     await executor.update(books).set({ updatedAt: new Date() }).where(eq(books.id, bookId));
   }
 
-  private async normalizeMemberships(
+  /**
+   * Fork. Each named series becomes an exact series (a picked id, a new series, or one name match),
+   * or waits for a person when it matches several series that share the name.
+   */
+  private async resolveMemberships(
+    bookId: number,
     memberships: readonly SeriesMembershipInput[],
-    executor: Pick<Db, 'insert'> | DbTransaction,
-  ): Promise<SeriesMembershipRef[]> {
-    const normalized: SeriesMembershipRef[] = [];
-    const seen = new Set<string>();
+    currentSeriesIds: ReadonlySet<number>,
+    executor: SeriesResolveExecutor,
+  ): Promise<{ resolved: SeriesMembershipRef[]; pending: SeriesPendingRef[] }> {
+    const resolved: SeriesMembershipRef[] = [];
+    const pending: SeriesPendingRef[] = [];
+    const seenIds = new Set<number>();
+    const seenPending = new Set<string>();
+    let position = 0;
 
     for (const membership of memberships) {
       const displayName = this.seriesIdentity.normalizeDisplayName(membership.seriesName);
       const normalizedName = this.seriesIdentity.normalizeName(displayName);
-      if (!displayName || !normalizedName || seen.has(normalizedName)) continue;
+      if (!displayName || !normalizedName) continue;
+      const seriesIndex = membership.seriesIndex ?? null;
 
-      const seriesId = await this.seriesIdentity.resolveSeriesId(displayName, executor);
-      if (seriesId == null) continue;
+      const seriesId = await this.pickSeriesId(bookId, membership, displayName, normalizedName, currentSeriesIds, executor);
+      if (seriesId === 'pending') {
+        if (seenPending.has(normalizedName)) continue;
+        seenPending.add(normalizedName);
+        pending.push({ seriesName: displayName, seriesIndex, displayOrder: position });
+        position += 1;
+        continue;
+      }
+      if (seriesId == null || seenIds.has(seriesId)) continue;
 
-      seen.add(normalizedName);
-      normalized.push({
-        seriesId,
-        seriesName: displayName,
-        seriesIndex: membership.seriesIndex ?? null,
-        displayOrder: normalized.length,
-        expectedBookCount: null,
-      });
+      seenIds.add(seriesId);
+      resolved.push({ seriesId, seriesName: displayName, seriesIndex, displayOrder: resolved.length, expectedBookCount: null });
+      position += 1;
     }
 
-    return normalized;
+    return { resolved, pending };
+  }
+
+  private async pickSeriesId(
+    bookId: number,
+    membership: SeriesMembershipInput,
+    displayName: string,
+    normalizedName: string,
+    currentSeriesIds: ReadonlySet<number>,
+    executor: SeriesResolveExecutor,
+  ): Promise<number | 'pending' | null> {
+    if (membership.seriesId != null) {
+      const [row] = await executor
+        .select({ id: bookSeries.id })
+        .from(bookSeries)
+        .where(and(eq(bookSeries.id, membership.seriesId), eq(bookSeries.normalizedName, normalizedName)))
+        .limit(1);
+      if (row) return row.id;
+    }
+    if (membership.newSeries) return this.seriesIdentity.createSeriesVariant(displayName, executor);
+
+    const match = await this.seriesIdentity.resolveForBook(displayName, { bookId, currentSeriesIds }, executor);
+    if (!match) return null;
+    return match.kind === 'series' ? match.seriesId : 'pending';
   }
 }

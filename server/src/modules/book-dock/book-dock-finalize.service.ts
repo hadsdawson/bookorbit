@@ -1843,18 +1843,12 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
       aladinId: meta.aladinId,
       updatedAt: new Date(),
     };
-    const patch = (await this.seriesIdentity?.resolveMetadataPatch(scalarFields)) ?? scalarFields;
+    const patch = (await this.seriesIdentity?.resolveMetadataPatch(scalarFields, undefined, { bookId })) ?? scalarFields;
 
     await this.db
       .update(bookMetadata)
       .set({ ...patch, ...buildAudioMetadataPatch(audio) })
       .where(eq(bookMetadata.bookId, bookId));
-    if (meta.seriesMemberships !== undefined) {
-      await this.seriesMemberships?.replaceForBook(bookId, meta.seriesMemberships);
-    } else {
-      await this.seriesMemberships?.syncPrimaryFromMetadata(bookId);
-    }
-
     if (meta.externalProviderIds) await this.providerIdStore?.write(bookId, meta.externalProviderIds);
     if (meta.communityRatings !== undefined) {
       await this.bookReadService.replaceCommunityRatings(bookId, meta.communityRatings);
@@ -1869,6 +1863,13 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
         bookId,
         meta.authors.map((name) => ({ name, sortName: null })),
       );
+    }
+
+    // Fork: after the authors, because they decide between series that share a name.
+    if (meta.seriesMemberships !== undefined) {
+      await this.seriesMemberships?.replaceForBook(bookId, meta.seriesMemberships);
+    } else {
+      await this.seriesMemberships?.syncPrimaryFromMetadata(bookId);
     }
 
     if (meta.genres.length > 0) {
@@ -2127,7 +2128,12 @@ function normalizeSeriesMemberships(value: BookDockMetadata['seriesMemberships']
     const key = seriesName.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    memberships.push({ seriesName, seriesIndex: parseSeriesIndex(item.seriesIndex) });
+    memberships.push({
+      seriesName,
+      seriesIndex: parseSeriesIndex(item.seriesIndex),
+      ...(item.seriesId != null ? { seriesId: item.seriesId } : {}),
+      ...(item.newSeries ? { newSeries: true } : {}),
+    });
   }
   return memberships;
 }
@@ -2145,7 +2151,13 @@ function withPrimarySeries(
   if (memberships === undefined || !seriesName) return memberships;
   const key = seriesName.toLowerCase();
   const others = memberships.slice(1).filter((membership) => membership.seriesName.toLowerCase() !== key);
-  return [{ seriesName, seriesIndex }, ...others];
+  // Fork: a pick between same-named series stays with the main series while its name does.
+  const first = memberships[0];
+  const pick = first && first.seriesName.toLowerCase() === key ? { seriesId: first.seriesId, newSeries: first.newSeries } : {};
+  return [
+    { seriesName, seriesIndex, ...(pick.seriesId != null ? { seriesId: pick.seriesId } : {}), ...(pick.newSeries ? { newSeries: true } : {}) },
+    ...others,
+  ];
 }
 
 function normalizeCommunityRatings(

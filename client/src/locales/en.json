@@ -10034,7 +10034,23 @@
         "invalidSeriesIndex": "Enter digits with at most one decimal point, such as 5.10.",
         "totalLabel": "Books in series",
         "totalPlaceholder": "of",
-        "totalHint": "Total books in this series. Shared with everyone who has this series."
+        "totalHint": "Total books in this series. Shared with everyone who has this series.",
+        "choice": {
+          "pickOne": "{count} series are named {name}. Choose the one this book belongs to.",
+          "joining": "This book will join this series.",
+          "listLabel": "Series named {name}",
+          "noAuthors": "No authors yet",
+          "moreAuthors": "{names} and {count} more",
+          "bookCount": "{count, plural, one {# book} other {# books}}",
+          "preview": "Preview",
+          "view": "View",
+          "noCovers": "No covers yet",
+          "startNew": "A new series named {name}"
+        },
+        "pending": {
+          "label": "Choose series: {names}",
+          "hint": "More than one series has this name. Open Edit to choose which one this book belongs to."
+        }
       },
       "storyGuide": {
         "title": "Story guide",

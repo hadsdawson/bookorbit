@@ -9,6 +9,7 @@ import {
   type BookDockFile,
   type CoverMedium,
   type BookDockMetadata,
+  type MetadataSeriesMembership,
   type MetadataCandidate,
   type MetadataSource,
   type MetadataProviderKey,
@@ -20,6 +21,7 @@ import BookDockStatusBadge from './BookDockStatusBadge.vue'
 import IdentifierInput from '@/components/ui/IdentifierInput.vue'
 import ChipInput from '@/components/ui/ChipInput.vue'
 import InputWithSuggestions from '@/components/ui/InputWithSuggestions.vue'
+import SeriesChoice from '@/features/book/components/series-choice/SeriesChoice.vue'
 import { useGenreSearch, useTagSearch } from '@/features/book/composables/useTagSearch'
 import { useGenrePolicy } from '@/features/book/composables/useGenrePolicy'
 import MetadataMatchWorkspace from '@/features/book/components/metadata-match/MetadataMatchWorkspace.vue'
@@ -85,6 +87,7 @@ const selectedCoverUrl = ref('')
 /** The other format's cover, picked here so a merged ebook and audiobook both get art when filed. */
 const otherCoverUrl = ref('')
 const passthroughMetadata = ref<BookDockMetadata>({})
+const seriesPick = reactive({ seriesId: null as number | null, newSeries: false, edited: false })
 const { search: searchAnyGenre } = useGenreSearch()
 const { restricted: genresRestricted, load: loadGenrePolicy, acceptGenre, searchAllowed: searchAllowedGenres } = useGenrePolicy()
 const searchGenres = computed(() => (genresRestricted.value ? searchAllowedGenres : searchAnyGenre))
@@ -144,6 +147,7 @@ watch(
     form.isbn10 = m.isbn10 ?? ''
     form.seriesName = m.seriesName ?? ''
     form.seriesIndex = m.seriesIndex != null ? String(m.seriesIndex) : ''
+    loadSeriesPick(m)
     form.genres = m.genres?.join(', ') ?? ''
     form.tags = m.tags?.join(', ') ?? ''
     selectedCoverUrl.value = m.coverUrl ?? ''
@@ -200,7 +204,7 @@ function buildMetadataPatchFromForm(): Partial<BookDockMetadata> {
     seriesName: form.seriesName || undefined,
     seriesIndex: normalizedSeriesIndex() ?? undefined,
     // A provider match keeps its whole series list; with the series cleared it would still be filed.
-    seriesMemberships: form.seriesName.trim() ? passthroughMetadata.value.seriesMemberships : undefined,
+    seriesMemberships: form.seriesName.trim() ? withSeriesPick(passthroughMetadata.value.seriesMemberships) : undefined,
     genres: form.genres
       ? form.genres
           .split(',')
@@ -230,6 +234,49 @@ function onFieldChange() {
 
 function onSeriesNameChange(value: string | null) {
   form.seriesName = value ?? ''
+  resetSeriesPick()
+  onFieldChange()
+}
+
+function sameSeriesName(a: string, b: string) {
+  return a.trim().toLowerCase() === b.trim().toLowerCase()
+}
+
+function loadSeriesPick(m: BookDockMetadata) {
+  const first = m.seriesMemberships?.[0]
+  const matches = first != null && sameSeriesName(first.seriesName, m.seriesName ?? '')
+  seriesPick.seriesId = matches ? (first.seriesId ?? null) : null
+  seriesPick.newSeries = matches && first.newSeries === true
+  seriesPick.edited = false
+}
+
+function resetSeriesPick() {
+  seriesPick.seriesId = null
+  seriesPick.newSeries = false
+  seriesPick.edited = true
+}
+
+function withSeriesPick(memberships: MetadataSeriesMembership[] | null | undefined) {
+  if (seriesPick.seriesId == null && !seriesPick.newSeries) return memberships ?? undefined
+  const name = form.seriesName.trim()
+  const picked: MetadataSeriesMembership = {
+    seriesName: name,
+    seriesIndex: normalizedSeriesIndex(),
+    ...(seriesPick.newSeries ? { newSeries: true } : { seriesId: seriesPick.seriesId }),
+  }
+  const rest = (memberships ?? []).filter((membership, index) => !(index === 0 && sameSeriesName(membership.seriesName, name)))
+  return [picked, ...rest.filter((membership) => !sameSeriesName(membership.seriesName, name))]
+}
+
+function handleSeriesPick(seriesId: number) {
+  seriesPick.seriesId = seriesId
+  seriesPick.newSeries = false
+  onFieldChange()
+}
+
+function handleSeriesStartNew() {
+  seriesPick.seriesId = null
+  seriesPick.newSeries = true
   onFieldChange()
 }
 
@@ -456,7 +503,10 @@ async function handleApply(patch: MetadataDiffApply) {
   if ('language' in p) form.language = p.language ?? ''
   if ('isbn13' in p) form.isbn13 = p.isbn13 ?? ''
   if ('isbn10' in p) form.isbn10 = p.isbn10 ?? ''
-  if ('seriesName' in p) form.seriesName = p.seriesName ?? ''
+  if ('seriesName' in p && !sameSeriesName(p.seriesName ?? '', form.seriesName)) {
+    form.seriesName = p.seriesName ?? ''
+    resetSeriesPick()
+  }
   if ('seriesIndex' in p) form.seriesIndex = p.seriesIndex == null ? '' : String(p.seriesIndex)
   if ('authors' in p) form.authors = (p.authors ?? []).join(', ')
   if ('genres' in p) form.genres = (p.genres ?? []).join(', ')
@@ -749,6 +799,16 @@ onMounted(() => {
                 {{ t('bookDock.invalidSeriesIndex') }}
               </span>
             </label>
+            <SeriesChoice
+              class="sm:col-span-2"
+              flush
+              :series-name="form.seriesName"
+              :series-id="seriesPick.seriesId"
+              :new-series="seriesPick.newSeries"
+              :edited="seriesPick.edited"
+              @pick="handleSeriesPick"
+              @start-new="handleSeriesStartNew"
+            />
             <div class="sm:col-span-2">
               <label for="book-dock-genres" class="text-xs font-medium text-muted-foreground">{{ t('bookDock.field.genres') }}</label>
               <ChipInput v-model="genreList" input-id="book-dock-genres" :search-fn="searchGenres" :normalize="acceptGenre" class="mt-1" />
