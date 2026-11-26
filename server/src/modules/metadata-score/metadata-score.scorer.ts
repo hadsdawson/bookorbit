@@ -9,6 +9,9 @@ export type ScoreData = {
   isbn13: string | null;
   publisher: string | null;
   publishedYear: number | null;
+  /** Fork. The edition's own name, and the year the work first came out. */
+  editionName: string | null;
+  originalPublishedYear: number | null;
   language: string | null;
   pageCount: number | null;
   seriesName: string | null;
@@ -52,6 +55,8 @@ const SCORE_RULES: Record<MetadataScoreField, ScoreRule> = {
   isbn13: { kind: 'string', value: (data) => data.isbn13 },
   publisher: { kind: 'string', value: (data) => data.publisher },
   publishedYear: { kind: 'positive-number', value: (data) => data.publishedYear },
+  editionName: { kind: 'string', value: (data) => data.editionName },
+  originalPublishedYear: { kind: 'positive-number', value: (data) => data.originalPublishedYear },
   language: { kind: 'string', value: (data) => data.language },
   isbn10: { kind: 'string', value: (data) => data.isbn10 },
   pageCount: { kind: 'positive-number', value: (data) => data.pageCount },

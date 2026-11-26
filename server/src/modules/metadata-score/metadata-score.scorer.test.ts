@@ -11,6 +11,8 @@ function makeData(overrides: Partial<ScoreData> = {}): ScoreData {
     isbn13: null,
     publisher: null,
     publishedYear: null,
+    editionName: null,
+    originalPublishedYear: null,
     language: null,
     pageCount: null,
     seriesName: null,
@@ -38,6 +40,34 @@ function makeData(overrides: Partial<ScoreData> = {}): ScoreData {
 
 describe('MetadataScoreScorer', () => {
   const scorer = new MetadataScoreScorer();
+
+  describe('edition name and first published', () => {
+    const only = (fields: Partial<MetadataScoreWeights>): MetadataScoreWeights =>
+      ({ ...Object.fromEntries(Object.keys(DEFAULT_METADATA_SCORE_WEIGHTS).map((key) => [key, 0])), ...fields }) as MetadataScoreWeights;
+
+    it('are off by default, so existing scores do not change', () => {
+      expect(DEFAULT_METADATA_SCORE_WEIGHTS.editionName).toBe(0);
+      expect(DEFAULT_METADATA_SCORE_WEIGHTS.originalPublishedYear).toBe(0);
+      expect(scorer.compute(makeData({ title: 'Infinite Wisdom' }), { ...DEFAULT_METADATA_SCORE_WEIGHTS, title: 10 })).toBe(
+        scorer.compute(makeData({ title: 'Infinite Wisdom', editionName: 'Full Cast', originalPublishedYear: 1999 }), {
+          ...DEFAULT_METADATA_SCORE_WEIGHTS,
+          title: 10,
+        }),
+      );
+    });
+
+    it('count toward the score once given a weight', () => {
+      const weights = only({ title: 10, editionName: 5, originalPublishedYear: 5 });
+      expect(scorer.compute(makeData({ title: 'Infinite Wisdom' }), weights)).toBe(50);
+      expect(scorer.compute(makeData({ title: 'Infinite Wisdom', editionName: 'Full Cast' }), weights)).toBe(75);
+      expect(scorer.compute(makeData({ title: 'Infinite Wisdom', editionName: 'Full Cast', originalPublishedYear: 1999 }), weights)).toBe(100);
+    });
+
+    it('do not count a blank edition name or a zero year', () => {
+      const weights = only({ editionName: 5, originalPublishedYear: 5 });
+      expect(scorer.compute(makeData({ editionName: '   ', originalPublishedYear: 0 }), weights)).toBe(0);
+    });
+  });
 
   describe('audiobook chapters', () => {
     const weights = (chapters: number): MetadataScoreWeights =>

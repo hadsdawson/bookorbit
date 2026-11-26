@@ -57,6 +57,10 @@ function isFieldFilled(field: MetadataScoreField): boolean {
       return !!b.publisher?.trim()
     case 'publishedYear':
       return b.publishedYear != null && b.publishedYear > 0
+    case 'editionName':
+      return !!b.editionName?.trim()
+    case 'originalPublishedYear':
+      return b.originalPublishedYear != null && b.originalPublishedYear > 0
     case 'language':
       return !!b.language?.trim()
     case 'pageCount':
