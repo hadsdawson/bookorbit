@@ -52,6 +52,16 @@ describe('BookDockCombineDialog', () => {
     } as Response)
   })
 
+  it('shows each file in its colored format chip, with the dot on the primary file', async () => {
+    const wrapper = mountDialog([file(1, 'The Bone Season.m4b'), file(2, 'The Bone Season.epub')])
+    await flushPromises()
+    const chips = wrapper.findAll('[data-testid="combine-format-chip"]')
+    expect(chips.map((chip) => chip.text())).toEqual([expect.stringContaining('M4B'), expect.stringContaining('EPUB')])
+    const primary = chips.find((chip) => chip.find('.rounded-full').exists())
+    expect(primary).toBeDefined()
+    expect(chips.filter((chip) => chip.find('.rounded-full').exists())).toHaveLength(1)
+  })
+
   it('follows the format priority of the library the book is headed to', async () => {
     const wrapper = mountDialog([file(1, 'Book A.epub', 7, 3), file(2, 'Book A.m4b', 7, 3)])
     await combineButton(wrapper).trigger('click')
