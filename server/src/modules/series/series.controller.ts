@@ -3,6 +3,7 @@ import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { RequestUser } from '../../common/types/request-user';
 import { FindNextSeriesBookDto } from './dto/find-next-series-book.dto';
+import { FindSeriesByNameDto } from './dto/find-series-by-name.dto';
 import { ListSeriesBooksDto } from './dto/list-series-books.dto';
 import { ListSeriesDto } from './dto/list-series.dto';
 import { SeriesService } from './series.service';
@@ -14,6 +15,12 @@ export class SeriesController {
   @Get()
   findAll(@CurrentUser() user: RequestUser, @Query() dto: ListSeriesDto) {
     return this.seriesService.findAll(user, dto);
+  }
+
+  /** Fork: every series with this name, so an editor can show which is which. */
+  @Get('by-name')
+  findByName(@CurrentUser() user: RequestUser, @Query() dto: FindSeriesByNameDto) {
+    return this.seriesService.findByName(user, dto.name);
   }
 
   @Get(':seriesId/books')

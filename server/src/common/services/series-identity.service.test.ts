@@ -9,20 +9,40 @@ function flattenSql(value: unknown): string {
   return [flattenSql(record.value), flattenSql(record.queryChunks)].join(' ');
 }
 
-function makeInsertDb(rows: Array<{ id: number }> = [{ id: 42 }]) {
-  const returning = vi.fn().mockResolvedValue(rows);
-  const onConflictDoUpdate = vi.fn().mockReturnValue({ returning });
-  const values = vi.fn().mockReturnValue({ onConflictDoUpdate });
-  const insert = vi.fn().mockReturnValue({ values });
-  return { db: { insert } as never, insert, values, onConflictDoUpdate, returning };
-}
-
-function makeSelectDb(rows: Array<{ id: number }> = [{ id: 42 }]) {
-  const limit = vi.fn().mockResolvedValue(rows);
-  const where = vi.fn().mockReturnValue({ limit });
-  const from = vi.fn().mockReturnValue({ where });
-  const select = vi.fn().mockReturnValue({ from });
-  return { db: { select } as never, select, from, where, limit };
+/**
+ * A stand-in for the query builder: every chained call returns the same query, and awaiting it
+ * yields the next queued result for that kind of statement, in the order the statements run.
+ */
+function fakeDb(results: { select?: unknown[][]; insert?: unknown[][] } = {}) {
+  const selectQueue = [...(results.select ?? [])];
+  const insertQueue = [...(results.insert ?? [])];
+  const calls: Record<string, unknown[][]> = {};
+  const query = (queue: unknown[][]) => {
+    const q: Record<string, unknown> = {};
+    for (const method of [
+      'from',
+      'where',
+      'orderBy',
+      'limit',
+      'innerJoin',
+      'groupBy',
+      'values',
+      'onConflictDoUpdate',
+      'onConflictDoNothing',
+      'returning',
+    ]) {
+      q[method] = vi.fn((...args: unknown[]) => {
+        (calls[method] ??= []).push(args);
+        return q;
+      });
+    }
+    q.then = (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) =>
+      Promise.resolve(queue.shift() ?? []).then(resolve, reject);
+    return q;
+  };
+  const select = vi.fn(() => query(selectQueue));
+  const insert = vi.fn(() => query(insertQueue));
+  return { db: { select, insert } as never, select, insert, calls };
 }
 
 describe('SeriesIdentityService', () => {
@@ -34,68 +54,6 @@ describe('SeriesIdentityService', () => {
     expect(service.normalizeName(null)).toBeNull();
     expect(service.normalizeDisplayName('  The   Expanse  ')).toBe('The Expanse');
     expect(service.normalizeDisplayName('   ')).toBeNull();
-  });
-
-  it('does not create a series row for blank names', async () => {
-    const { db, insert } = makeInsertDb();
-    const service = new SeriesIdentityService(db);
-
-    await expect(service.resolveSeriesId('   ')).resolves.toBeNull();
-
-    expect(insert).not.toHaveBeenCalled();
-  });
-
-  it('upserts a series row by normalized name and returns the stable id', async () => {
-    const { db, insert, values, onConflictDoUpdate, returning } = makeInsertDb([{ id: 77 }]);
-    const service = new SeriesIdentityService(db);
-
-    const id = await service.resolveSeriesId('  Dune   Chronicles  ');
-
-    expect(id).toBe(77);
-    expect(insert).toHaveBeenCalledTimes(1);
-    expect(values).toHaveBeenCalledWith({ name: 'Dune Chronicles', normalizedName: 'dune chronicles' });
-    const conflictConfig = onConflictDoUpdate.mock.calls[0]![0] as { set: Record<string, unknown> };
-    expect(conflictConfig.set).toEqual({ updatedAt: expect.any(Date) });
-    expect(conflictConfig.set).not.toHaveProperty('name');
-    expect(returning).toHaveBeenCalledTimes(1);
-  });
-
-  it('returns null when series resolution produces no row', async () => {
-    const { db } = makeInsertDb([]);
-    const service = new SeriesIdentityService(db);
-
-    await expect(service.resolveSeriesId('Dune')).resolves.toBeNull();
-  });
-
-  it('leaves metadata untouched when seriesName is absent or undefined', async () => {
-    const { db, insert } = makeInsertDb();
-    const service = new SeriesIdentityService(db);
-    const withoutSeries = { title: 'Dune' };
-    const undefinedSeries = { title: 'Dune Messiah', seriesName: undefined };
-
-    await expect(service.resolveMetadataPatch(withoutSeries)).resolves.toBe(withoutSeries);
-    await expect(service.resolveMetadataPatch(undefinedSeries)).resolves.toBe(undefinedSeries);
-
-    expect(insert).not.toHaveBeenCalled();
-  });
-
-  it('adds seriesId and trims seriesName when metadata includes a series', async () => {
-    const { db } = makeInsertDb([{ id: 88 }]);
-    const service = new SeriesIdentityService(db);
-
-    const patch = await service.resolveMetadataPatch({ bookId: 1, title: 'Caliban War', seriesName: '  The   Expanse  ' });
-
-    expect(patch).toEqual({ bookId: 1, title: 'Caliban War', seriesName: 'The Expanse', seriesId: 88 });
-  });
-
-  it('clears seriesId when metadata clears seriesName', async () => {
-    const { db, insert } = makeInsertDb();
-    const service = new SeriesIdentityService(db);
-
-    const patch = await service.resolveMetadataPatch({ bookId: 1, seriesName: '   ' });
-
-    expect(patch).toEqual({ bookId: 1, seriesName: null, seriesId: null });
-    expect(insert).not.toHaveBeenCalled();
   });
 
   it('runs all startup backfill statements without requiring manual data migration SQL', async () => {
@@ -110,7 +68,10 @@ describe('SeriesIdentityService', () => {
     expect(createSeriesSql).toContain('replace');
     expect(createSeriesSql).toContain('chr(160)');
     expect(createSeriesSql).toContain('btrim(regexp_replace');
-    expect(createSeriesSql).toContain('ON CONFLICT (normalized_name) DO NOTHING');
+    expect(createSeriesSql).toContain('ON CONFLICT (normalized_name, name_variant) DO NOTHING');
+    const linkSql = flattenSql(execute.mock.calls[1]![0]).replace(/\s+/g, ' ');
+    expect(linkSql).toContain('HAVING count(*) = 1');
+    expect(linkSql).toContain('NOT EXISTS');
     expect(createSeriesSql).not.toContain('DO UPDATE SET');
     expect(createSeriesSql).not.toContain('excluded.name');
   });
@@ -160,28 +121,119 @@ describe('SeriesIdentityService', () => {
     expect(message).toContain('connection reset');
   });
 
-  it('finds an existing id by normalized name', async () => {
-    const { db, select } = makeSelectDb([{ id: 91 }]);
-    const service = new SeriesIdentityService({} as never);
-
-    await expect(service.findIdByName('  DUNE  ', db)).resolves.toBe(91);
-
-    expect(select).toHaveBeenCalledTimes(1);
-  });
-
-  it('returns null when a normalized series lookup has no row', async () => {
-    const { db } = makeSelectDb([]);
-    const service = new SeriesIdentityService({} as never);
-
-    await expect(service.findIdByName('Dune', db)).resolves.toBeNull();
-  });
-
   it('does not query for a blank name lookup', async () => {
-    const { db, select } = makeSelectDb();
+    const { db, select } = fakeDb();
     const service = new SeriesIdentityService({} as never);
 
     await expect(service.findIdByName('   ', db)).resolves.toBeNull();
 
     expect(select).not.toHaveBeenCalled();
+  });
+
+  it('does not create a series row for blank names', async () => {
+    const { db, insert } = fakeDb();
+    const service = new SeriesIdentityService(db);
+    await expect(service.resolveSeriesId('   ')).resolves.toBeNull();
+    await expect(service.resolveForBook('   ', { bookId: 1 })).resolves.toBeNull();
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it('uses the existing series of a name, the automatic one first, without writing', async () => {
+    const { db, insert } = fakeDb({ select: [[{ id: 77 }]] });
+    const service = new SeriesIdentityService(db);
+    await expect(service.resolveSeriesId('  Dune   Chronicles  ')).resolves.toBe(77);
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it('creates a missing series as the automatic one for its name, safe against a concurrent create', async () => {
+    const { db, calls } = fakeDb({ select: [[]], insert: [[{ id: 78 }]] });
+    const service = new SeriesIdentityService(db);
+    await expect(service.resolveSeriesId('Dune')).resolves.toBe(78);
+    expect(calls.values![0]![0]).toEqual({ name: 'Dune', normalizedName: 'dune', nameVariant: 0 });
+    const conflict = calls.onConflictDoUpdate![0]![0] as { target: unknown[]; set: Record<string, unknown> };
+    expect(conflict.target).toHaveLength(2);
+    expect(conflict.set).toEqual({ updatedAt: expect.any(Date) });
+  });
+
+  describe('resolveForBook', () => {
+    it('uses the only series with the name', async () => {
+      const service = new SeriesIdentityService(fakeDb({ select: [[{ id: 5 }]] }).db);
+      await expect(service.resolveForBook('Legacy', { bookId: 1 })).resolves.toEqual({ kind: 'series', seriesId: 5 });
+    });
+
+    it('creates the series when no series has the name', async () => {
+      const service = new SeriesIdentityService(fakeDb({ select: [[]], insert: [[{ id: 9 }]] }).db);
+      await expect(service.resolveForBook('Legacy', { bookId: 1 })).resolves.toEqual({ kind: 'series', seriesId: 9 });
+    });
+
+    it('keeps the book in the same-named series it is already in', async () => {
+      const service = new SeriesIdentityService(fakeDb({ select: [[{ id: 5 }, { id: 6 }]] }).db);
+      await expect(service.resolveForBook('Legacy', { bookId: 1, currentSeriesIds: new Set([6]) })).resolves.toEqual({ kind: 'series', seriesId: 6 });
+    });
+
+    it('looks up the series the book is in when the caller does not say', async () => {
+      const service = new SeriesIdentityService(fakeDb({ select: [[{ id: 5 }, { id: 6 }], [{ seriesId: 6 }]] }).db);
+      await expect(service.resolveForBook('Legacy', { bookId: 1 })).resolves.toEqual({ kind: 'series', seriesId: 6 });
+    });
+
+    it("picks the one same-named series where the book's author already has a book", async () => {
+      const service = new SeriesIdentityService(fakeDb({ select: [[{ id: 5 }, { id: 6 }], [], [{ seriesId: 5 }]] }).db);
+      await expect(service.resolveForBook('Legacy', { bookId: 1 })).resolves.toEqual({ kind: 'series', seriesId: 5 });
+    });
+
+    it('leaves the pick to a person when no author or both authors match', async () => {
+      const noMatch = new SeriesIdentityService(fakeDb({ select: [[{ id: 5 }, { id: 6 }], [], []] }).db);
+      await expect(noMatch.resolveForBook('Legacy', { bookId: 1 })).resolves.toEqual({ kind: 'pending' });
+      const bothMatch = new SeriesIdentityService(fakeDb({ select: [[{ id: 5 }, { id: 6 }], [], [{ seriesId: 5 }, { seriesId: 6 }]] }).db);
+      await expect(bothMatch.resolveForBook('Legacy', { bookId: 1 })).resolves.toEqual({ kind: 'pending' });
+    });
+
+    it('leaves the pick to a person when there is no book to compare authors with', async () => {
+      const service = new SeriesIdentityService(fakeDb({ select: [[{ id: 5 }, { id: 6 }]] }).db);
+      await expect(service.resolveForBook('Legacy', {})).resolves.toEqual({ kind: 'pending' });
+    });
+  });
+
+  it('starts a same-named series after the ones that exist', async () => {
+    const { db, calls } = fakeDb({ select: [[{ variant: 0 }]], insert: [[{ id: 12 }]] });
+    const service = new SeriesIdentityService(db);
+    await expect(service.createSeriesVariant(' Legacy ')).resolves.toBe(12);
+    expect(calls.values![0]![0]).toEqual({ name: 'Legacy', normalizedName: 'legacy', nameVariant: 1 });
+  });
+
+  it('leaves metadata untouched when seriesName is absent or undefined', async () => {
+    const { db, insert } = fakeDb();
+    const service = new SeriesIdentityService(db);
+    const withoutSeries = { title: 'Dune' };
+    const undefinedSeries = { title: 'Dune Messiah', seriesName: undefined };
+    await expect(service.resolveMetadataPatch(withoutSeries)).resolves.toBe(withoutSeries);
+    await expect(service.resolveMetadataPatch(undefinedSeries)).resolves.toBe(undefinedSeries);
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it('adds the resolved series id and tidies the name, or no id while the series waits for a pick', async () => {
+    const one = new SeriesIdentityService(fakeDb({ select: [[{ id: 88 }]] }).db);
+    await expect(one.resolveMetadataPatch({ bookId: 1, title: 'Caliban War', seriesName: '  The   Expanse  ' })).resolves.toEqual({
+      bookId: 1,
+      title: 'Caliban War',
+      seriesName: 'The Expanse',
+      seriesId: 88,
+    });
+    const two = new SeriesIdentityService(fakeDb({ select: [[{ id: 5 }, { id: 6 }]] }).db);
+    await expect(two.resolveMetadataPatch({ seriesName: 'Legacy' })).resolves.toEqual({ seriesName: 'Legacy', seriesId: null });
+  });
+
+  it('clears seriesId when metadata clears seriesName', async () => {
+    const { db, insert } = fakeDb();
+    const service = new SeriesIdentityService(db);
+    await expect(service.resolveMetadataPatch({ bookId: 1, seriesName: '   ' })).resolves.toEqual({ bookId: 1, seriesName: null, seriesId: null });
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it('finds an id by name only when exactly one series has it', async () => {
+    const service = new SeriesIdentityService({} as never);
+    await expect(service.findIdByName('  DUNE  ', fakeDb({ select: [[{ id: 91 }]] }).db)).resolves.toBe(91);
+    await expect(service.findIdByName('Dune', fakeDb({ select: [[]] }).db)).resolves.toBeNull();
+    await expect(service.findIdByName('Legacy', fakeDb({ select: [[{ id: 5 }, { id: 6 }]] }).db)).resolves.toBeNull();
   });
 });

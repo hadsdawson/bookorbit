@@ -2,6 +2,7 @@ import type {
   AudiobookChapter,
   AudiobookChapterSource,
   BookFileWriteStatus,
+  BookPendingSeries,
   BookSeriesMembership,
   BookMetadataLockField,
   BookCommunityRating,
@@ -66,6 +67,8 @@ export class BookDetailDto {
   seriesName: string | null;
   seriesIndex: string | null;
   seriesMemberships: BookSeriesMembership[];
+  /** Fork. */
+  pendingSeries: BookPendingSeries[];
   rating: number | null;
   personalNote: string | null;
   personalNoteUpdatedAt: Date | null;

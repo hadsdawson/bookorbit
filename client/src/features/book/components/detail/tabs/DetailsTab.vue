@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PendingSeriesNotice from '@/features/book/components/series-choice/PendingSeriesNotice.vue'
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatDate as formatLocaleDate } from '@/i18n/formatters'
@@ -1083,7 +1084,7 @@ const seriesLinks = computed<SeriesDisplayLink[]>(() => {
       }))
   }
 
-  if (!props.book.seriesName) return []
+  if (!props.book.seriesName || (props.book.pendingSeries?.length ?? 0) > 0) return []
   return [
     {
       key: `primary-${props.book.seriesId ?? 'unknown'}`,
@@ -1118,6 +1119,12 @@ function providerLinkStyle(provider: string) {
     borderColor: `color-mix(in srgb, ${color} 40%, transparent)`,
     backgroundColor: `color-mix(in srgb, ${color} 7%, transparent)`,
   }
+}
+
+const pendingSeries = computed(() => props.book.pendingSeries ?? [])
+
+function handleChooseSeries() {
+  router.push({ name: 'book-detail', params: { bookId: props.book.id }, query: { tab: 'edit' } })
 }
 
 function handleEditMetadataFromScore() {
@@ -1581,7 +1588,8 @@ watch(
             <span class="text-muted-foreground">{{ t('book.detail.details.narratedBy') }}</span>
             <span class="ml-1 font-semibold">{{ narratorLine ?? '-' }}</span>
           </p>
-          <div v-if="seriesLinks.length" class="mt-2 flex flex-wrap gap-1.5">
+          <div v-if="seriesLinks.length || pendingSeries.length" class="mt-2 flex flex-wrap gap-1.5">
+            <PendingSeriesNotice :pending="pendingSeries" @choose="handleChooseSeries" />
             <template v-for="series in seriesLinks" :key="`m-${series.key}`">
               <RouterLink
                 v-if="series.seriesId != null"
@@ -1852,9 +1860,10 @@ watch(
             <span class="text-muted-foreground">{{ t('book.detail.details.narratedBy') }}</span>
             <span class="ml-1 font-medium text-foreground">{{ narratorLine ?? '-' }}</span>
           </p>
-          <template v-if="seriesLinks.length">
+          <template v-if="seriesLinks.length || pendingSeries.length">
             <span class="text-muted-foreground text-xs">·</span>
             <span class="inline-flex flex-wrap items-center gap-1">
+              <PendingSeriesNotice :pending="pendingSeries" @choose="handleChooseSeries" />
               <template v-for="series in seriesLinks" :key="series.key">
                 <RouterLink
                   v-if="series.seriesId != null"

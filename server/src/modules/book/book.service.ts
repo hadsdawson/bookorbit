@@ -2285,11 +2285,18 @@ export class BookService {
       if (dto.seriesMemberships !== undefined) {
         const previous = (await this.seriesMemberships?.findByBookId(id, tx)) ?? [];
         const totalOptions = { previousSeriesIds: new Set(previous.map((membership) => membership.seriesId)) };
-        await this.seriesMemberships?.replaceForBook(id, dto.seriesMemberships, tx);
-        // After replaceForBook, because it is what creates any series row the editor named.
+        const saved = (await this.seriesMemberships?.replaceForBook(id, dto.seriesMemberships, tx)) ?? [];
+        // After replaceForBook, because it is what creates any series row the editor named. Fork: by
+        // the series each row was saved to, since two series can share a name; a row still waiting
+        // for a pick has no series to set a total on.
         for (const membership of dto.seriesMemberships ?? []) {
           if (membership.expectedBookCount === undefined) continue;
-          await this.seriesExpectedCount?.setManual(membership.seriesName, membership.expectedBookCount ?? null, tx, totalOptions);
+          const key = normalizeMetadataTextKey(membership.seriesName);
+          const series =
+            saved.find((ref) => membership.seriesId != null && ref.seriesId === membership.seriesId) ??
+            saved.find((ref) => normalizeMetadataTextKey(ref.seriesName) === key);
+          if (!series) continue;
+          await this.seriesExpectedCount?.setManualForSeries(series.seriesId, membership.expectedBookCount ?? null, tx, totalOptions);
         }
       }
       this.throwIfMetadataUpdateFailpoint('afterSeriesMembershipsReplace');
@@ -3198,8 +3205,10 @@ export class BookService {
         if (fields.seriesMemberships !== undefined) {
           const ids = getSeriesUpdatableIds();
           recordResult('seriesMemberships', ids);
+          let memberships = fields.seriesMemberships;
           for (const bookId of ids) {
-            await this.seriesMemberships?.replaceForBook(bookId, fields.seriesMemberships, tx);
+            const saved = (await this.seriesMemberships?.replaceForBook(bookId, memberships, tx)) ?? [];
+            memberships = pinNewSeries(memberships, saved);
           }
         }
 
@@ -3933,6 +3942,7 @@ export class BookService {
       seriesName: meta?.seriesName ?? null,
       seriesIndex: meta?.seriesIndex ?? null,
       seriesMemberships: seriesMembershipRows,
+      pendingSeries: (await this.seriesMemberships?.findPendingByBookId(id)) ?? [],
       rating: personalRating,
       personalNote: personalNote?.note ?? null,
       personalNoteUpdatedAt: personalNote ? new Date(personalNote.updatedAt) : null,
@@ -4463,4 +4473,18 @@ export class BookService {
 
     await this.scoreService.calculateAndSaveMany(bookIds);
   }
+}
+
+/** Fork. A bulk "new series" is created once, by the first book, and every later book joins it. */
+function pinNewSeries<T extends { seriesName: string; seriesId?: number | null; newSeries?: boolean }>(
+  memberships: T[],
+  saved: readonly { seriesId: number; seriesName: string }[],
+): T[] {
+  if (!memberships.some((m) => m.newSeries)) return memberships;
+  return memberships.map((membership) => {
+    if (!membership.newSeries) return membership;
+    const key = normalizeMetadataTextKey(membership.seriesName);
+    const created = saved.find((ref) => normalizeMetadataTextKey(ref.seriesName) === key);
+    return created ? { ...membership, newSeries: false, seriesId: created.seriesId } : membership;
+  });
 }

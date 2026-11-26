@@ -338,6 +338,7 @@ watch(
                 v-if="key === 'seriesName'"
                 :model-value="seriesMembershipValues"
                 :search-fn="searchSeries"
+                choose-series
                 @update:model-value="handleSeriesMembershipsUpdate"
               />
               <InputWithSuggestions

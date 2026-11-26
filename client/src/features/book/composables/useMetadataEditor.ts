@@ -16,6 +16,10 @@ export type EditableSeriesMembership = {
   seriesIndex: string | null
   /** Series-level: saving it changes the total for every book in the series and every user. */
   expectedBookCount: number | null
+  /** Fork: the series this row means when several share its name. */
+  seriesId?: number | null
+  /** Fork: start a new series with this name instead of joining one. */
+  newSeries?: boolean
 }
 
 const ROOT_FIELDS = [
@@ -84,21 +88,34 @@ export function normalizeSeriesMemberships(values: readonly EditableSeriesMember
     const key = seriesName.toLowerCase()
     if (seen.has(key)) continue
     seen.add(key)
-    out.push({ seriesName, seriesIndex: value.seriesIndex ?? null, expectedBookCount: value.expectedBookCount ?? null })
+    const row: EditableSeriesMembership = { seriesName, seriesIndex: value.seriesIndex ?? null, expectedBookCount: value.expectedBookCount ?? null }
+    if (value.newSeries) row.newSeries = true
+    else if (value.seriesId != null) row.seriesId = value.seriesId
+    out.push(row)
   }
   return out
 }
 
 function seriesMembershipsFromBook(book: BookDetail): EditableSeriesMembership[] {
   const memberships = book.seriesMemberships ?? []
-  if (memberships.length > 0) {
-    return normalizeSeriesMemberships(
-      memberships.map((membership) => ({
-        seriesName: membership.seriesName,
-        seriesIndex: membership.seriesIndex,
-        expectedBookCount: membership.expectedBookCount ?? null,
+  const pending = book.pendingSeries ?? []
+  if (memberships.length > 0 || pending.length > 0) {
+    const rows = [
+      ...memberships.map((membership) => ({
+        order: membership.displayOrder,
+        row: {
+          seriesName: membership.seriesName,
+          seriesIndex: membership.seriesIndex,
+          expectedBookCount: membership.expectedBookCount ?? null,
+          seriesId: membership.seriesId,
+        },
       })),
-    )
+      ...pending.map((entry) => ({
+        order: entry.displayOrder,
+        row: { seriesName: entry.seriesName, seriesIndex: entry.seriesIndex, expectedBookCount: null },
+      })),
+    ].sort((a, b) => a.order - b.order)
+    return normalizeSeriesMemberships(rows.map((entry) => entry.row))
   }
   return book.seriesName ? [{ seriesName: book.seriesName, seriesIndex: book.seriesIndex, expectedBookCount: null }] : []
 }

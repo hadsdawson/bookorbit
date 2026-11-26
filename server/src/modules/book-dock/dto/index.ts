@@ -94,6 +94,10 @@ class BookDockAudiobookChapterDto {
 class BookDockSeriesMembershipDto {
   @IsString() @MaxLength(500) seriesName!: string;
   @IsOptional() @IsString() @MaxLength(SERIES_INDEX_MAX_LENGTH) @Matches(SERIES_INDEX_PATTERN) seriesIndex?: SeriesIndex | null;
+  /** Fork: the exact series picked when several share this name. */
+  @IsOptional() @IsInt() @Min(1) seriesId?: number | null;
+  /** Fork: start a new series of this name beside any that already have it. */
+  @IsOptional() @IsBoolean() newSeries?: boolean;
 }
 
 class BookDockCommunityRatingDto {

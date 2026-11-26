@@ -27,6 +27,8 @@ export const BOOK_MERGE_RULES: Readonly<Record<string, BookMergeRuleKind>> = {
   'book_genres.book_id': 'union',
   'book_tags.book_id': 'union',
   'book_series_memberships.book_id': 'fill',
+  // Fork: series waiting for a pick travel with the series list they belong to.
+  'book_series_pending.book_id': 'fill',
   'book_custom_metadata_values.book_id': 'fill',
   'comic_metadata.book_id': 'fill',
   'book_community_ratings.book_id': 'fill',

@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { SQL, and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import type { ContentFilterRules } from '@bookorbit/types';
+import type { ContentFilterRules, SeriesNameMatch } from '@bookorbit/types';
 import { buildContentFilterClauses } from '../../common/utils/content-filter-sql.utils';
 import { accentInsensitiveIlike, buildSearchPattern } from '../../common/utils/accent-insensitive-search.utils';
 import { MAX_SERIES_TOTAL_BOOKS } from '../../common/utils/series-total-books.utils';
@@ -508,6 +508,67 @@ export class SeriesRepository {
       .limit(1);
 
     return row ?? null;
+  }
+
+  /** Fork: every series with this name, the automatic one first, described from the given libraries. */
+  async findByNormalizedName(params: {
+    normalizedName: string;
+    libraryIds: number[];
+    contentFilters?: ContentFilterRules;
+  }): Promise<SeriesNameMatch[]> {
+    const series = await this.db
+      .select({ id: bookSeries.id, name: bookSeries.name })
+      .from(bookSeries)
+      .where(eq(bookSeries.normalizedName, params.normalizedName))
+      .orderBy(asc(bookSeries.nameVariant), asc(bookSeries.id));
+    if (series.length === 0) return [];
+    const ids = series.map((row) => row.id);
+    if (params.libraryIds.length === 0) {
+      return series.map((row) => ({ ...row, bookCount: 0, authors: [], moreAuthorCount: 0, coverBookIds: [] }));
+    }
+
+    const filterClauses = params.contentFilters ? buildContentFilterClauses(params.contentFilters, this.db) : [];
+    const [counts, authorRows, covers] = await Promise.all([
+      this.db
+        .select({ seriesId: bookSeriesMemberships.seriesId, bookCount: sql<number>`count(distinct ${books.id})::int` })
+        .from(books)
+        .innerJoin(bookSeriesMemberships, eq(bookSeriesMemberships.bookId, books.id))
+        .where(and(inArray(bookSeriesMemberships.seriesId, ids), this.buildLibraryFilter(params.libraryIds), ...filterClauses))
+        .groupBy(bookSeriesMemberships.seriesId),
+      this.db
+        .select({
+          seriesId: bookSeriesMemberships.seriesId,
+          authorName: authors.name,
+          books: sql<number>`count(distinct ${books.id})::int`,
+        })
+        .from(books)
+        .innerJoin(bookSeriesMemberships, eq(bookSeriesMemberships.bookId, books.id))
+        .innerJoin(bookAuthors, eq(bookAuthors.bookId, books.id))
+        .innerJoin(authors, eq(authors.id, bookAuthors.authorId))
+        .where(and(inArray(bookSeriesMemberships.seriesId, ids), this.buildLibraryFilter(params.libraryIds), ...filterClauses))
+        .groupBy(bookSeriesMemberships.seriesId, authors.name)
+        .orderBy(desc(sql`count(distinct ${books.id})`), asc(authors.name)),
+      this.fetchCoverBookIds(ids, params.libraryIds, params.contentFilters),
+    ]);
+
+    const countBySeries = new Map(counts.map((row) => [row.seriesId, Number(row.bookCount)]));
+    const authorsBySeries = new Map<number, string[]>();
+    for (const row of authorRows) {
+      const list = authorsBySeries.get(row.seriesId) ?? [];
+      list.push(row.authorName);
+      authorsBySeries.set(row.seriesId, list);
+    }
+    return series.map((row) => {
+      const allAuthors = authorsBySeries.get(row.id) ?? [];
+      return {
+        id: row.id,
+        name: row.name,
+        bookCount: countBySeries.get(row.id) ?? 0,
+        authors: allAuthors.slice(0, 3),
+        moreAuthorCount: Math.max(0, allAuthors.length - 3),
+        coverBookIds: (covers.get(row.id) ?? []).slice(0, 3),
+      };
+    });
   }
 
   private async fetchAuthorsForSeries(

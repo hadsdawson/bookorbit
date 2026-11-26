@@ -193,6 +193,17 @@ export function getBookMediaProfile(files: readonly BookMediaFile[]): BookMediaP
   };
 }
 
+/**
+ * Fork: a series a book names that matches more than one series of that name, so the book is in
+ * neither until someone picks which one.
+ */
+export type BookPendingSeries = {
+  seriesName: string;
+  seriesIndex: SeriesIndex | null;
+  /** Position among the book's series; 0 is its main series. */
+  displayOrder: number;
+};
+
 export type BookSeriesMembership = {
   seriesId: number;
   seriesName: string;
@@ -339,6 +350,8 @@ export type BookDetail = {
   seriesName: string | null;
   seriesIndex: SeriesIndex | null;
   seriesMemberships?: BookSeriesMembership[];
+  /** Fork: series the book names that match several series of that name and wait for a pick. */
+  pendingSeries?: BookPendingSeries[];
   rating: number | null;
   personalNote: string | null;
   personalNoteUpdatedAt: string | null;

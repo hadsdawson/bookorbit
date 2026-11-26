@@ -2670,7 +2670,7 @@ export class BookRepository {
     const patch = await preserveOutgoingChapters(
       executor,
       bookId,
-      (await this.seriesIdentity?.resolveMetadataPatch(fields, executor)) ?? fields,
+      (await this.seriesIdentity?.resolveMetadataPatch(fields, executor, { bookId })) ?? fields,
       fields.chaptersSource !== 'manual',
     );
     await executor.update(bookMetadata).set(patch).where(eq(bookMetadata.bookId, bookId));

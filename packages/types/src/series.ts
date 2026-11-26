@@ -111,3 +111,19 @@ export type SeriesNextBook = {
 export type SeriesNextBookResponse = {
   next: SeriesNextBook | null;
 };
+
+/**
+ * Fork: one of the series that share a name, as offered when a book's series is picked. Counts,
+ * authors and covers only cover books the viewer can see.
+ */
+export type SeriesNameMatch = {
+  id: number;
+  name: string;
+  bookCount: number;
+  /** Up to three author names, most books first. */
+  authors: string[];
+  /** How many more authors the series has beyond `authors`. */
+  moreAuthorCount: number;
+  /** The first books in series order that have a cover, at most three. */
+  coverBookIds: number[];
+};

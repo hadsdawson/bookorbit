@@ -1269,6 +1269,7 @@ function handleCoverChanged(medium: CoverMedium | null) {
                   :model-value="form.seriesMemberships"
                   :search-fn="searchSeriesName"
                   :disabled="isSeriesLocked"
+                  choose-series
                   @update:model-value="handleSeriesMembershipsUpdate"
                 />
               </MetadataFieldLabel>

@@ -4,12 +4,15 @@ import { useI18n } from 'vue-i18n'
 import { ArrowDown, ArrowUp, Plus, Trash2 } from '@lucide/vue'
 import { isValidSeriesIndex, SERIES_INDEX_MAX_LENGTH } from '@bookorbit/types'
 import InputWithSuggestions from '@/components/ui/InputWithSuggestions.vue'
+import SeriesChoice from '@/features/book/components/series-choice/SeriesChoice.vue'
 import type { EditableSeriesMembership } from '../../../composables/useMetadataEditor'
 
 const props = defineProps<{
   modelValue: EditableSeriesMembership[]
   searchFn: (q: string) => Promise<string[]>
   disabled?: boolean
+  /** Show the which-series chooser under rows whose name several series share. */
+  chooseSeries?: boolean
 }>()
 
 const { t } = useI18n()
@@ -55,8 +58,23 @@ function updateMembership(index: number, patch: Partial<EditableSeriesMembership
   emit('update:modelValue', next)
 }
 
+const editedRows = ref(new Set<string>())
+
 function updateSeriesName(index: number, value: string | null) {
-  updateMembership(index, { seriesName: value ?? '' })
+  editedRows.value = new Set(editedRows.value).add(getRowKey(index))
+  updateMembership(index, { seriesName: value ?? '', seriesId: undefined, newSeries: undefined })
+}
+
+function isRowEdited(index: number) {
+  return editedRows.value.has(getRowKey(index))
+}
+
+function pickSeries(index: number, seriesId: number) {
+  updateMembership(index, { seriesId, newSeries: false })
+}
+
+function startNewSeries(index: number) {
+  updateMembership(index, { seriesId: null, newSeries: true })
 }
 
 function updateSeriesIndex(index: number, event: Event) {
@@ -191,6 +209,16 @@ function moveMembership(index: number, offset: -1 | 1) {
       <p v-if="isSeriesIndexInvalid(membership.seriesIndex)" class="w-full ps-10 text-xs text-destructive" role="alert">
         {{ t('book.detail.seriesMembership.invalidSeriesIndex') }}
       </p>
+      <SeriesChoice
+        v-if="chooseSeries"
+        :series-name="membership.seriesName"
+        :series-id="membership.seriesId ?? null"
+        :new-series="membership.newSeries === true"
+        :edited="isRowEdited(index)"
+        :disabled="disabled"
+        @pick="pickSeries(index, $event)"
+        @start-new="startNewSeries(index)"
+      />
     </div>
   </div>
 </template>

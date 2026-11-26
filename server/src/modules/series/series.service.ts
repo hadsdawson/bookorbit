@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 
-import type { BooksPage, SeriesBooksPage, SeriesDetail, SeriesNextBookResponse, SeriesPage, SeriesSummary } from '@bookorbit/types';
+import type { BooksPage, SeriesBooksPage, SeriesDetail, SeriesNameMatch, SeriesNextBookResponse, SeriesPage, SeriesSummary } from '@bookorbit/types';
+import { normalizeMetadataTextKey } from '../../common/utils/metadata-text-normalize.utils';
 import { READER_OPENABLE_FORMATS, SERIES_GAP_PREVIEW_LIMIT, getOpenableFormatsForGroup, isOptInReaderFormat } from '@bookorbit/types';
 import { MAX_OFFSET_ROWS, isOffsetWithinLimit } from '../../common/constants/pagination.constants';
 import { withoutHiddenLibraries } from '../../common/library-visibility/library-visibility';
@@ -95,6 +96,18 @@ export class SeriesService {
   }
 
   /** Total series the user can browse; matches the unfiltered total of {@link findAll}. */
+  /** Fork: the series sharing this name, described from the libraries the viewer can open. */
+  async findByName(user: RequestUser, name: string): Promise<SeriesNameMatch[]> {
+    const normalizedName = normalizeMetadataTextKey(name);
+    if (!normalizedName) return [];
+    const libraryIds = await this.resolveLibraryIds(user);
+    return this.seriesRepo.findByNormalizedName({
+      normalizedName,
+      libraryIds,
+      contentFilters: user.isSuperuser ? undefined : user.contentFilters,
+    });
+  }
+
   async countAll(user: RequestUser): Promise<number> {
     const libraryIds = withoutHiddenLibraries(await this.libraryService.findAccessibleLibraryIds(user), user, 'series');
     if (libraryIds.length === 0) return 0;

@@ -125,6 +125,9 @@ function copySeriesMemberships(source: Record<string, unknown>, target: BookDock
     if (!isRecord(value) || typeof value.seriesName !== 'string') return [];
     const membership: NonNullable<BookDockMetadata['seriesMemberships']>[number] = { seriesName: value.seriesName };
     if (value.seriesIndex !== undefined) membership.seriesIndex = parseSeriesIndex(value.seriesIndex);
+    // Fork: which of several same-named series was picked, or that a new one was asked for.
+    if (typeof value.seriesId === 'number' && Number.isInteger(value.seriesId) && value.seriesId > 0) membership.seriesId = value.seriesId;
+    if (value.newSeries === true) membership.newSeries = true;
     return [membership];
   });
 }

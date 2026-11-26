@@ -83,6 +83,33 @@ describe('useMetadataEditor', () => {
     apiMock.mockReset()
   })
 
+  it('loads waiting series as rows in order and sends a picked series (fork)', async () => {
+    const book = makeBook({
+      seriesName: 'Wisdom',
+      seriesIndex: '2',
+      seriesMemberships: [{ seriesId: 7, seriesName: 'Cosmere', seriesIndex: null, displayOrder: 1, expectedBookCount: null }],
+      pendingSeries: [{ seriesName: 'Wisdom', seriesIndex: '2', displayOrder: 0 }],
+    })
+    apiMock.mockResolvedValue({ ok: true, json: async () => book })
+
+    const { form, load, save } = useMetadataEditor()
+    load(book)
+    expect(form.seriesMemberships).toEqual([
+      { seriesName: 'Wisdom', seriesIndex: '2', expectedBookCount: null },
+      { seriesName: 'Cosmere', seriesIndex: null, expectedBookCount: null, seriesId: 7 },
+    ])
+
+    form.seriesMemberships = [{ ...form.seriesMemberships[0]!, seriesId: 12 }, form.seriesMemberships[1]!]
+    await save(book.id, [])
+
+    const [, req] = apiMock.mock.calls[0] as [string, RequestInit]
+    const { metadata } = JSON.parse(String(req.body)) as { metadata: { seriesMemberships?: unknown } }
+    expect(metadata.seriesMemberships).toEqual([
+      { seriesName: 'Wisdom', seriesIndex: '2', expectedBookCount: null, seriesId: 12 },
+      { seriesName: 'Cosmere', seriesIndex: null, expectedBookCount: null, seriesId: 7 },
+    ])
+  })
+
   it('omits audioMetadata when book has no audio files', async () => {
     const book = makeBook()
     apiMock.mockResolvedValue({ ok: true, json: async () => book })

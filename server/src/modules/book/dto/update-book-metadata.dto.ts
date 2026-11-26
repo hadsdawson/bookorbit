@@ -38,6 +38,10 @@ export class ComicMetadataDto {
 export class BookSeriesMembershipDto {
   @IsString() @MaxLength(500) seriesName!: string;
   @IsOptional() @IsString() @MaxLength(SERIES_INDEX_MAX_LENGTH) @Matches(SERIES_INDEX_PATTERN) seriesIndex?: SeriesIndex | null;
+  /** Fork: the exact series picked when several share this name. */
+  @IsOptional() @IsInt() @Min(1) seriesId?: number | null;
+  /** Fork: start a new series of this name beside any that already have it. */
+  @IsOptional() @IsBoolean() newSeries?: boolean;
   // Series-level rather than book-level: writing it changes the total for every book in the
   // series and for every user. Bounds mirror the book_series range constraint.
   @IsOptional() @IsInt() @Min(1) @Max(MAX_SERIES_TOTAL_BOOKS) expectedBookCount?: number | null;

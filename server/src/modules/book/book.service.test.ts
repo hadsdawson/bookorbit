@@ -2074,10 +2074,13 @@ describe('BookService', () => {
         }),
         replaceForBook: vi.fn(() => {
           calls.push('replace');
-          return Promise.resolve([]);
+          return Promise.resolve([
+            { seriesId: 31, seriesName: 'Harry Potter', seriesIndex: '1', displayOrder: 0, expectedBookCount: null },
+            { seriesId: 32, seriesName: 'Hogwarts Library', seriesIndex: null, displayOrder: 1, expectedBookCount: null },
+          ]);
         }),
       };
-      const seriesExpectedCount = { setManual: vi.fn().mockResolvedValue(true) };
+      const seriesExpectedCount = { setManualForSeries: vi.fn().mockResolvedValue(true) };
       const { service } = makeService({ seriesMemberships, seriesExpectedCount });
       const user = makeUser();
       vi.spyOn(service, 'verifyBookAccess').mockResolvedValue(undefined);
@@ -2096,8 +2099,9 @@ describe('BookService', () => {
 
       expect(calls).toEqual(['find', 'replace']);
       const options = { previousSeriesIds: new Set([31]) };
-      expect(seriesExpectedCount.setManual).toHaveBeenNthCalledWith(1, 'Harry Potter', 7, expect.anything(), options);
-      expect(seriesExpectedCount.setManual).toHaveBeenNthCalledWith(2, 'Hogwarts Library', null, expect.anything(), options);
+      // Fork: by the exact series each row was saved to, since two series can share a name.
+      expect(seriesExpectedCount.setManualForSeries).toHaveBeenNthCalledWith(1, 31, 7, expect.anything(), options);
+      expect(seriesExpectedCount.setManualForSeries).toHaveBeenNthCalledWith(2, 32, null, expect.anything(), options);
     });
 
     it('updateMetadata cleans chapters instead of rejecting them and records who changed them', async () => {

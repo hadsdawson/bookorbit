@@ -90,6 +90,18 @@ describe('SeriesMembershipEditor', () => {
     ])
   })
 
+  it('drops a picked series when the name is changed (fork)', async () => {
+    const wrapper = mountHost([{ seriesName: 'Wisdom', seriesIndex: null, expectedBookCount: null, seriesId: 4 }])
+    const input = wrapper.get<HTMLInputElement>('input[type="text"]')
+
+    await input.setValue('Wisdom Saga')
+    await nextTick()
+
+    const [row] = (wrapper.vm as { memberships: EditableSeriesMembership[] }).memberships
+    expect(row?.seriesName).toBe('Wisdom Saga')
+    expect(row?.seriesId).toBeUndefined()
+  })
+
   describe('series length', () => {
     function membershipsOf(wrapper: ReturnType<typeof mountHost>): EditableSeriesMembership[] {
       return (wrapper.vm as { memberships: EditableSeriesMembership[] }).memberships

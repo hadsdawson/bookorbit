@@ -10,6 +10,12 @@ export const bookSeries = pgTable(
     id: serial('id').primaryKey(),
     name: varchar('name', { length: 500 }).notNull(),
     normalizedName: varchar('normalized_name', { length: 500 }).notNull(),
+    /**
+     * Fork. Tells apart series that share a name. Series found by name (scans, fetched metadata,
+     * Book Dock) always use variant 0, so automatic matching stays one series per name; a second
+     * series of the same name only comes from a person creating or splitting one.
+     */
+    nameVariant: integer('name_variant').notNull().default(0),
     nameSortKey: text('name_sort_key').generatedAlwaysAs(() => sortKeyFromColumn('name')),
     expectedBookCount: integer('expected_book_count'),
     expectedBookCountSource: varchar('expected_book_count_source', { length: 50 }),
@@ -21,7 +27,8 @@ export const bookSeries = pgTable(
       .$onUpdateFn(() => new Date()),
   },
   (t) => [
-    uniqueIndex('book_series_normalized_name_uidx').on(t.normalizedName),
+    uniqueIndex('book_series_normalized_name_variant_uidx').on(t.normalizedName, t.nameVariant),
+    index('book_series_normalized_name_idx').on(t.normalizedName),
     index('book_series_name_trgm_idx').using('gin', t.name.op('gin_trgm_ops')),
     index('book_series_name_unaccent_trgm_idx').using('gin', sql`public.bookorbit_unaccent(${t.name}) gin_trgm_ops`),
     index('book_series_name_lower_idx').on(sql`lower(${t.name})`),
@@ -72,3 +79,23 @@ export const bookSeriesMemberships = pgTable(
 
 export type BookSeriesMembership = typeof bookSeriesMemberships.$inferSelect;
 export type NewBookSeriesMembership = typeof bookSeriesMemberships.$inferInsert;
+
+/**
+ * Fork. A series a book names but that could not be told apart from another series of the same
+ * name. The book joins no series until a person picks one, so nothing is filed under a guess.
+ */
+export const bookSeriesPending = pgTable(
+  'book_series_pending',
+  {
+    bookId: integer('book_id')
+      .notNull()
+      .references(() => books.id, { onDelete: 'cascade' }),
+    seriesName: varchar('series_name', { length: 500 }).notNull(),
+    seriesIndex: varchar('series_index', { length: 20 }),
+    displayOrder: integer('display_order').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.bookId, t.displayOrder] })],
+);
+
+export type BookSeriesPending = typeof bookSeriesPending.$inferSelect;

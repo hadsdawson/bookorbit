@@ -165,6 +165,13 @@ export function isMetadataProviderKeySyntax(key: unknown): key is MetadataProvid
 export interface MetadataSeriesMembership {
   seriesName: string;
   seriesIndex?: SeriesIndex | null;
+  /**
+   * Fork: the exact series, when a person picked one of several that share this name. Without it
+   * the name is matched (see SeriesIdentityService.resolveForBook).
+   */
+  seriesId?: number | null;
+  /** Fork: start a new series with this name, even though one by that name already exists. */
+  newSeries?: boolean;
 }
 
 export interface BookCommunityRating {

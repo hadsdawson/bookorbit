@@ -50,6 +50,7 @@ describe('SeriesService', () => {
     findBookIds: vi.fn(),
     findNextReadableBook: vi.fn(),
     countSeries: vi.fn(),
+    findByNormalizedName: vi.fn(),
   };
 
   const bookReadService = {
@@ -73,6 +74,25 @@ describe('SeriesService', () => {
     );
     libraryService.findAll.mockResolvedValue([{ id: 1 }, { id: 2 }]);
     libraryService.findAccessibleLibraryIds.mockResolvedValue([1, 2]);
+  });
+
+  describe('findByName', () => {
+    it('looks up every series of a tidied name across the libraries the viewer can open', async () => {
+      seriesRepo.findByNormalizedName.mockResolvedValue([{ id: 5 }, { id: 6 }]);
+      const user = { ...reqUser(), contentFilters: EMPTY_CONTENT_FILTER_RULES };
+
+      await expect(service.findByName(user, '  Twisted   Tales ')).resolves.toEqual([{ id: 5 }, { id: 6 }]);
+      expect(seriesRepo.findByNormalizedName).toHaveBeenCalledWith({
+        normalizedName: 'twisted tales',
+        libraryIds: [1, 2],
+        contentFilters: EMPTY_CONTENT_FILTER_RULES,
+      });
+    });
+
+    it('answers nothing for a blank name without a query', async () => {
+      await expect(service.findByName(reqUser(), '   ')).resolves.toEqual([]);
+      expect(seriesRepo.findByNormalizedName).not.toHaveBeenCalled();
+    });
   });
 
   describe('countAll', () => {
