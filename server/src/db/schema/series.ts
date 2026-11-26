@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { check, index, integer, pgTable, primaryKey, serial, text, timestamp, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
 
+import { users } from './auth';
 import { books } from './books';
 import { sortKeyFromColumn } from './sort-key';
 
@@ -99,3 +100,12 @@ export const bookSeriesPending = pgTable(
 );
 
 export type BookSeriesPending = typeof bookSeriesPending.$inferSelect;
+
+/** Fork. Series someone checked on the Series check list and marked as fine, shared by everyone. */
+export const seriesReviewDismissals = pgTable('series_review_dismissals', {
+  seriesId: integer('series_id')
+    .primaryKey()
+    .references(() => bookSeries.id, { onDelete: 'cascade' }),
+  dismissedBy: integer('dismissed_by').references(() => users.id, { onDelete: 'set null' }),
+  dismissedAt: timestamp('dismissed_at', { withTimezone: true }).defaultNow().notNull(),
+});

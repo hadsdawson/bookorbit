@@ -15,6 +15,7 @@ import {
   RenameEntityDto,
   ScanDuplicatesDto,
   SplitEntityDto,
+  SplitSeriesBooksDto,
   UndismissPairDto,
 } from './dto/entity-manager.dto';
 import { EntityManagerService } from './entity-manager.service';
@@ -104,6 +105,18 @@ export class EntityManagerController {
     const entityIds = isInline(entityType) ? dto.values! : dto.entityIds!;
     const mode = isInline(entityType) ? 'inline' : (dto.mode ?? 'hard');
     return this.service.bulkDelete(entityType, user, entityIds, mode as 'soft' | 'hard' | 'inline', dto.writeFiles ?? false);
+  }
+
+  /** Fork. Move some of a series' books into a new series. */
+  @Post('series/split-books')
+  @RequirePermission(Permission.LibraryEditMetadata)
+  @Auditable({
+    action: AuditAction.EntityManagerSplit,
+    getResourceId: (req) => (req.body as Record<string, unknown>)?.seriesId as number | undefined,
+    description: (req) => `Moved ${(((req.body as Record<string, unknown>)?.bookIds as number[]) ?? []).length} books into a new series`,
+  })
+  splitSeriesBooks(@Body() dto: SplitSeriesBooksDto, @CurrentUser() user: RequestUser) {
+    return this.service.splitSeriesBooks(user, { seriesId: dto.seriesId, bookIds: dto.bookIds, name: dto.name, writeFiles: dto.writeFiles ?? false });
   }
 
   @Post(':entityType/split')

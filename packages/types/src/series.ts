@@ -127,3 +127,70 @@ export type SeriesNameMatch = {
   /** The first books in series order that have a cover, at most three. */
   coverBookIds: number[];
 };
+
+/** Fork. Why a series is on the Series check list. */
+export type SeriesReviewReason = "repeatedNumber" | "unrelatedAuthors";
+
+/** Fork. A series that may hold books from more than one real series. */
+export type SeriesReviewItem = {
+  id: number;
+  name: string;
+  bookCount: number;
+  authors: string[];
+  moreAuthorCount: number;
+  coverBookIds: number[];
+  reasons: SeriesReviewReason[];
+  /** Numbers used by books with no author in common, at most five. */
+  repeatedNumbers: string[];
+  /** Someone marked it as fine; it shows only under Marked fine. */
+  markedFine: boolean;
+};
+
+export type SeriesReviewView = "open" | "fine";
+
+export type SeriesReviewPage = {
+  items: SeriesReviewItem[];
+  total: number;
+  page: number;
+  size: number;
+  /** How many series each view holds. */
+  counts: { open: number; fine: number };
+};
+
+/** Fork. A book whose series name matches several series and waits for a pick. */
+export type SeriesWaitingBook = {
+  bookId: number;
+  title: string;
+  authors: string[];
+  seriesName: string;
+  seriesIndex: string | null;
+  displayOrder: number;
+};
+
+export type SeriesWaitingPage = {
+  items: SeriesWaitingBook[];
+  total: number;
+  page: number;
+  size: number;
+};
+
+export type ResolveWaitingSeriesRequest = {
+  bookId: number;
+  displayOrder: number;
+  seriesId?: number;
+  newSeries?: boolean;
+};
+
+export type SplitSeriesBooksRequest = {
+  seriesId: number;
+  bookIds: number[];
+  /** Name for the new series; the current name when left out. */
+  name?: string;
+  writeFiles?: boolean;
+};
+
+export type SplitSeriesBooksResult = {
+  seriesId: number;
+  name: string;
+  movedBookCount: number;
+};

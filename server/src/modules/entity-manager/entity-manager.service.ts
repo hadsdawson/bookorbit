@@ -14,6 +14,7 @@ import type {
   SplitResult,
   BulkDeleteResult,
 } from '@bookorbit/types';
+import type { SplitSeriesBooksResult } from '@bookorbit/types';
 import type { RequestUser } from '../../common/types/request-user';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
 import { FileWriteService } from '../file-write/file-write.service';
@@ -58,7 +59,7 @@ export class EntityManagerService {
     narratorStrategy: NarratorStrategy,
     publisherStrategy: PublisherStrategy,
     languageStrategy: LanguageStrategy,
-    seriesStrategy: SeriesStrategy,
+    private readonly seriesStrategy: SeriesStrategy,
     @Optional() private readonly genrePolicy?: GenrePolicyService,
   ) {
     this.strategies = new Map<EntityType, EntityStrategy>([
@@ -442,6 +443,37 @@ export class EntityManagerService {
       const error = logErrorFields(err);
       this.logger.warn(
         `[${event}] [fail] userId=${user.id} entityType=${entityType} durationMs=${Date.now() - startedAt} errorClass=${error.errorClass} error="${error.error}" - split failed`,
+      );
+      throw err;
+    }
+  }
+
+  /** Fork. Moves the chosen books of a series into a new series, the same name unless one is given. */
+  async splitSeriesBooks(
+    user: RequestUser,
+    input: { seriesId: number; bookIds: number[]; name?: string; writeFiles: boolean },
+  ): Promise<SplitSeriesBooksResult> {
+    const event = 'entity_manager.split_series_books';
+    const startedAt = Date.now();
+    this.logger.log(
+      `[${event}] [start] userId=${user.id} seriesId=${input.seriesId} bookCount=${input.bookIds.length} renamed=${input.name !== undefined} writeFiles=${input.writeFiles} - series split started`,
+    );
+    try {
+      const libraryIds = await this.libraryService.findEditableLibraryIds(user);
+      const result = await this.seriesStrategy.splitBooks({ seriesId: input.seriesId, bookIds: input.bookIds, name: input.name, libraryIds });
+
+      await this.repo.insertDismissedPair('series', input.seriesId, result.seriesId, 'split', user.id);
+      if (input.writeFiles) this.scheduleWrites(result.affectedBookIds, user.id);
+      await this.metadataScoreService.calculateAndSaveMany(result.affectedBookIds);
+
+      this.logger.log(
+        `[${event}] [end] userId=${user.id} seriesId=${input.seriesId} durationMs=${Date.now() - startedAt} newSeriesId=${result.seriesId} movedBooks=${result.affectedBookIds.length} - series split completed`,
+      );
+      return { seriesId: result.seriesId, name: result.name, movedBookCount: result.affectedBookIds.length };
+    } catch (err) {
+      const error = logErrorFields(err);
+      this.logger.warn(
+        `[${event}] [fail] userId=${user.id} seriesId=${input.seriesId} durationMs=${Date.now() - startedAt} errorClass=${error.errorClass} error="${error.error}" - series split failed`,
       );
       throw err;
     }

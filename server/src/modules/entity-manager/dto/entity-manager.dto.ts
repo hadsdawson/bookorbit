@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsIn, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsIn, IsInt, IsNumber, IsOptional, IsString, Length, Max, Min } from 'class-validator';
 
 export class ScanDuplicatesDto {
   @IsOptional()
@@ -138,6 +138,29 @@ export class SplitEntityDto {
   newNames!: string[];
 
   @IsOptional()
+  writeFiles?: boolean;
+}
+
+/** Fork. Move some of a series' books into a new series. */
+export class SplitSeriesBooksDto {
+  @IsInt()
+  @Min(1)
+  seriesId!: number;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(5000)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  bookIds!: number[];
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 500)
+  name?: string;
+
+  @IsOptional()
+  @IsBoolean()
   writeFiles?: boolean;
 }
 
