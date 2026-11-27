@@ -820,7 +820,7 @@ describe('BookDockFinalizeService', () => {
         await service.triggerAutoFinalize(1);
 
         expect(file).not.toHaveBeenCalled();
-        expect(repo.update).toHaveBeenCalledWith(1, { holdReason: 'duplicate', holdDetail: { ...fiction, bookId: 77 } });
+        expect(repo.update).toHaveBeenCalledWith(1, { holdReason: 'duplicate', holdDetail: { ...fiction, matchReason: 'same_path', bookId: 77 } });
       });
 
       it('shows why a merged item waits but never files it, and leaves its other files alone (fork)', async () => {
@@ -830,7 +830,10 @@ describe('BookDockFinalizeService', () => {
         await primary.service.triggerAutoFinalize(1);
 
         expect(primary.file).not.toHaveBeenCalled();
-        expect(primary.repo.update).toHaveBeenCalledWith(1, { holdReason: 'duplicate', holdDetail: { ...fiction, bookId: 77 } });
+        expect(primary.repo.update).toHaveBeenCalledWith(1, {
+          holdReason: 'duplicate',
+          holdDetail: { ...fiction, matchReason: 'same_path', bookId: 77 },
+        });
 
         mockAccess.mockRejectedValue(Object.assign(new Error('not found'), { code: 'ENOENT' }));
         const clear = setup({ row: { mergedIntoId: 1 } });
@@ -908,7 +911,10 @@ describe('BookDockFinalizeService', () => {
 
         expect(duplicates.findMatches).toHaveBeenCalledWith([{ fileId: 1, metadata: expect.any(Object), formats: ['epub'] }], [5]);
         expect(file).not.toHaveBeenCalled();
-        expect(repo.update).toHaveBeenCalledWith(1, { holdReason: 'duplicate', holdDetail: { ...fiction, bookId: 300 } });
+        expect(repo.update).toHaveBeenCalledWith(1, {
+          holdReason: 'duplicate',
+          holdDetail: { ...fiction, bookId: 300, matchReason: 'title_author', matchTitle: 'Dune' },
+        });
       });
 
       it('files a duplicate a person chose to keep both of', async () => {
@@ -970,7 +976,24 @@ describe('BookDockFinalizeService', () => {
 
         expect(prepare).toHaveBeenCalledTimes(1);
         expect(file).not.toHaveBeenCalled();
-        expect(repo.update).toHaveBeenCalledWith(1, { holdReason: 'duplicate', holdDetail: { ...fiction, bookId: 300 } });
+        expect(repo.update).toHaveBeenCalledWith(1, {
+          holdReason: 'duplicate',
+          holdDetail: { ...fiction, bookId: 300, matchReason: expect.any(String), matchTitle: 'Dune' },
+        });
+      });
+
+      it('never joins on an identifier when the titles share no words, and holds it as a possible match (fork)', async () => {
+        const { service, repo, duplicates, prepare, file } = setup({ dock: { autoJoin: true } });
+        duplicates.findMatches.mockResolvedValue(new Map([[1, [match({ reason: 'work_id', title: 'The Stars Are Dying', suspect: true })]]]));
+
+        await service.triggerAutoFinalize(1);
+
+        expect(prepare).toHaveBeenCalledTimes(1);
+        expect(file).not.toHaveBeenCalled();
+        expect(repo.update).toHaveBeenCalledWith(1, {
+          holdReason: 'duplicate',
+          holdDetail: { ...fiction, bookId: 300, matchReason: 'work_id', matchTitle: 'The Stars Are Dying', suspect: true },
+        });
       });
 
       it('does not join for an uploader who may not edit the library', async () => {
@@ -982,7 +1005,10 @@ describe('BookDockFinalizeService', () => {
 
         expect(joinService.canJoinIn).toHaveBeenCalledWith(expect.objectContaining({ id: 5 }), expect.objectContaining({ id: 7 }), expect.any(Map));
         expect(file).not.toHaveBeenCalled();
-        expect(repo.update).toHaveBeenCalledWith(1, { holdReason: 'duplicate', holdDetail: { ...fiction, bookId: 300 } });
+        expect(repo.update).toHaveBeenCalledWith(1, {
+          holdReason: 'duplicate',
+          holdDetail: { ...fiction, bookId: 300, matchReason: expect.any(String), matchTitle: 'Dune' },
+        });
       });
 
       it('holds the duplicate when the join fails as it files', async () => {
@@ -992,8 +1018,25 @@ describe('BookDockFinalizeService', () => {
 
         await service.triggerAutoFinalize(1);
 
-        expect(repo.update).toHaveBeenLastCalledWith(1, { holdReason: 'duplicate', holdDetail: { ...fiction, bookId: 300 } });
+        expect(repo.update).toHaveBeenLastCalledWith(1, {
+          holdReason: 'duplicate',
+          holdDetail: { ...fiction, bookId: 300, matchReason: expect.any(String), matchTitle: 'Dune' },
+        });
       });
+    });
+  });
+
+  describe('older duplicate holds (fork)', () => {
+    it('reviews duplicate holds saved without a match reason once at startup, without filing them', async () => {
+      const { service, repo } = makeService();
+      (repo as any).findDuplicateHoldIdsWithoutMatchReason = vi.fn().mockResolvedValueOnce([4, 9]).mockResolvedValueOnce([]);
+      const review = vi.spyOn(service, 'reviewHolds').mockImplementation(() => undefined);
+
+      await service.onApplicationBootstrap();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(review).toHaveBeenCalledExactlyOnceWith([4, 9]);
+      expect((repo as any).findDuplicateHoldIdsWithoutMatchReason).toHaveBeenLastCalledWith(expect.any(Number), 9);
     });
   });
 

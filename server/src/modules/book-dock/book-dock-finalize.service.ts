@@ -361,6 +361,35 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
       this.autoFinalizeQueue.pause();
       this.holdReviewQueue.pause();
     }
+    void this.reviewDuplicateHoldsWithoutReason();
+  }
+
+  /**
+   * Fork. Duplicate holds from before the hold said which book it matched and why are worked out
+   * again once, without filing anything, so the row can explain itself and flag an unlikely match.
+   */
+  private async reviewDuplicateHoldsWithoutReason(): Promise<void> {
+    const startedAt = Date.now();
+    let queued = 0;
+    try {
+      let afterId = 0;
+      while (true) {
+        const ids = await this.repo.findDuplicateHoldIdsWithoutMatchReason(BATCH_SIZE, afterId);
+        if (ids.length === 0) break;
+        this.reviewHolds(ids);
+        queued += ids.length;
+        afterId = ids[ids.length - 1]!;
+      }
+      if (queued > 0) {
+        this.logger.log(
+          `[book_dock.duplicate_hold_backfill] [end] queued=${queued} durationMs=${Date.now() - startedAt} - older duplicate holds queued for review`,
+        );
+      }
+    } catch (error) {
+      this.logger.warn(
+        `[book_dock.duplicate_hold_backfill] [fail] queued=${queued} durationMs=${Date.now() - startedAt} errorClass=${error instanceof Error ? error.name : 'Error'} error="${sanitizeLogValue(error instanceof Error ? error.message : String(error))}" - older duplicate holds could not be queued for review`,
+      );
+    }
   }
 
   onModuleDestroy(): void {
@@ -1363,6 +1392,7 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
           autoFile &&
           settings.autoJoin &&
           IDENTIFIER_MATCH_REASONS.has(match.reason) &&
+          !match.suspect &&
           match.canTakeFormat &&
           library.organizationMode === 'book_per_folder';
         if (!joinable) return { kind: 'wait', hold: this.duplicateHold(match, library) };
@@ -1398,7 +1428,11 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
     if (classified.status === 'duplicate') {
       // The same path already belongs to a book. "Keep both" cannot put a second file there.
       if (keepBoth) return this.wait('destination_conflict', libraryDetail);
-      return this.wait('duplicate', { ...libraryDetail, ...(classified.existingBookId !== undefined ? { bookId: classified.existingBookId } : {}) });
+      return this.wait('duplicate', {
+        ...libraryDetail,
+        matchReason: 'same_path',
+        ...(classified.existingBookId !== undefined ? { bookId: classified.existingBookId } : {}),
+      });
     }
     if (classified.status === 'destination_conflict') return this.wait('destination_conflict', libraryDetail);
     if (classified.status !== 'ready' || !autoFile) return { kind: 'wait', hold: null };
@@ -1410,7 +1444,17 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
   }
 
   private duplicateHold(match: DuplicateMatch, library: Pick<LibraryRow, 'id' | 'name'>): AutoFileHold {
-    return { reason: 'duplicate', detail: { libraryId: library.id, libraryName: library.name, bookId: match.bookId } };
+    return {
+      reason: 'duplicate',
+      detail: {
+        libraryId: library.id,
+        libraryName: library.name,
+        bookId: match.bookId,
+        matchReason: match.reason,
+        ...(match.title ? { matchTitle: match.title } : {}),
+        ...(match.suspect ? { suspect: true } : {}),
+      },
+    };
   }
 
   private async libraryDetail(libraryId: number): Promise<BookDockHoldDetail> {

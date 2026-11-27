@@ -84,6 +84,9 @@ export function isBookDockHoldReason(value: unknown): value is BookDockHoldReaso
 }
 
 /** The facts behind a hold reason. Which fields are set depends on the reason. */
+/** Fork. Why a docked file is taken to be a book a library already holds; `same_path` = its file name is already taken by that book. */
+export type BookDockDuplicateMatchReason = "isbn" | "edition_id" | "work_id" | "title_author" | "same_path";
+
 export interface BookDockHoldDetail {
   confidence?: number;
   threshold?: number;
@@ -91,6 +94,15 @@ export interface BookDockHoldDetail {
   libraryName?: string;
   /** The existing book a `duplicate` hold matched. */
   bookId?: number;
+  /** Fork: what the file and that book have in common, so a person can judge the match. */
+  matchReason?: BookDockDuplicateMatchReason;
+  /** Fork: the matched book's title as the library has it. */
+  matchTitle?: string;
+  /**
+   * Fork: an identifier matched, but the titles share no words, so the identifier is more likely
+   * wrong than the book a duplicate. Never auto-filed or auto-joined.
+   */
+  suspect?: boolean;
   /** A manager chose "Keep both" for a duplicate, so the duplicate check no longer holds the file. */
   keepBoth?: boolean;
 }

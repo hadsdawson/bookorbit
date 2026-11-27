@@ -11358,6 +11358,7 @@
       "reason": {
         "low_confidence": "Low match",
         "duplicate": "Already in library",
+        "possibleDuplicate": "Possible match, check it",
         "destination_conflict": "Path taken",
         "not_allowed_in_library": "Doesn't fit",
         "unsupported_layout": "Layout doesn't fit",
@@ -11369,6 +11370,7 @@
       "chip": {
         "lowConfidence": "{confidence}% match, needs {threshold}%",
         "duplicate": "Already in {library}",
+        "possibleDuplicate": "Possible match in {library}, check it",
         "doesNotFit": "Doesn't fit {library}"
       },
       "action": {
@@ -11382,7 +11384,18 @@
         "keepBoth": "Keep both",
         "keepBothFailed": "Could not keep both. Try again.",
         "hint": "Add as format puts this file in the existing book. Keep both files it as a second book.",
-        "hintMember": "Add as format puts this file in the existing book. A dock manager can also keep both."
+        "hintMember": "Add as format puts this file in the existing book. A dock manager can also keep both.",
+        "matched": "Matches “{title}” in {library}, because both have {why}.",
+        "matchedNoTitle": "Matches a book in {library}, because both have {why}.",
+        "yourLibrary": "your library",
+        "suspect": "The titles have nothing in common, so one of these books probably has a wrong ID. Open the book to check before deleting anything. If it is a different book, use Keep both.",
+        "reasons": {
+          "isbn": "the same ISBN",
+          "edition_id": "the same store ID (Amazon, Audible, Google Books or Goodreads)",
+          "work_id": "the same Hardcover or Open Library ID",
+          "title_author": "the same title and author",
+          "same_path": "the same file name in the same folder"
+        }
       }
     },
     "facts": {

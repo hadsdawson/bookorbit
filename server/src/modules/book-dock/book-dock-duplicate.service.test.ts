@@ -1,6 +1,6 @@
 import type { BookDockMetadata } from '@bookorbit/types';
 
-import { BookDockDuplicateService } from './book-dock-duplicate.service';
+import { BookDockDuplicateService, titlesUnrelated } from './book-dock-duplicate.service';
 import type { BookDockJoinCandidateRow } from './book-dock.repository';
 
 function candidate(overrides: Partial<BookDockJoinCandidateRow> = {}): BookDockJoinCandidateRow {
@@ -133,5 +133,46 @@ describe('BookDockDuplicateService', () => {
 
     expect(names).toEqual(new Map([[1, ['Library 6', 'Library 7', 'Library 8']]]));
     expect(repo.findJoinCandidatesByIsbn.mock.calls[0]?.[3]).toBeDefined();
+  });
+
+  it('flags an identifier match whose titles share no words as a possible match (fork)', async () => {
+    const { service, repo } = makeService();
+    repo.findJoinCandidatesByWorkId.mockResolvedValue([
+      candidate({ title: 'The Stars Are Dying', titleKey: 'stars are dying', hardcoverId: 'hc-1' }),
+    ]);
+
+    const matches = await service.findMatches(
+      [
+        {
+          fileId: 1,
+          metadata: { title: 'A Sword from the Embers', authors: ['Chloe C. Penaranda'], hardcoverId: 'hc-1' } as BookDockMetadata,
+          formats: ['m4b'],
+        },
+      ],
+      [5],
+    );
+
+    expect(matches.get(1)?.[0]).toMatchObject({ reason: 'work_id', title: 'The Stars Are Dying', suspect: true });
+  });
+
+  it('trusts an identifier match when the titles have a word in common (fork)', async () => {
+    const { service, repo } = makeService();
+    repo.findJoinCandidatesByIsbn.mockResolvedValue([candidate({ title: 'Dune: Deluxe Edition', isbn13: '9780441013593' })]);
+
+    const matches = await service.findMatches([{ fileId: 1, metadata: dune, formats: ['epub'] }], [5]);
+
+    expect(matches.get(1)?.[0]).toMatchObject({ reason: 'isbn', suspect: false });
+  });
+});
+
+describe('titlesUnrelated', () => {
+  it('ignores little words such as "the" and "from"', () => {
+    expect(titlesUnrelated('A Sword from the Embers', 'The Stars Are Dying')).toBe(true);
+  });
+
+  it('treats a shared word, or a missing title, as not unrelated', () => {
+    expect(titlesUnrelated('Dune', 'Dune Messiah')).toBe(false);
+    expect(titlesUnrelated(undefined, 'Dune')).toBe(false);
+    expect(titlesUnrelated('Dune', null)).toBe(false);
   });
 });

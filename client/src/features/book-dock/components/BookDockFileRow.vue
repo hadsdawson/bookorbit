@@ -29,7 +29,7 @@ import type { BookDockFile } from '@bookorbit/types'
 import { formatList } from '@/i18n/formatters'
 import { formatBytes } from '@/lib/formatting'
 import { keepBookDockDuplicate } from '../api/book-dock.api'
-import { HOLD_TONE_CLASS, holdChipText, holdStyle } from '../lib/hold-reason'
+import { HOLD_TONE_CLASS, duplicateExplanation, holdChipText, holdStyle } from '../lib/hold-reason'
 import BookDockMatchBadge from './BookDockMatchBadge.vue'
 import BookDockStatusBadge from './BookDockStatusBadge.vue'
 import BookDockCoverPeek from './BookDockCoverPeek.vue'
@@ -79,7 +79,13 @@ const title = computed(() => proposedTitle(props.file) ?? displayTitle(props.fil
 const author = computed(() => displayAuthor(props.file))
 const diff = computed(() => metadataDiff(props.file))
 const hold = computed(() => props.file.holdReason ?? null)
-const holdTone = computed(() => (hold.value ? HOLD_TONE_CLASS[holdStyle(hold.value).tone] : null))
+const suspectDuplicate = computed(() => hold.value === 'duplicate' && props.file.holdDetail?.suspect === true)
+// Fork: a possible match is a question for a person, not a known duplicate, so it is not shown in red.
+const holdTone = computed(() => {
+  if (!hold.value) return null
+  return HOLD_TONE_CLASS[suspectDuplicate.value ? 'amber' : holdStyle(hold.value).tone]
+})
+const matchExplanation = computed(() => duplicateExplanation(props.file, t))
 const holdIcon = computed(() => (hold.value ? holdStyle(hold.value).icon : null))
 const holdText = computed(() => holdChipText(props.file, t))
 const isDuplicate = computed(() => hold.value === 'duplicate')
@@ -498,7 +504,8 @@ async function onKeepBoth() {
         role="group"
         data-testid="book-dock-row-duplicate"
         :aria-label="holdText"
-        class="grid gap-3 rounded-[10px] border border-red-500/35 bg-card p-3"
+        class="grid gap-3 rounded-[10px] border bg-card p-3"
+        :class="suspectDuplicate ? 'border-amber-500/45' : 'border-red-500/35'"
       >
         <div class="flex items-center gap-2">
           <p class="text-[9.5px] font-semibold uppercase tracking-[0.09em] text-muted-foreground">{{ holdText }}</p>
@@ -512,6 +519,15 @@ async function onKeepBoth() {
             <ExternalLink class="size-3" aria-hidden="true" />
           </RouterLink>
         </div>
+        <p v-if="matchExplanation" class="text-xs text-foreground" data-testid="book-dock-row-duplicate-why">{{ matchExplanation }}</p>
+        <p
+          v-if="suspectDuplicate"
+          role="note"
+          class="rounded-md bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-300"
+          data-testid="book-dock-row-duplicate-suspect"
+        >
+          {{ t('bookDock.hold.duplicate.suspect') }}
+        </p>
         <div class="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
