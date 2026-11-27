@@ -2075,7 +2075,8 @@ function normalizeFinalizeMetadata(meta: BookDockMetadata | null | undefined): N
   const normalizedMeta = normalizeBookDockMetadata(meta);
   const publishedDate = normalizePublishedDate(normalizedMeta?.publishedDate) ?? null;
   const seriesName = normalizeText(normalizedMeta?.seriesName, 500);
-  const seriesIndex = parseSeriesIndex(normalizedMeta?.seriesIndex);
+  // Fork: a number with no series name is dropped rather than saved on its own.
+  const seriesIndex = seriesName ? parseSeriesIndex(normalizedMeta?.seriesIndex) : null;
   return {
     title: normalizeText(normalizedMeta?.title, 1000),
     subtitle: normalizeText(normalizedMeta?.subtitle, 1000),

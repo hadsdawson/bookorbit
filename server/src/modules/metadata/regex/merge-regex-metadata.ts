@@ -1,6 +1,7 @@
 import type { RegexMetadataFields } from '@bookorbit/types';
 import { isRunYearQualifiedName } from '../../../common/utils/series-run-year.utils';
 import type { ParsedBookData } from '../extractors/format-extractor.interface';
+import { withoutLoneSeriesIndex } from '../lib/series-index-guard';
 
 /** The fields a rule supplies over `base`: all of them when the rule leads, otherwise only what the file lacks. */
 export function decideRegexFields(base: ParsedBookData | null, regex: RegexMetadataFields, preferRegex: boolean): RegexMetadataFields {
@@ -31,5 +32,5 @@ export function mergeRegexMetadata(base: ParsedBookData | null, regex: RegexMeta
     result.publishedYear = decided.publishedYear;
     result.publishedDate = decided.publishedDate;
   }
-  return result;
+  return withoutLoneSeriesIndex(result);
 }

@@ -10965,6 +10965,7 @@
     "updatedOfFiles": "Updated {updated} of {total} files",
     "errorStatus": "Error {status}",
     "invalidSeriesIndex": "Enter digits with at most one decimal point, such as 5.10.",
+    "seriesIndexNeedsName": "Add a series name, or this number will not be saved.",
     "tab": {
       "all": "All",
       "pending": "Pending",

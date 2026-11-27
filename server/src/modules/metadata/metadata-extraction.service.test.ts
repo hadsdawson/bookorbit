@@ -150,6 +150,26 @@ describe('MetadataExtractionService', () => {
     expect(extractor).toHaveBeenCalledWith(`/books/book.${format}`);
   });
 
+  it.each([
+    ['epub', mocks.epub],
+    ['pdf', mocks.pdf],
+    ['fb2', mocks.fb2],
+    ['cbz', mocks.comic.cbz],
+    ['m4b', mocks.audio],
+  ])('drops a %s series number that has no series name (fork)', async (format, extractor) => {
+    extractor.mockResolvedValue({ ...extracted, seriesName: null, seriesIndex: '3' });
+    const service = new MetadataExtractionService({ extractMetadata: mocks.djvu, extractCover: mocks.djvuCover } as never);
+
+    await expect(service.extract(`/books/book.${format}`, format)).resolves.toMatchObject({ seriesName: null, seriesIndex: null });
+  });
+
+  it('keeps a series number that comes with its name (fork)', async () => {
+    mocks.epub.mockResolvedValue({ ...extracted, seriesName: 'Hades', seriesIndex: '3' });
+    const service = new MetadataExtractionService({ extractMetadata: mocks.djvu, extractCover: mocks.djvuCover } as never);
+
+    await expect(service.extract('/books/book.epub', 'epub')).resolves.toMatchObject({ seriesName: 'Hades', seriesIndex: '3' });
+  });
+
   it('returns null for unsupported formats without invoking an extractor', async () => {
     const service = new MetadataExtractionService({ extractMetadata: mocks.djvu, extractCover: mocks.djvuCover } as never);
 

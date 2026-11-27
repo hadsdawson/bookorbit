@@ -17,6 +17,7 @@ import { extractEpubAudioCover } from './lib/cover-epub';
 import { extractEpubFixedLayout, readEpubIsbnHits } from './lib/epub';
 import { readFb2IsbnHits } from './lib/fb2-parser';
 import { parseBookFilename } from './lib/filename-parser';
+import { withoutLoneSeriesIndex } from './lib/series-index-guard';
 import { type IsbnHit, toIsbnCandidates } from './lib/isbn-detect';
 import { readMobiIsbnHits } from './lib/mobi-parser';
 import { readPdfIsbnHits } from './lib/pdf-isbn-scan';
@@ -79,7 +80,7 @@ export class MetadataExtractionService {
     }
     const extractor = this.extractors.get(format);
     if (!extractor) return null;
-    return (await (options ? extractor.extract(absolutePath, options) : extractor.extract(absolutePath))) ?? null;
+    return withoutLoneSeriesIndex((await (options ? extractor.extract(absolutePath, options) : extractor.extract(absolutePath))) ?? null);
   }
 
   /** What a DjVu file supplies, read without rendering its cover. */
