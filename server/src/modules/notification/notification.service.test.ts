@@ -143,6 +143,16 @@ describe('NotificationService', () => {
       expect(repo.findUserIdsWithPermission).toHaveBeenCalledWith(Permission.NotificationAccess);
     });
 
+    it('leaves excluded users out of a "permission" scope', async () => {
+      repo.findUserIdsWithPermission.mockResolvedValue([30, 40]);
+      repo.findUserSettings.mockResolvedValue(new Map());
+      repo.insertOrCollapse.mockResolvedValue([makeInserted(40)]);
+
+      await service.notify(makePayload({ kind: 'permission', permission: Permission.NotificationAccess, excludeUserIds: [30] }));
+
+      expect(repo.insertOrCollapse.mock.calls[0][0]).toEqual([expect.objectContaining({ userId: 40 })]);
+    });
+
     it('resolves user IDs for "all" scope', async () => {
       repo.findAllActiveUserIds.mockResolvedValue([1, 2, 3]);
       repo.findUserSettings.mockResolvedValue(new Map());

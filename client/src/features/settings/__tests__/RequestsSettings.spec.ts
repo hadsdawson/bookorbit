@@ -29,6 +29,7 @@ const stubs = {
   RequestIndexersPanel: { template: '<div>sources panel</div>' },
   DownloadClientsPanel: { template: '<div>clients panel</div>' },
   RequestAutomationPanel: { template: '<div>automation panel</div>' },
+  RequestAlertsPanel: { template: '<div>alerts panel</div>' },
 }
 
 function mountPage(tab?: string) {
@@ -42,7 +43,7 @@ describe('RequestsSettings', () => {
     const wrapper = mountPage()
 
     const labels = wrapper.findAll('[role="tab"]').map((tab) => tab.text())
-    expect(labels).toEqual(['Sources', 'Download clients', 'Automation'])
+    expect(labels).toEqual(['Sources', 'Download clients', 'Automation', 'Alerts'])
   })
 
   /** Only the panel being looked at, so three concurrent loads do not happen on every visit. */

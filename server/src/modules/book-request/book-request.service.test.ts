@@ -470,16 +470,22 @@ describe('BookRequestService.submit', () => {
     });
   });
 
-  it('auto-approves and skips the approver notification for an auto-approve user', async () => {
+  it('auto-approves and tells the other approvers it was approved automatically', async () => {
     const { service, repo, notifications, automation } = makeService();
     repo.create.mockResolvedValue(row({ status: 'approved' }));
 
     await service.submit({ ...dto, targetLibraryId: 5 }, user({ permissions: [Permission.BookRequestAccess, Permission.BookRequestAutoApprove] }));
 
     expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ status: 'approved', decidedByUserId: 1 }), expect.any(Array));
-    expect(notifications.notify).not.toHaveBeenCalled();
-    // Skipping the notification here is only safe because automation knows nobody was told, and
-    // announces the request itself if it ends up handing it back.
+    // Fork: auto-approval is announced rather than silent, leaving out the requester themselves.
+    expect(notifications.notify).toHaveBeenCalledTimes(1);
+    expect(notifications.notify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: NotificationType.BookRequestSubmitted,
+        title: 'New book request (approved automatically)',
+        scope: { kind: 'permission', permission: Permission.ManageBookRequests, excludeUserIds: [1] },
+      }),
+    );
     expect(automation.considerRequest).toHaveBeenCalledWith(10, 'auto_approval');
   });
 
@@ -503,7 +509,7 @@ describe('BookRequestService.submit', () => {
     );
     // The requester is on their way to the picker; an unattended grab would take a different release.
     expect(automation.considerRequest).not.toHaveBeenCalled();
-    expect(notifications.notify).not.toHaveBeenCalled();
+    expect(notifications.notify).toHaveBeenCalledWith(expect.objectContaining({ title: 'New book request (approved automatically)' }));
   });
 
   /**

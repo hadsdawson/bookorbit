@@ -1,10 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { NotificationType, Permission } from '@bookorbit/types';
+import type { StoredBookRequestMediaKind } from '@bookorbit/types';
 
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
 import { LibraryService } from '../library/library.service';
+import type { RequestUser } from '../../common/types/request-user';
 import { NotificationService } from '../notification/notification.service';
 import { ContentFilterRepository } from '../user/content-filter.repository';
+import { BookRequestAlertService } from './book-request-alerts.service';
 import { BookRequestRepository } from './book-request.repository';
 
 export interface RequestNotification {
@@ -28,7 +31,35 @@ export class BookRequestNotifier {
     private readonly repo: BookRequestRepository,
     private readonly libraries: LibraryService,
     private readonly contentFilters: ContentFilterRepository,
+    @Optional() private readonly alerts?: BookRequestAlertService,
   ) {}
+
+  /**
+   * Fork. A new request, announced to approvers in the app and to admins outside it. One that is
+   * approved on the way in still reaches the bell, so an instance with auto-approval on is not
+   * silent about who asked for what; its requester is left out, since they know what they asked.
+   */
+  async announceNewRequest(input: {
+    requester: RequestUser;
+    bookTitle: string;
+    mediaKinds: StoredBookRequestMediaKind[];
+    approved: boolean;
+    requestId: number;
+  }): Promise<void> {
+    const { requester, bookTitle, mediaKinds, approved, requestId } = input;
+    this.alerts?.announce({ requester, title: bookTitle, mediaKinds, approved });
+
+    const both = mediaKinds.length > 1 ? ' as an ebook and an audiobook' : '';
+    await this.dispatch(NotificationType.BookRequestSubmitted, {
+      title: approved ? 'New book request (approved automatically)' : 'New book request',
+      message: `${requester.name} requested "${bookTitle}"${both}`,
+      actionUrl: '/requests?tab=all',
+      meta: { requestId },
+      scope: approved
+        ? { kind: 'permission', permission: Permission.ManageBookRequests, excludeUserIds: [requester.id] }
+        : { kind: 'permission', permission: Permission.ManageBookRequests },
+    });
+  }
 
   /** Everyone who can act on the queue, resolved by permission rather than by enumerating users. */
   async notifyApprovers(type: NotificationType, payload: RequestNotification): Promise<void> {
