@@ -166,7 +166,7 @@ const MAX_PUBLISHED_YEAR = 2200;
 const PUBLISHED_YEAR_RANGE_CONSTRAINT = 'book_metadata_published_year_range_chk';
 const INVALID_PUBLISHED_YEAR_MESSAGE = `Invalid metadata: published year must be between ${MIN_PUBLISHED_YEAR} and ${MAX_PUBLISHED_YEAR}.`;
 const INVALID_METADATA_MESSAGE = 'Invalid metadata values for this file. Review metadata fields and try again.';
-const INTERNAL_FAILURE_MESSAGE = 'Filing this book failed inside BookOrbit. Check the server log for the cause.';
+const DATABASE_FAILURE_MESSAGE = 'Filing this book failed while saving it to the BookOrbit database. Check the server log for the cause.';
 
 type NormalizedFinalizeMetadata = {
   title: string | null;
@@ -453,13 +453,31 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
     }
 
     for (const [primaryId, members] of mergedMembers) {
-      const bookId = results.find((result) => result.fileId === primaryId && result.success)?.bookId;
-      if (bookId === undefined || members.length === 0) continue;
+      if (members.length === 0) continue;
+      const primary = results.find((result) => result.fileId === primaryId);
+      const bookId = primary?.success ? primary.bookId : undefined;
+      // Fork: a group whose main file did not file leaves its other files in Book Dock. Say so per
+      // file, so the results do not read as if only one file was involved.
+      if (bookId === undefined) {
+        if (primary && !primary.success) {
+          for (const member of members) {
+            results.push(mergedMemberNotFiled(member, primary));
+            failed++;
+          }
+        }
+        continue;
+      }
       const joinOverrides = new Map<number, FinalizeOverrideEntry>(members.map((member) => [member.id, { requestedJoinBookId: bookId }]));
       const prepared = await this.prepareFinalizeBatch(members, defaultLibraryId, defaultFolderId, joinOverrides, userId, isSuperuser, requester);
+      const analysed = new Set(prepared.analyses.map((analysis) => analysis.fileId));
+      for (const member of members) {
+        if (analysed.has(member.id)) continue;
+        results.push({ fileId: member.id, fileName: member.fileName, success: false, message: MERGED_MEMBER_NOT_FOUND_MESSAGE });
+        failed++;
+      }
       for (const analysis of prepared.analyses) {
         const result = await this.finalizePreparedCandidate(analysis, prepared.existingDestinations);
-        results.push(result);
+        results.push(result.success ? result : { ...result, message: mergedMemberFailureMessage(result.message) });
         if (result.success) succeeded++;
         else failed++;
       }
@@ -470,13 +488,17 @@ export class BookDockFinalizeService implements OnModuleInit, OnApplicationBoots
 
     this.emitChange();
 
+    const failures = summarizeFailures(results);
     this.notificationService
       .notify({
         type: failed > 0 ? NotificationType.BookDockFinalizedWithErrors : NotificationType.BookDockFinalized,
         title: failed > 0 ? 'Library Dock finalization completed with errors' : 'Library Dock finalization completed',
-        message: `${succeeded} succeeded, ${failed} failed`,
+        message:
+          failures.length > 0
+            ? `${succeeded} succeeded, ${failed} failed. ${failureSentence(failures, failed)}`
+            : `${succeeded} succeeded, ${failed} failed`,
         scope: { kind: 'user', userId },
-        meta: { total: results.length, succeeded, failed },
+        meta: { total: results.length, succeeded, failed, ...(failures.length > 0 ? { failures } : {}) },
       })
       .catch(() => {});
 
@@ -2268,8 +2290,12 @@ function resolveFinalizeErrorMessage(error: unknown): string {
   }
   // Infrastructure errors can contain SQL and absolute filesystem paths. They belong in the
   // sanitized server log, not in the request drawer of the person who asked for the book.
-  if (isDatabaseError(error) || hasNodeStyleErrorCode(error)) {
-    return INTERNAL_FAILURE_MESSAGE;
+  // Fork: a filesystem error is still explained by its code, which carries no path.
+  if (isDatabaseError(error)) {
+    return DATABASE_FAILURE_MESSAGE;
+  }
+  if (hasNodeStyleErrorCode(error)) {
+    return describeFilesystemError(nodeErrorCode(error));
   }
   if (error instanceof Error && error.message) {
     return error.message;
@@ -2287,6 +2313,75 @@ function isDatabaseError(error: unknown): boolean {
     if (entry instanceof DatabaseError) return true;
   }
   return false;
+}
+
+const MERGED_MEMBER_NOT_FOUND_MESSAGE = 'This file was merged into a group but could no longer be found in Book Dock, so it was not filed.';
+/** How many failed files the bell notification names; the rest are counted. */
+const NOTIFIED_FAILURE_LIMIT = 3;
+
+/** Fork. A file merged under a main file that did not file stays in Book Dock with it. */
+function mergedMemberNotFiled(member: BookDockFileRow, primary: BookDockFinalizeFileResult): BookDockFinalizeFileResult {
+  const reason = primary.message ? ` The main file failed because: ${primary.message}` : '';
+  return {
+    fileId: member.id,
+    fileName: member.fileName,
+    success: false,
+    message: `Not filed, because the main file of its merged group (${primary.fileName}) could not be filed. It is still in Book Dock.${reason}`,
+  };
+}
+
+function mergedMemberFailureMessage(message: string | undefined): string {
+  const reason = message ? ` ${message}` : '';
+  return `The main file of this merged group was filed, but this file could not be added to the same book and is still in Book Dock.${reason}`;
+}
+
+function summarizeFailures(results: BookDockFinalizeFileResult[]): Array<{ fileName: string; message: string }> {
+  return results
+    .filter((result) => !result.success && !result.isDuplicate)
+    .slice(0, NOTIFIED_FAILURE_LIMIT)
+    .map((result) => ({ fileName: result.newName ?? result.fileName, message: result.message ?? 'Filing failed' }));
+}
+
+function failureSentence(failures: Array<{ fileName: string; message: string }>, failed: number): string {
+  const named = failures.map((failure) => `${failure.fileName}: ${failure.message}`).join(' ');
+  const rest = failed - failures.length;
+  return rest > 0 ? `${named} (and ${rest} more, see Book Dock)` : named;
+}
+
+function nodeErrorCode(error: unknown): string {
+  for (const entry of iterateErrorChain(error)) {
+    const code = asString(entry.code);
+    if (/^E[A-Z0-9_]+$/.test(code)) return code;
+  }
+  return '';
+}
+
+/** Fork. What each filesystem error means for the person filing, and what to do about it. */
+const FILESYSTEM_FAILURE_MESSAGES: Record<string, string> = {
+  EACCES:
+    'BookOrbit is not allowed to write to the library folder. Check that the folder on your NAS can be written by the user the BookOrbit container runs as.',
+  EPERM:
+    'BookOrbit is not allowed to change files in the library folder. Check that the folder on your NAS can be written by the user the BookOrbit container runs as.',
+  EROFS: 'The library folder is read-only, so nothing can be written there. Check the volume mount in your Docker settings.',
+  ENOSPC: 'The disk the library is on is full. Free up space and try again.',
+  EDQUOT: 'The storage quota for the library folder is used up. Free up space or raise the quota and try again.',
+  ENOENT:
+    'A file or folder BookOrbit needed has gone missing, for example a docked file that was moved or deleted while filing. Rescan Book Dock and try again.',
+  ENAMETOOLONG: 'The file or folder name would be too long for the disk. Shorten the title, series or author name and try again.',
+  EEXIST: 'A file or folder with this name is already in the library. Rename it or file it into the existing book.',
+  ENOTEMPTY: 'A folder that had to be replaced still has files in it. Check the destination folder in the library.',
+  EISDIR: 'BookOrbit expected a file but found a folder with that name in the library.',
+  ENOTDIR: 'Part of the destination path is a file rather than a folder. Check the library folder layout.',
+  EBUSY: 'The file is in use by another program. Wait for it to finish (for example a download or a sync) and try again.',
+  EMFILE: 'The server has too many files open at once. Try filing fewer books at a time.',
+  ENFILE: 'The server has too many files open at once. Try filing fewer books at a time.',
+  EIO: 'The disk reported a read or write error. Check the health of the drive on your NAS.',
+  EXDEV: 'The file could not be moved between these two folders because they are on different shares or volumes.',
+  ETIMEDOUT: 'The storage took too long to answer. If the library is on a network share, check that it is connected.',
+};
+
+function describeFilesystemError(code: string): string {
+  return FILESYSTEM_FAILURE_MESSAGES[code] ?? `Filing failed with a system error (${code || 'unknown'}). The server log has the details.`;
 }
 
 function hasNodeStyleErrorCode(error: unknown): boolean {

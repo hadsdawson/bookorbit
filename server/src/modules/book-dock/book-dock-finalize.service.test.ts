@@ -1030,6 +1030,9 @@ describe('BookDockFinalizeService', () => {
         expect.objectContaining({
           type: NotificationType.BookDockFinalizedWithErrors,
           title: 'Library Dock finalization completed with errors',
+          // Fork: the bell names what failed and why.
+          message: '1 succeeded, 1 failed. book-dock-file-2: Library Dock file not found',
+          meta: expect.objectContaining({ failures: [{ fileName: 'book-dock-file-2', message: 'Library Dock file not found' }] }),
         }),
       );
     });
@@ -1108,8 +1111,39 @@ describe('BookDockFinalizeService', () => {
 
       const result = await service.finalize(7, true, true, [1], false, [], 5, 9);
 
-      expect(result.failed).toBe(1);
+      // Fork: the merged file is reported too, with the main file's reason.
+      expect(result.failed).toBe(2);
+      expect(result.results[1]).toMatchObject({
+        fileId: 2,
+        success: false,
+        message: expect.stringContaining('main file of its merged group (book.epub) could not be filed'),
+      });
+      expect(result.results[1]!.message).toContain('Destination exists');
       expect(prepare).toHaveBeenCalledTimes(1);
+    });
+
+    it('says why a merged file failed after its main file was filed', async () => {
+      const { service, repo } = makeService();
+      const primary = makeRow({ id: 1, mergedIntoId: 1 });
+      repo.findByIds.mockResolvedValue([primary]);
+      repo.findMergedMembers = vi.fn().mockResolvedValue(new Map([[1, [makeRow({ id: 2, mergedIntoId: 1 })]]]));
+      vi.spyOn(service as never, 'prepareFinalizeBatch')
+        .mockResolvedValueOnce({
+          analyses: [{ fileId: 1, fileName: 'book.epub', row: primary, status: 'ready' }],
+          existingDestinations: new Map(),
+        } as never)
+        .mockResolvedValueOnce({ analyses: [{ fileId: 2, fileName: 'part2.epub', status: 'ready' }], existingDestinations: new Map() } as never);
+      vi.spyOn(service as never, 'finalizePreparedCandidate')
+        .mockResolvedValueOnce({ fileId: 1, fileName: 'book.epub', success: true, bookId: 40 } as never)
+        .mockResolvedValueOnce({ fileId: 2, fileName: 'part2.epub', success: false, message: 'The disk the library is on is full.' } as never);
+      vi.spyOn(service as never, 'emitChange').mockReturnValue(undefined as never);
+
+      const result = await service.finalize(7, true, true, [1], false, [], 5, 9);
+
+      expect(result).toMatchObject({ succeeded: 1, failed: 1 });
+      expect(result.results[1]!.message).toBe(
+        'The main file of this merged group was filed, but this file could not be added to the same book and is still in Book Dock. The disk the library is on is full.',
+      );
     });
   });
 
@@ -3810,7 +3844,7 @@ describe('BookDockFinalizeService', () => {
     const result = await (harness.service as any).finalizeFile(row, undefined, undefined, new Map(), 1, true);
 
     expect(result.success).toBe(false);
-    expect(result.message).toBe('Filing this book failed inside BookOrbit. Check the server log for the cause.');
+    expect(result.message).toBe('Filing this book failed while saving it to the BookOrbit database. Check the server log for the cause.');
     expect(result.message).not.toContain('select');
     expect(result.message).not.toContain('book_dock_unit_files');
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('errorClass=DatabaseError errorCode=42601'));
@@ -3818,47 +3852,52 @@ describe('BookDockFinalizeService', () => {
     expect(warn).not.toHaveBeenCalledWith(expect.stringContaining('book_dock_unit_files'));
   });
 
-  it.each(['EXDEV', 'EPERM', 'EACCES', 'ENOENT'])('logs %s from a failed file move without exposing paths to the requester', async (code) => {
-    const harness = makeService();
-    const row = makeRow({ absolutePath: '/dock/book.epub' });
-    const prepared = {
-      fileId: row.id,
-      fileName: row.fileName,
-      row,
-      status: 'ready',
-      destPath: '/library/book.epub',
-      library: { id: 5 },
-      folder: { id: 9, path: '/library' },
-      format: 'epub',
-      placement: [
-        {
-          sourcePath: '/dock/book.epub',
-          destPath: '/library/book.epub',
-          format: 'epub',
-          role: 'content',
-          sortOrder: 0,
-        },
-      ],
-    };
-    const failure = Object.assign(new Error(`${code}: move '/dock/book.epub' -> '/library/book.epub'`), { code });
-    harness.storage.moveToPath.mockRejectedValueOnce(failure);
-    vi.spyOn(harness.service as never, 'classifyDestination').mockResolvedValue(prepared as never);
-    const warn = vi.spyOn((harness.service as any).logger, 'warn').mockImplementation(() => {});
+  it.each(['EXDEV', 'EPERM', 'EACCES', 'ENOENT', 'ENOSPC'])(
+    'logs %s from a failed file move without exposing paths to the requester',
+    async (code) => {
+      const harness = makeService();
+      const row = makeRow({ absolutePath: '/dock/book.epub' });
+      const prepared = {
+        fileId: row.id,
+        fileName: row.fileName,
+        row,
+        status: 'ready',
+        destPath: '/library/book.epub',
+        library: { id: 5 },
+        folder: { id: 9, path: '/library' },
+        format: 'epub',
+        placement: [
+          {
+            sourcePath: '/dock/book.epub',
+            destPath: '/library/book.epub',
+            format: 'epub',
+            role: 'content',
+            sortOrder: 0,
+          },
+        ],
+      };
+      const failure = Object.assign(new Error(`${code}: move '/dock/book.epub' -> '/library/book.epub'`), { code });
+      harness.storage.moveToPath.mockRejectedValueOnce(failure);
+      vi.spyOn(harness.service as never, 'classifyDestination').mockResolvedValue(prepared as never);
+      const warn = vi.spyOn((harness.service as any).logger, 'warn').mockImplementation(() => {});
 
-    const result = await (harness.service as any).finalizePreparedCandidate(prepared, new Map());
+      const result = await (harness.service as any).finalizePreparedCandidate(prepared, new Map());
 
-    expect(result).toEqual({
-      fileId: 1,
-      fileName: 'book.epub',
-      success: false,
-      message: 'Filing this book failed inside BookOrbit. Check the server log for the cause.',
-    });
-    expect(result.message).not.toContain('/dock');
-    expect(result.message).not.toContain('/library');
-    expect(warn).toHaveBeenCalledExactlyOnceWith(
-      `[book_dock.finalize] [fail] fileId=1 stage=filing errorClass=Error errorCode=${code} error="${code}" - Book Dock file finalization failed`,
-    );
-  });
+      // Fork: the code is translated into a reason the person filing can act on, still without a path.
+      expect(result).toEqual({
+        fileId: 1,
+        fileName: 'book.epub',
+        success: false,
+        message: expect.stringMatching(/./),
+      });
+      expect(result.message).not.toContain('Check the server log');
+      expect(result.message).not.toContain('/dock');
+      expect(result.message).not.toContain('/library');
+      expect(warn).toHaveBeenCalledExactlyOnceWith(
+        `[book_dock.finalize] [fail] fileId=1 stage=filing errorClass=Error errorCode=${code} error="${code}" - Book Dock file finalization failed`,
+      );
+    },
+  );
 
   it('cleanupBookDockRecord deletes cover files and bucket row id', async () => {
     const { service, repo } = makeService();
@@ -3949,7 +3988,7 @@ describe('BookDockFinalizeService', () => {
 
     expect(classified).toMatchObject({
       status: 'error',
-      message: 'Filing this book failed inside BookOrbit. Check the server log for the cause.',
+      message: expect.stringContaining('not allowed to write to the library folder'),
     });
     expect(warn).toHaveBeenCalledExactlyOnceWith(
       '[book_dock.finalize] [fail] fileId=1 stage=destination_check errorClass=Error errorCode=EACCES error="EACCES" - Book Dock file finalization failed',

@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { X, Check, AlertCircle, Copy, Loader2, ExternalLink, ChevronDown, FileText, Trash2, Layers } from '@lucide/vue'
+import { X, Check, AlertCircle, Copy, Loader2, ExternalLink, FileText, Trash2, Layers } from '@lucide/vue'
 import type {
   BookDockDiscardDuplicatesResult,
   BookDockFinalizeFileResult,
@@ -43,7 +43,6 @@ const { libraryId: defaultLibraryId, folderId: defaultFolderId, hasDestination, 
 const { result, loading, error, finalize, reset } = useBookDockFinalize()
 const joinChoices = useBookDockJoinChoices()
 
-const expandedErrors = ref<Set<number>>(new Set())
 const reimportingIds = reactive(new Set<number>())
 const renameInputs = ref<Map<number, string>>(new Map())
 const selectionSummary = ref<{ total: number; withDestination: number; withoutDestination: number } | null>(null)
@@ -534,14 +533,6 @@ async function handleDiscardResultDuplicates() {
                 >
                   {{ t('bookDock.finalizeDialog.viewExisting') }} <ExternalLink class="size-3" />
                 </button>
-                <button
-                  v-if="!r.success && !r.isDuplicate && r.message && !isFileExistsError(r.message)"
-                  class="text-xs text-red-500 flex items-center gap-1 shrink-0 hover:text-red-600 transition-colors"
-                  @click="expandedErrors.has(r.fileId) ? expandedErrors.delete(r.fileId) : expandedErrors.add(r.fileId)"
-                >
-                  {{ expandedErrors.has(r.fileId) ? t('bookDock.finalizeDialog.hide') : t('bookDock.finalizeDialog.details') }}
-                  <ChevronDown class="size-3 transition-transform" :class="expandedErrors.has(r.fileId) ? 'rotate-180' : ''" />
-                </button>
               </div>
               <div v-if="!r.success && isFileExistsError(r.message)" class="px-3 pb-2.5">
                 <div class="flex items-center gap-1.5">
@@ -564,8 +555,9 @@ async function handleDiscardResultDuplicates() {
                   </button>
                 </div>
               </div>
-              <div v-if="!r.success && r.message && expandedErrors.has(r.fileId)" class="px-3 pb-2">
-                <p class="text-xs text-red-500 bg-red-500/10 rounded-md p-2 break-all">{{ resultMessage(r) }}</p>
+              <!-- Fork: the reason is shown outright; behind a toggle it read as a bare "failed". -->
+              <div v-if="!r.success && !r.isDuplicate && r.message && !isFileExistsError(r.message)" class="px-3 pb-2">
+                <p class="text-xs text-destructive bg-destructive/10 rounded-md p-2 break-words">{{ resultMessage(r) }}</p>
               </div>
             </div>
           </div>
