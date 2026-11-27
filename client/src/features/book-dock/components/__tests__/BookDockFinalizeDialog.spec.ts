@@ -415,10 +415,7 @@ describe('BookDockFinalizeDialog', () => {
         ],
       }
       await flushPromises()
-      await wrapper
-        .findAll('button')
-        .find((button) => button.text().includes('Details'))!
-        .trigger('click')
+      // Fork: the reason is on screen without opening anything.
       expect(wrapper.text()).toContain('You cannot edit Dune, so this file cannot be added to it.')
     })
   })
