@@ -338,6 +338,27 @@ export class BookDockRepository {
       else 4 end`;
   }
 
+  /**
+   * Fork. Duplicate holds saved before the hold recorded why it matched, oldest first, a page at a
+   * time. Holds are few; the page keeps one startup pass bounded all the same.
+   */
+  async findDuplicateHoldIdsWithoutMatchReason(limit: number, afterId = 0): Promise<number[]> {
+    const rows = await this.db
+      .select({ id: bookDockFiles.id })
+      .from(bookDockFiles)
+      .where(
+        and(
+          eq(bookDockFiles.status, 'ready'),
+          eq(bookDockFiles.holdReason, 'duplicate'),
+          gt(bookDockFiles.id, afterId),
+          sql`${bookDockFiles.holdDetail} ->> 'matchReason' is null`,
+        ),
+      )
+      .orderBy(asc(bookDockFiles.id))
+      .limit(limit);
+    return rows.map((row) => row.id);
+  }
+
   async findById(id: number): Promise<BookDockFileRow | undefined> {
     const [row] = await this.db.select().from(bookDockFiles).where(eq(bookDockFiles.id, id)).limit(1);
     return row;

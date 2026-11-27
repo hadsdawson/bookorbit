@@ -92,6 +92,7 @@ export function holdChipText(file: Pick<BookDockFile, 'holdReason' | 'holdDetail
         ? t('bookDock.hold.chip.lowConfidence', { confidence: detail.confidence, threshold: detail.threshold })
         : holdReasonLabel(reason, t)
     case 'duplicate':
+      if (detail.suspect) return library ? t('bookDock.hold.chip.possibleDuplicate', { library }) : t('bookDock.hold.reason.possibleDuplicate')
       return library ? t('bookDock.hold.chip.duplicate', { library }) : holdReasonLabel(reason, t)
     case 'not_allowed_in_library':
     case 'unsupported_layout':
@@ -99,4 +100,18 @@ export function holdChipText(file: Pick<BookDockFile, 'holdReason' | 'holdDetail
     default:
       return holdReasonLabel(reason, t)
   }
+}
+
+/**
+ * Fork. Which book a duplicate hold matched and why, so a person can tell a real duplicate from a
+ * stray id before deleting anything. Null for a hold saved before the server recorded the reason.
+ */
+export function duplicateExplanation(file: Pick<BookDockFile, 'holdReason' | 'holdDetail'>, t: Translate): string | null {
+  const detail = file.holdDetail
+  if (file.holdReason !== 'duplicate' || !detail?.matchReason) return null
+  const why = t(`bookDock.hold.duplicate.reasons.${detail.matchReason}`)
+  const library = detail.libraryName ?? t('bookDock.hold.duplicate.yourLibrary')
+  return detail.matchTitle
+    ? t('bookDock.hold.duplicate.matched', { title: detail.matchTitle, library, why })
+    : t('bookDock.hold.duplicate.matchedNoTitle', { library, why })
 }

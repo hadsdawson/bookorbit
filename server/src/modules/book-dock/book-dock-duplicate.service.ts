@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { normalizeWorkToken, type BookDockMetadata, type ContentFilterRules } from '@bookorbit/types';
 
 import { normalizeMetadataIsbn } from '../../common/text-match/isbn-normalize';
+import { normalizeTitleText, significantTokens, tokenizeTitleText } from '../../common/text-match/title-match';
 import { acceptsFormats, hasFolderOfItsOwn, joinKeysFor } from './book-dock-join.service';
 import { BookDockRepository, type BookDockJoinCandidateRow, type EditionIdKeys } from './book-dock.repository';
 
@@ -28,6 +29,12 @@ export interface DuplicateMatch {
   reason: DuplicateMatchReason;
   /** The book lacks the file's formats and has a folder of its own, so the file could join it as another format. */
   canTakeFormat: boolean;
+  /**
+   * Fork: an identifier matched but the two titles share no words. A stray id on either side (a
+   * Hardcover or Goodreads id copied onto the wrong book) is far more likely than one book under
+   * two unrelated titles, so this is shown as a possible match and never acted on alone.
+   */
+  suspect: boolean;
 }
 
 interface MatchKeys {
@@ -112,6 +119,7 @@ export class BookDockDuplicateService {
             title: row.title,
             reason,
             canTakeFormat: acceptsFormats(formatsByBook.get(row.bookId) ?? [], input.formats) && hasFolderOfItsOwn(row, row.libraryFolderPath),
+            suspect: reason !== 'title_author' && titlesUnrelated(input.metadata?.title, row.title),
           });
         }
       }
@@ -179,6 +187,16 @@ function matches(reason: DuplicateMatchReason, row: BookDockJoinCandidateRow, ke
         row.titleKey !== null && keys.titleKeys.includes(row.titleKey) && authors.some((name) => keys.authorTokens.has(normalizeWorkToken(name)))
       );
   }
+}
+
+/** Fork. Both titles known and not one meaningful word in common. A missing title proves nothing either way. */
+export function titlesUnrelated(fileTitle: unknown, bookTitle: string | null): boolean {
+  if (typeof fileTitle !== 'string' || !fileTitle.trim() || !bookTitle?.trim()) return false;
+  const words = (title: string) => new Set(significantTokens(tokenizeTitleText(normalizeTitleText(title))).filter((token) => token.length > 2));
+  const fileWords = words(fileTitle);
+  const bookWords = words(bookTitle);
+  if (fileWords.size === 0 || bookWords.size === 0) return false;
+  return ![...fileWords].some((word) => bookWords.has(word));
 }
 
 function matchKeysFor(metadata: BookDockMetadata | null): MatchKeys {
