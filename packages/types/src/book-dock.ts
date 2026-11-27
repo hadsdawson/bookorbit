@@ -348,6 +348,8 @@ export interface BookDockFile {
   targetLibraryId: number | null;
   targetFolderId: number | null;
   confidence: number | null;
+  /** Fork. How `confidence` was reached, for the match badge's hover; null when it cannot be shown. */
+  confidenceBreakdown?: BookDockConfidenceBreakdown | null;
   fetchedMetadataSources: Partial<Record<keyof BookDockMetadata, string>> | null;
   errorMessage: string | null;
   metadataEditedAt: string | null;
@@ -631,3 +633,19 @@ export type BookOrbitFolderMetadata = { formatVersion: 1 } & Pick<
   | "externalProviderIds"
   | "comicMetadata"
 >;
+
+/** Fork. One field's share of a Book Dock match score. */
+export interface BookDockConfidencePart {
+  field: "title" | "authors" | "year" | "series";
+  points: number;
+  max: number;
+  /** False when the file or the looked-up details had nothing for this field, so it could not count. */
+  compared: boolean;
+}
+
+/**
+ * Fork. Why a Book Dock file scored what it did: either an ISBN decided it outright, or the
+ * points each field earned.
+ */
+export type BookDockConfidenceBreakdown =
+  { kind: "isbn"; match: "isbn13" | "isbn10" | "conflict"; score: number } | { kind: "fields"; parts: BookDockConfidencePart[]; score: number };

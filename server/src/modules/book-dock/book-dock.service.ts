@@ -5,6 +5,7 @@ import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import {
   isBookDockHoldReason,
+  type BookDockConfidenceBreakdown,
   type BookDockDockCounts,
   type BookDockFile,
   type BookDockFilesPage,
@@ -22,7 +23,7 @@ import { LibraryService } from '../library/library.service';
 import { isMergePrimary } from './book-dock-merge';
 import { BookDockRepository, type BookDockFilter, type ListOptions } from './book-dock.repository';
 import { BookDockPathsService, removeLeftoverFolders } from './book-dock-paths.service';
-import { BookDockIngestService } from './book-dock-ingest.service';
+import { BookDockIngestService, computeConfidenceBreakdown } from './book-dock-ingest.service';
 import { BookDockDuplicateService } from './book-dock-duplicate.service';
 import { BookDockKeptFilesService } from './book-dock-kept-files.service';
 import { BookDockFinalizeService, mergeBookDockMetadata } from './book-dock-finalize.service';
@@ -753,6 +754,17 @@ export class BookDockService {
   }
 }
 
+/**
+ * Fork. Worked out again from the stored details rather than stored, so files already in Book Dock
+ * get it too. Shown only when it lands on the stored score: a score from another path, or details
+ * that changed since, would otherwise be explained by numbers that do not add up to it.
+ */
+function confidenceBreakdownFor(row: BookDockFileRow): BookDockConfidenceBreakdown | null {
+  if (row.confidence === null || !row.fetchedMetadata) return null;
+  const breakdown = computeConfidenceBreakdown(row.embeddedMetadata ?? {}, row.fetchedMetadata);
+  return breakdown.score === row.confidence ? breakdown : null;
+}
+
 function toDto(
   row: BookDockFileRow,
   unitFiles: BookDockUnitFileRow[] = [],
@@ -772,6 +784,7 @@ function toDto(
     targetLibraryId: row.targetLibraryId,
     targetFolderId: row.targetFolderId,
     confidence: row.confidence ?? null,
+    confidenceBreakdown: confidenceBreakdownFor(row),
     fetchedMetadataSources: normalizeBookDockMetadataSources(row.fetchedMetadataSources),
     errorMessage: row.errorMessage,
     metadataEditedAt: row.metadataEditedAt?.toISOString() ?? null,
