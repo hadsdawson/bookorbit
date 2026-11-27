@@ -22,7 +22,7 @@ export interface FollowInput {
 }
 
 export interface ListedReleaseRow extends UpcomingReleaseRow {
-  matchedFollows: { kind: ReleaseFollowKind; name: string }[];
+  matchedFollows: { id: number; kind: ReleaseFollowKind; name: string }[];
   state: 'requested' | 'dismissed' | null;
   /** How many rows the whole list has, before the limit. */
   totalCount: number;
@@ -432,7 +432,7 @@ export class NewReleasesRepository {
         END AS user_state
       FROM upcoming_releases r
       CROSS JOIN LATERAL (
-        SELECT json_agg(json_build_object('kind', f.kind, 'name', f.name) ORDER BY f.kind, f.name) AS follows
+        SELECT json_agg(json_build_object('id', f.id, 'kind', f.kind, 'name', f.name) ORDER BY f.kind, f.name) AS follows
         FROM release_follows f
         WHERE f.user_id = ${userId}
           AND ((f.kind = 'author' AND f.name_key = ANY(r.author_keys)) OR (f.kind = 'series' AND f.name_key = r.series_key))
@@ -467,7 +467,7 @@ export class NewReleasesRepository {
       ownedBookId: row.owned_book_id as number | null,
       firstSeenAt: row.first_seen_at as Date,
       lastSeenAt: row.last_seen_at as Date,
-      matchedFollows: (row.matched_follows as { kind: ReleaseFollowKind; name: string }[] | null) ?? [],
+      matchedFollows: (row.matched_follows as { id: number; kind: ReleaseFollowKind; name: string }[] | null) ?? [],
       state: (row.user_state as 'requested' | 'dismissed' | null) ?? null,
       totalCount: Number(row.total_count ?? 0),
     }));

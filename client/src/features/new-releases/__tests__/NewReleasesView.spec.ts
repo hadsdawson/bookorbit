@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   followAllForReleases: vi.fn<(kind: string) => Promise<{ added: number }>>(),
   listReleaseFollows: vi.fn<() => Promise<{ items: never[]; total: number }>>(),
   unfollowForReleases: vi.fn<(id: number) => Promise<void>>(),
+  followForReleases: vi.fn<(input: unknown) => Promise<unknown>>(),
   saveNewReleasesSettings: vi.fn<(settings: unknown) => Promise<unknown>>(),
   requestNewRelease: vi.fn<(id: number, formats: string[]) => Promise<{ requested: string[] }>>(),
 }))
@@ -39,7 +40,7 @@ function overview(overrides: Partial<NewReleasesOverview> = {}): NewReleasesOver
         ebookDate: '2027-03-09',
         audiobookDate: '2027-03-16',
         releaseDate: '2027-03-09',
-        matchedFollows: [{ kind: 'series', name: 'The Saga' }],
+        matchedFollows: [{ id: 2, kind: 'series', name: 'The Saga' }],
         state: 'requested',
       },
     ],
@@ -75,6 +76,21 @@ describe('NewReleasesView', () => {
     expect(item.text()).toContain('Audiobook')
     expect(item.text()).toContain('Requested')
     expect(item.text()).toContain('Because you follow The Saga')
+  })
+
+  it('offers Unfollow series under the book and drops it from the list once unfollowed', async () => {
+    mocks.unfollowForReleases.mockReset().mockResolvedValue(undefined)
+    const wrapper = mount(NewReleasesView)
+    await flushPromises()
+
+    const link = wrapper.get('[data-testid="unfollow-release-follow"]')
+    expect(link.text()).toBe('Unfollow series')
+    expect(link.attributes('aria-label')).toBe('Unfollow series: The Saga')
+    await link.trigger('click')
+    await flushPromises()
+
+    expect(mocks.unfollowForReleases).toHaveBeenCalledWith(2)
+    expect(wrapper.find('[data-testid="new-release-item"]').exists()).toBe(false)
   })
 
   it('hides a book from the list', async () => {

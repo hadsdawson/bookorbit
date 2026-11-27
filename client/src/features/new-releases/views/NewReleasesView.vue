@@ -7,6 +7,7 @@ import {
   NEW_RELEASE_RETENTION_DAYS,
   type NewReleaseDelivery,
   type NewReleaseItem,
+  type NewReleaseMatchedFollow,
   type NewReleaseRequestFormat,
   type NewReleaseRetentionDays,
   type ReleaseFollow,
@@ -30,14 +31,30 @@ import {
 } from '../composables/useNewReleases'
 
 const { t } = useI18n()
-const { overview, loading, failed, showHidden, groups, followTotal, anySource, load, hide, unhide, followAll, saveSettings, request } =
-  useNewReleases()
+const {
+  overview,
+  loading,
+  failed,
+  showHidden,
+  groups,
+  followTotal,
+  anySource,
+  load,
+  hide,
+  unhide,
+  followAll,
+  saveSettings,
+  request,
+  unfollow,
+  refollow,
+} = useNewReleases()
 const follows = useReleaseFollowList()
 
 type Tab = 'upcoming' | 'following'
 const tab = ref<Tab>('upcoming')
 const view = ref<ReleaseView>(readReleaseView())
 const savingRetention = ref(false)
+const unfollowing = ref<number | null>(null)
 const savingDelivery = ref(false)
 const requesting = ref<number | null>(null)
 
@@ -160,6 +177,48 @@ async function handleHide(item: NewReleaseItem) {
     })
   } catch (error) {
     toast.error(errorMessage(error, 'newReleases.errors.hide'))
+  }
+}
+
+/** Fork. The ids a follow was made with, so Undo follows the same author or series again. */
+function followIdsFor(item: NewReleaseItem, follow: NewReleaseMatchedFollow): { authorId?: number; seriesId?: number } {
+  if (follow.kind === 'series') return item.seriesId ? { seriesId: item.seriesId } : {}
+  const authorId = item.authorLinks.find((link) => link.name.toLowerCase() === follow.name.toLowerCase())?.authorId
+  return authorId ? { authorId } : {}
+}
+
+function unfollowLabel(follow: NewReleaseMatchedFollow): string {
+  return follow.kind === 'author' ? t('newReleases.item.unfollowAuthor') : t('newReleases.item.unfollowSeries')
+}
+
+function unfollowAria(follow: NewReleaseMatchedFollow): string {
+  return follow.kind === 'author'
+    ? t('newReleases.item.unfollowAuthorNamed', { name: follow.name })
+    : t('newReleases.item.unfollowSeriesNamed', { name: follow.name })
+}
+
+async function handleUnfollowFromRelease(item: NewReleaseItem, follow: NewReleaseMatchedFollow) {
+  if (unfollowing.value !== null) return
+  unfollowing.value = follow.id
+  const ids = followIdsFor(item, follow)
+  try {
+    await unfollow(follow)
+    toast.success(t('newReleases.follow.unfollowed', { name: follow.name }), {
+      action: { label: t('newReleases.item.undo'), onClick: () => void handleRefollow(follow, ids) },
+    })
+  } catch (error) {
+    toast.error(errorMessage(error, 'newReleases.errors.unfollow'))
+  } finally {
+    unfollowing.value = null
+  }
+}
+
+async function handleRefollow(follow: NewReleaseMatchedFollow, ids: { authorId?: number; seriesId?: number }) {
+  try {
+    await refollow(follow, ids)
+    toast.success(t('newReleases.follow.followed', { name: follow.name }))
+  } catch (error) {
+    toast.error(errorMessage(error, 'newReleases.errors.follow'))
   }
 }
 
@@ -451,34 +510,50 @@ onMounted(load)
                     </p>
                   </div>
 
-                  <div class="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-start">
-                    <RequestReleaseButton
-                      v-if="item.state !== 'requested' && !isReleased(item.releaseDate)"
-                      :item="item"
-                      :busy="requesting === item.id"
-                      :default-format="overview.server.defaultFormat"
-                      @request="handleRequest"
-                    />
+                  <div class="flex shrink-0 flex-col items-end gap-1">
+                    <div class="flex flex-col items-end gap-1 sm:flex-row sm:items-start">
+                      <RequestReleaseButton
+                        v-if="item.state !== 'requested' && !isReleased(item.releaseDate)"
+                        :item="item"
+                        :busy="requesting === item.id"
+                        :default-format="overview.server.defaultFormat"
+                        @request="handleRequest"
+                      />
+                      <button
+                        v-if="item.state === 'dismissed'"
+                        type="button"
+                        class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                        :title="t('newReleases.item.unhide')"
+                        :aria-label="t('newReleases.item.unhideNamed', { title: item.title })"
+                        @click="handleUnhideClick(item)"
+                      >
+                        <Eye :size="15" aria-hidden="true" />
+                      </button>
+                      <button
+                        v-else
+                        type="button"
+                        class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                        :title="t('newReleases.item.hide')"
+                        :aria-label="t('newReleases.item.hideNamed', { title: item.title })"
+                        data-testid="hide-release"
+                        @click="handleHide(item)"
+                      >
+                        <EyeOff :size="15" aria-hidden="true" />
+                      </button>
+                    </div>
+                    <!-- Fork: stop following what this book is listed for, right where it shows. -->
                     <button
-                      v-if="item.state === 'dismissed'"
+                      v-for="follow in item.matchedFollows"
+                      :key="follow.id"
                       type="button"
-                      class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                      :title="t('newReleases.item.unhide')"
-                      :aria-label="t('newReleases.item.unhideNamed', { title: item.title })"
-                      @click="handleUnhideClick(item)"
+                      class="text-xs text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50"
+                      :title="follow.name"
+                      :aria-label="unfollowAria(follow)"
+                      :disabled="unfollowing !== null"
+                      data-testid="unfollow-release-follow"
+                      @click="handleUnfollowFromRelease(item, follow)"
                     >
-                      <Eye :size="15" aria-hidden="true" />
-                    </button>
-                    <button
-                      v-else
-                      type="button"
-                      class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                      :title="t('newReleases.item.hide')"
-                      :aria-label="t('newReleases.item.hideNamed', { title: item.title })"
-                      data-testid="hide-release"
-                      @click="handleHide(item)"
-                    >
-                      <EyeOff :size="15" aria-hidden="true" />
+                      {{ unfollowLabel(follow) }}
                     </button>
                   </div>
                 </li>

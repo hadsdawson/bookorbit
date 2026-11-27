@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import type {
   NewReleaseItem,
+  NewReleaseMatchedFollow,
   NewReleaseRequestFormat,
   NewReleasesOverview,
   ReleaseFollow,
@@ -10,6 +11,7 @@ import type {
 
 import {
   followAllForReleases,
+  followForReleases,
   getNewReleases,
   listReleaseFollows,
   setNewReleaseHidden,
@@ -136,7 +138,46 @@ export function useNewReleases() {
     return requested
   }
 
-  return { overview, loading, failed, showHidden, groups, followTotal, anySource, load, hide, unhide, followAll, saveSettings, request }
+  /**
+   * Fork. Stops following the author or series a book is listed for. Books listed only because of
+   * it leave the list at once; a book another follow still matches stays, without this reason.
+   */
+  async function unfollow(follow: NewReleaseMatchedFollow): Promise<void> {
+    await unfollowForReleases(follow.id)
+    if (!overview.value) return
+    const counts = overview.value.followCounts
+    overview.value = {
+      ...overview.value,
+      followCounts: { ...counts, [follow.kind]: Math.max(0, counts[follow.kind] - 1) },
+      items: overview.value.items
+        .map((entry) => ({ ...entry, matchedFollows: entry.matchedFollows.filter((matched) => matched.id !== follow.id) }))
+        .filter((entry) => entry.matchedFollows.length > 0),
+    }
+  }
+
+  /** Fork. Undo for `unfollow`: follows again, then lists afresh, since the follow has a new id. */
+  async function refollow(follow: NewReleaseMatchedFollow, ids: { authorId?: number; seriesId?: number }): Promise<void> {
+    await followForReleases({ kind: follow.kind, name: follow.name, ...ids })
+    await load()
+  }
+
+  return {
+    overview,
+    loading,
+    failed,
+    showHidden,
+    groups,
+    followTotal,
+    anySource,
+    load,
+    hide,
+    unhide,
+    followAll,
+    saveSettings,
+    request,
+    unfollow,
+    refollow,
+  }
 }
 
 /** The Following tab: a searchable, paged list of what this user follows. */
