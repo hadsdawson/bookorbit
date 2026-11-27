@@ -30,6 +30,7 @@ import { formatList } from '@/i18n/formatters'
 import { formatBytes } from '@/lib/formatting'
 import { keepBookDockDuplicate } from '../api/book-dock.api'
 import { HOLD_TONE_CLASS, holdChipText, holdStyle } from '../lib/hold-reason'
+import BookDockMatchBadge from './BookDockMatchBadge.vue'
 import BookDockStatusBadge from './BookDockStatusBadge.vue'
 import BookDockCoverPeek from './BookDockCoverPeek.vue'
 import type { BookDockConflict } from '../composables/useBookDockConflicts'
@@ -321,14 +322,13 @@ async function onKeepBoth() {
           :since="props.file.updatedAt"
         />
 
-        <span
+        <BookDockMatchBadge
           v-if="hasScore && hold !== 'low_confidence'"
-          class="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10.5px] font-semibold tabular-nums"
-          :data-narrow-hidden="hold ? '1' : undefined"
-          :class="confidenceBadgeClass(props.file.confidence)"
-        >
-          {{ t('bookDock.layout.row.match', { percent: props.file.confidence }) }}
-        </span>
+          :confidence="props.file.confidence as number"
+          :breakdown="props.file.confidenceBreakdown"
+          :badge-class="confidenceBadgeClass(props.file.confidence)"
+          :narrow-hidden="!!hold"
+        />
         <span v-else-if="noMatchYet" class="text-[10.5px] font-medium text-muted-foreground">{{ t('bookDock.layout.row.noMatch') }}</span>
 
         <span

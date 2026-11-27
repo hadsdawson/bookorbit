@@ -4,7 +4,15 @@ import { basename, dirname, extname, join, relative, sep } from 'path';
 import { mkdir, realpath, stat } from 'fs/promises';
 import { Readable } from 'stream';
 
-import { isAudioFormat, isComicFormat, MetadataProviderKey, resolveBookDockSearchTitle, type BookDockMetadata } from '@bookorbit/types';
+import {
+  isAudioFormat,
+  isComicFormat,
+  MetadataProviderKey,
+  resolveBookDockSearchTitle,
+  type BookDockConfidenceBreakdown,
+  type BookDockConfidencePart,
+  type BookDockMetadata,
+} from '@bookorbit/types';
 import type { BookDockFileRow, NewBookDockFileRow } from '../../db/schema';
 import { resolveSearchMediaKind } from '../../common/utils/book-media.utils';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
@@ -716,43 +724,66 @@ function authorSimilarity(embAuthors: string[], fetchAuthors: string[]): number 
 }
 
 function computeConfidence(embedded: BookDockMetadata, fetched: BookDockMetadata): number {
+  return computeConfidenceBreakdown(embedded, fetched).score;
+}
+
+/**
+ * Fork. The match score with its working shown. The score itself is unchanged from upstream's
+ * `computeConfidence`; this only records which rule or which fields produced it.
+ */
+export function computeConfidenceBreakdown(embedded: BookDockMetadata, fetched: BookDockMetadata): BookDockConfidenceBreakdown {
   const embedded13 = normalizeMetadataIsbn(embedded.isbn13);
   const embedded10 = normalizeMetadataIsbn(embedded.isbn10);
   const fetched13 = normalizeMetadataIsbn(fetched.isbn13);
   const fetched10 = normalizeMetadataIsbn(fetched.isbn10);
   // ISBN exact match - definitive
-  if (embedded13 && embedded13 === fetched13) return 95;
-  if (embedded10 && embedded10 === fetched10) return 90;
+  if (embedded13 && embedded13 === fetched13) return { kind: 'isbn', match: 'isbn13', score: 95 };
+  if (embedded10 && embedded10 === fetched10) return { kind: 'isbn', match: 'isbn10', score: 90 };
 
   const embIsbn = embedded13 || embedded10;
   const fetchIsbn = fetched13 || fetched10;
   const canonical = canonicalIsbn13(embIsbn);
-  if (canonical && canonical === canonicalIsbn13(fetchIsbn)) return 90;
+  if (canonical && canonical === canonicalIsbn13(fetchIsbn)) return { kind: 'isbn', match: 'isbn10', score: 90 };
 
   // Conflicting ISBNs - almost certainly wrong book
-  if (embIsbn && fetchIsbn && embIsbn !== fetchIsbn) return 10;
+  if (embIsbn && fetchIsbn && embIsbn !== fetchIsbn) return { kind: 'isbn', match: 'conflict', score: 10 };
 
-  let score = 0;
+  const parts: BookDockConfidencePart[] = [];
 
   // Title: up to 55 points
-  if (embedded.title && fetched.title) {
-    score += Math.round(titleSimilarity(embedded.title, fetched.title) * 55);
-  }
+  const titleCompared = Boolean(embedded.title && fetched.title);
+  parts.push({
+    field: 'title',
+    max: 55,
+    compared: titleCompared,
+    points: titleCompared ? Math.round(titleSimilarity(embedded.title!, fetched.title!) * 55) : 0,
+  });
 
   // Authors: up to 30 points
-  if (embedded.authors?.length && fetched.authors?.length) {
-    score += Math.round(authorSimilarity(embedded.authors, fetched.authors) * 30);
-  }
+  const authorsCompared = Boolean(embedded.authors?.length && fetched.authors?.length);
+  parts.push({
+    field: 'authors',
+    max: 30,
+    compared: authorsCompared,
+    points: authorsCompared ? Math.round(authorSimilarity(embedded.authors!, fetched.authors!) * 30) : 0,
+  });
 
   // Published year: up to 10 points
-  if (embedded.publishedYear && fetched.publishedYear) {
-    if (embedded.publishedYear === fetched.publishedYear) score += 10;
-  }
+  const yearCompared = Boolean(embedded.publishedYear && fetched.publishedYear);
+  parts.push({ field: 'year', max: 10, compared: yearCompared, points: yearCompared && embedded.publishedYear === fetched.publishedYear ? 10 : 0 });
 
   // Series: up to 5 points
-  if (embedded.seriesName && fetched.seriesName) {
-    if (jaccard(tokenize(embedded.seriesName), tokenize(fetched.seriesName)) >= 0.5) score += 5;
-  }
+  const seriesCompared = Boolean(embedded.seriesName && fetched.seriesName);
+  parts.push({
+    field: 'series',
+    max: 5,
+    compared: seriesCompared,
+    points: seriesCompared && jaccard(tokenize(embedded.seriesName!), tokenize(fetched.seriesName!)) >= 0.5 ? 5 : 0,
+  });
 
-  return Math.min(score, 100);
+  const score = Math.min(
+    parts.reduce((total, part) => total + part.points, 0),
+    100,
+  );
+  return { kind: 'fields', parts, score };
 }

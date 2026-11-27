@@ -11164,6 +11164,25 @@
         "setDestination": "Set destination",
         "file": "File",
         "match": "{percent}% match",
+        "matchBreakdown": {
+          "title": "How this score was worked out",
+          "isbn13": "The ISBN-13 in the file matches the details that were found, so the score is 95%.",
+          "isbn10": "The ISBN-10 in the file matches the details that were found, so the score is 90%.",
+          "conflict": "The file's ISBN is different from the one that was found, so this is probably the wrong book. The score is 10%.",
+          "fields": {
+            "title": "Title",
+            "authors": "Author",
+            "year": "Published year",
+            "series": "Series"
+          },
+          "points": "{points} / {max}",
+          "notCompared": "not compared",
+          "notComparedHint": "Not compared means the file or the details found had nothing for that field, so it earned no points.",
+          "total": "Total",
+          "weakNote": "Under 85% counts as a weak match.",
+          "unavailable": "No breakdown is available for this score. It appears after this book's details are looked up again.",
+          "show": "Show how the {percent}% match was worked out"
+        },
         "noAuthor": "No author yet",
         "proposedChanges": "Proposed changes",
         "noChanges": "No metadata fetched yet",
