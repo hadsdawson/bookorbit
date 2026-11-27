@@ -524,11 +524,20 @@ export class SeriesRepository {
     if (series.length === 0) return [];
     const ids = series.map((row) => row.id);
     if (params.libraryIds.length === 0) {
-      return series.map((row) => ({ ...row, bookCount: 0, authors: [], moreAuthorCount: 0, coverBookIds: [] }));
+      return series.map((row) => ({
+        ...row,
+        bookCount: 0,
+        authors: [],
+        moreAuthorCount: 0,
+        coverBookIds: [],
+        firstIndex: null,
+        lastIndex: null,
+        firstTitle: null,
+      }));
     }
 
     const filterClauses = params.contentFilters ? buildContentFilterClauses(params.contentFilters, this.db) : [];
-    const [counts, authorRows, covers] = await Promise.all([
+    const [counts, authorRows, covers, spans] = await Promise.all([
       this.db
         .select({ seriesId: bookSeriesMemberships.seriesId, bookCount: sql<number>`count(distinct ${books.id})::int` })
         .from(books)
@@ -549,6 +558,7 @@ export class SeriesRepository {
         .groupBy(bookSeriesMemberships.seriesId, authors.name)
         .orderBy(desc(sql`count(distinct ${books.id})`), asc(authors.name)),
       this.fetchCoverBookIds(ids, params.libraryIds, params.contentFilters),
+      this.fetchSeriesSpans(ids, params.libraryIds, params.contentFilters),
     ]);
 
     const countBySeries = new Map(counts.map((row) => [row.seriesId, Number(row.bookCount)]));
@@ -567,8 +577,43 @@ export class SeriesRepository {
         authors: allAuthors.slice(0, 3),
         moreAuthorCount: Math.max(0, allAuthors.length - 3),
         coverBookIds: (covers.get(row.id) ?? []).slice(0, 3),
+        firstIndex: spans.get(row.id)?.firstIndex ?? null,
+        lastIndex: spans.get(row.id)?.lastIndex ?? null,
+        firstTitle: spans.get(row.id)?.firstTitle ?? null,
       };
     });
+  }
+
+  /**
+   * Fork. Each series' first and last number and its first book's title, read in series order.
+   * Only ever asked for the few series that share one name, so reading their books is bounded.
+   */
+  private async fetchSeriesSpans(
+    seriesIds: number[],
+    libraryIds: number[],
+    contentFilters?: ContentFilterRules,
+  ): Promise<Map<number, { firstIndex: string | null; lastIndex: string | null; firstTitle: string | null }>> {
+    const filterClauses = contentFilters ? buildContentFilterClauses(contentFilters, this.db) : [];
+    const rows = await this.db
+      .select({ seriesId: bookSeriesMemberships.seriesId, seriesIndex: bookSeriesMemberships.seriesIndex, title: bookMetadata.title })
+      .from(books)
+      .innerJoin(bookSeriesMemberships, eq(bookSeriesMemberships.bookId, books.id))
+      .innerJoin(bookMetadata, eq(bookMetadata.bookId, books.id))
+      .where(and(inArray(bookSeriesMemberships.seriesId, seriesIds), this.buildLibraryFilter(libraryIds), ...filterClauses))
+      .orderBy(asc(bookSeriesMemberships.seriesId), ...seriesIndexOrderBy(bookSeriesMemberships.seriesIndex, 'ASC'), asc(books.id));
+
+    const result = new Map<number, { firstIndex: string | null; lastIndex: string | null; firstTitle: string | null }>();
+    for (const row of rows) {
+      if (row.seriesId == null) continue;
+      const span = result.get(row.seriesId);
+      if (!span) {
+        result.set(row.seriesId, { firstIndex: row.seriesIndex ?? null, lastIndex: row.seriesIndex ?? null, firstTitle: row.title ?? null });
+      } else if (row.seriesIndex != null) {
+        span.firstIndex ??= row.seriesIndex;
+        span.lastIndex = row.seriesIndex;
+      }
+    }
+    return result;
   }
 
   private async fetchAuthorsForSeries(

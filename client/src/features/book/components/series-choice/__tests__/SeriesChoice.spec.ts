@@ -71,7 +71,31 @@ describe('SeriesChoice', () => {
     const picks = wrapper.findAll('[data-testid="series-choice-pick"]')
     expect(picks[0]!.attributes('aria-pressed')).toBe('false')
     expect(picks[1]!.attributes('aria-pressed')).toBe('true')
-    expect(wrapper.text()).not.toContain('series are named')
+    // Fork: the warning goes, but the list still says these all share the name.
+    expect(wrapper.text()).not.toContain('Choose the one this book belongs to')
+    expect(wrapper.get('[data-testid="series-choice-count"]').text()).toBe('2 series are named Wisdom.')
+  })
+
+  it('titles each option with the series name, the author below it (fork)', async () => {
+    respond([match(4, ['A']), match(9, ['B'])])
+    const wrapper = await mountChoice({ seriesId: 9 })
+
+    const names = wrapper.findAll('[data-testid="series-choice-name"]').map((name) => name.text())
+    expect(names).toEqual(['Wisdom', 'Wisdom'])
+    expect(wrapper.find('[data-testid="series-choice-duplicate"]').exists()).toBe(false)
+  })
+
+  it('tells apart same-named series by the same author, and calls them a likely duplicate (fork)', async () => {
+    respond([
+      { ...match(22317, ['Janet Evanovich'], 4), firstIndex: '1', lastIndex: '4', firstTitle: 'One for the Money' },
+      { ...match(29208, ['Janet Evanovich'], 1), firstIndex: '9', lastIndex: '9', firstTitle: 'To the Nines' },
+      match(5, ['Someone Else']),
+    ])
+    const wrapper = await mountChoice({ seriesId: 22317 })
+
+    const spans = wrapper.findAll('[data-testid="series-choice-span"]').map((span) => span.text())
+    expect(spans).toEqual(['Books #1 to #4 · starts with One for the Money', 'Book #9 · starts with To the Nines'])
+    expect(wrapper.findAll('[data-testid="series-choice-duplicate"]')).toHaveLength(2)
   })
 
   it('stays hidden for a single match the person did not just type', async () => {
