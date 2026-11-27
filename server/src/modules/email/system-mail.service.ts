@@ -1,6 +1,8 @@
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
+
 import { EmailEncryptionService } from './email-encryption.service';
 import { EmailProviderRepository } from './email-provider.repository';
 import { EmailTransportService } from './email-transport.service';
@@ -20,6 +22,50 @@ export class SystemMailService {
   async isConfigured(): Promise<boolean> {
     const [provider] = await this.repo.findSystemProvider();
     return !!provider;
+  }
+
+  /**
+   * Fork. A short notice for admins through the system provider, used by book request alerts.
+   * The failure message names the mail server's reason, because the only reader is the admin
+   * who configured that server.
+   */
+  async sendAdminAlert(to: string[], subject: string, text: string, html: string): Promise<void> {
+    const event = 'system-mail.admin_alert';
+    const startedAt = Date.now();
+    this.logger.log(`[${event}] [start] recipients=${to.length} - admin alert send started`);
+
+    const [provider] = await this.repo.findSystemProvider();
+    if (!provider) {
+      this.logger.warn(
+        `[${event}] [fail] recipients=${to.length} durationMs=${Date.now() - startedAt} errorClass=ServiceUnavailableException error="system mail provider not configured" - admin alert send failed`,
+      );
+      throw new ServiceUnavailableException('No system mail provider is set. Pick one under Email settings first.');
+    }
+
+    const password = provider.passwordEnc ? this.encryption.decrypt(provider.passwordEnc) : undefined;
+    const transporter = this.transport.buildTransporter({
+      host: provider.host,
+      port: provider.port,
+      username: provider.username,
+      password: password ?? null,
+      auth: provider.auth,
+      ssl: provider.ssl,
+      startTls: provider.startTls,
+      tlsRejectUnauthorized: provider.tlsRejectUnauthorized,
+    });
+    const from = provider.fromAddress ? (provider.fromName ? `${provider.fromName} <${provider.fromAddress}>` : provider.fromAddress) : undefined;
+
+    try {
+      await transporter.sendMail({ from, to, subject, text, html });
+      this.logger.log(`[${event}] [end] recipients=${to.length} durationMs=${Date.now() - startedAt} - admin alert send completed`);
+    } catch (error) {
+      const errorClass = error instanceof Error && error.name ? error.name : 'Error';
+      const errorMessage = this.sanitizeErrorMessage(error instanceof Error ? error.message : String(error));
+      this.logger.error(
+        `[${event}] [fail] recipients=${to.length} durationMs=${Date.now() - startedAt} errorClass=${errorClass} error="${sanitizeLogValue(errorMessage)}" - admin alert send failed`,
+      );
+      throw new ServiceUnavailableException(`The mail server refused the message: ${errorMessage.slice(0, 200)}`);
+    }
   }
 
   async sendPasswordReset(to: string, name: string, rawToken: string): Promise<void> {

@@ -885,6 +885,45 @@
     "apiKey": "write"
   },
   {
+    "file": "server/src/modules/book-request/book-request-alerts.controller.ts",
+    "className": "BookRequestAlertController",
+    "methodName": "get",
+    "httpMethod": "GET",
+    "path": "/admin/book-request-alerts",
+    "permissions": ["Permission.ManageAppSettings"],
+    "libraryAccess": [],
+    "isPublic": false,
+    "allowDefault": false,
+    "useGuards": [],
+    "apiKey": "read"
+  },
+  {
+    "file": "server/src/modules/book-request/book-request-alerts.controller.ts",
+    "className": "BookRequestAlertController",
+    "methodName": "update",
+    "httpMethod": "PUT",
+    "path": "/admin/book-request-alerts",
+    "permissions": ["Permission.ManageAppSettings"],
+    "libraryAccess": [],
+    "isPublic": false,
+    "allowDefault": false,
+    "useGuards": [],
+    "apiKey": "write"
+  },
+  {
+    "file": "server/src/modules/book-request/book-request-alerts.controller.ts",
+    "className": "BookRequestAlertController",
+    "methodName": "test",
+    "httpMethod": "POST",
+    "path": "/admin/book-request-alerts/test/:channel",
+    "permissions": ["Permission.ManageAppSettings"],
+    "libraryAccess": [],
+    "isPublic": false,
+    "allowDefault": false,
+    "useGuards": [],
+    "apiKey": "write"
+  },
+  {
     "file": "server/src/modules/book-request/download-clients/download-client.controller.ts",
     "className": "DownloadClientController",
     "methodName": "findAll",

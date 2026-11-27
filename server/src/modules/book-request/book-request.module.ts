@@ -76,6 +76,9 @@ import { RequestUserCleanupService } from './fulfillment/request-user-cleanup.se
 import { RequestCompanionService } from './fulfillment/request-companion.service';
 import { RequestReleaseDateService } from './fulfillment/request-release-date.service';
 import { MetadataFetchModule } from '../metadata-fetch/metadata-fetch.module';
+import { EmailModule } from '../email/email.module';
+import { BookRequestAlertController } from './book-request-alerts.controller';
+import { BookRequestAlertService } from './book-request-alerts.service';
 import { RequestVerificationService } from './fulfillment/request-verification.service';
 import { RequestWatchdogService } from './fulfillment/request-watchdog.service';
 
@@ -96,6 +99,7 @@ import { RequestWatchdogService } from './fulfillment/request-watchdog.service';
     UserModule,
     JobsModule,
     forwardRef(() => NotificationModule),
+    forwardRef(() => EmailModule),
   ],
   controllers: [
     BookRequestController,
@@ -103,6 +107,7 @@ import { RequestWatchdogService } from './fulfillment/request-watchdog.service';
     BookRequestSavedViewController,
     BookRequestAdminController,
     BookRequestAutomationController,
+    BookRequestAlertController,
     DownloadClientController,
     IndexerController,
     IndexerManagerController,
@@ -116,6 +121,7 @@ import { RequestWatchdogService } from './fulfillment/request-watchdog.service';
     BookRequestAttributionService,
     BookRequestDedupeService,
     BookRequestNotifier,
+    BookRequestAlertService,
     BookRequestGateway,
     BookRequestEventsService,
     RequestCredentialService,

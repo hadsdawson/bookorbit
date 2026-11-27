@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import DownloadClientsPanel from './DownloadClientsPanel.vue'
+import RequestAlertsPanel from './RequestAlertsPanel.vue'
 import RequestAutomationPanel from './RequestAutomationPanel.vue'
 import RequestIndexersPanel from './RequestIndexersPanel.vue'
 import NewReleasesServerSettings from '@/features/new-releases/components/NewReleasesServerSettings.vue'
@@ -13,11 +14,12 @@ const { t } = useI18n()
 withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
 /**
- * The three things this page configures, in the order a release passes through them: where it is
+ * The things this page configures, in the order a release passes through them: where it is
  * found, what fetches it, and what happens once it lands. Stacked, they were one long scroll whose
- * middle looked like a continuation of its top.
+ * middle looked like a continuation of its top. Fork: alerts come last, as they are about requests
+ * arriving rather than releases.
  */
-const TABS = ['sources', 'clients', 'automation'] as const
+const TABS = ['sources', 'clients', 'automation', 'alerts'] as const
 type Tab = (typeof TABS)[number]
 
 function normalizeTab(value: unknown): Tab {
@@ -28,6 +30,7 @@ const tabs = computed(() => [
   { id: 'sources' as const, label: t('settings.system.requests.tabs.sources') },
   { id: 'clients' as const, label: t('settings.system.requests.tabs.clients') },
   { id: 'automation' as const, label: t('settings.system.requests.tabs.automation') },
+  { id: 'alerts' as const, label: t('settings.system.requests.tabs.alerts') },
 ])
 const { activeTab, selectTab } = useRouteTab<Tab>({
   routeName: 'settings-admin-requests',
@@ -71,6 +74,9 @@ function handleEncryptionState(configured: boolean) {
     <!-- Narrower than the rest of the page: this tab is mostly prose, and a switch explaining
          itself over the full width of a list view is a line too long to read comfortably. Wrapped
          rather than passed as a class, because the panel has a v-if root and would not inherit it. -->
+    <div v-else-if="activeTab === 'alerts'" class="max-w-3xl space-y-6">
+      <RequestAlertsPanel />
+    </div>
     <div v-else class="max-w-3xl space-y-6">
       <RequestAutomationPanel />
       <NewReleasesServerSettings />

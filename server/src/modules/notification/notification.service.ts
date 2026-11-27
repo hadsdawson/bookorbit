@@ -11,7 +11,8 @@ export type NotificationScope =
   | { kind: 'library'; libraryId: number }
   | { kind: 'user'; userId: number }
   | { kind: 'users'; userIds: number[] }
-  | { kind: 'permission'; permission: Permission }
+  /** Fork: `excludeUserIds` leaves out people the notice is about, such as whoever caused it. */
+  | { kind: 'permission'; permission: Permission; excludeUserIds?: number[] }
   | { kind: 'all' };
 
 /** Notifications are a transient feed, not an audit trail; the audit log is the durable record. */
@@ -183,8 +184,12 @@ export class NotificationService {
         return [...new Set(scope.userIds.filter((userId) => Number.isSafeInteger(userId) && userId > 0))];
       case 'library':
         return this.repo.findUserIdsWithLibraryAccess(scope.libraryId);
-      case 'permission':
-        return this.repo.findUserIdsWithPermission(scope.permission);
+      case 'permission': {
+        const userIds = await this.repo.findUserIdsWithPermission(scope.permission);
+        if (!scope.excludeUserIds?.length) return userIds;
+        const excluded = new Set(scope.excludeUserIds);
+        return userIds.filter((userId) => !excluded.has(userId));
+      }
       case 'all':
         return this.repo.findAllActiveUserIds();
     }

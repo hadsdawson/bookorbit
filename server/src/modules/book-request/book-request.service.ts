@@ -369,12 +369,14 @@ export class BookRequestService {
     this.afterCreate(row, plan);
     this.gateway.emitChanged();
 
-    if (!plan.settledOnCreate) {
-      await this.notifier.notifyApprovers(NotificationType.BookRequestSubmitted, {
-        title: 'New book request',
-        message: `${subject.name} requested "${row.title}"`,
-        actionUrl: '/requests?tab=all',
-        meta: { requestId: row.id },
+    // Fork: approved-on-arrival requests are announced too, so auto-approval is not silent.
+    if (!plan.availableOnCreate) {
+      await this.notifier.announceNewRequest({
+        requester: subject,
+        bookTitle: row.title,
+        mediaKinds: [row.mediaKind],
+        approved: plan.settledOnCreate,
+        requestId: row.id,
       });
     }
 
@@ -709,16 +711,22 @@ export class BookRequestService {
    * one ask is the queue counting the same person twice.
    */
   private async announcePair(subject: RequestUser, plans: CreatePlan[], rows: BookRequestRow[]): Promise<void> {
-    const waiting = rows.filter((row) => plans.some((plan) => plan.insert.mediaKind === row.mediaKind && !plan.settledOnCreate));
-    if (waiting.length === 0) return;
+    // Fork: approved-on-arrival halves are announced too; the pair reads as approved only when
+    // no half is left waiting on a person.
+    const planFor = (row: BookRequestRow) => plans.find((plan) => plan.insert.mediaKind === row.mediaKind);
+    const announced = rows.filter((row) => {
+      const plan = planFor(row);
+      return plan !== undefined && !plan.availableOnCreate;
+    });
+    if (announced.length === 0) return;
 
-    const lead = waiting.find((row) => row.mediaKind === 'ebook') ?? waiting[0]!;
-    await this.notifier.notifyApprovers(NotificationType.BookRequestSubmitted, {
-      title: 'New book request',
-      message:
-        waiting.length > 1 ? `${subject.name} requested "${lead.title}" as an ebook and an audiobook` : `${subject.name} requested "${lead.title}"`,
-      actionUrl: '/requests?tab=all',
-      meta: { requestId: lead.id },
+    const lead = announced.find((row) => row.mediaKind === 'ebook') ?? announced[0]!;
+    await this.notifier.announceNewRequest({
+      requester: subject,
+      bookTitle: lead.title,
+      mediaKinds: announced.map((row) => row.mediaKind),
+      approved: announced.every((row) => planFor(row)!.settledOnCreate),
+      requestId: lead.id,
     });
   }
 
