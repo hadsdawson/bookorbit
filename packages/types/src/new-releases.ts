@@ -25,6 +25,12 @@ export interface ReleaseFollow {
   createdAt: string;
 }
 
+export interface NewReleaseMatchedFollow {
+  id: number;
+  kind: ReleaseFollowKind;
+  name: string;
+}
+
 export type NewReleaseUserState = "requested" | "dismissed" | null;
 
 export interface NewReleaseItem {
@@ -39,8 +45,8 @@ export interface NewReleaseItem {
   audiobookDate: string | null;
   /** The earlier of the two confirmed dates. */
   releaseDate: string;
-  /** Why it is listed: the follows of this user it matched. */
-  matchedFollows: { kind: ReleaseFollowKind; name: string }[];
+  /** Why it is listed: the follows of this user it matched. Fork: with each follow's id, for Unfollow. */
+  matchedFollows: NewReleaseMatchedFollow[];
   state: NewReleaseUserState;
   /** Fork: each author, with their id when they are in the user's libraries (by name or alternate name). */
   authorLinks: { name: string; authorId: number | null }[];

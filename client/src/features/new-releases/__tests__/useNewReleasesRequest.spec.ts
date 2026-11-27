@@ -28,7 +28,7 @@ function item(id: number): NewReleaseItem {
     ebookDate: '2027-03-09',
     audiobookDate: null,
     releaseDate: '2027-03-09',
-    matchedFollows: [{ kind: 'author', name: 'Jane Writer' }],
+    matchedFollows: [{ id: 1, kind: 'author', name: 'Jane Writer' }],
     state: null,
   }
 }

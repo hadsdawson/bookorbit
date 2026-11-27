@@ -18914,7 +18914,11 @@
       "hiddenBadge": "Hidden",
       "unhide": "Show again",
       "unhideNamed": "Show {title} again",
-      "linksLabel": "Pages for {title}"
+      "linksLabel": "Pages for {title}",
+      "unfollowAuthor": "Unfollow author",
+      "unfollowSeries": "Unfollow series",
+      "unfollowAuthorNamed": "Unfollow author: {name}",
+      "unfollowSeriesNamed": "Unfollow series: {name}"
     },
     "following": {
       "search": "Search followed names",
