@@ -126,6 +126,11 @@ export type SeriesNameMatch = {
   moreAuthorCount: number;
   /** The first books in series order that have a cover, at most three. */
   coverBookIds: number[];
+  /** Fork: the lowest and highest numbers its books have, to tell same-named series apart. */
+  firstIndex?: string | null;
+  lastIndex?: string | null;
+  /** Fork: the title of its first book in series order. */
+  firstTitle?: string | null;
 };
 
 /** Fork. Why a series is on the Series check list. */

@@ -10080,7 +10080,12 @@
           "preview": "Preview",
           "view": "View",
           "noCovers": "No covers yet",
-          "startNew": "A new series named {name}"
+          "startNew": "A new series named {name}",
+          "several": "{count} series are named {name}.",
+          "range": "Books #{first} to #{last}",
+          "single": "Book #{number}",
+          "startsWith": "starts with {title}",
+          "likelyDuplicate": "Same name and author as another series here: probably a duplicate."
         },
         "pending": {
           "label": "Choose series: {names}",

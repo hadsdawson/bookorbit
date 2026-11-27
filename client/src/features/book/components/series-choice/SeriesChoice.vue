@@ -49,6 +49,38 @@ function authorLine(match: SeriesNameMatch) {
   return match.moreAuthorCount > 0 ? t('book.detail.seriesMembership.choice.moreAuthors', { names, count: match.moreAuthorCount }) : names
 }
 
+/**
+ * Fork. Same name is why these are listed, and the same authors too means nothing on the card tells
+ * them apart: most likely one series by accident. Those get their range of numbers and a note.
+ */
+function authorKey(match: SeriesNameMatch) {
+  return match.authors.map((name) => name.toLowerCase()).join('|')
+}
+
+const sameAuthorIds = computed(() => {
+  const byAuthors = new Map<string, number[]>()
+  for (const match of matches.value) {
+    const key = authorKey(match)
+    byAuthors.set(key, [...(byAuthors.get(key) ?? []), match.id])
+  }
+  return new Set([...byAuthors.values()].filter((ids) => ids.length > 1).flat())
+})
+
+function looksDuplicate(match: SeriesNameMatch) {
+  return sameAuthorIds.value.has(match.id)
+}
+
+function spanLine(match: SeriesNameMatch) {
+  const parts: string[] = []
+  if (match.firstIndex && match.lastIndex && match.firstIndex !== match.lastIndex) {
+    parts.push(t('book.detail.seriesMembership.choice.range', { first: match.firstIndex, last: match.lastIndex }))
+  } else if (match.firstIndex) {
+    parts.push(t('book.detail.seriesMembership.choice.single', { number: match.firstIndex }))
+  }
+  if (match.firstTitle) parts.push(t('book.detail.seriesMembership.choice.startsWith', { title: match.firstTitle }))
+  return parts.join(' · ')
+}
+
 const openPreview = ref<number | null>(null)
 
 function setPreview(id: number | null) {
@@ -84,6 +116,9 @@ function seriesHref(id: number) {
       <TriangleAlert class="size-3.5 shrink-0" aria-hidden="true" />
       {{ t('book.detail.seriesMembership.choice.pickOne', { count: matches.length, name: seriesName.trim() }) }}
     </p>
+    <p v-else-if="matches.length > 1" class="mb-1.5 text-xs text-muted-foreground" data-testid="series-choice-count">
+      {{ t('book.detail.seriesMembership.choice.several', { count: matches.length, name: seriesName.trim() }) }}
+    </p>
     <p v-else-if="matches.length === 1 && !newSeries" class="mb-1.5 text-xs text-muted-foreground">
       {{ t('book.detail.seriesMembership.choice.joining') }}
     </p>
@@ -111,10 +146,17 @@ function seriesHref(id: number) {
             <Check v-if="isSelected(match)" class="size-3" />
           </span>
           <span class="min-w-0 flex-1">
-            <span class="block truncate font-medium text-foreground">{{ authorLine(match) }}</span>
+            <span class="block truncate font-medium text-foreground" data-testid="series-choice-name">{{ match.name }}</span>
+            <span class="block truncate text-muted-foreground" :title="authorLine(match)">{{ authorLine(match) }}</span>
             <span class="block text-muted-foreground">
               {{ t('book.detail.seriesMembership.choice.bookCount', { count: match.bookCount }) }} · #{{ match.id }}
             </span>
+            <template v-if="looksDuplicate(match)">
+              <span v-if="spanLine(match)" class="block text-muted-foreground" data-testid="series-choice-span">{{ spanLine(match) }}</span>
+              <span class="block text-warning" data-testid="series-choice-duplicate">{{
+                t('book.detail.seriesMembership.choice.likelyDuplicate')
+              }}</span>
+            </template>
           </span>
         </button>
         <Popover :open="previewOpen(match.id)" @update:open="handlePreviewToggle(match.id, $event)">
