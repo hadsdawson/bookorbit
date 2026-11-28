@@ -406,7 +406,7 @@ export class NewReleasesService implements OnApplicationBootstrap {
     await this.repository.saveUserSettings(user.id, settings);
     const saved = await this.repository.findUserSettings(user.id);
     // Switching to having books requested picks up what is already listed, not only new finds.
-    if (settings.delivery === 'request') this.kick();
+    if (settings.delivery === 'request' || settings.delivery === 'series') this.kick();
     return {
       delivery: (saved?.delivery as NewReleaseDelivery | null) ?? null,
       retentionDays: (saved?.retentionDays ?? DEFAULT_NEW_RELEASE_RETENTION_DAYS) as NewReleaseRetentionDays,
@@ -418,7 +418,7 @@ export class NewReleasesService implements OnApplicationBootstrap {
     if (settings.language !== undefined) await this.appSettings.setValue(LANGUAGE_KEY, settings.language);
     if (settings.languageStrict !== undefined) await this.appSettings.setValue(LANGUAGE_STRICT_KEY, String(settings.languageStrict));
     await this.appSettings.setValue(DEFAULT_DELIVERY_KEY, settings.defaultDelivery);
-    if (settings.defaultDelivery === 'request') this.kick();
+    if (settings.defaultDelivery === 'request' || settings.defaultDelivery === 'series') this.kick();
     return this.serverSettings();
   }
 

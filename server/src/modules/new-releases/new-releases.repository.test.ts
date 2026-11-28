@@ -28,3 +28,14 @@ describe('NewReleasesRepository.listForUser', () => {
     expect(compiled().sql).not.toContain('NOT EXISTS');
   });
 });
+
+describe('NewReleasesRepository.findPendingAutoRequests', () => {
+  it('files requests for everything followed, or only for books of a followed series', async () => {
+    const { repo, compiled } = makeRepo();
+    await repo.findPendingAutoRequests('series', 10);
+    const { sql, params } = compiled();
+    expect(sql).toContain("= 'request'");
+    expect(sql).toContain("= 'series' AND f.kind = 'series'");
+    expect(params).toContain('series');
+  });
+});

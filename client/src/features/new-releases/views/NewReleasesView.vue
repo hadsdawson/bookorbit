@@ -399,6 +399,7 @@ onMounted(load)
                 <option value="default">{{ t('newReleases.delivery.default', { choice: serverDeliveryLabel }) }}</option>
                 <option value="suggest">{{ t('newReleases.delivery.suggest') }}</option>
                 <option value="request">{{ t('newReleases.delivery.request') }}</option>
+                <option value="series">{{ t('newReleases.delivery.series') }}</option>
               </select>
             </label>
           </div>

@@ -1,0 +1,2 @@
+ALTER TABLE "release_user_settings" DROP CONSTRAINT "release_user_settings_delivery_chk";--> statement-breakpoint
+ALTER TABLE "release_user_settings" ADD CONSTRAINT "release_user_settings_delivery_chk" CHECK ("release_user_settings"."delivery" IS NULL OR "release_user_settings"."delivery" IN ('suggest', 'request', 'series'));

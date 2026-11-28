@@ -626,7 +626,10 @@ export class NewReleasesRepository {
       WHERE r.release_date > current_date
         AND r.owned_book_id IS NULL
         AND st.state IS NULL
-        AND COALESCE(us.delivery, ${defaultDelivery}) = 'request'
+        AND (
+          COALESCE(us.delivery, ${defaultDelivery}) = 'request'
+          OR (COALESCE(us.delivery, ${defaultDelivery}) = 'series' AND f.kind = 'series')
+        )
         AND ${languageOk}
         AND (u.is_superuser OR EXISTS (
           SELECT 1 FROM user_permissions p WHERE p.user_id = u.id AND p.permission_name = 'new_releases_access'
