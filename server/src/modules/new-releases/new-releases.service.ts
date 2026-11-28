@@ -34,7 +34,7 @@ import { BookRequestService } from '../book-request/book-request.service';
 import { LibraryService } from '../library/library.service';
 import { NewReleasesRepository, type FollowInput, type ReleaseFollowRow } from './new-releases.repository';
 import { mergeReleases, nameKey, type SourceRelease } from './release-merge';
-import { formatDate, formatsToRequest, pairRequestFor, requestFor } from './release-request';
+import { formatDate, formatsToRequest, pairRequestFor, requestFor, type RequestableRelease } from './release-request';
 import { ReleaseSourcesService, type ReleaseTarget } from './release-sources.service';
 
 const EVENT = 'new_releases.check';
@@ -95,7 +95,7 @@ function toFollow(row: ReleaseFollowRow): ReleaseFollow {
 }
 
 /** Fork: the list's language filter as the server settings set it; "any" turns it off. */
-function languageFilterOf(server: NewReleasesServerSettings): { language: string | null; strictLanguage: boolean } {
+export function languageFilterOf(server: NewReleasesServerSettings): { language: string | null; strictLanguage: boolean } {
   if (server.language === 'any') return { language: null, strictLanguage: false };
   return { language: server.language, strictLanguage: server.languageStrict };
 }
@@ -440,18 +440,33 @@ export class NewReleasesService implements OnApplicationBootstrap {
     release: NonNullable<Awaited<ReturnType<NewReleasesRepository['findReleaseById']>>>,
     formats: NewReleaseRequestFormat[],
   ): Promise<NewReleaseRequestFormat[]> {
+    const requested = await this.fileRequestsFor(user, release, formats, { releaseId: release.id });
+    if (requested.length > 0) await this.repository.setRequested(user.id, release.id);
+    return requested;
+  }
+
+  /**
+   * Files requests for one book in the formats given, as the request form would. Fork: shared by
+   * New Releases and the series pop-up, which files books that are not in the New Releases list.
+   */
+  async fileRequestsFor(
+    user: RequestUser,
+    release: RequestableRelease,
+    formats: NewReleaseRequestFormat[],
+    options: { releaseId?: number; note?: string } = {},
+  ): Promise<NewReleaseRequestFormat[]> {
+    const ref = options.releaseId !== undefined ? `releaseId=${options.releaseId}` : `title="${sanitizeLogValue(release.title)}"`;
     // Fork. Both formats go in as one paired request, as the request form files "both", so the two halves
     // show as one request and the second lands beside the first. If the pair is refused, each format is
     // tried on its own below, so a refusal of one still files the other.
     if (formats.includes('ebook') && formats.includes('audiobook')) {
       try {
-        const pair = pairRequestFor(release);
+        const pair = pairRequestFor(release, options.note);
         await this.bookRequests.submitPair(pair.work, user, pair.halves);
-        await this.repository.setRequested(user.id, release.id);
         return ['ebook', 'audiobook'];
       } catch (error) {
         this.logger.warn(
-          `[new_releases.request] [fail] userId=${user.id} releaseId=${release.id} format=pair errorClass=${error instanceof Error ? error.name : 'UnknownError'} error="${sanitizeLogValue(error instanceof Error ? error.message : String(error))}" - could not file a paired request, filing each format`,
+          `[new_releases.request] [fail] userId=${user.id} ${ref} format=pair errorClass=${error instanceof Error ? error.name : 'UnknownError'} error="${sanitizeLogValue(error instanceof Error ? error.message : String(error))}" - could not file a paired request, filing each format`,
         );
       }
     }
@@ -459,16 +474,15 @@ export class NewReleasesService implements OnApplicationBootstrap {
     for (const format of formats) {
       // One at a time rather than as a pair, so a refusal of one format still files the other.
       try {
-        await this.bookRequests.submit(requestFor(release, format), user);
+        await this.bookRequests.submit(requestFor(release, format, options.note), user);
         requested.push(format);
       } catch (error) {
         this.logger.warn(
-          `[new_releases.request] [fail] userId=${user.id} releaseId=${release.id} format=${format} errorClass=${error instanceof Error ? error.name : 'UnknownError'} error="${sanitizeLogValue(error instanceof Error ? error.message : String(error))}" - could not file a request`,
+          `[new_releases.request] [fail] userId=${user.id} ${ref} format=${format} errorClass=${error instanceof Error ? error.name : 'UnknownError'} error="${sanitizeLogValue(error instanceof Error ? error.message : String(error))}" - could not file a request`,
         );
         if (formats.length === 1) throw error;
       }
     }
-    if (requested.length > 0) await this.repository.setRequested(user.id, release.id);
     return requested;
   }
 

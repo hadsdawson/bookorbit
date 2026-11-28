@@ -50,6 +50,22 @@ const HARDCOVER_UPCOMING_QUERY = `
   }
 `;
 
+/** Fork: every book of one series, out or not, in reading order, for the series pop-up. */
+const HARDCOVER_SERIES_QUERY = `
+  query SeriesBooks($where: books_bool_exp!) {
+    books(where: $where, order_by: { release_date: asc }, limit: 60) {
+      id
+      slug
+      title
+      release_date
+      image { url }
+      contributions { author { name } }
+      book_series { position series { name } }
+      editions(limit: 25) { isbn_13 asin release_date reading_format_id language { code2 } }
+    }
+  }
+`;
+
 interface HardcoverUpcomingBook {
   id: number;
   slug?: string | null;
@@ -304,8 +320,38 @@ export class ReleaseSourcesService {
     return { releases, failedSources, attempted: steps.length };
   }
 
-  private async fromHardcover(target: ReleaseTarget, today: string, apiKey: string): Promise<SourceRelease[]> {
-    const where: Record<string, unknown> = { release_date: { _gt: today }, canonical_id: { _is_null: true } };
+  /**
+   * Fork: every book a series has, released or not, for the series pop-up on a request. Hardcover
+   * and Audible only: Google Books knows nothing of series, so its answers would be guesses.
+   */
+  async lookupSeries(target: ReleaseTarget): Promise<{ releases: SourceRelease[]; failedSources: ReleaseSourceKey[]; attempted: number }> {
+    const config = await this.providerConfig.getConfig();
+    const releases: SourceRelease[] = [];
+    const failedSources: ReleaseSourceKey[] = [];
+    const steps: { source: ReleaseSourceKey; run: () => Promise<SourceLookup> }[] = [];
+    if (config.hardcover.enabled && config.hardcover.apiKey.trim()) {
+      steps.push({ source: 'hardcover', run: async () => ({ found: await this.fromHardcover(target, null, config.hardcover.apiKey) }) });
+    }
+    if (config.audible.enabled) steps.push({ source: 'audible', run: () => this.fromAudible(target) });
+
+    for (const step of steps) {
+      try {
+        const { found, members } = await step.run();
+        releases.push(...found.filter((release) => members || belongsToTarget(release, target)));
+      } catch (error) {
+        failedSources.push(step.source);
+        this.logger.warn(
+          `[series_books.source] [fail] source=${step.source} name="${sanitizeLogValue(target.name)}" error="${sanitizeLogError(error)}" - series lookup failed, other sources still count`,
+        );
+      }
+    }
+    return { releases, failedSources, attempted: steps.length };
+  }
+
+  /** A null `today` asks for every book, not only the ones still to come. */
+  private async fromHardcover(target: ReleaseTarget, today: string | null, apiKey: string): Promise<SourceRelease[]> {
+    const where: Record<string, unknown> = { canonical_id: { _is_null: true } };
+    if (today !== null) where.release_date = { _gt: today };
     if (target.kind === 'author') {
       where.contributions = { author: { name: { _eq: target.name } } };
     } else {
@@ -315,7 +361,7 @@ export class ReleaseSourcesService {
     const res = await fetchWithThrottle(HARDCOVER_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: toBearerAuthorization(apiKey) },
-      body: JSON.stringify({ query: HARDCOVER_UPCOMING_QUERY, variables: { where } }),
+      body: JSON.stringify({ query: today === null ? HARDCOVER_SERIES_QUERY : HARDCOVER_UPCOMING_QUERY, variables: { where } }),
       signal: buildRequestSignal(PROVIDER_TIMEOUT_MS.DEFAULT),
     });
     if (!res.ok) throw new Error(`hardcover responded ${res.status}`);
