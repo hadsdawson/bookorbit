@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import CopyTextButton from '../CopyTextButton.vue'
 
-const clipboard = vi.hoisted(() => ({ copyToClipboard: vi.fn<(text: string) => Promise<boolean>>() }))
+const clipboard = vi.hoisted(() => ({ copyToClipboard: vi.fn<(text: string, from?: Element | null) => Promise<boolean>>() }))
 const toast = vi.hoisted(() => ({ error: vi.fn<(message: string) => void>() }))
 
 vi.mock('@/lib/clipboard', () => clipboard)
@@ -34,7 +34,7 @@ describe('CopyTextButton', () => {
     await button.trigger('click')
     await flushPromises()
 
-    expect(clipboard.copyToClipboard).toHaveBeenCalledWith('Hard Eight')
+    expect(clipboard.copyToClipboard).toHaveBeenCalledWith('Hard Eight', button.element)
     expect(rowClick).not.toHaveBeenCalled()
     expect(button.attributes('title')).toBe('bookRequests.copy.copied')
     vi.advanceTimersByTime(1_500)

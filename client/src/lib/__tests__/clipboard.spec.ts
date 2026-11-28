@@ -103,3 +103,44 @@ describe('copyToClipboard', () => {
     expect(document.execCommand).not.toHaveBeenCalled()
   })
 })
+
+describe('copyToClipboard inside a modal dialog', () => {
+  beforeEach(() => {
+    document.body.innerHTML = ''
+    restoreProperty(globalThis.navigator, 'clipboard', undefined)
+  })
+
+  afterEach(() => {
+    document.body.innerHTML = ''
+    restoreProperty(globalThis.navigator, 'clipboard', originalClipboardDescriptor)
+    restoreProperty(document, 'execCommand', originalExecCommandDescriptor)
+  })
+
+  it('puts the fallback text box inside the dialog the button is in, then gives focus back', async () => {
+    document.body.innerHTML = '<div role="dialog" id="drawer"><button id="copy">Copy</button></div>'
+    const button = document.getElementById('copy')!
+    button.focus()
+    let parentId: string | undefined
+    setExecCommand(() => {
+      parentId = document.querySelector('textarea')?.parentElement?.id
+      return true
+    })
+
+    await expect(copyToClipboard('I Accidentally Hired a Shadow Walker', button)).resolves.toBe(true)
+
+    expect(parentId).toBe('drawer')
+    expect(document.querySelector('textarea')).toBeNull()
+    expect(document.activeElement).toBe(button)
+  })
+
+  it('uses the page body outside a dialog', async () => {
+    let onBody = false
+    setExecCommand(() => {
+      onBody = document.querySelector('textarea')?.parentElement === document.body
+      return true
+    })
+
+    await expect(copyToClipboard('Jessica Cage')).resolves.toBe(true)
+    expect(onBody).toBe(true)
+  })
+})
