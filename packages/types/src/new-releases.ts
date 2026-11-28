@@ -5,8 +5,11 @@ export type ReleaseFollowKind = (typeof RELEASE_FOLLOW_KINDS)[number];
 export const NEW_RELEASE_FORMATS = ["ebook", "audiobook", "both"] as const;
 export type NewReleaseFormat = (typeof NEW_RELEASE_FORMATS)[number];
 
-/** "suggest" lists a new book for the user to request; "request" files the request for them. */
-export const NEW_RELEASE_DELIVERIES = ["suggest", "request"] as const;
+/**
+ * "suggest" lists a new book for the user to request; "request" files the request for them. Fork:
+ * "series" files it for books of a followed series and suggests the rest (an author's other books).
+ */
+export const NEW_RELEASE_DELIVERIES = ["suggest", "request", "series"] as const;
 export type NewReleaseDelivery = (typeof NEW_RELEASE_DELIVERIES)[number];
 
 /** How long a book stays listed after it comes out. */

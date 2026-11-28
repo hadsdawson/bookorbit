@@ -147,7 +147,7 @@ export const releaseUserSettings = pgTable(
     retentionDays: smallint('retention_days').notNull().default(30),
   },
   (t) => [
-    check('release_user_settings_delivery_chk', sql`${t.delivery} IS NULL OR ${t.delivery} IN ('suggest', 'request')`),
+    check('release_user_settings_delivery_chk', sql`${t.delivery} IS NULL OR ${t.delivery} IN ('suggest', 'request', 'series')`),
     check('release_user_settings_retention_chk', sql`${t.retentionDays} IN (15, 30, 60, 90)`),
   ],
 );

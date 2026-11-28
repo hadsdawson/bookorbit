@@ -197,4 +197,12 @@ describe('NewReleasesView', () => {
     await flushPromises()
     expect(mocks.saveNewReleasesSettings).toHaveBeenLastCalledWith({ delivery: null })
   })
+
+  it('offers requesting only books of followed series', async () => {
+    const wrapper = mount(NewReleasesView)
+    await flushPromises()
+    await wrapper.get('[data-testid="new-releases-delivery"]').setValue('series')
+    await flushPromises()
+    expect(mocks.saveNewReleasesSettings).toHaveBeenCalledWith({ delivery: 'series' })
+  })
 })
