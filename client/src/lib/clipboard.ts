@@ -1,4 +1,9 @@
-export async function copyToClipboard(text: string): Promise<boolean> {
+/**
+ * Fork: `from` is the element the copy was asked from, usually the button pressed. The fallback's
+ * hidden text box goes in the dialog that element sits in, because a modal dialog (the request
+ * drawer) keeps focus inside itself: a box added outside it cannot be selected, so nothing copied.
+ */
+export async function copyToClipboard(text: string, from?: Element | null): Promise<boolean> {
   if (!text) return false
 
   if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
@@ -11,6 +16,8 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   }
 
   if (typeof document === 'undefined' || !document.body) return false
+  const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+  const host = (from ?? previousFocus)?.closest('[role="dialog"]') ?? document.body
   const textarea = document.createElement('textarea')
   try {
     textarea.value = text
@@ -19,7 +26,7 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     textarea.style.top = '-9999px'
     textarea.style.left = '-9999px'
     textarea.style.opacity = '0'
-    document.body.appendChild(textarea)
+    host.appendChild(textarea)
     textarea.focus()
     textarea.select()
     textarea.setSelectionRange(0, text.length)
@@ -28,6 +35,7 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     return false
   } finally {
     textarea.remove()
+    previousFocus?.focus({ preventScroll: true })
   }
 }
 

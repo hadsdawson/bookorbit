@@ -16,7 +16,7 @@ let resetTimer: ReturnType<typeof setTimeout> | null = null
 async function handleCopy(event: MouseEvent): Promise<void> {
   // Rows open their request on click; copying should not.
   event.stopPropagation()
-  if (!(await copyToClipboard(props.text))) {
+  if (!(await copyToClipboard(props.text, event.currentTarget as Element | null))) {
     toast.error(t('bookRequests.copy.failed'))
     return
   }
