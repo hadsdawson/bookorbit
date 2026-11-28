@@ -8,12 +8,17 @@ import { CreateReleaseFollowDto, FindReleaseFollowQueryDto, FollowAllDto, ListRe
 import { SetReleaseStateDto } from './dto/set-release-state.dto';
 import { RequestReleaseDto } from './dto/request-release.dto';
 import { NewReleasesOverviewQueryDto, UpdateNewReleasesServerSettingsDto, UpdateNewReleasesSettingsDto } from './dto/update-settings.dto';
+import { RequestSeriesBooksDto, SeriesBooksQueryDto } from './dto/series-books.dto';
 import { NewReleasesService } from './new-releases.service';
+import { SeriesBooksService } from './series-books.service';
 
 @Controller('new-releases')
 @RequirePermission(Permission.NewReleasesAccess)
 export class NewReleasesController {
-  constructor(private readonly service: NewReleasesService) {}
+  constructor(
+    private readonly service: NewReleasesService,
+    private readonly seriesBooks: SeriesBooksService,
+  ) {}
 
   @Get()
   overview(@CurrentUser() user: RequestUser, @Query() query: NewReleasesOverviewQueryDto) {
@@ -23,6 +28,19 @@ export class NewReleasesController {
   @Put('settings')
   updateSettings(@CurrentUser() user: RequestUser, @Body() dto: UpdateNewReleasesSettingsDto) {
     return this.service.updateUserSettings(user, dto);
+  }
+
+  /** Fork: every book of a series and where each stands for this user, for the series pop-up. */
+  @Get('series-books')
+  listSeriesBooks(@CurrentUser() user: RequestUser, @Query() query: SeriesBooksQueryDto) {
+    return this.seriesBooks.list(user, query.name, query.author);
+  }
+
+  @Post('series-books/request')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission(Permission.NewReleasesAccess, Permission.BookRequestAccess)
+  requestSeriesBooks(@CurrentUser() user: RequestUser, @Body() dto: RequestSeriesBooksDto) {
+    return this.seriesBooks.request(user, dto.name, dto.author, dto.keys);
   }
 
   @Post(':id/request')

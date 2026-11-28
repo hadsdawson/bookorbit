@@ -288,6 +288,26 @@ export class NewReleasesRepository {
     return result.rows[0]?.name ?? null;
   }
 
+  /** Fork: Audible ASINs of books of one library series, so the series pop-up can find it on Audible by id. */
+  async findLibrarySeriesAudibleAsins(seriesId: number, libraryIds: number[], limit = 3): Promise<string[]> {
+    if (libraryIds.length === 0) return [];
+    const libraries = sql.join(
+      libraryIds.map((id) => sql`${id}`),
+      sql`, `,
+    );
+    const result = await this.db.execute<{ audible_id: string }>(sql`
+      SELECT bm.audible_id
+      FROM book_series_memberships m
+      JOIN books b ON b.id = m.book_id
+      JOIN book_metadata bm ON bm.book_id = m.book_id
+      WHERE m.series_id = ${seriesId} AND b.library_id IN (${libraries}) AND bm.audible_id IS NOT NULL AND bm.audible_id <> ''
+      GROUP BY bm.audible_id
+      ORDER BY max(m.updated_at) DESC
+      LIMIT ${limit}
+    `);
+    return result.rows.map((row) => row.audible_id);
+  }
+
   // ── Checks ──────────────────────────────────────────────
 
   /**

@@ -8,6 +8,12 @@ import type { SourceRelease } from './release-merge';
 
 export const NEW_RELEASE_REQUEST_NOTE = 'Requested from New Releases';
 
+/** Fork: what filing a request needs to know about a book, from New Releases or the series pop-up. */
+export type RequestableRelease = Pick<
+  UpcomingReleaseRow,
+  'title' | 'authors' | 'seriesName' | 'seriesIndex' | 'isbn13' | 'coverUrl' | 'ebookDate' | 'audiobookDate' | 'sources'
+>;
+
 /** The confirmed date of one format of a release, or null when that format has none. */
 export function formatDate(release: Pick<UpcomingReleaseRow, 'ebookDate' | 'audiobookDate'>, format: NewReleaseRequestFormat): string | null {
   return format === 'ebook' ? release.ebookDate : release.audiobookDate;
@@ -23,7 +29,11 @@ export function formatsToRequest(defaultFormat: NewReleaseFormat): NewReleaseReq
 }
 
 /** One request, as the request form would have filed it for this book in this format. */
-export function requestFor(release: UpcomingReleaseRow, format: NewReleaseRequestFormat): CreateBookRequestDto {
+export function requestFor(
+  release: RequestableRelease,
+  format: NewReleaseRequestFormat,
+  note: string = NEW_RELEASE_REQUEST_NOTE,
+): CreateBookRequestDto {
   const date = formatDate(release, format);
   const sources = (release.sources as SourceRelease[] | null) ?? [];
   const audible = format === 'audiobook' ? sources.find((source) => source.source === 'audible' && source.asin) : undefined;
@@ -31,7 +41,7 @@ export function requestFor(release: UpcomingReleaseRow, format: NewReleaseReques
     mediaKind: format,
     title: release.title,
     authors: release.authors,
-    note: NEW_RELEASE_REQUEST_NOTE,
+    note,
   };
   if (release.seriesName) dto.seriesName = release.seriesName;
   if (release.seriesIndex !== null && Number.isInteger(release.seriesIndex) && release.seriesIndex >= 0) dto.seriesIndex = release.seriesIndex;
@@ -53,12 +63,15 @@ export function requestFor(release: UpcomingReleaseRow, format: NewReleaseReques
  * they share, and what each format sets for itself (its own date, the ebook's ISBN, the audiobook's
  * Audible id).
  */
-export function pairRequestFor(release: UpcomingReleaseRow): {
+export function pairRequestFor(
+  release: RequestableRelease,
+  note: string = NEW_RELEASE_REQUEST_NOTE,
+): {
   work: CreateBookRequestPairDto;
   halves: Record<NewReleaseRequestFormat, PairHalfWork>;
 } {
-  const ebook = requestFor(release, 'ebook');
-  const audiobook = requestFor(release, 'audiobook');
+  const ebook = requestFor(release, 'ebook', note);
+  const audiobook = requestFor(release, 'audiobook', note);
   const shared: Partial<CreateBookRequestPairDto> = { title: ebook.title, authors: ebook.authors, note: ebook.note };
   if (ebook.seriesName !== undefined) shared.seriesName = ebook.seriesName;
   if (ebook.seriesIndex !== undefined) shared.seriesIndex = ebook.seriesIndex;

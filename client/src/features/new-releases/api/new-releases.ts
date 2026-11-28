@@ -9,6 +9,8 @@ import type {
   ReleaseFollow,
   ReleaseFollowKind,
   ReleaseFollowPage,
+  SeriesBooksRequestResult,
+  SeriesBooksResult,
 } from '@bookorbit/types'
 
 import { apiJson, apiSend, jsonBody } from '@/lib/api-json'
@@ -75,4 +77,19 @@ export function getNewReleasesServerSettings(): Promise<NewReleasesServerSetting
 
 export function saveNewReleasesServerSettings(settings: NewReleasesServerSettings): Promise<NewReleasesServerSettings> {
   return apiJson(`${BASE}/server-settings`, jsonBody('PUT', settings), 'newReleases.errors.saveSettings')
+}
+
+/** Fork: every book of a series and where each stands for this user. */
+export function getSeriesBooks(name: string, author?: string | null): Promise<SeriesBooksResult> {
+  const params = new URLSearchParams({ name })
+  if (author) params.set('author', author)
+  return apiJson(`${BASE}/series-books?${params.toString()}`, undefined, 'newReleases.seriesBooks.loadFailed')
+}
+
+export function requestSeriesBooks(name: string, author: string | null | undefined, keys: string[]): Promise<SeriesBooksRequestResult> {
+  return apiJson(
+    `${BASE}/series-books/request`,
+    jsonBody('POST', author ? { name, author, keys } : { name, keys }),
+    'newReleases.seriesBooks.requestFailed',
+  )
 }

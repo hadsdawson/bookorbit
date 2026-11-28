@@ -58,6 +58,7 @@ import { useRequestListDensity } from './composables/useRequestListDensity'
 import { useRequestQueue } from './composables/useRequestQueue'
 import { REQUEST_DRAWER } from './requestDrawerContext'
 import { localizedRequestActionFailure } from './requestActionFailure'
+import SeriesBooksDialog from '@/features/new-releases/components/SeriesBooksDialog.vue'
 
 const TABS = ['search', 'mine', 'all'] as const
 type RequestsTab = (typeof TABS)[number]
@@ -1099,6 +1100,7 @@ const emptyMessage = computed(() => {
 
     <RequestDrawer :open="drawerOpen" :level="drawerLevel" @close="closeDrawer" @back="returnToRequest">
       <router-view />
+      <SeriesBooksDialog />
     </RequestDrawer>
   </div>
 </template>

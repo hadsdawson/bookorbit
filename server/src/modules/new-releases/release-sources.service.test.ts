@@ -142,3 +142,43 @@ describe('ReleaseSourcesService Audible series lookup', () => {
     expect(String(fetchMock.mock.calls[1]?.[0])).toContain('keywords=The+Saga');
   });
 });
+
+describe('ReleaseSourcesService series lookup', () => {
+  const fetchMock = vi.mocked(fetchWithThrottle);
+
+  afterEach(() => fetchMock.mockReset());
+
+  it('asks Hardcover for every book of the series, not only the ones still to come', async () => {
+    const sources = new ReleaseSourcesService({
+      getConfig: () =>
+        Promise.resolve({ hardcover: { enabled: true, apiKey: 'key' }, audible: { enabled: false }, google: { enabled: true, apiKey: 'key' } }),
+    } as unknown as ProviderConfigService);
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          data: {
+            books: [
+              {
+                id: 1,
+                title: 'Book One',
+                release_date: '2024-02-01',
+                contributions: [{ author: { name: 'Jane Writer' } }],
+                book_series: [{ position: 1, series: { name: 'The Saga' } }],
+                editions: [{ reading_format_id: 4, release_date: '2024-02-01' }],
+              },
+            ],
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    const { releases, attempted } = await sources.lookupSeries({ kind: 'series', name: 'The Saga', nameKey: 'thesaga', authorHint: 'Jane Writer' });
+
+    expect(attempted).toBe(1);
+    expect(releases).toEqual([expect.objectContaining({ title: 'Book One', date: '2024-02-01' })]);
+    const body = JSON.parse((fetchMock.mock.calls[0]?.[1] as RequestInit).body as string) as { variables: { where: Record<string, unknown> } };
+    expect(body.variables.where.release_date).toBeUndefined();
+    expect(body.variables.where.book_series).toEqual({ series: { name: { _eq: 'The Saga' } }, compilation: { _eq: false } });
+  });
+});

@@ -133,3 +133,54 @@ export interface FollowAllResult {
   /** Up to 20 of the skipped names, for the page to list. */
   skippedNames: string[];
 }
+
+/** Fork: the series pop-up on a request. Where one book of a series stands for this user. */
+export const SERIES_BOOK_STATUSES = ["owned", "requested", "missing"] as const;
+export type SeriesBookStatus = (typeof SERIES_BOOK_STATUSES)[number];
+
+export interface SeriesBookItem {
+  /** Stable id for this book within the series list, sent back to request it. */
+  key: string;
+  title: string;
+  authors: string[];
+  seriesIndex: number | null;
+  coverUrl: string | null;
+  /** When it came out (YYYY-MM-DD), when a source says. */
+  releasedOn: string | null;
+  /** When it comes out, for a book not out yet. */
+  comingOn: string | null;
+  comingSoon: boolean;
+  /** "owned" when every format asked for is in the library, "requested" when the rest is requested. */
+  status: SeriesBookStatus;
+  /** The formats still to request; empty unless status is "missing". */
+  missingFormats: NewReleaseRequestFormat[];
+  /** A library copy to open, when there is one. */
+  ownedBookId: number | null;
+  /** A request to open, when there is one. */
+  requestId: number | null;
+}
+
+export interface SeriesBooksResult {
+  seriesName: string;
+  /** The series' id when it is in the user's libraries, for Follow. */
+  seriesId: number | null;
+  books: SeriesBookItem[];
+  /** The formats a book is requested in, from the New Releases "Format to request" setting. */
+  formats: NewReleaseRequestFormat[];
+  sources: NewReleaseSourceStatus;
+  /** Sites that failed this time, so the list can say it may be incomplete. */
+  failedSources: ("hardcover" | "audible" | "google")[];
+}
+
+export interface SeriesBooksRequestPayload {
+  name: string;
+  author?: string;
+  keys: string[];
+}
+
+export interface SeriesBooksRequestResult {
+  /** Keys of the books a request was filed or joined for. */
+  requested: string[];
+  /** Keys of the books that could not be requested. */
+  failed: string[];
+}

@@ -9,11 +9,12 @@ import { NewReleasesAdminController, NewReleasesController } from './new-release
 import { NewReleasesRepository } from './new-releases.repository';
 import { NewReleasesService } from './new-releases.service';
 import { ReleaseSourcesService } from './release-sources.service';
+import { SeriesBooksService } from './series-books.service';
 
 @Module({
   imports: [AppSettingsModule, AuthModule, BookRequestModule, LibraryModule, MetadataPreferencesModule],
   controllers: [NewReleasesController, NewReleasesAdminController],
-  providers: [NewReleasesRepository, NewReleasesService, ReleaseSourcesService],
+  providers: [NewReleasesRepository, NewReleasesService, ReleaseSourcesService, SeriesBooksService],
   exports: [NewReleasesService],
 })
 export class NewReleasesModule {}

@@ -50,12 +50,14 @@ import { requestMediaIcon } from '../requestMedia'
 import { localizedRequestActionFailure } from '../requestActionFailure'
 import { currentRequestProgress } from '../requestPipeline'
 import { sourceDotClass } from '../sourceColors'
+import { useSeriesBooks } from '@/features/new-releases/composables/useSeriesBooks'
 
 const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const { hasPermission } = usePermissions()
 const { user } = useAuth()
+const { allowed: canSeeSeries, showSeries } = useSeriesBooks()
 const drawer = inject(REQUEST_DRAWER, null)
 
 /** The same window the list behind the drawer collapses its own refreshes into. */
@@ -229,6 +231,13 @@ const facts = computed<RequestFact[]>(() => {
   }
   return rows
 })
+
+/** Fork: the series name opens every book of the series, to request the rest. */
+function handleSeriesClick() {
+  const row = request.value
+  if (!row?.seriesName) return
+  showSeries({ name: row.seriesName, author: row.authors[0] ?? null })
+}
 
 /** Notes are quoted under the facts, each credited to whoever wrote it. */
 const quotes = computed(() => {
@@ -934,7 +943,17 @@ async function handleFileAnyway() {
             <div v-for="fact in facts" :key="fact.key" class="min-w-0">
               <dt class="text-xs text-muted-foreground">{{ fact.label }}</dt>
               <dd class="mt-0.5 text-sm [overflow-wrap:anywhere] text-foreground" :class="fact.numeric ? 'tabular-nums' : undefined">
-                {{ fact.value }}
+                <button
+                  v-if="fact.key === 'series' && canSeeSeries"
+                  type="button"
+                  class="text-start text-primary underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                  :title="t('newReleases.seriesBooks.open', { name: fact.value })"
+                  data-testid="request-series-link"
+                  @click="handleSeriesClick"
+                >
+                  {{ fact.value }}
+                </button>
+                <template v-else>{{ fact.value }}</template>
                 <time v-if="fact.when" class="mt-px block text-xs text-muted-foreground tabular-nums" :datetime="fact.when.iso">{{
                   fact.when.text
                 }}</time>

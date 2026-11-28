@@ -54,6 +54,7 @@ import MetadataCacheNotice from '@/features/metadata-cache/components/MetadataCa
 import SearchFreshButton from '@/features/metadata-cache/components/SearchFreshButton.vue'
 import { providerIconPathSafe } from '@/features/book/lib/provider-icons'
 import { useLibraries } from '@/features/library/composables/useLibraries'
+import { useSeriesBooks } from '@/features/new-releases/composables/useSeriesBooks'
 import { getProviderColor } from '@/lib/provider-colors'
 import { useCandidateGroups, type CandidateGroup, type CandidateIsbnChoice } from '../composables/useCandidateGroups'
 import { formatLanguageName } from '@/i18n/formatters'
@@ -85,6 +86,7 @@ const {
 const { libraries, fetchLibraries } = useLibraries()
 const { hasPermission } = usePermissions()
 const { user } = useAuth()
+const { offerSeries } = useSeriesBooks()
 const router = useRouter()
 const route = useRoute()
 const {
@@ -777,7 +779,14 @@ async function requestGroupChoice(group: CandidateGroup, candidate: MetadataCand
     toast.error(submitFailureText(lastFailure.value, t) ?? t('bookRequests.search.submitFailed'))
     return
   }
+  offerRestOfSeries(candidate)
   await afterSubmit(result, openPicker, isbn)
+}
+
+/** Fork: after a request for a book in a series, offers the books of it still missing. */
+function offerRestOfSeries(candidate: MetadataCandidate): void {
+  if (!candidate.seriesName) return
+  void offerSeries({ name: candidate.seriesName, author: candidate.authors?.[0] ?? null })
 }
 
 /** Where each half of a pair lands and what it prefers, read off the two halves of the form. */
@@ -838,6 +847,7 @@ async function requestPairGroup(group: CandidateGroup): Promise<void> {
       toast.error(submitFailureText(lastFailure.value, t) ?? t('bookRequests.search.submitFailed'))
       return
     }
+    offerRestOfSeries(candidate)
     if (plan.joinBookId !== null && !result.subscribed && !openPicker) {
       toast.success(t('bookRequests.search.pair.submittedJoinsBook'))
       emit('submitted')
@@ -852,6 +862,7 @@ async function requestPairGroup(group: CandidateGroup): Promise<void> {
     toast.error(submitFailureText(lastFailure.value, t) ?? t('bookRequests.search.submitFailed'))
     return
   }
+  offerRestOfSeries(candidate)
   await afterPairSubmit(result, openPicker, isbn)
 }
 
