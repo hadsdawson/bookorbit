@@ -15,6 +15,7 @@ import {
   type NewReleasesOverview,
   type NewReleasesServerSettings,
   type NewReleasesUserSettings,
+  type FollowAllResult,
   type ReleaseFollow,
   type ReleaseFollowKind,
   type ReleaseFollowPage,
@@ -50,6 +51,8 @@ const LIST_LIMIT = 500;
 /** Books the dashboard widget shows; the rest are counted. */
 const WIDGET_LIMIT = 12;
 const FOLLOW_ALL_PAGE = 1_000;
+/** Fork: how many skipped names Follow all sends back to list; the rest are counted. */
+const FOLLOW_ALL_SKIPPED_NAMES = 20;
 /** Kept a while past the longest drop-off period, then deleted. */
 const KEEP_RELEASED_DAYS = 120;
 /** A release no source has reported for this long is gone from the sites. */
@@ -143,7 +146,17 @@ export class NewReleasesService implements OnApplicationBootstrap {
       seriesId: input.kind === 'series' ? (input.seriesId ?? null) : null,
     };
     const row = await this.repository.insertFollow(user.id, follow);
-    if (input.kind === 'author') await this.followLinkedNames(user.id);
+    // Fork: following a name yourself undoes having unfollowed it, and an author's other names with it.
+    await this.repository.clearUnfollows(user.id, input.kind, [key]);
+    if (input.kind === 'author') {
+      const linked = await this.repository.findLinkedAuthorNames({ userId: user.id, followId: row.id }, false);
+      await this.repository.clearUnfollows(
+        user.id,
+        'author',
+        linked.map((entry) => nameKey(entry.name)),
+      );
+      await this.followLinkedNames(user.id);
+    }
     this.kick();
     return toFollow(row);
   }
@@ -152,6 +165,9 @@ export class NewReleasesService implements OnApplicationBootstrap {
   async unfollow(user: RequestUser, id: number): Promise<void> {
     const row = await this.repository.findFollowById(user.id, id);
     if (!row) throw new NotFoundException('Follow not found');
+    const kind = row.kind as ReleaseFollowKind;
+    // Fork: remembered, so Follow all asks before following any of these again.
+    const forgotten = [{ kind, name: row.name, nameKey: row.nameKey, authorId: row.authorId, seriesId: row.seriesId }];
     if (row.kind === 'author') {
       const linked = await this.repository.findLinkedAuthorNames({ userId: user.id, followId: id }, false);
       const keys = [...new Set(linked.map((entry) => nameKey(entry.name)).filter(Boolean))];
@@ -159,8 +175,13 @@ export class NewReleasesService implements OnApplicationBootstrap {
         user.id,
         keys.filter((key) => key !== row.nameKey),
       );
+      for (const entry of linked) {
+        const key = nameKey(entry.name);
+        if (key && key !== row.nameKey) forgotten.push({ kind: 'author', name: entry.name, nameKey: key, authorId: entry.authorId, seriesId: null });
+      }
     }
     if (!(await this.repository.deleteFollow(user.id, id))) throw new NotFoundException('Follow not found');
+    await this.repository.recordUnfollows(user.id, forgotten);
   }
 
   /**
@@ -179,7 +200,18 @@ export class NewReleasesService implements OnApplicationBootstrap {
       byUser.set(entry.userId, inputs);
     }
     let added = 0;
-    for (const [id, inputs] of byUser) added += await this.repository.insertFollowsIfMissing(id, inputs);
+    for (const [id, inputs] of byUser) {
+      // Fork: a name the user unfollowed stays unfollowed, even as another name of a followed author.
+      const unfollowed = await this.repository.findUnfollowedKeys(
+        id,
+        'author',
+        inputs.map((input) => input.nameKey),
+      );
+      added += await this.repository.insertFollowsIfMissing(
+        id,
+        inputs.filter((input) => !unfollowed.has(input.nameKey)),
+      );
+    }
     if (added > 0) this.logger.log(`[new_releases.follow_linked_names] [end] userId=${userId ?? 'all'} added=${added} - other names followed`);
     return added;
   }
@@ -209,11 +241,19 @@ export class NewReleasesService implements OnApplicationBootstrap {
    * Follows every author, or every series, in the libraries this user can see. Walks them a page at
    * a time so a large library never sits in memory, and skips names already followed.
    */
-  async followAll(user: RequestUser, kind: ReleaseFollowKind): Promise<{ added: number }> {
+  /**
+   * Fork: names the user unfollowed are skipped and reported back, so the page can ask before
+   * following them again; `includeUnfollowed` follows them too and forgets the unfollow.
+   */
+  async followAll(user: RequestUser, kind: ReleaseFollowKind, includeUnfollowed = false): Promise<FollowAllResult> {
     const startedAt = Date.now();
     const libraryIds = await this.libraryService.findAccessibleLibraryIds(user);
-    this.logger.log(`[new_releases.follow_all] [start] userId=${user.id} kind=${kind} libraries=${libraryIds.length} - following everything`);
+    this.logger.log(
+      `[new_releases.follow_all] [start] userId=${user.id} kind=${kind} libraries=${libraryIds.length} includeUnfollowed=${includeUnfollowed} - following everything`,
+    );
     let added = 0;
+    let skipped = 0;
+    const skippedNames: string[] = [];
     let afterId = 0;
     try {
       for (;;) {
@@ -236,9 +276,27 @@ export class NewReleasesService implements OnApplicationBootstrap {
               }));
         if (page.length === 0) break;
         afterId = page[page.length - 1]!.id;
+        const inputs = page.map((entry) => entry.input).filter((input) => input.nameKey);
+        const unfollowed = await this.repository.findUnfollowedKeys(
+          user.id,
+          kind,
+          inputs.map((input) => input.nameKey),
+        );
+        if (includeUnfollowed) {
+          await this.repository.clearUnfollows(user.id, kind, [...unfollowed]);
+          added += await this.repository.insertFollowsIfMissing(user.id, inputs);
+          continue;
+        }
+        const seen = new Set<string>();
+        for (const input of inputs) {
+          if (!unfollowed.has(input.nameKey) || seen.has(input.nameKey)) continue;
+          seen.add(input.nameKey);
+          skipped++;
+          if (skippedNames.length < FOLLOW_ALL_SKIPPED_NAMES) skippedNames.push(input.name);
+        }
         added += await this.repository.insertFollowsIfMissing(
           user.id,
-          page.map((entry) => entry.input).filter((input) => input.nameKey),
+          inputs.filter((input) => !unfollowed.has(input.nameKey)),
         );
       }
     } catch (error) {
@@ -248,10 +306,10 @@ export class NewReleasesService implements OnApplicationBootstrap {
       throw error;
     }
     this.logger.log(
-      `[new_releases.follow_all] [end] userId=${user.id} kind=${kind} durationMs=${Date.now() - startedAt} added=${added} - followed everything`,
+      `[new_releases.follow_all] [end] userId=${user.id} kind=${kind} durationMs=${Date.now() - startedAt} added=${added} skippedUnfollowed=${skipped} - followed everything`,
     );
     if (added > 0) this.kick();
-    return { added };
+    return { added, skipped, skippedNames };
   }
 
   // ── The list ────────────────────────────────────────────

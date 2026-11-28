@@ -232,6 +232,39 @@ export class NewReleasesRepository {
     return result.rows.map((row) => ({ userId: Number(row.user_id), name: row.name, authorId: Number(row.author_id) }));
   }
 
+  /** Fork. Remembers names the user stopped following; a name already remembered is left as it is. */
+  async recordUnfollows(
+    userId: number,
+    entries: { kind: ReleaseFollowKind; name: string; nameKey: string; authorId: number | null; seriesId: number | null }[],
+  ): Promise<void> {
+    const rows = entries.filter((entry) => entry.nameKey);
+    if (rows.length === 0) return;
+    await this.db
+      .insert(schema.releaseUnfollows)
+      .values(rows.map((entry) => ({ userId, ...entry })))
+      .onConflictDoNothing({ target: [schema.releaseUnfollows.userId, schema.releaseUnfollows.kind, schema.releaseUnfollows.nameKey] });
+  }
+
+  /** Fork. Forgets that the user stopped following these names, because they chose to follow them. */
+  async clearUnfollows(userId: number, kind: ReleaseFollowKind, nameKeys: string[]): Promise<void> {
+    const keys = [...new Set(nameKeys.filter(Boolean))];
+    if (keys.length === 0) return;
+    await this.db
+      .delete(schema.releaseUnfollows)
+      .where(and(eq(schema.releaseUnfollows.userId, userId), eq(schema.releaseUnfollows.kind, kind), inArray(schema.releaseUnfollows.nameKey, keys)));
+  }
+
+  /** Fork. Which of these names the user stopped following. */
+  async findUnfollowedKeys(userId: number, kind: ReleaseFollowKind, nameKeys: string[]): Promise<Set<string>> {
+    const keys = [...new Set(nameKeys.filter(Boolean))];
+    if (keys.length === 0) return new Set();
+    const rows = await this.db
+      .select({ nameKey: schema.releaseUnfollows.nameKey })
+      .from(schema.releaseUnfollows)
+      .where(and(eq(schema.releaseUnfollows.userId, userId), eq(schema.releaseUnfollows.kind, kind), inArray(schema.releaseUnfollows.nameKey, keys)));
+    return new Set(rows.map((row) => row.nameKey));
+  }
+
   async deleteAuthorFollowsByKeys(userId: number, nameKeys: string[]): Promise<number> {
     if (nameKeys.length === 0) return 0;
     const rows = await this.db

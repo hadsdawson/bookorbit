@@ -51,7 +51,7 @@ export class NewReleasesController {
   @Post('follows/all')
   @HttpCode(HttpStatus.OK)
   followAll(@CurrentUser() user: RequestUser, @Body() dto: FollowAllDto) {
-    return this.service.followAll(user, dto.kind);
+    return this.service.followAll(user, dto.kind, dto.includeUnfollowed === true);
   }
 
   @Delete('follows/:id')

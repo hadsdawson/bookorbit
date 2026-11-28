@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import type {
+  FollowAllResult,
   NewReleaseItem,
   NewReleaseMatchedFollow,
   NewReleaseRequestFormat,
@@ -113,10 +114,10 @@ export function useNewReleases() {
     await load()
   }
 
-  async function followAll(kind: ReleaseFollowKind): Promise<number> {
-    const { added } = await followAllForReleases(kind)
+  async function followAll(kind: ReleaseFollowKind, includeUnfollowed = false): Promise<FollowAllResult> {
+    const result = await followAllForReleases(kind, includeUnfollowed)
     await load()
-    return added
+    return result
   }
 
   /** Fetched again afterwards: a shorter period lists fewer books, and the delivery in effect may change. */

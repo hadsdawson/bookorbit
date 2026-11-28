@@ -124,3 +124,12 @@ export interface UpdateNewReleasesUserSettingsPayload {
   retentionDays?: NewReleaseRetentionDays;
   delivery?: NewReleaseDelivery | null;
 }
+
+/** Fork. What Follow all did: names the user once unfollowed are skipped unless asked for. */
+export interface FollowAllResult {
+  added: number;
+  /** Names skipped because the user unfollowed them before. */
+  skipped: number;
+  /** Up to 20 of the skipped names, for the page to list. */
+  skippedNames: string[];
+}

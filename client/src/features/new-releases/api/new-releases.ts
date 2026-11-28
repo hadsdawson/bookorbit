@@ -1,4 +1,5 @@
 import type {
+  FollowAllResult,
   NewReleaseRequestFormat,
   NewReleaseRequestResult,
   NewReleasesOverview,
@@ -47,8 +48,9 @@ export function followForReleases(input: { kind: ReleaseFollowKind; name: string
   return apiJson(`${BASE}/follows`, jsonBody('POST', input), 'newReleases.errors.follow')
 }
 
-export function followAllForReleases(kind: ReleaseFollowKind): Promise<{ added: number }> {
-  return apiJson(`${BASE}/follows/all`, jsonBody('POST', { kind }), 'newReleases.errors.followAll')
+/** Fork: names the user unfollowed are skipped and listed back, unless `includeUnfollowed`. */
+export function followAllForReleases(kind: ReleaseFollowKind, includeUnfollowed = false): Promise<FollowAllResult> {
+  return apiJson(`${BASE}/follows/all`, jsonBody('POST', includeUnfollowed ? { kind, includeUnfollowed } : { kind }), 'newReleases.errors.followAll')
 }
 
 export function unfollowForReleases(id: number): Promise<void> {
