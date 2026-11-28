@@ -1,11 +1,12 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { defineComponent } from 'vue'
 import type { NewReleasesOverview } from '@bookorbit/types'
 
 const mocks = vi.hoisted(() => ({
   getNewReleases: vi.fn<() => Promise<NewReleasesOverview>>(),
   setNewReleaseHidden: vi.fn<(id: number, hidden: boolean) => Promise<void>>(),
-  followAllForReleases: vi.fn<(kind: string) => Promise<{ added: number }>>(),
+  followAllForReleases: vi.fn<(kind: string, includeUnfollowed?: boolean) => Promise<{ added: number; skipped: number; skippedNames: string[] }>>(),
   listReleaseFollows: vi.fn<() => Promise<{ items: never[]; total: number }>>(),
   unfollowForReleases: vi.fn<(id: number) => Promise<void>>(),
   followForReleases: vi.fn<(input: unknown) => Promise<unknown>>(),
@@ -17,6 +18,13 @@ vi.mock('vue-sonner', () => ({ toast: { success: vi.fn<() => void>(), error: vi.
 vi.mock('../api/new-releases', () => mocks)
 
 import NewReleasesView from '../views/NewReleasesView.vue'
+
+const ConfirmDialogStub = defineComponent({
+  name: 'ConfirmDialog',
+  props: { open: Boolean, title: String, description: String, confirmLabel: String, cancelLabel: String, busy: Boolean, destructive: Boolean },
+  emits: ['confirm', 'cancel'],
+  template: '<div />',
+})
 
 afterEach(() => {
   vi.useRealTimers()
@@ -60,7 +68,7 @@ describe('NewReleasesView', () => {
   beforeEach(() => {
     mocks.getNewReleases.mockReset().mockResolvedValue(overview())
     mocks.setNewReleaseHidden.mockReset().mockResolvedValue(undefined)
-    mocks.followAllForReleases.mockReset().mockResolvedValue({ added: 3 })
+    mocks.followAllForReleases.mockReset().mockResolvedValue({ added: 3, skipped: 0, skippedNames: [] })
     mocks.listReleaseFollows.mockReset().mockResolvedValue({ items: [], total: 0 })
     mocks.saveNewReleasesSettings.mockReset().mockResolvedValue({ delivery: null, retentionDays: 60 })
     mocks.requestNewRelease.mockReset().mockResolvedValue({ requested: ['ebook'] })
@@ -117,8 +125,27 @@ describe('NewReleasesView', () => {
     await flushPromises()
     await wrapper.get('[data-testid="follow-all-authors"]').trigger('click')
     await flushPromises()
-    expect(mocks.followAllForReleases).toHaveBeenCalledWith('author')
+    expect(mocks.followAllForReleases).toHaveBeenCalledWith('author', false)
     expect(mocks.getNewReleases).toHaveBeenCalledTimes(2)
+  })
+
+  it('asks before following again what was unfollowed on purpose (fork)', async () => {
+    mocks.followAllForReleases
+      .mockResolvedValueOnce({ added: 3, skipped: 2, skippedNames: ['Jane Writer', 'Ann Other'] })
+      .mockResolvedValueOnce({ added: 2, skipped: 0, skippedNames: [] })
+    const wrapper = mount(NewReleasesView, { global: { stubs: { ConfirmDialog: ConfirmDialogStub } } })
+    await flushPromises()
+    await wrapper.get('[data-testid="follow-all-authors"]').trigger('click')
+    await flushPromises()
+
+    const dialog = wrapper.getComponent(ConfirmDialogStub)
+    expect(dialog.props('open')).toBe(true)
+    expect(dialog.props('description')).toContain('Jane Writer, Ann Other')
+    dialog.vm.$emit('confirm')
+    await flushPromises()
+
+    expect(mocks.followAllForReleases).toHaveBeenLastCalledWith('author', true)
+    expect(wrapper.getComponent(ConfirmDialogStub).props('open')).toBe(false)
   })
   it('shows each format on its own day in the calendar and remembers the view', async () => {
     vi.useFakeTimers({ now: new Date(2027, 2, 1), toFake: ['Date'] })

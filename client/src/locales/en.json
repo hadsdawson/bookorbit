@@ -18964,7 +18964,16 @@
       "author": "Follow all authors",
       "series": "Follow all series",
       "authorDone": "{count, plural, =0 {You already follow every author in your libraries.} one {Now following # more author.} other {Now following # more authors.}}",
-      "seriesDone": "{count, plural, =0 {You already follow every series in your libraries.} one {Now following # more series.} other {Now following # more series.}}"
+      "seriesDone": "{count, plural, =0 {You already follow every series in your libraries.} one {Now following # more series.} other {Now following # more series.}}",
+      "refollow": {
+        "title": "Follow these again?",
+        "authorDescription": "{count, plural, one {You unfollowed # of these authors before, so it was skipped: {names}. Follow it again?} other {You unfollowed # of these authors before, so they were skipped: {names}. Follow them again?}}",
+        "seriesDescription": "{count, plural, one {You unfollowed # of these series before, so it was skipped: {names}. Follow it again?} other {You unfollowed # of these series before, so they were skipped: {names}. Follow them again?}}",
+        "namesMore": "{names} and {count} more",
+        "confirm": "Follow again",
+        "cancel": "Keep unfollowed",
+        "done": "{count, plural, one {Following # more again.} other {Following # more again.}}"
+      }
     },
     "empty": {
       "noFollowsTitle": "You're not following anyone yet",

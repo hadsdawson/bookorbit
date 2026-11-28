@@ -1,6 +1,6 @@
 import { RELEASE_FOLLOW_KINDS, type ReleaseFollowKind } from '@bookorbit/types';
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
 export class CreateReleaseFollowDto {
   @IsIn(RELEASE_FOLLOW_KINDS)
@@ -25,6 +25,11 @@ export class CreateReleaseFollowDto {
 export class FollowAllDto {
   @IsIn(RELEASE_FOLLOW_KINDS)
   kind!: ReleaseFollowKind;
+
+  /** Fork: also follow names the user unfollowed before. */
+  @IsOptional()
+  @IsBoolean()
+  includeUnfollowed?: boolean;
 }
 
 export class FindReleaseFollowQueryDto {

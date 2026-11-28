@@ -52,6 +52,9 @@ describe('NewReleasesService', () => {
     findFollowById: ReturnType<typeof vi.fn<NewReleasesRepository['findFollowById']>>;
     deleteAuthorFollowsByKeys: ReturnType<typeof vi.fn<NewReleasesRepository['deleteAuthorFollowsByKeys']>>;
     deleteFollow: ReturnType<typeof vi.fn<NewReleasesRepository['deleteFollow']>>;
+    recordUnfollows: ReturnType<typeof vi.fn<NewReleasesRepository['recordUnfollows']>>;
+    clearUnfollows: ReturnType<typeof vi.fn<NewReleasesRepository['clearUnfollows']>>;
+    findUnfollowedKeys: ReturnType<typeof vi.fn<NewReleasesRepository['findUnfollowedKeys']>>;
   };
   let lookup: ReturnType<typeof vi.fn<ReleaseSourcesService['lookup']>>;
   let submit: ReturnType<typeof vi.fn<BookRequestService['submit']>>;
@@ -81,6 +84,9 @@ describe('NewReleasesService', () => {
       findFollowById: vi.fn<NewReleasesRepository['findFollowById']>(),
       deleteAuthorFollowsByKeys: vi.fn<NewReleasesRepository['deleteAuthorFollowsByKeys']>().mockResolvedValue(0),
       deleteFollow: vi.fn<NewReleasesRepository['deleteFollow']>().mockResolvedValue(true),
+      recordUnfollows: vi.fn<NewReleasesRepository['recordUnfollows']>().mockResolvedValue(undefined),
+      clearUnfollows: vi.fn<NewReleasesRepository['clearUnfollows']>().mockResolvedValue(undefined),
+      findUnfollowedKeys: vi.fn<NewReleasesRepository['findUnfollowedKeys']>().mockResolvedValue(new Set()),
     };
     lookup = vi.fn<ReleaseSourcesService['lookup']>();
     submit = vi.fn<BookRequestService['submit']>().mockResolvedValue({} as never);
@@ -150,12 +156,36 @@ describe('NewReleasesService', () => {
       .mockResolvedValueOnce([]);
     repository.insertFollowsIfMissing.mockResolvedValue(2);
 
-    await expect(service.followAll(user, 'author')).resolves.toEqual({ added: 2 });
+    await expect(service.followAll(user, 'author')).resolves.toEqual({ added: 2, skipped: 0, skippedNames: [] });
 
     expect(repository.findLibraryAuthorsPage).toHaveBeenLastCalledWith([1, 2], 2, 1000);
     expect(repository.insertFollowsIfMissing).toHaveBeenCalledWith(3, [
       expect.objectContaining({ name: 'Émile Zola', nameKey: 'emilezola', authorId: 1 }),
       expect.objectContaining({ name: 'Jane Writer', nameKey: 'janewriter', authorId: 2 }),
+    ]);
+  });
+
+  it('skips names the user unfollowed and says which, unless asked to follow them too (fork)', async () => {
+    const page = [
+      { id: 1, name: 'Émile Zola' },
+      { id: 2, name: 'Jane Writer' },
+    ];
+    repository.findLibraryAuthorsPage.mockResolvedValueOnce(page).mockResolvedValueOnce([]);
+    repository.findUnfollowedKeys.mockResolvedValue(new Set(['janewriter']));
+    repository.insertFollowsIfMissing.mockResolvedValue(1);
+
+    await expect(service.followAll(user, 'author')).resolves.toEqual({ added: 1, skipped: 1, skippedNames: ['Jane Writer'] });
+    expect(repository.insertFollowsIfMissing).toHaveBeenCalledWith(3, [expect.objectContaining({ nameKey: 'emilezola' })]);
+    expect(repository.clearUnfollows).not.toHaveBeenCalled();
+
+    repository.findLibraryAuthorsPage.mockResolvedValueOnce(page).mockResolvedValueOnce([]);
+    repository.insertFollowsIfMissing.mockResolvedValue(2);
+
+    await expect(service.followAll(user, 'author', true)).resolves.toEqual({ added: 2, skipped: 0, skippedNames: [] });
+    expect(repository.clearUnfollows).toHaveBeenCalledWith(3, 'author', ['janewriter']);
+    expect(repository.insertFollowsIfMissing).toHaveBeenLastCalledWith(3, [
+      expect.objectContaining({ nameKey: 'emilezola' }),
+      expect.objectContaining({ nameKey: 'janewriter' }),
     ]);
   });
 
@@ -307,6 +337,29 @@ describe('NewReleasesService', () => {
     expect(repository.findLinkedAuthorNames).toHaveBeenCalledWith({ userId: 3, followId: 1 }, false);
     expect(repository.deleteAuthorFollowsByKeys).toHaveBeenCalledWith(3, [expect.not.stringMatching(/^seananmcguire$/)]);
     expect(repository.deleteFollow).toHaveBeenCalledWith(3, 1);
+    // Fork: remembered, the author and their other names, so Follow all asks before following them again.
+    expect(repository.recordUnfollows).toHaveBeenCalledWith(3, [
+      expect.objectContaining({ kind: 'author', nameKey: 'seananmcguire' }),
+      expect.objectContaining({ kind: 'author', name: 'A. Deborah Baker', authorId: 40 }),
+    ]);
+  });
+
+  it('forgets an unfollow when the person follows the name again (fork)', async () => {
+    repository.insertFollow.mockResolvedValue({ id: 1, kind: 'series', name: 'The Saga', createdAt: new Date() } as never);
+
+    await service.follow(user, { kind: 'series', name: 'The Saga' });
+
+    expect(repository.clearUnfollows).toHaveBeenCalledWith(3, 'series', ['thesaga']);
+  });
+
+  it('does not bring back an unfollowed other name of a followed author (fork)', async () => {
+    repository.findLinkedAuthorNames.mockResolvedValue([{ userId: 3, name: 'A. Deborah Baker', authorId: 40 }]);
+    repository.findUnfollowedKeys.mockResolvedValue(new Set(['adeborahbaker']));
+    repository.insertFollowsIfMissing.mockResolvedValue(0);
+
+    await service.followLinkedNames(3);
+
+    expect(repository.insertFollowsIfMissing).toHaveBeenCalledWith(3, []);
   });
 });
 

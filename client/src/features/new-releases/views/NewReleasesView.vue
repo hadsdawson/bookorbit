@@ -15,6 +15,7 @@ import {
 } from '@bookorbit/types'
 
 import { Button } from '@/components/ui/button'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import { formatDate, formatNumber, formatRelativeFromNow } from '@/i18n/formatters'
 import { errorMessage } from '@/lib/api-json'
 import NewReleasesCalendar from '../components/NewReleasesCalendar.vue'
@@ -234,14 +235,47 @@ async function runFollowAll(kind: ReleaseFollowKind) {
   if (followingAll.value) return
   followingAll.value = kind
   try {
-    const added = await followAll(kind)
-    toast.success(t(`newReleases.followAll.${kind}Done`, { count: added }))
+    const result = await followAll(kind)
+    toast.success(t(`newReleases.followAll.${kind}Done`, { count: result.added }))
     if (tab.value === 'following') await follows.load()
+    // Fork: names unfollowed on purpose are not followed again without asking.
+    if (result.skipped > 0) refollowAsk.value = { kind, count: result.skipped, names: result.skippedNames }
   } catch (error) {
     toast.error(errorMessage(error, 'newReleases.errors.followAll'))
   } finally {
     followingAll.value = null
   }
+}
+
+const refollowAsk = ref<{ kind: ReleaseFollowKind; count: number; names: string[] } | null>(null)
+const refollowing = ref(false)
+
+const refollowDescription = computed(() => {
+  const ask = refollowAsk.value
+  if (!ask) return ''
+  const more = ask.count - ask.names.length
+  const names = more > 0 ? t('newReleases.followAll.refollow.namesMore', { names: ask.names.join(', '), count: more }) : ask.names.join(', ')
+  return t(`newReleases.followAll.refollow.${ask.kind}Description`, { count: ask.count, names })
+})
+
+async function handleRefollowConfirm() {
+  const ask = refollowAsk.value
+  if (!ask || refollowing.value) return
+  refollowing.value = true
+  try {
+    await followAll(ask.kind, true)
+    toast.success(t('newReleases.followAll.refollow.done', { count: ask.count }))
+    if (tab.value === 'following') await follows.load()
+    refollowAsk.value = null
+  } catch (error) {
+    toast.error(errorMessage(error, 'newReleases.errors.followAll'))
+  } finally {
+    refollowing.value = false
+  }
+}
+
+function handleRefollowCancel() {
+  refollowAsk.value = null
 }
 
 function handleFollowAllAuthors() {
@@ -625,5 +659,16 @@ onMounted(load)
         </section>
       </template>
     </div>
+    <ConfirmDialog
+      :open="refollowAsk !== null"
+      :title="t('newReleases.followAll.refollow.title')"
+      :description="refollowDescription"
+      :confirm-label="t('newReleases.followAll.refollow.confirm')"
+      :cancel-label="t('newReleases.followAll.refollow.cancel')"
+      :busy="refollowing"
+      :destructive="false"
+      @confirm="handleRefollowConfirm"
+      @cancel="handleRefollowCancel"
+    />
   </div>
 </template>

@@ -49,6 +49,26 @@ export const releaseFollows = pgTable(
 );
 
 /**
+ * Fork only. Names a user chose to stop following, so Follow all (and following an author's other
+ * names) does not quietly follow them again. Cleared when they follow that name themselves.
+ */
+export const releaseUnfollows = pgTable(
+  'release_unfollows',
+  {
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    kind: varchar('kind', { length: 10 }).notNull(),
+    name: varchar('name', { length: 500 }).notNull(),
+    nameKey: varchar('name_key', { length: 500 }).notNull(),
+    authorId: integer('author_id').references(() => authors.id, { onDelete: 'set null' }),
+    seriesId: integer('series_id').references(() => bookSeries.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.kind, t.nameKey] }), check('release_unfollows_kind_chk', sql`${t.kind} IN ('author', 'series')`)],
+);
+
+/**
  * Fork only. When each followed name was last looked up. One row per name however many people
  * follow it, so the weekly check visits it once.
  */
